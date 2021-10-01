@@ -52,7 +52,7 @@ import {
   guaranteeType,
   uniq,
   isNonNullable,
-  prettyCONSTName
+  prettyCONSTName,
 } from '@finos/legend-shared';
 import type { MappingExecutionState } from '../../../../stores/editor-state/element-editor-state/mapping/MappingExecutionState';
 import {
@@ -79,13 +79,11 @@ import {
   RelationalInputType,
 } from '@finos/legend-graph';
 import { StudioTextInputEditor } from '../../../shared/StudioTextInputEditor';
-import {
-  getRelationalInputTestDataEditorLanguage
-} from "./MappingTestEditor";
+import { getRelationalInputTestDataEditorLanguage } from './MappingTestEditor';
 import {
   MappingTestObjectInputDataState,
-  MappingTestRelationalInputDataState
-} from "../../../../stores/editor-state/element-editor-state/mapping/MappingTestState";
+  MappingTestRelationalInputDataState,
+} from '../../../../stores/editor-state/element-editor-state/mapping/MappingTestState';
 
 interface ClassMappingSelectOption {
   label: string;
@@ -422,7 +420,9 @@ export const MappingExecutionRelationalInputDataBuilder = observer(
     return (
       <div className="panel__content mapping-execution-builder__input-data-panel__content">
         <StudioTextInputEditor
-          language={getRelationalInputTestDataEditorLanguage(inputDataState.inputData.inputType)}
+          language={getRelationalInputTestDataEditorLanguage(
+            inputDataState.inputData.inputType,
+          )}
           inputValue={inputDataState.inputData.data}
           updateInput={updateInput}
         />
@@ -544,13 +544,14 @@ export const MappingExecutionInputDataBuilder = observer(
 
     //input type builder
     let inputTypeBuilder: React.ReactNode;
-    if (inputDataState instanceof MappingTestRelationalInputDataState || inputDataState instanceof MappingTestObjectInputDataState) {
+    if (
+      inputDataState instanceof MappingTestRelationalInputDataState ||
+      inputDataState instanceof MappingTestObjectInputDataState
+    ) {
       inputTypeBuilder = (
-        <MappingExecutionInputDataTypeBuilder
-          inputDataState={inputDataState}
-        />
-      )
-    } else{
+        <MappingExecutionInputDataTypeBuilder inputDataState={inputDataState} />
+      );
+    } else {
       inputTypeBuilder = null;
     }
 
@@ -605,46 +606,51 @@ export const MappingExecutionInputDataBuilder = observer(
 
 export const MappingExecutionInputDataTypeBuilder = observer(
   (props: {
-    inputDataState: MappingTestRelationalInputDataState | MappingTestObjectInputDataState;
+    inputDataState:
+      | MappingTestRelationalInputDataState
+      | MappingTestObjectInputDataState;
   }) => {
     const { inputDataState } = props;
     let chosenInputType = inputDataState.inputData.inputType;
     let inputTypeList: string[] = [];
 
     if (inputDataState instanceof MappingTestObjectInputDataState) {
-      inputTypeList.push(ObjectInputType.JSON)
+      inputTypeList.push(ObjectInputType.JSON);
     } else {
-      inputTypeList.push(RelationalInputType.CSV,RelationalInputType.SQL);
+      inputTypeList.push(RelationalInputType.CSV, RelationalInputType.SQL);
     }
 
-    const changeInputType = (val:string): (() => void) =>
+    const changeInputType =
+      (val: string): (() => void) =>
       (): void => {
-          inputDataState.inputData.setInputType(val);
-      }
+        inputDataState.inputData.setInputType(val);
+      };
 
-    return(<DropdownMenu
-      className="edit-panel__header__tab"
-      content={
-        <MenuContent>
-          {inputTypeList.map((mode) => (
-            <MenuContentItem
-              key={mode}
-              className="edit-panel__header__dropdown__tab__option"
-              onClick = {changeInputType(mode)}
-            >
-              {prettyCONSTName(mode)}
-            </MenuContentItem>
-          ))}
-        </MenuContent>
-      }
-    >
-      <div className="edit-panel__header__tab__content">
-        <div className="edit-panel__header__tab__label">
-          {prettyCONSTName(chosenInputType)}
+    return (
+      <DropdownMenu
+        className="edit-panel__header__tab"
+        content={
+          <MenuContent>
+            {inputTypeList.map((mode) => (
+              <MenuContentItem
+                key={mode}
+                className="edit-panel__header__dropdown__tab__option"
+                onClick={changeInputType(mode)}
+              >
+                {prettyCONSTName(mode)}
+              </MenuContentItem>
+            ))}
+          </MenuContent>
+        }
+      >
+        <div className="edit-panel__header__tab__content">
+          <div className="edit-panel__header__tab__label">
+            {prettyCONSTName(chosenInputType)}
+          </div>
+          <CaretDownIcon />
         </div>
-        <CaretDownIcon />
-      </div>
-    </DropdownMenu>);
+      </DropdownMenu>
+    );
   },
 );
 

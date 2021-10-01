@@ -375,11 +375,8 @@ export class MappingExecutionRelationalInputDataState extends MappingExecutionIn
         // NOTE: this is a gross simplification of handling the input for relational input data
         [this.inputData.data],
       );
-    }
-    else {
-      datasourceSpecification.setTestDataSetupCsv(
-        this.inputData.data
-      )
+    } else {
+      datasourceSpecification.setTestDataSetupCsv(this.inputData.data);
     }
     return createRuntimeForExecution(
       this.mapping,
