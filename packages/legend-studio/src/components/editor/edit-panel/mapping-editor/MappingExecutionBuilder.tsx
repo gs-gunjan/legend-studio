@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Fragment, useState, useRef, useCallback } from 'react';
+import { Fragment, useState, useRef, useCallback } from 'react';
 import { flowResult } from 'mobx';
 import type { SelectComponent } from '@finos/legend-art';
 import {
@@ -415,8 +415,6 @@ export const MappingExecutionRelationalInputDataBuilder = observer(
     const updateInput = (val: string): void =>
       inputDataState.inputData.setData(val);
 
-    // TODO: handle CSV input type
-
     return (
       <div className="panel__content mapping-execution-builder__input-data-panel__content">
         <StudioTextInputEditor
@@ -473,6 +471,56 @@ export const MappingExecutionEmptyInputDataBuilder = observer(
           }}
         />
       </div>
+    );
+  },
+);
+
+export const MappingExecutionInputDataTypeBuilder = observer(
+  (props: {
+    inputDataState:
+      | MappingTestRelationalInputDataState
+      | MappingTestObjectInputDataState;
+  }) => {
+    const { inputDataState } = props;
+    const chosenInputType = inputDataState.inputData.inputType;
+    const inputTypeList: string[] = [];
+
+    if (inputDataState instanceof MappingTestObjectInputDataState) {
+      inputTypeList.push(ObjectInputType.JSON);
+    } else {
+      inputTypeList.push(RelationalInputType.CSV, RelationalInputType.SQL);
+    }
+
+    const changeInputType =
+      (val: string): (() => void) =>
+      (): void => {
+        inputDataState.inputData.setInputType(val);
+      };
+
+    return (
+      <DropdownMenu
+        className="edit-panel__header__tab"
+        content={
+          <MenuContent>
+            {inputTypeList.map((mode) => (
+              <MenuContentItem
+                key={mode}
+                className="edit-panel__header__dropdown__tab__option"
+                onClick={changeInputType(mode)}
+              >
+                {prettyCONSTName(mode)}
+              </MenuContentItem>
+            ))}
+          </MenuContent>
+        }
+      >
+        <div className="edit-panel__header__tab__content">
+          <div className="edit-panel__header__tab__label">
+            {prettyCONSTName(chosenInputType)}
+          </div>
+          <CaretDownIcon />
+        </div>
+      </DropdownMenu>
     );
   },
 );
@@ -600,56 +648,6 @@ export const MappingExecutionInputDataBuilder = observer(
           />
         )}
       </div>
-    );
-  },
-);
-
-export const MappingExecutionInputDataTypeBuilder = observer(
-  (props: {
-    inputDataState:
-      | MappingTestRelationalInputDataState
-      | MappingTestObjectInputDataState;
-  }) => {
-    const { inputDataState } = props;
-    let chosenInputType = inputDataState.inputData.inputType;
-    let inputTypeList: string[] = [];
-
-    if (inputDataState instanceof MappingTestObjectInputDataState) {
-      inputTypeList.push(ObjectInputType.JSON);
-    } else {
-      inputTypeList.push(RelationalInputType.CSV, RelationalInputType.SQL);
-    }
-
-    const changeInputType =
-      (val: string): (() => void) =>
-      (): void => {
-        inputDataState.inputData.setInputType(val);
-      };
-
-    return (
-      <DropdownMenu
-        className="edit-panel__header__tab"
-        content={
-          <MenuContent>
-            {inputTypeList.map((mode) => (
-              <MenuContentItem
-                key={mode}
-                className="edit-panel__header__dropdown__tab__option"
-                onClick={changeInputType(mode)}
-              >
-                {prettyCONSTName(mode)}
-              </MenuContentItem>
-            ))}
-          </MenuContent>
-        }
-      >
-        <div className="edit-panel__header__tab__content">
-          <div className="edit-panel__header__tab__label">
-            {prettyCONSTName(chosenInputType)}
-          </div>
-          <CaretDownIcon />
-        </div>
-      </DropdownMenu>
     );
   },
 );

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { Fragment, useState, useEffect, useCallback } from 'react';
+import { Fragment, useState, useEffect, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import type { MappingTestState } from '../../../../stores/editor-state/element-editor-state/mapping/MappingTestState';
 import {
@@ -341,8 +341,6 @@ export const MappingTestRelationalInputDataBuilder = observer(
     const updateInput = (val: string): void =>
       inputDataState.inputData.setData(val);
 
-    // TODO: handle CSV input type
-
     return (
       <div className="panel__content mapping-test-editor__input-data-panel__content">
         <StudioTextInputEditor
@@ -354,6 +352,57 @@ export const MappingTestRelationalInputDataBuilder = observer(
           updateInput={updateInput}
         />
       </div>
+    );
+  },
+);
+
+export const MappingTestInputDataTypeBuilder = observer(
+  (props: {
+    inputDataState:
+      | MappingTestObjectInputDataState
+      | MappingTestRelationalInputDataState;
+    isReadOnly: boolean;
+  }) => {
+    const { inputDataState, isReadOnly } = props;
+    const inputTypeList: string[] = [];
+    const chosenInputType = inputDataState.inputData.inputType;
+
+    if (inputDataState instanceof MappingTestObjectInputDataState) {
+      inputTypeList.push(ObjectInputType.JSON);
+    } else {
+      inputTypeList.push(RelationalInputType.CSV, RelationalInputType.SQL);
+    }
+
+    const changeInputType =
+      (val: string): (() => void) =>
+      (): void => {
+        inputDataState.inputData.setInputType(val);
+      };
+    return (
+      <DropdownMenu
+        className="edit-panel__header__tab"
+        disabled={isReadOnly}
+        content={
+          <MenuContent>
+            {inputTypeList.map((mode) => (
+              <MenuContentItem
+                key={mode}
+                className="edit-panel__header__dropdown__tab__option"
+                onClick={changeInputType(mode)}
+              >
+                {prettyCONSTName(mode)}
+              </MenuContentItem>
+            ))}
+          </MenuContent>
+        }
+      >
+        <div className="edit-panel__header__tab__content">
+          <div className="edit-panel__header__tab__label">
+            {prettyCONSTName(chosenInputType)}
+          </div>
+          <CaretDownIcon />
+        </div>
+      </DropdownMenu>
     );
   },
 );
@@ -457,57 +506,6 @@ export const MappingTestInputDataBuilder = observer(
           />
         )}
       </div>
-    );
-  },
-);
-
-export const MappingTestInputDataTypeBuilder = observer(
-  (props: {
-    inputDataState:
-      | MappingTestObjectInputDataState
-      | MappingTestRelationalInputDataState;
-    isReadOnly: boolean;
-  }) => {
-    const { inputDataState, isReadOnly } = props;
-    let inputTypeList: string[] = [];
-    let chosenInputType = inputDataState.inputData.inputType;
-
-    if (inputDataState instanceof MappingTestObjectInputDataState) {
-      inputTypeList.push(ObjectInputType.JSON);
-    } else {
-      inputTypeList.push(RelationalInputType.CSV, RelationalInputType.SQL);
-    }
-
-    const changeInputType =
-      (val: string): (() => void) =>
-      (): void => {
-        inputDataState.inputData.setInputType(val);
-      };
-    return (
-      <DropdownMenu
-        className="edit-panel__header__tab"
-        disabled={isReadOnly}
-        content={
-          <MenuContent>
-            {inputTypeList.map((mode) => (
-              <MenuContentItem
-                key={mode}
-                className="edit-panel__header__dropdown__tab__option"
-                onClick={changeInputType(mode)}
-              >
-                {prettyCONSTName(mode)}
-              </MenuContentItem>
-            ))}
-          </MenuContent>
-        }
-      >
-        <div className="edit-panel__header__tab__content">
-          <div className="edit-panel__header__tab__label">
-            {prettyCONSTName(chosenInputType)}
-          </div>
-          <CaretDownIcon />
-        </div>
-      </DropdownMenu>
     );
   },
 );
