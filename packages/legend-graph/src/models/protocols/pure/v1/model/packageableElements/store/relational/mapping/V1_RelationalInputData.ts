@@ -23,6 +23,7 @@ import type { V1_TestDataSource } from '../../modelToModel/mapping/V1_TestDataSo
 export class V1_RelationalInputData extends V1_InputData implements Hashable {
   database!: string;
   inputType!: string;
+  data: string | undefined;
   testDataSource!: V1_TestDataSource;
 
   get hashCode(): string {

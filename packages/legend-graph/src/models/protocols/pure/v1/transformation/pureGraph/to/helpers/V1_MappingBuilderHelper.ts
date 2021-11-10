@@ -221,14 +221,15 @@ const V1_buildMappingTestInputData = (
       inputData.inputType,
       `Object input data 'inputType' field is missing`,
     );
-    assertNonNullable(
-      (inputData.testDataSource as V1_StringTestDataSource).data,
-      `Object input data 'data' field is missing`,
-    );
+    const data =
+      inputData.data !== 'undefined'
+        ? inputData.data
+        : (inputData.testDataSource as V1_StringTestDataSource).data;
+    assertNonNullable(data, `Object input data 'data' field is missing`);
     return new ObjectInputData(
       context.resolveClass(inputData.sourceClass),
       getObjectInputType(inputData.inputType),
-      (inputData.testDataSource as V1_StringTestDataSource).data,
+      data,
       [],
     );
   } else if (inputData instanceof V1_FlatDataInputData) {
@@ -243,13 +244,14 @@ const V1_buildMappingTestInputData = (
         inputData.testDataSource.textElements,
       );
     }
-    assertNonNullable(
-      (inputData.testDataSource as V1_StringTestDataSource).data,
-      `Flat-data input data 'data' field is missing`,
-    );
+    const data =
+      inputData.data !== undefined
+        ? inputData.data
+        : (inputData.testDataSource as V1_StringTestDataSource).data;
+    assertNonNullable(data, `Flat-data input data 'data' field is missing`);
     return new FlatDataInputData(
       context.resolveFlatDataStore(inputData.sourceFlatData.path),
-      (inputData.testDataSource as V1_StringTestDataSource).data,
+      data,
       [],
     );
   } else if (inputData instanceof V1_RelationalInputData) {
@@ -269,13 +271,14 @@ const V1_buildMappingTestInputData = (
       inputData.inputType,
       `Relational input data 'inputType' field is missing`,
     );
-    assertNonNullable(
-      (inputData.testDataSource as V1_StringTestDataSource).data,
-      `Relational input data 'data' field is missing`,
-    );
+    const data =
+      inputData.data !== undefined
+        ? inputData.data
+        : (inputData.testDataSource as V1_StringTestDataSource).data;
+    assertNonNullable(data, `Relational input data 'data' field is missing`);
     return new RelationalInputData(
       context.resolveDatabase(inputData.database),
-      (inputData.testDataSource as V1_StringTestDataSource).data,
+      data,
       getRelationalInputType(inputData.inputType),
       [],
     );

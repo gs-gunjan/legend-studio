@@ -28,12 +28,20 @@ export class V1_ResultBuilder {
 }
 
 export class V1_MappingTestResult {
-  actual!: object;
+  mappingPath!: string;
+  testName!: string;
+  exception: object | undefined;
+  expected: string | undefined;
+  actual: string | undefined;
   result!: string;
 
   static readonly serialization = new SerializationFactory(
     createModelSchema(V1_MappingTestResult, {
-      actual: raw(),
+      actual: optional(primitive()),
+      mappingPath: primitive(),
+      testName: primitive(),
+      exception: optional(raw()),
+      expected: optional(primitive()),
       result: primitive(),
     }),
   );
@@ -135,5 +143,7 @@ export const V1_serializeExecutionResult = (
 };
 
 export const V1_serializeMappingTestResult = (
-  value: PlainObject<V1_MappingTestResult>,
-): V1_MappingTestResult => V1_MappingTestResult.serialization.fromJson(value);
+  value: PlainObject<V1_MappingTestResult[]>,
+): V1_MappingTestResult[] => [
+  V1_MappingTestResult.serialization.fromJson(value),
+];

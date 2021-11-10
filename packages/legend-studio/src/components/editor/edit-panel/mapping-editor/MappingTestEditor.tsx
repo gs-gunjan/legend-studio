@@ -649,9 +649,9 @@ export const MappingTestEditor = observer(
     );
     // Plan
     const executionPlanState = testState.executionPlanState;
-    const generatePlan = applicationStore.guaranteeSafeAction(() =>
-      flowResult(testState.generatePlan()),
-    );
+    // const generatePlan = applicationStore.guaranteeSafeAction(() =>
+    //   flowResult(testState.generatePlan()),
+    // );
     // Test Result
     let testResult = '';
     switch (testState.result) {
@@ -706,14 +706,14 @@ export const MappingTestEditor = observer(
             >
               <PlayIcon className="mapping-test-editor__icon__run" />
             </button>
-            <button
+            {/* <button
               className="mapping-test-editor__header__action"
               onClick={generatePlan}
               tabIndex={-1}
               title="View Execution Plan"
             >
               <FaScroll className="mapping-test-editor__icon__generate-plan" />
-            </button>
+            </button> */}
           </div>
         </div>
         <div className="mapping-test-editor__content">

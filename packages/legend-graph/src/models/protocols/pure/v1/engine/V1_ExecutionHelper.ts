@@ -27,6 +27,7 @@ import {
   TdsBuilder,
   TDSColumn,
   MappingTestResult,
+  TestResult,
 } from '../../../../../graphManager/action/execution/ExecutionResult';
 import type { ExecutionResult } from '../../../../../graphManager/action/execution/ExecutionResult';
 import type {
@@ -124,10 +125,30 @@ export const V1_buildExecutionResult = (
 };
 
 export const V1_buildMappingTestResult = (
-  protocol: V1_MappingTestResult,
-): MappingTestResult => {
-  const mappingTestResult = new MappingTestResult();
-  mappingTestResult.actual = JSON.stringify(protocol.actual);
-  mappingTestResult.result = protocol.result;
-  return mappingTestResult;
+  protocol: V1_MappingTestResult[],
+): MappingTestResult[] => {
+  const mappingTestResultList: MappingTestResult[] = [];
+  protocol.forEach((element) => {
+    const mappingTestResult = new MappingTestResult();
+    mappingTestResult.actual = JSON.stringify(element.actual);
+    mappingTestResult.expected = JSON.stringify(element.expected);
+    mappingTestResult.mappingPath = element.mappingPath;
+    mappingTestResult.testName = element.testName;
+    mappingTestResult.exception = element.exception;
+    switch (element.result) {
+      case 'SUCCESS':
+        mappingTestResult.result = TestResult.SUCCESS;
+        break;
+      case 'FAILURE':
+        mappingTestResult.result = TestResult.FAILURE;
+        break;
+      case 'ERROR':
+        mappingTestResult.result = TestResult.ERROR;
+        break;
+      default:
+        throw new UnsupportedOperationError('Invalid response');
+    }
+    mappingTestResultList.push(mappingTestResult);
+  });
+  return mappingTestResultList;
 };

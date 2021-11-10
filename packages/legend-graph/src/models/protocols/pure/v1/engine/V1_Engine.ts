@@ -434,7 +434,7 @@ export class V1_Engine {
   async executeMappingTest(
     input: V1_ExecuteMappingTestInput,
     useLosslessParse: boolean,
-  ): Promise<V1_MappingTestResult> {
+  ): Promise<V1_MappingTestResult[]> {
     const executionResultInText = await (
       (await this.engineServerClient.doMappingTest(
         V1_ExecuteMappingTestInput.serialization.toJson(input),

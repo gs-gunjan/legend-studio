@@ -369,10 +369,7 @@ export const TEST_DATA__SimpleGraph = [
           inputData: [
             {
               _type: 'object',
-              testDataSource: {
-                _type: 'stringData',
-                data: '{"employees":[{"firstName":"Tyler","lastName":"Durden"},{"firstName":"Big","lastName":"Lebowski"},{"firstName":"Geralt","lastName":"Witcher"}],"legalName":"MCDataTeam","incType":"Corporation"}',
-              },
+              data: '{"employees":[{"firstName":"Tyler","lastName":"Durden"},{"firstName":"Big","lastName":"Lebowski"},{"firstName":"Geralt","lastName":"Witcher"}],"legalName":"MCDataTeam","incType":"Corporation"}',
               inputType: 'JSON',
               sourceClass: 'demo::Firm',
             },

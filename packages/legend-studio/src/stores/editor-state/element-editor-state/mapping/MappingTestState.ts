@@ -176,7 +176,7 @@ abstract class MappingTestInputDataState {
     this.inputData = inputData;
   }
 
-  abstract get runtime(): Runtime;
+  // abstract get runtime(): Runtime;
 }
 
 export class MappingTestObjectInputDataState extends MappingTestInputDataState {
@@ -205,103 +205,14 @@ export class MappingTestObjectInputDataState extends MappingTestInputDataState {
     /* @MARKER: Workaround for https://github.com/finos/legend-studio/issues/68 */
     this.inputData.setData(tryToMinifyLosslessJSONString(val));
   }
-
-  get runtime(): Runtime {
-    const engineConfig =
-      this.editorStore.graphManagerState.graphManager.TEMP__getEngineConfig();
-    const runtime = new EngineRuntime();
-    runtime.addMapping(
-      PackageableElementExplicitReference.create(this.mapping),
-    );
-    const connection = new JsonModelConnection(
-      PackageableElementExplicitReference.create(
-        this.editorStore.graphManagerState.graph.modelStore,
-      ),
-      PackageableElementExplicitReference.create(
-        this.inputData.sourceClass.value,
-      ),
-      createUrlStringFromData(
-        this.inputData.data,
-        JsonModelConnection.CONTENT_TYPE,
-        engineConfig.useBase64ForAdhocConnectionDataUrls,
-      ),
-    );
-    runtime.addIdentifiedConnection(
-      new IdentifiedConnection(
-        runtime.generateIdentifiedConnectionId(),
-        connection,
-      ),
-    );
-    return runtime;
-  }
 }
-// TODO: remove runtime since now we dont require to provide them for running mapping test
+
 export class MappingTestFlatDataInputDataState extends MappingTestInputDataState {
   declare inputData: FlatDataInputData;
-
-  get runtime(): Runtime {
-    const engineConfig =
-      this.editorStore.graphManagerState.graphManager.TEMP__getEngineConfig();
-    const runtime = new EngineRuntime();
-    runtime.addMapping(
-      PackageableElementExplicitReference.create(this.mapping),
-    );
-    const connection = new FlatDataConnection(
-      PackageableElementExplicitReference.create(
-        this.inputData.sourceFlatData.value,
-      ),
-      createUrlStringFromData(
-        this.inputData.data,
-        FlatDataConnection.CONTENT_TYPE,
-        engineConfig.useBase64ForAdhocConnectionDataUrls,
-      ),
-    );
-    runtime.addIdentifiedConnection(
-      new IdentifiedConnection(
-        runtime.generateIdentifiedConnectionId(),
-        connection,
-      ),
-    );
-    return runtime;
-  }
 }
 
 export class MappingTestRelationalInputDataState extends MappingTestInputDataState {
   declare inputData: RelationalInputData;
-
-  get runtime(): Runtime {
-    const datasourceSpecification = new LocalH2DatasourceSpecification();
-    switch (this.inputData.inputType) {
-      case RelationalInputType.SQL:
-        datasourceSpecification.setTestDataSetupSqls(
-          // NOTE: this is a gross simplification of handling the input for relational input data
-          [this.inputData.data],
-        );
-        break;
-      case RelationalInputType.CSV:
-        datasourceSpecification.setTestDataSetupCsv(this.inputData.data);
-        break;
-      default:
-        throw new UnsupportedOperationError(`Invalid input data type`);
-    }
-    const runtime = new EngineRuntime();
-    runtime.addMapping(
-      PackageableElementExplicitReference.create(this.mapping),
-    );
-    const connection = new RelationalDatabaseConnection(
-      PackageableElementExplicitReference.create(this.inputData.database.value),
-      DatabaseType.H2,
-      datasourceSpecification,
-      new DefaultH2AuthenticationStrategy(),
-    );
-    runtime.addIdentifiedConnection(
-      new IdentifiedConnection(
-        runtime.generateIdentifiedConnectionId(),
-        connection,
-      ),
-    );
-    return runtime;
-  }
 }
 
 abstract class MappingTestAssertionState {
@@ -383,7 +294,7 @@ export class MappingTestState {
       setAssertionState: action,
       setInputDataStateBasedOnSource: action,
       updateAssertion: action,
-      generatePlan: flow,
+      // generatePlan: flow,
     });
 
     this.editorStore = editorStore;
@@ -679,25 +590,25 @@ export class MappingTestState {
     this.test.setAssert(this.assertionState.assert);
   }
 
-  *generatePlan(): GeneratorFn<void> {
-    try {
-      this.isGeneratingPlan = true;
-      yield flowResult(
-        this.executionPlanState.generatePlan(
-          this.mappingEditorState.mapping,
-          this.queryState.query,
-          this.inputDataState.runtime,
-        ),
-      );
-    } catch (error) {
-      assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
-        LogEvent.create(GRAPH_MANAGER_LOG_EVENT.EXECUTION_FAILURE),
-        error,
-      );
-      this.editorStore.applicationStore.notifyError(error);
-    } finally {
-      this.isGeneratingPlan = false;
-    }
-  }
+  // *generatePlan(): GeneratorFn<void> {
+  //   try {
+  //     this.isGeneratingPlan = true;
+  //     yield flowResult(
+  //       this.executionPlanState.generatePlan(
+  //         this.mappingEditorState.mapping,
+  //         this.queryState.query,
+  //         this.inputDataState.runtime,
+  //       ),
+  //     );
+  //   } catch (error) {
+  //     assertErrorThrown(error);
+  //     this.editorStore.applicationStore.log.error(
+  //       LogEvent.create(GRAPH_MANAGER_LOG_EVENT.EXECUTION_FAILURE),
+  //       error,
+  //     );
+  //     this.editorStore.applicationStore.notifyError(error);
+  //   } finally {
+  //     this.isGeneratingPlan = false;
+  //   }
+  // }
 }

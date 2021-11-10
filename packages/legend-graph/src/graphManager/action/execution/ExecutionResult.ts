@@ -24,8 +24,18 @@ export enum BuilderType {
 }
 
 export class MappingTestResult {
-  actual!: string;
-  result!: string;
+  mappingPath!: string;
+  testName!: string;
+  exception: object | undefined;
+  expected: string | undefined;
+  actual: string | undefined;
+  result!: TestResult;
+}
+
+export enum TestResult {
+  SUCCESS = 'SUCCESS',
+  FAILURE = 'FAILURE',
+  ERROR = 'ERROR',
 }
 
 export class ResultBuilder {

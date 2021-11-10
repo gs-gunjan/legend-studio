@@ -1922,7 +1922,7 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
     testId: string,
     clientVersion: string,
     useLosslessParse: boolean,
-  ): Promise<MappingTestResult> {
+  ): Promise<MappingTestResult[]> {
     return V1_buildMappingTestResult(
       await this.engine.executeMappingTest(
         this.createMappingTestExecutionInput(

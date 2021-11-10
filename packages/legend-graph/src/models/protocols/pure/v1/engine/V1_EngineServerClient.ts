@@ -293,7 +293,7 @@ export class V1_EngineServerClient extends AbstractServerClient {
   doMappingTest = (
     input: PlainObject<V1_ExecuteMappingTestInput>,
     returnResultAsText?: boolean,
-  ): Promise<PlainObject<V1_MappingTestResult> | Response> =>
+  ): Promise<PlainObject<V1_MappingTestResult[]> | Response> =>
     this.postWithTracing(
       this.getTraceData(CORE_ENGINE_TRACER_SPAN.EXECUTE),
       `${this._execution()}/doMappingTest`,

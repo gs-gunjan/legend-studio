@@ -28,6 +28,7 @@ export enum V1_ObjectInputType {
 export class V1_ObjectInputData extends V1_InputData implements Hashable {
   inputType = V1_ObjectInputType.JSON; // default value for backward compatibility
   sourceClass!: string;
+  data: string | undefined;
   testDataSource!: V1_TestDataSource;
 
   get hashCode(): string {

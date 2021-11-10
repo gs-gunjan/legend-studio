@@ -259,7 +259,7 @@ export abstract class AbstractPureGraphManager {
     testId: string,
     clientVersion: string,
     lossless: boolean,
-  ): Promise<MappingTestResult>;
+  ): Promise<MappingTestResult[]>;
 
   abstract generateMappingTestData(
     graph: PureModel,

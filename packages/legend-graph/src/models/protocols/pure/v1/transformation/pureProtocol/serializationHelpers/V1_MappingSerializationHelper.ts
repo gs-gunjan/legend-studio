@@ -698,17 +698,23 @@ const V1_objectInputData = createModelSchema(V1_ObjectInputData, {
   _type: usingConstantValueSchema(V1_InputDataType.OBJECT),
   inputType: primitive(),
   sourceClass: primitive(),
-  testDataSource: custom(
-    (val) => V1_serializeTestDataSource(val),
-    (val) => V1_deserializeTestDataSource(val),
+  data: optional(primitive()),
+  testDataSource: optional(
+    custom(
+      (val) => V1_serializeTestDataSource(val),
+      (val) => V1_deserializeTestDataSource(val),
+    ),
   ),
 });
 
 const V1_flatDataInputData = createModelSchema(V1_FlatDataInputData, {
   _type: usingConstantValueSchema(V1_InputDataType.FLAT_DATA),
-  testDataSource: custom(
-    (val) => V1_serializeTestDataSource(val),
-    (val) => V1_deserializeTestDataSource(val),
+  data: optional(primitive()),
+  testDataSource: optional(
+    custom(
+      (val) => V1_serializeTestDataSource(val),
+      (val) => V1_deserializeTestDataSource(val),
+    ),
   ),
   sourceFlatData: usingModelSchema(
     V1_packageableElementPointerDeserializerSchema,
@@ -718,10 +724,13 @@ const V1_flatDataInputData = createModelSchema(V1_FlatDataInputData, {
 const V1_relationalInputData = createModelSchema(V1_RelationalInputData, {
   _type: usingConstantValueSchema(V1_InputDataType.RELATIONAL),
   database: primitive(),
+  data: optional(primitive()),
   inputType: primitive(),
-  testDataSource: custom(
-    (val) => V1_serializeTestDataSource(val),
-    (val) => V1_deserializeTestDataSource(val),
+  testDataSource: optional(
+    custom(
+      (val) => V1_serializeTestDataSource(val),
+      (val) => V1_deserializeTestDataSource(val),
+    ),
   ),
 });
 
