@@ -16,6 +16,8 @@
 
 import { computed, makeObservable, observable } from 'mobx';
 import { ServiceTest } from '../../../DSLService_Exports.js';
+import { MappingTest } from '../../../graph/metamodel/pure/packageableElements/mapping/MappingTest.js';
+import { MappingTestSuite } from '../../../graph/metamodel/pure/packageableElements/mapping/MappingTestSuite.js';
 import { ServiceTestSuite } from '../../../graph/metamodel/pure/packageableElements/service/ServiceTestSuite.js';
 import { EqualTo } from '../../../graph/metamodel/pure/test/assertion/EqualTo.js';
 import { EqualToJson } from '../../../graph/metamodel/pure/test/assertion/EqualToJson.js';
@@ -27,6 +29,10 @@ import type {
 } from '../../../graph/metamodel/pure/test/Test.js';
 import { type ObserverContext, skipObserved } from './CoreObserverHelper.js';
 import { observe_ExternalFormatData } from './DSLData_ObserverHelper.js';
+import {
+  observe_MappingTest,
+  observe_MappingTestSuite,
+} from './DSLMapping_ObserverHelper.js';
 import {
   observe_ServiceTest,
   observe_ServiceTestSuite,
@@ -69,6 +75,8 @@ const observe_EqualToJson = skipObserved(
 export function observe_AtomicTest(metamodel: AtomicTest): AtomicTest {
   if (metamodel instanceof ServiceTest) {
     return observe_ServiceTest(metamodel);
+  } else if (metamodel instanceof MappingTest) {
+    return observe_MappingTest(metamodel);
   }
   return metamodel;
 }
@@ -90,6 +98,8 @@ export function observe_TestSuite(
 ): TestSuite {
   if (metamodel instanceof ServiceTestSuite) {
     return observe_ServiceTestSuite(metamodel, context);
+  } else if (metamodel instanceof MappingTestSuite) {
+    return observe_MappingTestSuite(metamodel, context);
   }
   return metamodel;
 }

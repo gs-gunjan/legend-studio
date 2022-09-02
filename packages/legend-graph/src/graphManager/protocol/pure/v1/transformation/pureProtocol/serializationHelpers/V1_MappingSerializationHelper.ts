@@ -44,7 +44,7 @@ import {
 import { PRIMITIVE_TYPE } from '../../../../../../../graph/MetaModelConst.js';
 import type { V1_InputData } from '../../../model/packageableElements/mapping/V1_InputData.js';
 import { V1_Mapping } from '../../../model/packageableElements/mapping/V1_Mapping.js';
-import { V1_MappingTest } from '../../../model/packageableElements/mapping/V1_MappingTest.js';
+import { V1_DEPRECATED__MappingTest } from '../../../model/packageableElements/mapping/V1_DEPRECATED__MappingTest.js';
 import {
   V1_multiplicitySchema,
   V1_packageableElementPointerDeserializerSchema,
@@ -102,6 +102,21 @@ import type { PureProtocolProcessorPlugin } from '../../../../PureProtocolProces
 import { V1_BindingTransformer } from '../../../model/packageableElements/externalFormat/store/V1_BindingTransformer.js';
 import { V1_MergeOperationClassMapping } from '../../../model/packageableElements/mapping/V1_MergeOperationClassMapping.js';
 import type { V1_RelationalOperationElement } from '../../../model/packageableElements/store/relational/model/V1_RelationalOperationElement.js';
+import { V1_MappingTestSuite } from '../../../model/packageableElements/mapping/V1_MappingTestSuite.js';
+import {
+  V1_AtomicTestType,
+  V1_deserializeAtomicTest,
+  V1_deserializeTestAssertion,
+  V1_serializeAtomicTest,
+  V1_serializeTestAssertion,
+  V1_TestSuiteType,
+} from './V1_TestSerializationHelper.js';
+import { V1_StoreTestData } from '../../../model/packageableElements/mapping/V1_StoreTestData.js';
+import {
+  V1_deserializeEmbeddedDataType,
+  V1_serializeEmbeddedDataType,
+} from './V1_DataElementSerializationHelper.js';
+import { V1_MappingTest } from '../../../model/packageableElements/mapping/V1_MappingTest.js';
 
 enum V1_ClassMappingType {
   OPERATION = 'operation',
@@ -804,20 +819,61 @@ const V1_deserializeTestAssert = (
   }
 };
 
-const V1_mappingTestModelSchema = createModelSchema(V1_MappingTest, {
-  assert: custom(
-    (val) => V1_serializeTestAssert(val),
-    (val) => V1_deserializeTestAssert(val),
-  ),
-  inputData: list(
+const V1_mappingTestModelLegacySchema = createModelSchema(
+  V1_DEPRECATED__MappingTest,
+  {
+    assert: custom(
+      (val) => V1_serializeTestAssert(val),
+      (val) => V1_deserializeTestAssert(val),
+    ),
+    inputData: list(
+      custom(
+        (val) => V1_serializeInputData(val),
+        (val) => V1_deserializeInputData(val),
+      ),
+    ),
+    name: primitive(),
+    query: usingModelSchema(V1_rawLambdaModelSchema),
+  },
+);
+
+export const V1_storeTestDataModelSchema = (
+  plugins: PureProtocolProcessorPlugin[],
+): ModelSchema<V1_StoreTestData> =>
+  createModelSchema(V1_StoreTestData, {
+    data: custom(
+      (val) => V1_serializeEmbeddedDataType(val, plugins),
+      (val) => V1_deserializeEmbeddedDataType(val, plugins),
+    ),
+    store: primitive(),
+  });
+
+export const V1_mappingTestModelSchema = createModelSchema(V1_MappingTest, {
+  _type: usingConstantValueSchema(V1_AtomicTestType.MAPPING_TEST),
+  assertions: list(
     custom(
-      (val) => V1_serializeInputData(val),
-      (val) => V1_deserializeInputData(val),
+      (val) => V1_serializeTestAssertion(val),
+      (val) => V1_deserializeTestAssertion(val),
     ),
   ),
-  name: primitive(),
+  id: primitive(),
   query: usingModelSchema(V1_rawLambdaModelSchema),
 });
+
+export const V1_mappingTestSuiteModelSchema = (
+  plugins: PureProtocolProcessorPlugin[],
+): ModelSchema<V1_MappingTestSuite> =>
+  createModelSchema(V1_MappingTestSuite, {
+    _type: usingConstantValueSchema(V1_TestSuiteType.MAPPING_TEST_SUITE),
+    id: primitive(),
+    storeTestDatas: usingModelSchema(V1_storeTestDataModelSchema(plugins)),
+    tests: list(
+      custom(
+        (val) => V1_serializeAtomicTest(val),
+        (val) => V1_deserializeAtomicTest(val),
+      ),
+    ),
+  });
 
 // ------------------------------------- Association Mapping -------------------------------------
 
@@ -1103,5 +1159,5 @@ export const V1_mappingModelSchema = (
     includedMappings: list(usingModelSchema(V1_mappingIncludeModelSchema)),
     name: primitive(),
     package: primitive(),
-    tests: list(usingModelSchema(V1_mappingTestModelSchema)),
+    tests: list(usingModelSchema(V1_mappingTestModelLegacySchema)),
   });

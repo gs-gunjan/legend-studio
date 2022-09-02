@@ -31,6 +31,8 @@ import {
   SKIP,
 } from 'serializr';
 import type { PureProtocolProcessorPlugin } from '../../../../PureProtocolProcessorPlugin.js';
+import { V1_MappingTest } from '../../../model/packageableElements/mapping/V1_MappingTest.js';
+import { V1_MappingTestSuite } from '../../../model/packageableElements/mapping/V1_MappingTestSuite.js';
 import { V1_MultiExecutionServiceTestResult } from '../../../model/packageableElements/service/V1_MultiExecutionServiceTestResult.js';
 import { V1_ServiceTest } from '../../../model/packageableElements/service/V1_ServiceTest.js';
 import { V1_ServiceTestSuite } from '../../../model/packageableElements/service/V1_ServiceTestSuite.js';
@@ -53,6 +55,10 @@ import { V1_AtomicTestId } from '../../../model/test/V1_AtomicTestId.js';
 import type { V1_TestSuite } from '../../../model/test/V1_TestSuite.js';
 import { V1_externalFormatDataModelSchema } from './V1_DataElementSerializationHelper.js';
 import {
+  V1_mappingTestModelSchema,
+  V1_mappingTestSuiteModelSchema,
+} from './V1_MappingSerializationHelper.js';
+import {
   V1_serviceTestModelSchema,
   V1_serviceTestSuiteModelSchema,
 } from './V1_ServiceSerializationHelper.js';
@@ -65,6 +71,7 @@ enum V1_AssertionStatusType {
 
 export enum V1_AtomicTestType {
   SERVICE_TEST = 'serviceTest',
+  MAPPING_TEST = 'mappingTest',
 }
 
 enum V1_TestAssertionType {
@@ -84,6 +91,7 @@ enum V1_TestResultType {
 
 export enum V1_TestSuiteType {
   SERVICE_TEST_SUITE = 'serviceTestSuite',
+  MAPPING_TEST_SUITE = 'mappingTestSuite',
 }
 
 export const V1_atomicTestIdModelSchema = createModelSchema(V1_AtomicTestId, {
@@ -228,6 +236,8 @@ export const V1_serializeAtomicTest = (
 ): PlainObject<V1_AtomicTest> => {
   if (protocol instanceof V1_ServiceTest) {
     return serialize(V1_serviceTestModelSchema, protocol);
+  } else if (protocol instanceof V1_MappingTest) {
+    return serialize(V1_mappingTestModelSchema, protocol);
   }
   throw new UnsupportedOperationError(`Can't serialize atomic test`, protocol);
 };
@@ -238,6 +248,8 @@ export const V1_deserializeAtomicTest = (
   switch (json._type) {
     case V1_AtomicTestType.SERVICE_TEST:
       return deserialize(V1_serviceTestModelSchema, json);
+    case V1_AtomicTestType.MAPPING_TEST:
+      return deserialize(V1_mappingTestModelSchema, json);
     default:
       throw new UnsupportedOperationError(
         `Can't deserialize atomic test of type '${json._type}'`,
@@ -284,6 +296,8 @@ export const V1_serializeTestSuite = (
 ): PlainObject<V1_TestSuite> => {
   if (protocol instanceof V1_ServiceTestSuite) {
     return serialize(V1_serviceTestSuiteModelSchema(plugins), protocol);
+  } else if (protocol instanceof V1_MappingTestSuite) {
+    return serialize(V1_mappingTestSuiteModelSchema(plugins), protocol);
   }
   throw new UnsupportedOperationError(`Can't serialize test suite`, protocol);
 };
@@ -295,6 +309,8 @@ export const V1_deserializeTestSuite = (
   switch (json._type) {
     case V1_TestSuiteType.SERVICE_TEST_SUITE:
       return deserialize(V1_serviceTestSuiteModelSchema(plugins), json);
+    case V1_TestSuiteType.MAPPING_TEST_SUITE:
+      return deserialize(V1_mappingTestSuiteModelSchema(plugins), json);
     default:
       throw new UnsupportedOperationError(
         `Can't deserialize test suite of type '${json._type}'`,

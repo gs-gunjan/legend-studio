@@ -55,7 +55,7 @@ import {
   observe_SetImplementation,
   observe_EnumerationMapping,
   observe_AssociationImplementation,
-  observe_MappingTest,
+  observe_MappingTest_Legacy,
   observe_SourceValue,
   observe_MappingTestAssert,
   observe_SetImplementationContainer,
@@ -162,7 +162,10 @@ export const mapping_addTest = action(
     val: MappingTest,
     observerContext: ObserverContext,
   ): void => {
-    addUniqueEntry(mapping.tests, observe_MappingTest(val, observerContext));
+    addUniqueEntry(
+      mapping.tests,
+      observe_MappingTest_Legacy(val, observerContext),
+    );
   },
 );
 

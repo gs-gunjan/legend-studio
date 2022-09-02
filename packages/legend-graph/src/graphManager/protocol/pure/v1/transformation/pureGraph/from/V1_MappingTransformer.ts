@@ -58,7 +58,7 @@ import type { InlineEmbeddedRelationalInstanceSetImplementation } from '../../..
 import type { OtherwiseEmbeddedRelationalInstanceSetImplementation } from '../../../../../../../graph/metamodel/pure/packageableElements/store/relational/mapping/OtherwiseEmbeddedRelationalInstanceSetImplementation.js';
 import type { InferableMappingElementIdValue } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/InferableMappingElementId.js';
 import type { MappingInclude } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingInclude.js';
-import type { MappingTest } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingTest.js';
+import type { DEPRECATED__MappingTest } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/DEPRECATED__MappingTest.js';
 import type { AssociationImplementation } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/AssociationImplementation.js';
 import { RelationalAssociationImplementation } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/RelationalAssociationImplementation.js';
 import type { PropertyReference } from '../../../../../../../graph/metamodel/pure/packageableElements/domain/PropertyReference.js';
@@ -93,7 +93,7 @@ import {
 } from '../../../model/packageableElements/store/modelToModel/mapping/V1_ObjectInputData.js';
 import { V1_FlatDataInputData } from '../../../model/packageableElements/store/flatData/mapping/V1_FlatDataInputData.js';
 import { V1_ExpectedOutputMappingTestAssert } from '../../../model/packageableElements/mapping/V1_ExpectedOutputMappingTestAssert.js';
-import { V1_MappingTest } from '../../../model/packageableElements/mapping/V1_MappingTest.js';
+import { V1_DEPRECATED__MappingTest } from '../../../model/packageableElements/mapping/V1_DEPRECATED__MappingTest.js';
 import { V1_RawValueSpecificationTransformer } from './V1_RawValueSpecificationTransformer.js';
 import { V1_MappingInclude } from '../../../model/packageableElements/mapping/V1_MappingInclude.js';
 import { V1_EnumerationMapping } from '../../../model/packageableElements/mapping/V1_EnumerationMapping.js';
@@ -148,6 +148,18 @@ import { isStubbed_EnumValueMapping } from '../../../../../../../graph/helpers/c
 import { isStubbed_RawLambda } from '../../../../../../../graph/helpers/creator/RawValueSpecificationCreatorHelper.js';
 import { isStubbed_RawRelationalOperationElement } from '../../../../../../../graph/helpers/creator/StoreRelational_ModelCreatorHelper.js';
 import { pruneSourceInformation } from '../../../../../../../graph/MetaModelUtils.js';
+import { V1_MappingTest } from '../../../model/packageableElements/mapping/V1_MappingTest.js';
+import {
+  V1_transformAtomicTest,
+  V1_transformTestAssertion,
+  V1_transformTestSuite,
+} from './V1_TestTransformer.js';
+import type { MappingTest } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingTest.js';
+import type { MappingTestSuite } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingTestSuite.js';
+import { V1_MappingTestSuite } from '../../../model/packageableElements/mapping/V1_MappingTestSuite.js';
+import type { StoreTestData } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/StoreTestData.js';
+import { V1_StoreTestData } from '../../../model/packageableElements/mapping/V1_StoreTestData.js';
+import { V1_transformEmbeddedData } from './V1_DataElementTransformer.js';
 
 export const V1_transformPropertyReference = (
   element: PropertyReference,
@@ -306,11 +318,11 @@ const transformTestAssert = (
   );
 };
 
-const transformMappingTest = (
-  element: MappingTest,
+const transformMappingTestLegacy = (
+  element: DEPRECATED__MappingTest,
   context: V1_GraphTransformerContext,
-): V1_MappingTest => {
-  const test = new V1_MappingTest();
+): V1_DEPRECATED__MappingTest => {
+  const test = new V1_DEPRECATED__MappingTest();
   test.assert = transformTestAssert(element.assert);
   test.inputData = element.inputData.map(transformMappingTestInputData);
   test.name = element.name;
@@ -318,6 +330,46 @@ const transformMappingTest = (
     new V1_RawValueSpecificationTransformer(context),
   ) as V1_RawLambda;
   return test;
+};
+
+const transformStoreTestData = (
+  element: StoreTestData,
+  context: V1_GraphTransformerContext,
+): V1_StoreTestData => {
+  const testData = new V1_StoreTestData();
+  testData.data = V1_transformEmbeddedData(element.data, context);
+  testData.store = element.store;
+  return testData;
+};
+
+export const V1_transformMappingTest = (
+  element: MappingTest,
+  context: V1_GraphTransformerContext,
+): V1_MappingTest => {
+  const mappingTest = new V1_MappingTest();
+  mappingTest.id = element.id;
+  mappingTest.assertions = element.assertions.map((assertion) =>
+    V1_transformTestAssertion(assertion),
+  );
+  mappingTest.query = element.query.accept_RawValueSpecificationVisitor(
+    new V1_RawValueSpecificationTransformer(context),
+  ) as V1_RawLambda;
+  return mappingTest;
+};
+
+export const V1_transformMappingTestSuite = (
+  element: MappingTestSuite,
+  context: V1_GraphTransformerContext,
+): V1_MappingTestSuite => {
+  const mappingTestSuite = new V1_MappingTestSuite();
+  mappingTestSuite.id = element.id;
+  mappingTestSuite.storeTestDatas = element.storeTestDatas.map((testData) =>
+    transformStoreTestData(testData, context),
+  );
+  mappingTestSuite.tests = element.tests.map((test) =>
+    V1_transformAtomicTest(test, context),
+  );
+  return mappingTestSuite;
 };
 
 // Include Mapping
@@ -1215,8 +1267,11 @@ export const V1_transformMapping = (
     (associationMapping) =>
       transformAssociationImplementation(associationMapping, context),
   );
-  mapping.tests = element.tests.map((test) =>
-    transformMappingTest(test, context),
+  mapping.tests = element.test.map((test) =>
+    transformMappingTestLegacy(test, context),
+  );
+  mapping.testSuites = element.tests.map((testSuite) =>
+    V1_transformTestSuite(testSuite, context),
   );
   return mapping;
 };

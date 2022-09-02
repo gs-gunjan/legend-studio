@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020-present, Goldman Sachs
+ * Copyright (c) 2022-present, Goldman Sachs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,19 @@
  * limitations under the License.
  */
 
-import type { Test } from './Test.js';
+import { hashArray, type Hashable } from '@finos/legend-shared';
+import { CORE_HASH_STRUCTURE } from '../../../../../../../graph/Core_HashUtils.js';
+import type { V1_EmbeddedData } from '../../data/V1_EmbeddedData.js';
 
-export interface Testable {
-  test: Test[];
+export class V1_StoreTestData implements Hashable {
+  store!: string;
+  data!: V1_EmbeddedData;
+
+  get hashCode(): string {
+    return hashArray([
+      CORE_HASH_STRUCTURE.STORE_TEST_DATA,
+      this.store,
+      this.data,
+    ]);
+  }
 }

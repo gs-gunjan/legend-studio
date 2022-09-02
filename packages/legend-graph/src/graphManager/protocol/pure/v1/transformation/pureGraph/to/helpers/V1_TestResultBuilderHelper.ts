@@ -54,7 +54,7 @@ const buildAtomicTestId = (
   element: V1_AtomicTestId,
   testable: Testable,
 ): AtomicTestId => {
-  const testSuite = testable.tests
+  const testSuite = testable.test
     .filter(filterByType(TestSuite))
     .find((t) => t.id === element.testSuiteId);
   let atomicTest: AtomicTest;
@@ -64,7 +64,7 @@ const buildAtomicTestId = (
     );
   } else {
     atomicTest = guaranteeType(
-      testable.tests.find((e) => e.id === element.atomicTestId),
+      testable.test.find((e) => e.id === element.atomicTestId),
       AtomicTest,
     );
   }

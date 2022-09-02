@@ -37,6 +37,12 @@ import type {
 } from '../../../../../../../graph/metamodel/pure/test/Test.js';
 import { EqualToTDS } from '../../../../../../../graph/metamodel/pure/test/assertion/EqualToTDS.js';
 import { V1_EqualToTDS } from '../../../model/test/assertion/V1_EqualToTDS.js';
+import {
+  V1_transformMappingTest,
+  V1_transformMappingTestSuite,
+} from './V1_MappingTransformer.js';
+import { MappingTestSuite } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingTestSuite.js';
+import { MappingTest } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingTest.js';
 
 const transformEqualTo = (element: EqualTo): V1_EqualTo => {
   const equalTo = new V1_EqualTo();
@@ -59,9 +65,14 @@ const transformEqualToTDS = (element: EqualToTDS): V1_EqualToTDS => {
   return equalToTDS;
 };
 
-export const V1_transformAtomicTest = (value: AtomicTest): V1_AtomicTest => {
+export const V1_transformAtomicTest = (
+  value: AtomicTest,
+  context: V1_GraphTransformerContext,
+): V1_AtomicTest => {
   if (value instanceof ServiceTest) {
-    return V1_transformServiceTest(value);
+    return V1_transformServiceTest(value, context);
+  } else if (value instanceof MappingTest) {
+    return V1_transformMappingTest(value, context);
   }
   throw new UnsupportedOperationError(`Can't transform atomic test`, value);
 };
@@ -85,6 +96,8 @@ export const V1_transformTestSuite = (
 ): V1_TestSuite => {
   if (value instanceof ServiceTestSuite) {
     return V1_transformServiceTestSuite(value, context);
+  } else if (value instanceof MappingTestSuite) {
+    return V1_transformMappingTestSuite(value, context);
   }
   throw new UnsupportedOperationError(`Can't transform test suite`, value);
 };

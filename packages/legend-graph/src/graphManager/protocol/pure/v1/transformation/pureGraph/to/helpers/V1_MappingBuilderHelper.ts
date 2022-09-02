@@ -20,6 +20,7 @@ import {
   guaranteeNonNullable,
   assertTrue,
   assertType,
+  guaranteeType,
   UnsupportedOperationError,
 } from '@finos/legend-shared';
 import { PRIMITIVE_TYPE } from '../../../../../../../../graph/MetaModelConst.js';
@@ -32,7 +33,7 @@ import {
   EnumValueMapping,
   SourceValue,
 } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/EnumValueMapping.js';
-import { MappingTest } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingTest.js';
+import { DEPRECATED__MappingTest } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/DEPRECATED__MappingTest.js';
 import { ObjectInputData } from '../../../../../../../../graph/metamodel/pure/packageableElements/store/modelToModel/mapping/ObjectInputData.js';
 import type { InputData } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/InputData.js';
 import { FlatDataInputData } from '../../../../../../../../graph/metamodel/pure/packageableElements/store/flatData/mapping/FlatDataInputData.js';
@@ -51,7 +52,7 @@ import {
   V1_getEnumValueMappingSourceValueType,
 } from '../../../../model/packageableElements/mapping/V1_EnumValueMapping.js';
 import type { V1_EnumerationMapping } from '../../../../model/packageableElements/mapping/V1_EnumerationMapping.js';
-import type { V1_MappingTest } from '../../../../model/packageableElements/mapping/V1_MappingTest.js';
+import type { V1_DEPRECATED__MappingTest } from '../../../../model/packageableElements/mapping/V1_DEPRECATED__MappingTest.js';
 import { V1_ExpectedOutputMappingTestAssert } from '../../../../model/packageableElements/mapping/V1_ExpectedOutputMappingTestAssert.js';
 import type { V1_InputData } from '../../../../model/packageableElements/mapping/V1_InputData.js';
 import { V1_ObjectInputData } from '../../../../model/packageableElements/store/modelToModel/mapping/V1_ObjectInputData.js';
@@ -68,6 +69,15 @@ import {
 import { getRelationalInputType } from '../../../../../../../../graph/helpers/StoreRelational_Helper.js';
 import { getEnumValue } from '../../../../../../../../graph/helpers/DomainHelper.js';
 import { V1_getIncludedMappingPath } from '../../../../helpers/V1_DSLMapping_Helper.js';
+import type { V1_MappingTestSuite } from '../../../../model/packageableElements/mapping/V1_MappingTestSuite.js';
+import { MappingTestSuite } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingTestSuite.js';
+import { V1_MappingTest } from '../../../../model/packageableElements/mapping/V1_MappingTest.js';
+import type { TestSuite } from '../../../../../../../../graph/metamodel/pure/test/Test.js';
+import { MappingTest } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingTest.js';
+import { V1_buildTestAssertion } from './V1_TestBuilderHelper.js';
+import type { V1_StoreTestData } from '../../../../model/packageableElements/mapping/V1_StoreTestData.js';
+import { StoreTestData } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/StoreTestData.js';
+import { V1_buildEmbeddedData } from './V1_DataElementBuilderHelper.js';
 
 export const V1_getInferredClassMappingId = (
   _class: Class,
@@ -197,6 +207,54 @@ export const V1_buildMappingInclude = (
   return includedMapping;
 };
 
+const buildStoreTestData = (
+  element: V1_StoreTestData,
+  context: V1_GraphBuilderContext,
+): StoreTestData => {
+  const storeTestData = new StoreTestData();
+  storeTestData.store = element.store;
+  storeTestData.data = V1_buildEmbeddedData(element.data, context);
+  return storeTestData;
+};
+
+export const V1_buildMappingTest = (
+  element: V1_MappingTest,
+  parentSuite: TestSuite,
+  context: V1_GraphBuilderContext,
+): MappingTest => {
+  const mappingTest = new MappingTest();
+  mappingTest.id = element.id;
+  mappingTest.__parent = parentSuite;
+  mappingTest.assertions = element.assertions.map((assertion) =>
+    V1_buildTestAssertion(assertion, mappingTest, context),
+  );
+  mappingTest.query = V1_buildRawLambdaWithResolvedPaths(
+    element.query.parameters,
+    element.query.body,
+    context,
+  );
+  return mappingTest;
+};
+
+export const V1_buildMappingTestSuite = (
+  element: V1_MappingTestSuite,
+  context: V1_GraphBuilderContext,
+): MappingTestSuite => {
+  const mappingTestSuite = new MappingTestSuite();
+  mappingTestSuite.id = element.id;
+  mappingTestSuite.storeTestDatas = element.storeTestDatas.map((testData) =>
+    buildStoreTestData(testData, context),
+  );
+  mappingTestSuite.tests = element.tests.map((test) =>
+    V1_buildMappingTest(
+      guaranteeType(test, V1_MappingTest),
+      mappingTestSuite,
+      context,
+    ),
+  );
+  return mappingTestSuite;
+};
+
 const V1_buildMappingTestInputData = (
   inputData: V1_InputData,
   context: V1_GraphBuilderContext,
@@ -257,10 +315,10 @@ const V1_buildMappingTestInputData = (
   );
 };
 
-export const V1_buildMappingTest = (
-  mappingTest: V1_MappingTest,
+export const V1_buildMappingTestLegacy = (
+  mappingTest: V1_DEPRECATED__MappingTest,
   context: V1_GraphBuilderContext,
-): MappingTest => {
+): DEPRECATED__MappingTest => {
   assertNonEmptyString(
     mappingTest.name,
     `Mapping test 'name' field is missing or empty`,
@@ -285,7 +343,12 @@ export const V1_buildMappingTest = (
   );
   // TODO: maybe we want to validate the graph fetch tree here so we can throw user into
   // text mode to resolve the issue but as of now, we don't do that because it's just test
-  return new MappingTest(mappingTest.name, query, inputData, modelAssert);
+  return new DEPRECATED__MappingTest(
+    mappingTest.name,
+    query,
+    inputData,
+    modelAssert,
+  );
 };
 
 export const V1_resolveClassMappingRoot = (mapping: Mapping): void => {

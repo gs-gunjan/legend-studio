@@ -205,11 +205,7 @@ export abstract class BasicModel {
   }
 
   get ownTestables(): Testable[] {
-    return [
-      ...this.ownServices,
-      // TODO: add mappings once supported in the backend
-      // ...this.ownMappings,
-    ];
+    return [...this.ownServices, ...this.ownMappings];
   }
 
   getExtensionElements<T extends PackageableElement>(
