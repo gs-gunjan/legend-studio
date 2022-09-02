@@ -99,6 +99,7 @@ import {
   TestData,
   ConnectionTestData,
   DEFAULT_TEST_SUITE_PREFIX,
+  DEPRECATED__MappingTest,
 } from '@finos/legend-graph';
 import {
   ActionAlertActionType,
@@ -633,7 +634,7 @@ export class MappingExecutionState {
         const assert = new ExpectedOutputMappingTestAssert(
           toGrammarString(this.executionResultText),
         );
-        const mappingTest = new MappingTest(
+        const mappingTest = new DEPRECATED__MappingTest(
           generateMappingTestName(this.mappingEditorState.mapping),
           query,
           [inputData],

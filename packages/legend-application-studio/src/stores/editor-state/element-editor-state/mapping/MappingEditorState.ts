@@ -98,6 +98,7 @@ import {
   InferableMappingElementRootExplicitValue,
   stub_Class,
   findPropertyMapping,
+  DEPRECATED__MappingTest,
 } from '@finos/legend-graph';
 import { LambdaEditorState } from '@finos/legend-application';
 import type {
@@ -127,11 +128,11 @@ export interface MappingExplorerTreeNodeData extends TreeNodeData {
 
 export const generateMappingTestName = (mapping: Mapping): string => {
   const generatedName = generateEnumerableNameFromToken(
-    mapping.tests.map((test) => test.name),
+    mapping.test.map((t) => t.name),
     'test',
   );
   assertTrue(
-    !mapping.tests.find((test) => test.name === generatedName),
+    !mapping.test.find((t) => t.name === generatedName),
     `Can't auto-generate test name for value '${generatedName}'`,
   );
   return generatedName;
@@ -627,8 +628,8 @@ export class MappingEditorState extends ElementEditorState {
     });
 
     this.editorStore = editorStore;
-    this.mappingTestStates = this.mapping.tests.map(
-      (test) => new MappingTestState(editorStore, test, this),
+    this.mappingTestStates = this.mapping.test.map(
+      (t) => new MappingTestState(editorStore, t, this),
     );
     this.mappingExplorerTreeData = getMappingElementTreeData(
       this.mapping,
@@ -1360,7 +1361,7 @@ export class MappingEditorState extends ElementEditorState {
   // -------------------------------------- Test ---------------------------------------
 
   *openTest(
-    test: MappingTest,
+    test: DEPRECATED__MappingTest,
     openTab?: MAPPING_TEST_EDITOR_TAB_TYPE,
   ): GeneratorFn<void> {
     const isOpened = Boolean(
@@ -1437,7 +1438,7 @@ export class MappingEditorState extends ElementEditorState {
     this.allTestRunTime = Date.now() - startTime;
   }
 
-  *addTest(test: MappingTest): GeneratorFn<void> {
+  *addTest(test: DEPRECATED__MappingTest): GeneratorFn<void> {
     this.mappingTestStates.push(
       new MappingTestState(this.editorStore, test, this),
     );
@@ -1449,7 +1450,7 @@ export class MappingEditorState extends ElementEditorState {
     yield flowResult(this.openTest(test));
   }
 
-  *deleteTest(test: MappingTest): GeneratorFn<void> {
+  *deleteTest(test: DEPRECATED__MappingTest): GeneratorFn<void> {
     const matchMappingTestState = (
       tabState: MappingEditorTabState | undefined,
     ): boolean =>
@@ -1508,7 +1509,7 @@ export class MappingEditorState extends ElementEditorState {
         source,
       );
     }
-    const newTest = new MappingTest(
+    const newTest = new DEPRECATED__MappingTest(
       generateMappingTestName(this.mapping),
       query,
       [inputData],

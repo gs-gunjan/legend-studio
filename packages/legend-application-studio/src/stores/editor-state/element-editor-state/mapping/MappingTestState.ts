@@ -49,7 +49,6 @@ import {
 } from 'mobx';
 import { createMockDataForMappingElementSource } from '../../../shared/MockDataUtil.js';
 import {
-  type MappingTest,
   type RawLambda,
   type Runtime,
   type InputData,
@@ -83,6 +82,7 @@ import {
   stub_Class,
   generateIdentifiedConnectionId,
   DEPRECATED__validate_MappingTest,
+  type DEPRECATED__MappingTest,
 } from '@finos/legend-graph';
 import {
   ExecutionPlanState,
@@ -113,11 +113,15 @@ export enum TEST_RESULT {
 
 export class MappingTestQueryState extends LambdaEditorState {
   editorStore: EditorStore;
-  test: MappingTest;
+  test: DEPRECATED__MappingTest;
   isInitializingLambda = false;
   query: RawLambda;
 
-  constructor(editorStore: EditorStore, test: MappingTest, query: RawLambda) {
+  constructor(
+    editorStore: EditorStore,
+    test: DEPRECATED__MappingTest,
+    query: RawLambda,
+  ) {
     super('', LAMBDA_PIPE);
 
     makeObservable(this, {
@@ -400,7 +404,7 @@ export class MappingTestState {
   editorStore: EditorStore;
   mappingEditorState: MappingEditorState;
   result: TEST_RESULT = TEST_RESULT.NONE;
-  test: MappingTest;
+  test: DEPRECATED__MappingTest;
   runTime = 0;
   isSkipped = false;
   errorRunningTest?: Error | undefined;
@@ -416,7 +420,7 @@ export class MappingTestState {
 
   constructor(
     editorStore: EditorStore,
-    test: MappingTest,
+    test: DEPRECATED__MappingTest,
     mappingEditorState: MappingEditorState,
   ) {
     makeAutoObservable(this, {

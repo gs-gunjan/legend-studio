@@ -17,5 +17,5 @@
 import type { Test } from './Test.js';
 
 export interface Testable {
-  test: Test[];
+  tests: Test[];
 }
