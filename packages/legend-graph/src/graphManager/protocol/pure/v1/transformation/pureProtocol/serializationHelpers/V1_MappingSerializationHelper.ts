@@ -104,11 +104,12 @@ import { V1_MergeOperationClassMapping } from '../../../model/packageableElement
 import type { V1_RelationalOperationElement } from '../../../model/packageableElements/store/relational/model/V1_RelationalOperationElement.js';
 import { V1_MappingTestSuite } from '../../../model/packageableElements/mapping/V1_MappingTestSuite.js';
 import {
-  V1_AtomicTestType,
   V1_deserializeAtomicTest,
   V1_deserializeTestAssertion,
+  V1_deserializeTestSuite,
   V1_serializeAtomicTest,
   V1_serializeTestAssertion,
+  V1_serializeTestSuite,
   V1_TestSuiteType,
 } from './V1_TestSerializationHelper.js';
 import { V1_StoreTestData } from '../../../model/packageableElements/mapping/V1_StoreTestData.js';
@@ -117,6 +118,8 @@ import {
   V1_serializeEmbeddedDataType,
 } from './V1_DataElementSerializationHelper.js';
 import { V1_MappingTest } from '../../../model/packageableElements/mapping/V1_MappingTest.js';
+import type { V1_TestSuite } from '../../../model/test/V1_TestSuite.js';
+import { V1_AtomicTestType } from './V1_TestSerializationEnum.js';
 
 enum V1_ClassMappingType {
   OPERATION = 'operation',
@@ -1123,7 +1126,7 @@ const V1_mappingIncludeModelSchema = createModelSchema(V1_MappingInclude, {
 });
 
 export const V1_mappingModelSchema = (
-  plugins?: PureProtocolProcessorPlugin[],
+  plugins: PureProtocolProcessorPlugin[],
 ): ModelSchema<V1_Mapping> =>
   createModelSchema(V1_Mapping, {
     _type: usingConstantValueSchema(V1_MAPPING_ELEMENT_PROTOCOL_TYPE),
@@ -1160,4 +1163,19 @@ export const V1_mappingModelSchema = (
     name: primitive(),
     package: primitive(),
     tests: list(usingModelSchema(V1_mappingTestModelLegacySchema)),
+    testSuites: custom(
+      (values) =>
+        serializeArray(
+          values,
+          (value: V1_TestSuite) => V1_serializeTestSuite(value, plugins),
+          {
+            skipIfEmpty: true,
+            INTERNAL__forceReturnEmptyInTest: true,
+          },
+        ),
+      (values) =>
+        deserializeArray(values, (v) => V1_deserializeTestSuite(v, plugins), {
+          skipIfEmpty: false,
+        }),
+    ),
   });

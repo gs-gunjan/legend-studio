@@ -62,16 +62,12 @@ import {
   V1_serviceTestModelSchema,
   V1_serviceTestSuiteModelSchema,
 } from './V1_ServiceSerializationHelper.js';
+import { V1_AtomicTestType } from './V1_TestSerializationEnum.js';
 
 enum V1_AssertionStatusType {
   ASSERT_FAIL = 'assertFail',
   ASSERT_PASS = 'assertPass',
   EQUAL_TO_JSON_ASSERT_FAIL = 'equalToJsonAssertFail',
-}
-
-export enum V1_AtomicTestType {
-  SERVICE_TEST = 'serviceTest',
-  MAPPING_TEST = 'mappingTest',
 }
 
 enum V1_TestAssertionType {

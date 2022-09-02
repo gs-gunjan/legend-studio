@@ -69,7 +69,6 @@ import {
   extractExecutionResultValues,
   LAMBDA_PIPE,
   GRAPH_MANAGER_EVENT,
-  MappingTest,
   Class,
   ObjectInputData,
   ObjectInputType,

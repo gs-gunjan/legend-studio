@@ -74,7 +74,6 @@ import {
   EnumerationMapping,
   SetImplementation,
   PureInstanceSetImplementation,
-  MappingTest,
   ExpectedOutputMappingTestAssert,
   ObjectInputData,
   ObjectInputType,

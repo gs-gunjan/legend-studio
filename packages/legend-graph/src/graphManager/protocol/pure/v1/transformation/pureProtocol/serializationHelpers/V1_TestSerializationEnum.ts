@@ -14,20 +14,7 @@
  * limitations under the License.
  */
 
-import { hashArray, type Hashable } from '@finos/legend-shared';
-import { CORE_HASH_STRUCTURE } from '../../../../../../../graph/Core_HashUtils.js';
-import { V1_TestSuite } from '../../test/V1_TestSuite.js';
-import type { V1_StoreTestData } from './V1_StoreTestData.js';
-
-export class V1_MappingTestSuite extends V1_TestSuite implements Hashable {
-  storeTestDatas: V1_StoreTestData[] = [];
-
-  get hashCode(): string {
-    return hashArray([
-      CORE_HASH_STRUCTURE.MAPPING_TEST_SUITE,
-      hashArray(this.storeTestDatas),
-      this.id,
-      hashArray(this.tests),
-    ]);
-  }
+export enum V1_AtomicTestType {
+  SERVICE_TEST = 'serviceTest',
+  MAPPING_TEST = 'mappingTest',
 }
