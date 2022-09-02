@@ -791,12 +791,9 @@ export const observe_Mapping = skipObservedWithContext(
       observe_AssociationImplementation(associationMapping, context),
     );
     metamodel.test.forEach((t) => observe_MappingTest_Legacy(t, context));
-    if (metamodel.tests) {
-      metamodel.tests.forEach((testSuite) =>
-        observe_TestSuite(testSuite, context),
-      );
-    }
-
+    metamodel.tests.forEach((testSuite) =>
+      observe_TestSuite(testSuite, context),
+    );
     return metamodel;
   },
 );

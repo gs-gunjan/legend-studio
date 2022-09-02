@@ -35,7 +35,6 @@ import type { V1_Service } from '../../../model/packageableElements/service/V1_S
 import { V1_ClassMappingSecondPassBuilder } from './V1_ClassMappingSecondPassBuilder.js';
 import {
   V1_buildMappingTestLegacy,
-  V1_buildMappingTestSuite,
   V1_resolveClassMappingRoot,
 } from './helpers/V1_MappingBuilderHelper.js';
 import type { V1_PackageableRuntime } from '../../../model/packageableElements/runtime/V1_PackageableRuntime.js';
