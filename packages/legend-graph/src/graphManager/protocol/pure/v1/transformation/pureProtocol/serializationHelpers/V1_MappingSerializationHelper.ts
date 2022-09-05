@@ -1169,7 +1169,7 @@ export const V1_mappingModelSchema = (
           values,
           (value: V1_TestSuite) => V1_serializeTestSuite(value, plugins),
           {
-            skipIfEmpty: true,
+            skipIfEmpty: false,
             INTERNAL__forceReturnEmptyInTest: true,
           },
         ),
