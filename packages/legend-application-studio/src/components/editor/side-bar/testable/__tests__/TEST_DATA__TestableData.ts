@@ -322,7 +322,6 @@ export const TEST_DATA__RelationalServiceTestable = [
       includedMappings: [],
       name: 'RelationalMapping',
       package: 'execution',
-      testSuites: [],
       tests: [
         {
           assert: {

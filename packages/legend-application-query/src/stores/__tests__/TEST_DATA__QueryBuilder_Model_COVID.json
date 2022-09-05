@@ -451,7 +451,6 @@
       "includedMappings": [],
       "name": "CovidDataMapping",
       "package": "mapping",
-      "testSuites": [],
       "tests": []
     },
     "classifierPath": "meta::pure::mapping::Mapping"

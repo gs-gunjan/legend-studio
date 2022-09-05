@@ -464,7 +464,6 @@ export const roundtripTestData = [
       includedMappings: [],
       name: 'mapping',
       package: 'anything',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',

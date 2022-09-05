@@ -258,7 +258,6 @@ export const TEST_DATA__PreviewData_entities = [
       includedMappings: [],
       name: 'RelationalMapping',
       package: 'model',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',

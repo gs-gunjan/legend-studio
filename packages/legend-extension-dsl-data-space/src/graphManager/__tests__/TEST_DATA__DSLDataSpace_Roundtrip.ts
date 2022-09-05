@@ -24,7 +24,6 @@ export const TEST_DATA__roundtrip = [
       includedMappings: [],
       name: 'TestMapping',
       package: 'test::model',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',

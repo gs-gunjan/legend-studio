@@ -349,7 +349,6 @@
       "includedMappings": [],
       "name": "NewMapping",
       "package": "model",
-      "testSuites": [],
       "tests": []
     },
     "classifierPath": "meta::pure::mapping::Mapping"

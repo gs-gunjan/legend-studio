@@ -70,7 +70,6 @@
       "includedMappings": [],
       "name": "AutoMapping",
       "package": "test::autoMapping",
-      "testSuites": [],
       "tests": [
         {
           "assert": {

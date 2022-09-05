@@ -477,7 +477,6 @@ export const TEST_DATA__SemiStructuredRelationalTypeRoundtrip = [
       includedMappings: [],
       name: 'SnowflakeMapping',
       package: 'joinChain::mapping',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',

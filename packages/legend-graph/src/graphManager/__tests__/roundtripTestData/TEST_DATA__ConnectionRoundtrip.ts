@@ -110,7 +110,6 @@ export const testModelChainConnectionRoundtrip = [
       includedMappings: [],
       name: 'myMapping',
       package: 'test',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',

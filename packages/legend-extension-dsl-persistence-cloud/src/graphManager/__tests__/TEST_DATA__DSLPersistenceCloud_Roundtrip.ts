@@ -158,7 +158,6 @@ export const TEST_DATA__roundtrip = [
       includedMappings: [],
       name: 'Mapping',
       package: 'org::dxl',
-      testSuites: [],
       tests: [],
     },
   },

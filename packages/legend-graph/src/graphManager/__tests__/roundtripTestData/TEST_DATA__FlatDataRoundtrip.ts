@@ -7529,7 +7529,6 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
       includedMappings: [],
       name: 'PersonWithColumnNamesMapping__asFlatData',
       package: 'test',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',
@@ -15573,7 +15572,6 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
       includedMappings: [],
       name: 'TapeToLogical',
       package: 'myFlatDataTest',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',
@@ -15669,7 +15667,6 @@ export const TEST_DATA__FlatDataInputDataRoundtrip = [
       includedMappings: [],
       name: 'tMapping',
       package: 'test',
-      testSuites: [],
       tests: [
         {
           assert: {

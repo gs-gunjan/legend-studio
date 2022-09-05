@@ -359,7 +359,6 @@ export const TEST_DATA__SimpleGraph = [
       ],
       name: 'MyMapping',
       package: 'demo',
-      testSuites: [],
       tests: [
         {
           assert: {

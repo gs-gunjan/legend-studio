@@ -222,7 +222,6 @@ export const TEST_DATA__simpleDebuggingCase = [
       includedMappings: [],
       name: 'MyMapping',
       package: 'myPack',
-      testSuites: [],
       tests: [],
     },
   },

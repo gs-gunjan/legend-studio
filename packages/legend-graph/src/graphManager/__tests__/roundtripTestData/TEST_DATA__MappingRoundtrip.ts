@@ -83,7 +83,6 @@ export const TEST_DATA__MappingRoundtrip = [
       includedMappings: [],
       name: 'tMapping1',
       package: 'test',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',
@@ -361,7 +360,6 @@ export const TEST_DATA__MappingRoundtrip = [
       includedMappings: [],
       name: 'tMapping2',
       package: 'test',
-      testSuites: [],
       tests: [
         {
           assert: {
@@ -612,7 +610,6 @@ export const TEST_DATA__LocalPropertyMapping = [
       includedMappings: [],
       name: 'crossPropertyMappingWithLocalProperties',
       package: 'test',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',
@@ -1053,7 +1050,6 @@ export const TEST_DATA__AggregationAwareMappingRoundtrip = [
       includedMappings: [],
       name: 'map',
       package: 'test',
-      testSuites: [],
       tests: [],
     },
     path: 'test::map',
@@ -1295,7 +1291,6 @@ export const TEST_DATA__Relational_LocalPropertyMappingRoundtrip = [
       includedMappings: [],
       name: 'InMemoryAndRelationalCrossStoreMapping1',
       package: 'my::mappings',
-      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',

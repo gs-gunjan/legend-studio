@@ -116,7 +116,6 @@ const entities = [
       includedMappings: [],
       name: 'MyMapping',
       package: 'model',
-      testSuites: [],
       tests: [
         {
           assert: {
