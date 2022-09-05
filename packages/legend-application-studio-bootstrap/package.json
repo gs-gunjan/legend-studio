@@ -50,6 +50,7 @@
     "@finos/legend-extension-application-studio-query-builder": "workspace:*",
     "@finos/legend-extension-dsl-data-space": "workspace:*",
     "@finos/legend-extension-dsl-diagram": "workspace:*",
+    "@finos/legend-extension-dsl-mastery": "workspace:*",
     "@finos/legend-extension-dsl-persistence": "workspace:*",
     "@finos/legend-extension-dsl-persistence-cloud": "workspace:*",
     "@finos/legend-extension-dsl-text": "workspace:*",
