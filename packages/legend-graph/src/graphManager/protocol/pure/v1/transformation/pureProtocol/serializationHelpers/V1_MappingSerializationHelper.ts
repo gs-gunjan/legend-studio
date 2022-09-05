@@ -1169,13 +1169,13 @@ export const V1_mappingModelSchema = (
           values,
           (value: V1_TestSuite) => V1_serializeTestSuite(value, plugins),
           {
-            skipIfEmpty: false,
+            skipIfEmpty: true,
             INTERNAL__forceReturnEmptyInTest: true,
           },
         ),
       (values) =>
         deserializeArray(values, (v) => V1_deserializeTestSuite(v, plugins), {
-          skipIfEmpty: false,
+          skipIfEmpty: true,
         }),
     ),
   });
