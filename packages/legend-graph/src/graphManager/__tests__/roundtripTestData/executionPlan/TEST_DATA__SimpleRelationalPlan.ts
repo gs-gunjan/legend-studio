@@ -515,6 +515,7 @@ export const TEST_DATA__simpleRelationalPlan = {
         includedMappings: [],
         name: 'NewMapping',
         package: 'model',
+        testSuites: [],
         tests: [],
       },
       classifierPath: 'meta::pure::mapping::Mapping',

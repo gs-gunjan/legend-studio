@@ -288,6 +288,7 @@
       ],
       "name": "parentMapping",
       "package": "model",
+      "testSuites": [],
       "tests": []
     },
     "classifierPath": "meta::pure::mapping::Mapping"
@@ -369,6 +370,7 @@
       "includedMappings": [],
       "name": "subMapping",
       "package": "model",
+      "testSuites": [],
       "tests": []
     },
     "classifierPath": "meta::pure::mapping::Mapping"

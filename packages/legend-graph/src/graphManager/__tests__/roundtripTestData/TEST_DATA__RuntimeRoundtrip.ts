@@ -47,6 +47,7 @@ export const TEST_DATA__RuntimeRoundtrip = [
       includedMappings: [],
       name: 'tMapping',
       package: 'test',
+      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',

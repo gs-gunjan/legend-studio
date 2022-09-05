@@ -882,6 +882,7 @@
       "includedMappings": [],
       "name": "map",
       "package": "my",
+      "testSuites": [],
       "tests": []
     },
     "classifierPath": "meta::pure::mapping::Mapping"

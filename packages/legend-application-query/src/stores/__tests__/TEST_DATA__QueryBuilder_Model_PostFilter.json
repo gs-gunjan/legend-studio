@@ -140,6 +140,7 @@
       "includedMappings": [],
       "name": "M2MMapping",
       "package": "model::postFilter",
+      "testSuites": [],
       "tests": []
     },
     "classifierPath": "meta::pure::mapping::Mapping"

@@ -40,6 +40,7 @@ export const TEST_DATA__InferenceDefaultMappingElementID = [
       includedMappings: [],
       name: 'M',
       package: 'test',
+      testSuites: [],
       tests: [],
     },
     classifierPath: 'meta::pure::mapping::Mapping',

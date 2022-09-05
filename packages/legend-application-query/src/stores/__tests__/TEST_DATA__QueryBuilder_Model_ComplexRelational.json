@@ -10901,6 +10901,7 @@
       "includedMappings": [],
       "name": "simpleRelationalMapping",
       "package": "model::relational::tests",
+      "testSuites": [],
       "tests": []
     },
     "classifierPath": "meta::pure::mapping::Mapping"
