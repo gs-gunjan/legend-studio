@@ -202,7 +202,9 @@ export const pureSingleExecution_setMapping = action(
     value: Mapping,
     observerContext: ObserverContext,
   ): void => {
-    pe.mapping.value = observe_Mapping(value, observerContext);
+    if (pe.mapping !== undefined) {
+      pe.mapping.value = observe_Mapping(value, observerContext);
+    }
   },
 );
 export const pureSingleExecution_setRuntime = action(
