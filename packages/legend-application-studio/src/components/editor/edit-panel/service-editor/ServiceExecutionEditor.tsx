@@ -88,240 +88,245 @@ const PureExecutionContextConfigurationEditor = observer(
     // mapping
     // TODO: this is not generic error handling, as there could be other problems
     // with mapping, we need to genericize this
-    const isMappingEmpty = validate_PureExecutionMapping(
-      executionContext.mapping.value,
-    );
-    const mapping = executionContext.mapping.value;
-    const mappingOptions =
-      editorStore.graphManagerState.usableMappings.map(buildElementOption);
-    const noMappingLabel = (
-      <div
-        className="service-execution-editor__configuration__mapping-option--empty"
-        title={isMappingEmpty?.messages.join('\n') ?? ''}
-      >
-        <div className="service-execution-editor__configuration__mapping-option--empty__label">
-          (none)
-        </div>
-        <ErrorIcon />
-      </div>
-    );
-    const selectedMappingOption = {
-      value: mapping,
-      label: isMappingEmpty ? noMappingLabel : mapping.path,
-    };
-    const onMappingSelectionChange = (
-      val: PackageableElementOption<Mapping>,
-    ): void => {
-      if (val.value !== mapping) {
-        executionContextState.setMapping(val.value);
-        pureExecutionState.autoSelectRuntimeOnMappingChange(val.value);
-      }
-    };
-    const visitMapping = (): void => editorStore.openElement(mapping);
-    // runtime
-    const runtime = executionContext.runtime;
-    const isRuntimePointer = runtime instanceof RuntimePointer;
-    const customRuntimeLabel = (
-      <div className="service-execution-editor__configuration__runtime-option--custom">
-        <CogIcon />
-        <div className="service-execution-editor__configuration__runtime-option--custom__label">
-          (custom)
-        </div>
-      </div>
-    );
-    // only show custom runtime option when a runtime pointer is currently selected
-    let runtimeOptions = !isRuntimePointer
-      ? []
-      : ([{ label: customRuntimeLabel }] as {
-          label: string | React.ReactNode;
-          value?: Runtime;
-        }[]);
-    // NOTE: for now, only include runtime associated with the mapping
-    // TODO?: Should we bring the runtime compatibility check from query to here?
-    const runtimes = editorStore.graphManagerState.graph.runtimes.filter((rt) =>
-      rt.runtimeValue.mappings.map((m) => m.value).includes(mapping),
-    );
-    runtimeOptions = runtimeOptions.concat(
-      runtimes.map((rt) => ({
-        label: rt.path,
-        value: new RuntimePointer(
-          PackageableElementExplicitReference.create(rt),
-        ),
-      })),
-    );
-    const runtimePointerWarning =
-      runtime instanceof RuntimePointer &&
-      !runtimes.includes(runtime.packageableRuntime.value) // if the runtime does not belong to the chosen mapping
-        ? `runtime is not associated with specified mapping '${mapping.path}'`
-        : undefined;
-    const selectedRuntimeOption = {
-      value: runtime,
-      label:
-        runtime instanceof RuntimePointer ? (
-          <div
-            className="service-execution-editor__configuration__runtime-option__pointer"
-            title={undefined}
-          >
-            <div
-              className={clsx(
-                'service-execution-editor__configuration__runtime-option__pointer__label',
-                {
-                  'service-execution-editor__configuration__runtime-option__pointer__label--with-warning':
-                    Boolean(runtimePointerWarning),
-                },
-              )}
-            >
-              {runtime.packageableRuntime.value.path}
-            </div>
-            {runtimePointerWarning && (
-              <div
-                className="service-execution-editor__configuration__runtime-option__pointer__warning"
-                title={runtimePointerWarning}
-              >
-                <ExclamationTriangleIcon />
-              </div>
-            )}
-          </div>
-        ) : (
-          customRuntimeLabel
-        ),
-    };
-    const onRuntimeSelectionChange = (val: {
-      label: string | React.ReactNode;
-      value?: Runtime;
-    }): void => {
-      if (val.value === undefined) {
-        pureExecutionState.useCustomRuntime();
-      } else if (val.value !== runtime) {
-        executionContextState.setRuntime(val.value);
-      }
-    };
-    const visitRuntime = (): void => {
-      if (runtime instanceof RuntimePointer) {
-        editorStore.openElement(runtime.packageableRuntime.value);
-      }
-    };
-    const openRuntimeEditor = (): void =>
-      pureExecutionState.openRuntimeEditor();
-    // DnD
-    const handleMappingOrRuntimeDrop = useCallback(
-      (item: UMLEditorElementDropTarget): void => {
-        const element = item.data.packageableElement;
-        if (!isReadOnly) {
-          if (element instanceof Mapping) {
-            executionContextState.setMapping(element);
-            pureExecutionState.autoSelectRuntimeOnMappingChange(element);
-          } else if (
-            element instanceof PackageableRuntime &&
-            element.runtimeValue.mappings.map((m) => m.value).includes(mapping)
-          ) {
-            executionContextState.setRuntime(
-              new RuntimePointer(
-                PackageableElementExplicitReference.create(element),
-              ),
-            );
-          }
-        }
-      },
-      [isReadOnly, mapping, executionContextState, pureExecutionState],
-    );
-    const [{ isMappingOrRuntimeDragOver }, dropMappingOrRuntimeRef] = useDrop<
-      ElementDragSource,
-      void,
-      { isMappingOrRuntimeDragOver: boolean }
-    >(
-      () => ({
-        accept: [
-          CORE_DND_TYPE.PROJECT_EXPLORER_MAPPING,
-          CORE_DND_TYPE.PROJECT_EXPLORER_RUNTIME,
-        ],
-        drop: (item) => handleMappingOrRuntimeDrop(item),
-        collect: (monitor) => ({
-          isMappingOrRuntimeDragOver: monitor.isOver({ shallow: true }),
-        }),
-      }),
-      [handleMappingOrRuntimeDrop],
-    );
-    // close runtime editor as we leave service editor
-    useEffect(
-      () => (): void => pureExecutionState.closeRuntimeEditor(),
-      [executionContextState, pureExecutionState],
-    );
-
-    return (
-      <PanelContent>
-        <PanelDropZone
-          dropTargetConnector={dropMappingOrRuntimeRef}
-          isDragOver={isMappingOrRuntimeDragOver && !isReadOnly}
+    if (executionContext.mapping !== undefined) {
+      const isMappingEmpty = validate_PureExecutionMapping(
+        executionContext.mapping.value,
+      );
+      const mapping = executionContext.mapping.value;
+      const mappingOptions =
+        editorStore.graphManagerState.usableMappings.map(buildElementOption);
+      const noMappingLabel = (
+        <div
+          className="service-execution-editor__configuration__mapping-option--empty"
+          title={isMappingEmpty?.messages.join('\n') ?? ''}
         >
-          <div className="service-execution-editor__configuration__items">
-            <div className="service-execution-editor__configuration__item">
-              <div className="btn--sm service-execution-editor__configuration__item__label">
-                <PURE_MappingIcon />
-              </div>
-              <CustomSelectorInput
-                className="panel__content__form__section__dropdown service-execution-editor__configuration__item__dropdown"
-                disabled={isReadOnly}
-                options={mappingOptions}
-                onChange={onMappingSelectionChange}
-                value={selectedMappingOption}
-                darkMode={true}
-                hasError={isMappingEmpty}
-              />
-              <button
-                className="btn--dark btn--sm service-execution-editor__configuration__item__btn"
-                onClick={visitMapping}
-                tabIndex={-1}
-                title="See mapping"
+          <div className="service-execution-editor__configuration__mapping-option--empty__label">
+            (none)
+          </div>
+          <ErrorIcon />
+        </div>
+      );
+      const selectedMappingOption = {
+        value: mapping,
+        label: isMappingEmpty ? noMappingLabel : mapping.path,
+      };
+      const onMappingSelectionChange = (
+        val: PackageableElementOption<Mapping>,
+      ): void => {
+        if (val.value !== mapping) {
+          executionContextState.setMapping(val.value);
+          pureExecutionState.autoSelectRuntimeOnMappingChange(val.value);
+        }
+      };
+      const visitMapping = (): void => editorStore.openElement(mapping);
+      // runtime
+      const runtime = executionContext.runtime;
+      const isRuntimePointer = runtime instanceof RuntimePointer;
+      const customRuntimeLabel = (
+        <div className="service-execution-editor__configuration__runtime-option--custom">
+          <CogIcon />
+          <div className="service-execution-editor__configuration__runtime-option--custom__label">
+            (custom)
+          </div>
+        </div>
+      );
+      // only show custom runtime option when a runtime pointer is currently selected
+      let runtimeOptions = !isRuntimePointer
+        ? []
+        : ([{ label: customRuntimeLabel }] as {
+            label: string | React.ReactNode;
+            value?: Runtime;
+          }[]);
+      // NOTE: for now, only include runtime associated with the mapping
+      // TODO?: Should we bring the runtime compatibility check from query to here?
+      const runtimes = editorStore.graphManagerState.graph.runtimes.filter(
+        (rt) => rt.runtimeValue.mappings.map((m) => m.value).includes(mapping),
+      );
+      runtimeOptions = runtimeOptions.concat(
+        runtimes.map((rt) => ({
+          label: rt.path,
+          value: new RuntimePointer(
+            PackageableElementExplicitReference.create(rt),
+          ),
+        })),
+      );
+      const runtimePointerWarning =
+        runtime instanceof RuntimePointer &&
+        !runtimes.includes(runtime.packageableRuntime.value) // if the runtime does not belong to the chosen mapping
+          ? `runtime is not associated with specified mapping '${mapping.path}'`
+          : undefined;
+      const selectedRuntimeOption = {
+        value: runtime,
+        label:
+          runtime instanceof RuntimePointer ? (
+            <div
+              className="service-execution-editor__configuration__runtime-option__pointer"
+              title={undefined}
+            >
+              <div
+                className={clsx(
+                  'service-execution-editor__configuration__runtime-option__pointer__label',
+                  {
+                    'service-execution-editor__configuration__runtime-option__pointer__label--with-warning':
+                      Boolean(runtimePointerWarning),
+                  },
+                )}
               >
-                <LongArrowRightIcon />
-              </button>
-            </div>
-            <div className="service-execution-editor__configuration__item">
-              <div className="btn--sm service-execution-editor__configuration__item__label">
-                <PURE_RuntimeIcon />
+                {runtime.packageableRuntime.value.path}
               </div>
-              <CustomSelectorInput
-                className="panel__content__form__section__dropdown service-execution-editor__configuration__item__dropdown"
-                disabled={isReadOnly}
-                options={runtimeOptions}
-                onChange={onRuntimeSelectionChange}
-                value={selectedRuntimeOption}
-                darkMode={true}
-              />
-              {!isRuntimePointer && (
-                <button
-                  className="btn--sm btn--dark service-execution-editor__configuration__item__btn"
-                  disabled={Boolean(isReadOnly || isMappingEmpty)}
-                  onClick={openRuntimeEditor}
-                  tabIndex={-1}
-                  title={
-                    isReadOnly ? 'See runtime' : 'Configure custom runtime'
-                  }
+              {runtimePointerWarning && (
+                <div
+                  className="service-execution-editor__configuration__runtime-option__pointer__warning"
+                  title={runtimePointerWarning}
                 >
-                  <CogIcon />
-                </button>
+                  <ExclamationTriangleIcon />
+                </div>
               )}
-              {isRuntimePointer && (
+            </div>
+          ) : (
+            customRuntimeLabel
+          ),
+      };
+      const onRuntimeSelectionChange = (val: {
+        label: string | React.ReactNode;
+        value?: Runtime;
+      }): void => {
+        if (val.value === undefined) {
+          pureExecutionState.useCustomRuntime();
+        } else if (val.value !== runtime) {
+          executionContextState.setRuntime(val.value);
+        }
+      };
+      const visitRuntime = (): void => {
+        if (runtime instanceof RuntimePointer) {
+          editorStore.openElement(runtime.packageableRuntime.value);
+        }
+      };
+      const openRuntimeEditor = (): void =>
+        pureExecutionState.openRuntimeEditor();
+      // DnD
+      const handleMappingOrRuntimeDrop = useCallback(
+        (item: UMLEditorElementDropTarget): void => {
+          const element = item.data.packageableElement;
+          if (!isReadOnly) {
+            if (element instanceof Mapping) {
+              executionContextState.setMapping(element);
+              pureExecutionState.autoSelectRuntimeOnMappingChange(element);
+            } else if (
+              element instanceof PackageableRuntime &&
+              element.runtimeValue.mappings
+                .map((m) => m.value)
+                .includes(mapping)
+            ) {
+              executionContextState.setRuntime(
+                new RuntimePointer(
+                  PackageableElementExplicitReference.create(element),
+                ),
+              );
+            }
+          }
+        },
+        [isReadOnly, mapping, executionContextState, pureExecutionState],
+      );
+      const [{ isMappingOrRuntimeDragOver }, dropMappingOrRuntimeRef] = useDrop<
+        ElementDragSource,
+        void,
+        { isMappingOrRuntimeDragOver: boolean }
+      >(
+        () => ({
+          accept: [
+            CORE_DND_TYPE.PROJECT_EXPLORER_MAPPING,
+            CORE_DND_TYPE.PROJECT_EXPLORER_RUNTIME,
+          ],
+          drop: (item) => handleMappingOrRuntimeDrop(item),
+          collect: (monitor) => ({
+            isMappingOrRuntimeDragOver: monitor.isOver({ shallow: true }),
+          }),
+        }),
+        [handleMappingOrRuntimeDrop],
+      );
+      // close runtime editor as we leave service editor
+      useEffect(
+        () => (): void => pureExecutionState.closeRuntimeEditor(),
+        [executionContextState, pureExecutionState],
+      );
+
+      return (
+        <PanelContent>
+          <PanelDropZone
+            dropTargetConnector={dropMappingOrRuntimeRef}
+            isDragOver={isMappingOrRuntimeDragOver && !isReadOnly}
+          >
+            <div className="service-execution-editor__configuration__items">
+              <div className="service-execution-editor__configuration__item">
+                <div className="btn--sm service-execution-editor__configuration__item__label">
+                  <PURE_MappingIcon />
+                </div>
+                <CustomSelectorInput
+                  className="panel__content__form__section__dropdown service-execution-editor__configuration__item__dropdown"
+                  disabled={isReadOnly}
+                  options={mappingOptions}
+                  onChange={onMappingSelectionChange}
+                  value={selectedMappingOption}
+                  darkMode={true}
+                  hasError={isMappingEmpty}
+                />
                 <button
-                  className="btn--sm btn--dark service-execution-editor__configuration__item__btn"
-                  onClick={visitRuntime}
+                  className="btn--dark btn--sm service-execution-editor__configuration__item__btn"
+                  onClick={visitMapping}
                   tabIndex={-1}
-                  title="See runtime"
+                  title="See mapping"
                 >
                   <LongArrowRightIcon />
                 </button>
-              )}
-              <EmbeddedRuntimeEditor
-                runtimeEditorState={pureExecutionState.runtimeEditorState}
-                isReadOnly={serviceState.isReadOnly}
-                onClose={(): void => pureExecutionState.closeRuntimeEditor()}
-              />
+              </div>
+              <div className="service-execution-editor__configuration__item">
+                <div className="btn--sm service-execution-editor__configuration__item__label">
+                  <PURE_RuntimeIcon />
+                </div>
+                <CustomSelectorInput
+                  className="panel__content__form__section__dropdown service-execution-editor__configuration__item__dropdown"
+                  disabled={isReadOnly}
+                  options={runtimeOptions}
+                  onChange={onRuntimeSelectionChange}
+                  value={selectedRuntimeOption}
+                  darkMode={true}
+                />
+                {!isRuntimePointer && (
+                  <button
+                    className="btn--sm btn--dark service-execution-editor__configuration__item__btn"
+                    disabled={Boolean(isReadOnly || isMappingEmpty)}
+                    onClick={openRuntimeEditor}
+                    tabIndex={-1}
+                    title={
+                      isReadOnly ? 'See runtime' : 'Configure custom runtime'
+                    }
+                  >
+                    <CogIcon />
+                  </button>
+                )}
+                {isRuntimePointer && (
+                  <button
+                    className="btn--sm btn--dark service-execution-editor__configuration__item__btn"
+                    onClick={visitRuntime}
+                    tabIndex={-1}
+                    title="See runtime"
+                  >
+                    <LongArrowRightIcon />
+                  </button>
+                )}
+                <EmbeddedRuntimeEditor
+                  runtimeEditorState={pureExecutionState.runtimeEditorState}
+                  isReadOnly={serviceState.isReadOnly}
+                  onClose={(): void => pureExecutionState.closeRuntimeEditor()}
+                />
+              </div>
             </div>
-          </div>
-        </PanelDropZone>
-      </PanelContent>
-    );
+          </PanelDropZone>
+        </PanelContent>
+      );
+    }
+    return <PanelContent></PanelContent>;
   },
 );
 

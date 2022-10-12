@@ -254,7 +254,7 @@ export const ServiceExecutionQueryEditor = observer(
         const service = executionState.serviceEditorState.service;
         const selectedExecutionState =
           executionState.selectedExecutionContextState;
-        if (selectedExecutionState) {
+        if (selectedExecutionState?.executionContext.mapping !== undefined) {
           const mapping = selectedExecutionState.executionContext.mapping.value;
           if (!isStubbed_PackageableElement(mapping)) {
             await flowResult(

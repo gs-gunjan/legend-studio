@@ -372,8 +372,8 @@ export class ServicePureExecutionQueryState extends LambdaEditorState {
 }
 
 export interface ServiceExecutionContext {
-  mapping: PackageableElementReference<Mapping>;
-  runtime: Runtime;
+  mapping: PackageableElementReference<Mapping> | undefined;
+  runtime: Runtime | undefined;
 }
 
 export abstract class ServiceExecutionContextState {
@@ -509,7 +509,13 @@ export abstract class ServicePureExecutionState extends ServiceExecutionState {
   };
 
   *generatePlan(debug: boolean): GeneratorFn<void> {
-    if (!this.selectedExecutionContextState || this.isGeneratingPlan) {
+    if (
+      !this.selectedExecutionContextState ||
+      this.isGeneratingPlan ||
+      this.selectedExecutionContextState.executionContext.mapping ===
+        undefined ||
+      this.selectedExecutionContextState.executionContext.runtime === undefined
+    ) {
       return;
     }
     try {
@@ -572,7 +578,13 @@ export abstract class ServicePureExecutionState extends ServiceExecutionState {
   }
 
   *runQuery(): GeneratorFn<void> {
-    if (!this.selectedExecutionContextState || this.isRunningQuery) {
+    if (
+      !this.selectedExecutionContextState ||
+      this.isRunningQuery ||
+      this.selectedExecutionContextState.executionContext.mapping ===
+        undefined ||
+      this.selectedExecutionContextState.executionContext.runtime === undefined
+    ) {
       return;
     }
     try {
@@ -636,7 +648,13 @@ export abstract class ServicePureExecutionState extends ServiceExecutionState {
   get serviceExecutionParameters():
     | { query: RawLambda; mapping: Mapping; runtime: Runtime }
     | undefined {
-    if (!this.selectedExecutionContextState || this.isRunningQuery) {
+    if (
+      !this.selectedExecutionContextState ||
+      this.isRunningQuery ||
+      this.selectedExecutionContextState.executionContext.mapping ===
+        undefined ||
+      this.selectedExecutionContextState.executionContext.runtime === undefined
+    ) {
       return undefined;
     }
     const query = this.queryState.query;
@@ -658,7 +676,8 @@ export abstract class ServicePureExecutionState extends ServiceExecutionState {
       !(
         this.selectedExecutionContextState.executionContext.runtime instanceof
         RuntimePointer
-      )
+      ) &&
+      this.selectedExecutionContextState.executionContext.runtime !== undefined
     ) {
       this.runtimeEditorState = new RuntimeEditorState(
         this.editorStore,
@@ -669,7 +688,11 @@ export abstract class ServicePureExecutionState extends ServiceExecutionState {
   }
 
   useCustomRuntime(): void {
-    if (this.selectedExecutionContextState) {
+    if (
+      this.selectedExecutionContextState?.executionContext.mapping !==
+        undefined &&
+      this.selectedExecutionContextState.executionContext.runtime !== undefined
+    ) {
       const customRuntime = new EngineRuntime();
       runtime_addMapping(
         customRuntime,
@@ -767,23 +790,28 @@ export class SingleServicePureExecutionState extends ServicePureExecutionState {
   }
 
   changeExecution(): void {
-    const _execution = new PureMultiExecution(
-      this.multiExecutionKey,
-      this.execution.func,
-      this.serviceEditorState.service,
-    );
-    const _parameter = new KeyedExecutionParameter(
-      `execContext_1`,
-      this.execution.mapping,
-      this.execution.runtime,
-    );
-    _execution.executionParameters = [_parameter];
-    service_setExecution(
-      this.serviceEditorState.service,
-      _execution,
-      this.editorStore.changeDetectionState.observerContext,
-    );
-    this.serviceEditorState.resetExecutionState();
+    if (
+      this.execution.mapping !== undefined &&
+      this.execution.runtime !== undefined
+    ) {
+      const _execution = new PureMultiExecution(
+        this.multiExecutionKey,
+        this.execution.func,
+        this.serviceEditorState.service,
+      );
+      const _parameter = new KeyedExecutionParameter(
+        `execContext_1`,
+        this.execution.mapping,
+        this.execution.runtime,
+      );
+      _execution.executionParameters = [_parameter];
+      service_setExecution(
+        this.serviceEditorState.service,
+        _execution,
+        this.editorStore.changeDetectionState.observerContext,
+      );
+      this.serviceEditorState.resetExecutionState();
+    }
   }
 }
 
