@@ -214,10 +214,12 @@ const pureSingleExecutionModelSchema = createModelSchema(
     ),
     func: usingModelSchema(V1_rawLambdaModelSchema),
     mapping: optional(primitive()),
-    runtime: optional(custom(
-      (val) => V1_serializeRuntimeValue(val),
-      (val) => V1_deserializeRuntimeValue(val),
-    )),
+    runtime: optional(
+      custom(
+        (val) => V1_serializeRuntimeValue(val),
+        (val) => V1_deserializeRuntimeValue(val),
+      ),
+    ),
   },
 );
 
