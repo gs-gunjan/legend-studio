@@ -171,14 +171,16 @@ export const V1_serviceTestSuiteModelSchema = (
   });
 
 const V1_serializeRuntimeValue = (
-  protocol: V1_Runtime,
-): PlainObject<V1_Runtime> => {
+  protocol: V1_Runtime | undefined,
+): PlainObject<V1_Runtime> | undefined => {
   if (protocol instanceof V1_RuntimePointer) {
     return serialize(V1_runtimePointerModelSchema, protocol);
   } else if (protocol instanceof V1_EngineRuntime) {
     return serialize(V1_EngineRuntime, protocol);
   } else if (protocol instanceof V1_LegacyRuntime) {
     return serialize(V1_LegacyRuntime, protocol);
+  } else if (protocol === undefined) {
+    return undefined;
   }
   throw new UnsupportedOperationError(
     `Can't serialize runtime value`,
@@ -211,11 +213,11 @@ const pureSingleExecutionModelSchema = createModelSchema(
       V1_ServiceExecutionType.PURE_SINGLE_EXECUTION,
     ),
     func: usingModelSchema(V1_rawLambdaModelSchema),
-    mapping: primitive(),
-    runtime: custom(
+    mapping: optional(primitive()),
+    runtime: optional(custom(
       (val) => V1_serializeRuntimeValue(val),
       (val) => V1_deserializeRuntimeValue(val),
-    ),
+    )),
   },
 );
 
