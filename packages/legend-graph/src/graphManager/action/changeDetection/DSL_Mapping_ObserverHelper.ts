@@ -124,7 +124,7 @@ import {
 } from './Testable_ObserverHelper.js';
 import type { MappingTestSuite } from '../../../graph/metamodel/pure/packageableElements/mapping/MappingTestSuite.js';
 import type { StoreTestData } from '../../../graph/metamodel/pure/packageableElements/mapping/StoreTestData.js';
-import { observe_EmbeddedData } from './DSLData_ObserverHelper.js';
+import { observe_EmbeddedData } from './DSL_Data_ObserverHelper.js';
 
 // ------------------------------------- Store -------------------------------------
 
@@ -178,7 +178,7 @@ export const observe_MappingTestSuite = skipObservedWithContext(
       hashCode: computed,
     });
 
-    metamodel.tests.forEach(observe_AtomicTest);
+    metamodel.tests.forEach((test) => observe_AtomicTest(test, context));
     metamodel.storeTestDatas.forEach((testData) =>
       observe_StoreTestData(testData, context),
     );

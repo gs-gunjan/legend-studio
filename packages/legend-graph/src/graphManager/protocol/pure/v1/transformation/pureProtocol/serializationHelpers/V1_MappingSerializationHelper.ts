@@ -889,8 +889,8 @@ export const V1_mappingTestSuiteModelSchema = (
     storeTestDatas: usingModelSchema(V1_storeTestDataModelSchema(plugins)),
     tests: list(
       custom(
-        (val) => V1_serializeAtomicTest(val),
-        (val) => V1_deserializeAtomicTest(val),
+        (val) => V1_serializeAtomicTest(val, plugins),
+        (val) => V1_deserializeAtomicTest(val, plugins),
       ),
     ),
   });

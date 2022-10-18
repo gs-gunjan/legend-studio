@@ -16,7 +16,6 @@
 
 import { computed, makeObservable, observable } from 'mobx';
 import { ServiceTest } from '../../../DSL_Service_Exports.js';
-import { ServiceTest } from '../../../DSLService_Exports.js';
 import { MappingTest } from '../../../graph/metamodel/pure/packageableElements/mapping/MappingTest.js';
 import { MappingTestSuite } from '../../../graph/metamodel/pure/packageableElements/mapping/MappingTestSuite.js';
 import { ServiceTestSuite } from '../../../graph/metamodel/pure/packageableElements/service/ServiceTestSuite.js';
@@ -34,7 +33,7 @@ import { observe_ExternalFormatData } from './DSL_Data_ObserverHelper.js';
 import {
   observe_MappingTest,
   observe_MappingTestSuite,
-} from './DSLMapping_ObserverHelper.js';
+} from './DSL_Mapping_ObserverHelper.js';
 import {
   observe_ServiceTest,
   observe_ServiceTestSuite,
