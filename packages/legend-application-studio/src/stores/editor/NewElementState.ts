@@ -74,25 +74,29 @@ import {
   DataElement,
   stub_RawLambda,
   stub_Database,
+  Measure,
 } from '@finos/legend-graph';
-import type { DSLMapping_LegendStudioApplicationPlugin_Extension } from '../DSLMapping_LegendStudioApplicationPlugin_Extension.js';
+import type { DSL_Mapping_LegendStudioApplicationPlugin_Extension } from '../DSL_Mapping_LegendStudioApplicationPlugin_Extension.js';
 import {
   packageableConnection_setConnectionValue,
   runtime_addMapping,
-} from '../graphModifier/DSLMapping_GraphModifierHelper.js';
+} from '../shared/modifier/DSL_Mapping_GraphModifierHelper.js';
 import {
   fileGeneration_setScopeElements,
   fileGeneration_setType,
   generationSpecification_addGenerationElement,
-} from '../graphModifier/DSLGeneration_GraphModifierHelper.js';
+} from '../shared/modifier/DSL_Generation_GraphModifierHelper.js';
 import {
   service_initNewService,
   service_setExecution,
-} from '../graphModifier/DSLService_GraphModifierHelper.js';
+} from '../shared/modifier/DSL_Service_GraphModifierHelper.js';
 import type { EmbeddedDataTypeOption } from '../editor-state/element-editor-state/data/DataEditorState.js';
-import { dataElement_setEmbeddedData } from '../graphModifier/DSLData_GraphModifierHelper.js';
-import { PACKAGEABLE_ELEMENT_TYPE } from '../shared/ModelUtil.js';
-import type { PackageableElementOption } from '@finos/legend-application';
+import { dataElement_setEmbeddedData } from '../shared/modifier/DSL_Data_GraphModifierHelper.js';
+import { PACKAGEABLE_ELEMENT_TYPE } from '../shared/ModelClassifierUtils.js';
+import {
+  buildElementOption,
+  type PackageableElementOption,
+} from '@finos/legend-application';
 import { EmbeddedDataType } from '../editor-state/ExternalFormatState.js';
 import { createEmbeddedData } from '../editor-state/element-editor-state/data/EmbeddedDataState.js';
 
@@ -302,7 +306,7 @@ export class NewRelationalDatabaseConnectionDriver extends NewConnectionValueDri
     if (store instanceof Database) {
       selectedStore = store;
     } else {
-      const dbs = this.editorStore.graphManagerState.graph.databases;
+      const dbs = this.editorStore.graphManagerState.usableDatabases;
       selectedStore = dbs.length ? (dbs[0] as Database) : stub_Database();
     }
     return new RelationalDatabaseConnection(
@@ -357,13 +361,13 @@ export class NewPackageableConnectionDriver extends NewElementDriver<Packageable
         this.newConnectionValueDriver = new NewPureModelConnectionDriver(
           this.editorStore,
         );
-        break;
+        return;
       case CONNECTION_TYPE.RELATIONAL:
         this.newConnectionValueDriver =
           new NewRelationalDatabaseConnectionDriver(this.editorStore);
-        break;
+        return;
       default:
-        null;
+        return;
     }
   }
 
@@ -382,7 +386,7 @@ export class NewPackageableConnectionDriver extends NewElementDriver<Packageable
       .flatMap(
         (plugin) =>
           (
-            plugin as DSLMapping_LegendStudioApplicationPlugin_Extension
+            plugin as DSL_Mapping_LegendStudioApplicationPlugin_Extension
           ).getExtraNewConnectionDriverCreators?.() ?? [],
       );
     for (const creator of extraNewConnectionDriverCreators) {
@@ -431,7 +435,8 @@ export class NewServiceDriver extends NewElementDriver<Service> {
       isValid: computed,
       createElement: action,
     });
-    this.mappingOption = editorStore.mappingOptions[0];
+    this.mappingOption =
+      editorStore.graphManagerState.usableMappings.map(buildElementOption)[0];
   }
 
   setMappingOption(val: PackageableElementOption<Mapping> | undefined): void {
@@ -447,10 +452,7 @@ export class NewServiceDriver extends NewElementDriver<Service> {
     const _mapping = mappingOption.value;
     const mapping = PackageableElementExplicitReference.create(_mapping);
     const service = new Service(name);
-    const runtimes =
-      this.editorStore.graphManagerState.graph.ownRuntimes.concat(
-        this.editorStore.graphManagerState.graph.dependencyManager.runtimes,
-      );
+    const runtimes = this.editorStore.graphManagerState.usableRuntimes;
     const compatibleRuntimes = runtimes.filter((runtime) =>
       runtime.runtimeValue.mappings.map((m) => m.value).includes(_mapping),
     );
@@ -754,6 +756,9 @@ export class NewElementState {
         break;
       case PACKAGEABLE_ELEMENT_TYPE.ENUMERATION:
         element = new Enumeration(name);
+        break;
+      case PACKAGEABLE_ELEMENT_TYPE.MEASURE:
+        element = new Measure(name);
         break;
       case PACKAGEABLE_ELEMENT_TYPE.PROFILE:
         element = new Profile(name);

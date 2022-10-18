@@ -1,5 +1,71 @@
 # @finos/legend-graph
 
+## 18.0.1
+
+### Patch Changes
+
+- [#1560](https://github.com/finos/legend-studio/pull/1560) [`7b7d665d`](https://github.com/finos/legend-studio/commit/7b7d665d258f0a609bf25566585acea7b38ae6e4) ([@akphi](https://github.com/akphi)) - Fix a bug with `PropertyExplicitReference.create()` not working with derived properties coming from associations.
+
+## 18.0.0
+
+### Major Changes
+
+- [#1520](https://github.com/finos/legend-studio/pull/1520) [`240875e8`](https://github.com/finos/legend-studio/commit/240875e869c95d7d228756a66eec1e82a45b8884) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** `AbstractPropertyExpression.func` should now use `PropertyReference` and `FunctionType.returnType` should now use `PackageableElementReference<Type>`.
+
+- [#1520](https://github.com/finos/legend-studio/pull/1520) [`240875e8`](https://github.com/finos/legend-studio/commit/240875e869c95d7d228756a66eec1e82a45b8884) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Move `value specification` helpers from `@finos/legend-graph` to `@finos/legend-query-builder`
+
+- [#1553](https://github.com/finos/legend-studio/pull/1553) [`f8e745c1`](https://github.com/finos/legend-studio/commit/f8e745c11fe1708fea0f8f2f90a7d24fe8345ca5) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - **BREAKING CHANGE:** Make multiplicity's upper bound and lower bound `readonly`.
+
+### Patch Changes
+
+- [#1555](https://github.com/finos/legend-studio/pull/1555) [`143434a9`](https://github.com/finos/legend-studio/commit/143434a91f3f4be689a59c4085edf91fdf9aee3d) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Generate milestoning date properties for milestoned classes.
+
+## 17.0.1
+
+### Patch Changes
+
+- [#1547](https://github.com/finos/legend-studio/pull/1547) [`971a3cf5`](https://github.com/finos/legend-studio/commit/971a3cf52687e1307fabae973e967fb419dad3bc) ([@gayathrir11](https://github.com/gayathrir11)) - Add extension mechanism for `Testable`
+
+- [#1541](https://github.com/finos/legend-studio/pull/1541) [`5d3eebc1`](https://github.com/finos/legend-studio/commit/5d3eebc1e89d87d8cdc161fd3a5adfceab477f5b) ([@PoojaParlapalli](https://github.com/PoojaParlapalli)) - Add support for Flatdata association mapping.
+
+## 17.0.0
+
+### Major Changes
+
+- [#1521](https://github.com/finos/legend-studio/pull/1521) [`e29ca75c`](https://github.com/finos/legend-studio/commit/e29ca75c04e7bce509fd24086998aa4bc95c4ec5) ([@gayathrir11](https://github.com/gayathrir11)) - **BREAKING CHANGE:** Renamed `Relational store` plugins and presets to use prefix `STO_Relational` instead of `StoreRelational`
+
+- [#1521](https://github.com/finos/legend-studio/pull/1521) [`e29ca75c`](https://github.com/finos/legend-studio/commit/e29ca75c04e7bce509fd24086998aa4bc95c4ec5) ([@gayathrir11](https://github.com/gayathrir11)) - **BREAKING CHANGE:** Rename DSL plugins and presets to use prefix `DSL_` instead of `DSL`
+
+- [#1521](https://github.com/finos/legend-studio/pull/1521) [`e29ca75c`](https://github.com/finos/legend-studio/commit/e29ca75c04e7bce509fd24086998aa4bc95c4ec5) ([@gayathrir11](https://github.com/gayathrir11)) - **BREAKING CHANGE:** Renamed `FlataData store` plugins and presets to use the prefix `STO_FlatData` instead of `StoreFlatData`
+
+### Minor Changes
+
+- [#1508](https://github.com/finos/legend-studio/pull/1508) [`10b9bc4e`](https://github.com/finos/legend-studio/commit/10b9bc4e617e1f48dfad7571523394b9103dc7f6) ([@chloeminkyung](https://github.com/chloeminkyung)) - Add `TestBatch` to Testable model and incorporate into GlobalTestRunner.
+
+## 16.0.0
+
+### Major Changes
+
+- [#1488](https://github.com/finos/legend-studio/pull/1488) [`a90b4698`](https://github.com/finos/legend-studio/commit/a90b469846363058ac7efffcbfb8cf0070582609) ([@akphi](https://github.com/akphi)) - Renamed `DSLGenerationSpecification_*` plugin extension to `DSLGeneration_*`
+
+### Minor Changes
+
+- [#1456](https://github.com/finos/legend-studio/pull/1456) [`5b692ece`](https://github.com/finos/legend-studio/commit/5b692ece6844e84c5d7f71df8edfe9a86aaefd55) ([@gayathrir11](https://github.com/gayathrir11)) - Implement `hashing` for `ValueSpecification` metamodels
+
+## 15.0.0
+
+### Major Changes
+
+- [#1476](https://github.com/finos/legend-studio/pull/1476) [`293f2345`](https://github.com/finos/legend-studio/commit/293f2345cd7dcc7e97fc4b6b21c7d274a1407176) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed `CorePureGraphManagerPlugin` to `Core_PureGraphManagerPlugin`.
+
+### Minor Changes
+
+- [#1476](https://github.com/finos/legend-studio/pull/1476) [`293f2345`](https://github.com/finos/legend-studio/commit/293f2345cd7dcc7e97fc4b6b21c7d274a1407176) ([@akphi](https://github.com/akphi)) - Added enum `meta::pure::functions::date::Month`, class `meta::pure::functions::date::Time`, and class `meta::pure::functions::date::Duration` to core system.
+
+## 14.1.0
+
+## 14.0.6
+
 ## 14.0.5
 
 ## 14.0.4
@@ -394,10 +460,6 @@
 ### Major Changes
 
 - [#755](https://github.com/finos/legend-studio/pull/755) [`61821cd6`](https://github.com/finos/legend-studio/commit/61821cd62c3b8b1a16124a092038ab963311de17) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Rename `CORE_ELEMENT_PATH` to `CORE_PURE_PATH`.
-
-### Minor Changes
-
-- [#740](https://github.com/finos/legend-studio/pull/740) [`947e10e4`](https://github.com/finos/legend-studio/commit/947e10e4fabb0a18c31222aa76166c04763f085d) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Improve QueryBuilder_PureProtocolProcessorPlugin to handle PropertyExpression type inference
 
 ### Patch Changes
 

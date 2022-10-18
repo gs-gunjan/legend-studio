@@ -31,8 +31,8 @@ import {
   fromGrammarString,
   toGrammarString,
   createUrlStringFromData,
-  losslessParse,
-  losslessStringify,
+  parseLosslessJSON,
+  stringifyLosslessJSON,
   tryToMinifyLosslessJSONString,
   tryToFormatLosslessJSONString,
   tryToMinifyJSONString,
@@ -47,7 +47,7 @@ import {
   makeAutoObservable,
   flowResult,
 } from 'mobx';
-import { createMockDataForMappingElementSource } from '../../../shared/MockDataUtil.js';
+import { createMockDataForMappingElementSource } from '../../../shared/MockDataUtils.js';
 import {
   type RawLambda,
   type Runtime,
@@ -84,12 +84,8 @@ import {
   DEPRECATED__validate_MappingTest,
   type DEPRECATED__MappingTest,
 } from '@finos/legend-graph';
-import {
-  ExecutionPlanState,
-  LambdaEditorState,
-  TAB_SIZE,
-} from '@finos/legend-application';
-import { flatData_setData } from '../../../graphModifier/StoreFlatData_GraphModifierHelper.js';
+import { ExecutionPlanState, TAB_SIZE } from '@finos/legend-application';
+import { flatData_setData } from '../../../shared/modifier/STO_FlatData_GraphModifierHelper.js';
 import {
   expectedOutputMappingTestAssert_setExpectedOutput,
   mappingTest_setAssert,
@@ -97,12 +93,13 @@ import {
   objectInputData_setData,
   runtime_addIdentifiedConnection,
   runtime_addMapping,
-} from '../../../graphModifier/DSLMapping_GraphModifierHelper.js';
+} from '../../../shared/modifier/DSL_Mapping_GraphModifierHelper.js';
 import {
   localH2DatasourceSpecification_setTestDataSetupCsv,
   localH2DatasourceSpecification_setTestDataSetupSqls,
   relationalInputData_setData,
-} from '../../../graphModifier/StoreRelational_GraphModifierHelper.js';
+} from '../../../shared/modifier/STO_Relational_GraphModifierHelper.js';
+import { LambdaEditorState } from '@finos/legend-query-builder';
 
 export enum TEST_RESULT {
   NONE = 'NONE', // test has not run yet
@@ -645,7 +642,7 @@ export class MappingTestState {
         this.assertionState instanceof MappingTestExpectedOutputAssertionState
       ) {
         this.assertionState.setExpectedResult(
-          losslessStringify(
+          stringifyLosslessJSON(
             extractExecutionResultValues(result),
             undefined,
             TAB_SIZE,
@@ -704,7 +701,7 @@ export class MappingTestState {
       this.setTestRunPromise(promise);
       const result = (yield promise) as ExecutionResult;
       if (this.testRunPromise === promise) {
-        this.testExecutionResultText = losslessStringify(
+        this.testExecutionResultText = stringifyLosslessJSON(
           extractExecutionResultValues(result),
           undefined,
           TAB_SIZE,
@@ -716,7 +713,7 @@ export class MappingTestState {
           // TODO: this logic should probably be better handled in by engine mapping test runner
           assertionMatched =
             hashObject(extractExecutionResultValues(result)) ===
-            hashObject(losslessParse(this.assertionState.expectedResult));
+            hashObject(parseLosslessJSON(this.assertionState.expectedResult));
         } else {
           throw new UnsupportedOperationError();
         }

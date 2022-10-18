@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { EDITOR_LANGUAGE } from '@finos/legend-application';
+import { EDITOR_LANGUAGE, TextInputEditor } from '@finos/legend-application';
 import {
   type TreeData,
   type TreeNodeContainerProps,
@@ -34,10 +34,12 @@ import {
   WarningIcon,
   CircleNotchIcon,
   EmptyCircleIcon,
+  PanelContent,
 } from '@finos/legend-art';
 import {
   AssertFail,
   EqualToJsonAssertFail,
+  PackageableElement,
   TestError,
 } from '@finos/legend-graph';
 import { type GeneratorFn, isNonNullable } from '@finos/legend-shared';
@@ -52,13 +54,14 @@ import {
   AssertionTestTreeNodeData,
   TestableTreeNodeData,
   TestSuiteTreeNodeData,
+  TestBatchTreeNodeData,
   getNodeTestableResult,
   getAtomicTest_TestResult,
   getAssertionStatus,
 } from '../../../../stores/sidebar-state/testable/GlobalTestRunnerState.js';
 import { LEGEND_STUDIO_TEST_ID } from '../../../LegendStudioTestID.js';
 import { TextDiffView } from '../../../shared/DiffView.js';
-import { StudioTextInputEditor } from '../../../shared/StudioTextInputEditor.js';
+import { getElementTypeIcon } from '../../../shared/ElementIconUtils.js';
 import { useEditorStore } from '../../EditorStoreProvider.js';
 
 export const getTestableResultIcon = (
@@ -165,7 +168,7 @@ const TestFailViewer = observer(
           </div>
           <div className="modal__body">
             {failure instanceof TestError && (
-              <StudioTextInputEditor
+              <TextInputEditor
                 inputValue={failure.error}
                 isReadOnly={true}
                 language={EDITOR_LANGUAGE.TEXT}
@@ -181,7 +184,7 @@ const TestFailViewer = observer(
             )}
             {failure instanceof AssertFail &&
               !(failure instanceof EqualToJsonAssertFail) && (
-                <StudioTextInputEditor
+                <TextInputEditor
                   inputValue={failure.message ?? ''}
                   isReadOnly={true}
                   language={EDITOR_LANGUAGE.TEXT}
@@ -249,6 +252,7 @@ const TestableTreeNodeContainer: React.FC<
 > = (props) => {
   const { node, level, stepPaddingInRem, onNodeSelect } = props;
   const { treeData, testableState, globalTestRunnerState } = props.innerProps;
+  const editorStore = useEditorStore();
   const results = testableState.results;
   const expandIcon =
     node instanceof AssertionTestTreeNodeData ? (
@@ -259,7 +263,16 @@ const TestableTreeNodeContainer: React.FC<
       <ChevronRightIcon />
     );
   const nodeIcon =
-    node instanceof TestableTreeNodeData ? node.testableMetadata.icon : null;
+    node instanceof TestableTreeNodeData
+      ? node.testableMetadata.testable instanceof PackageableElement
+        ? getElementTypeIcon(
+            editorStore,
+            editorStore.graphState.getPackageableElementType(
+              node.testableMetadata.testable,
+            ),
+          )
+        : null
+      : null;
   const resultIcon = getTestableResultIcon(
     getNodeTestableResult(
       node,
@@ -322,6 +335,13 @@ const TestableTreeNodeContainer: React.FC<
           </div>
         )}
         {node instanceof AtomicTestTreeNodeData && (
+          <div className="global-test-runner__item__link__content">
+            <span className="global-test-runner__item__link__content__id">
+              {node.label}
+            </span>
+          </div>
+        )}
+        {node instanceof TestBatchTreeNodeData && (
           <div className="global-test-runner__item__link__content">
             <span className="global-test-runner__item__link__content__id">
               {node.label}
@@ -444,7 +464,7 @@ export const GlobalTestRunner = observer(
                 }
               ></div>
             </div>
-            <div className="panel__content">{renderTestables()}</div>
+            <PanelContent>{renderTestables()}</PanelContent>
             {globalTestRunnerState.failureViewing && (
               <TestFailViewer
                 globalTestRunnerState={globalTestRunnerState}

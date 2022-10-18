@@ -46,6 +46,7 @@ import {
   type TEMPORARY__EngineSetupConfig,
   type GraphBuilderOptions,
   type ExecutionOptions,
+  type ServiceRegistrationOptions,
 } from '../../../../graphManager/AbstractPureGraphManager.js';
 import type { Mapping } from '../../../../graph/metamodel/pure/packageableElements/mapping/Mapping.js';
 import type { Runtime } from '../../../../graph/metamodel/pure/packageableElements/runtime/Runtime.js';
@@ -162,7 +163,7 @@ import {
   V1_setupEngineRuntimeSerialization,
   V1_setupLegacyRuntimeSerialization,
 } from './transformation/pureProtocol/serializationHelpers/V1_RuntimeSerializationHelper.js';
-import type { DSLGenerationSpecification_PureProtocolProcessorPlugin_Extension } from '../DSLGenerationSpecification_PureProtocolProcessorPlugin_Extension.js';
+import type { DSL_Generation_PureProtocolProcessorPlugin_Extension } from '../DSL_Generation_PureProtocolProcessorPlugin_Extension.js';
 import type { RawRelationalOperationElement } from '../../../../graph/metamodel/pure/packageableElements/store/relational/model/RawRelationalOperationElement.js';
 import { V1_GraphTransformerContextBuilder } from './transformation/pureGraph/from/V1_GraphTransformerContext.js';
 import type {
@@ -185,6 +186,7 @@ import { V1_buildExecutionPlan } from './transformation/pureGraph/to/V1_Executio
 import type {
   LightQuery,
   Query,
+  QueryInfo,
 } from '../../../../graphManager/action/query/Query.js';
 import {
   V1_buildQuery,
@@ -226,12 +228,12 @@ import {
 import {
   type Service,
   MultiExecutionServiceTestResult,
-} from '../../../../DSLService_Exports.js';
+} from '../../../../DSL_Service_Exports.js';
 import type { Testable } from '../../../../graph/metamodel/pure/test/Testable.js';
 import {
   getNullableIDFromTestable,
   getNullableTestable,
-} from '../../../helpers/DSLData_GraphManagerHelper.js';
+} from '../../../helpers/DSL_Data_GraphManagerHelper.js';
 import type { TestAssertion } from '../../../../graph/metamodel/pure/test/assertion/TestAssertion.js';
 import { AssertFail } from '../../../../graph/metamodel/pure/test/assertion/status/AssertFail.js';
 import {
@@ -250,7 +252,7 @@ import type {
 } from '../../../../graphManager/action/analytics/MappingModelCoverageAnalysis.js';
 import { deserialize } from 'serializr';
 import { V1_getFunctionSuffix } from './helpers/V1_DomainHelper.js';
-import type { SchemaSet } from '../../../../graph/metamodel/pure/packageableElements/externalFormat/schemaSet/DSLExternalFormat_SchemaSet.js';
+import type { SchemaSet } from '../../../../graph/metamodel/pure/packageableElements/externalFormat/schemaSet/DSL_ExternalFormat_SchemaSet.js';
 
 class V1_PureModelContextDataIndex {
   elements: V1_PackageableElement[] = [];
@@ -1484,6 +1486,12 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
 
   // ------------------------------------------- Compile -------------------------------------------
 
+  async compileEntities(entities: Entity[]): Promise<void> {
+    await this.engine.compilePureModelContextData(
+      await this.entitiesToPureModelContextData(entities),
+    );
+  }
+
   async compileGraph(
     graph: PureModel,
     options?:
@@ -1581,7 +1589,7 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
       .flatMap(
         (plugin) =>
           (
-            plugin as DSLGenerationSpecification_PureProtocolProcessorPlugin_Extension
+            plugin as DSL_Generation_PureProtocolProcessorPlugin_Extension
           ).V1_getExtraModelGenerators?.() ?? [],
       );
     for (const generator of extraModelGenerators) {
@@ -1640,6 +1648,7 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
           graph,
           this.pluginManager.getPureGraphManagerPlugins(),
         ),
+      this.pluginManager.getPureProtocolProcessorPlugins(),
     );
     return result;
   }
@@ -1679,6 +1688,7 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
             graph,
             this.pluginManager.getPureGraphManagerPlugins(),
           ),
+        this.pluginManager.getPureProtocolProcessorPlugins(),
       );
       const result = results[0];
       let status: AssertFail | undefined = undefined;
@@ -2010,7 +2020,7 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
       testDataGenerationExecuteInput,
     );
     testDataGenerationExecuteInput.parameters = parameters;
-    testDataGenerationExecuteInput.hashValues = Boolean(
+    testDataGenerationExecuteInput.hashStrings = Boolean(
       options?.anonymizeGeneratedData,
     );
     return this.engine.generateExecuteTestData(testDataGenerationExecuteInput);
@@ -2105,6 +2115,7 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
     version: string | undefined,
     server: string,
     executionMode: ServiceExecutionMode,
+    options?: ServiceRegistrationOptions,
   ): Promise<ServiceRegistrationResult> {
     const serverServiceInfo = await this.engine.getServerServiceInfo();
     // input
@@ -2114,7 +2125,6 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
       serverServiceInfo.services.dependencies.pure,
     );
     switch (executionMode) {
-      case ServiceExecutionMode.FULL_INTERACTIVE_LIGHT:
       case ServiceExecutionMode.FULL_INTERACTIVE: {
         const data = this.createServiceRegistrationInput(graph, service);
         data.origin = new V1_PureModelContextPointer(protocol);
@@ -2124,10 +2134,20 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
       case ServiceExecutionMode.SEMI_INTERACTIVE: {
         const sdlcInfo = new V1_AlloySDLC(groupId, artifactId, version);
         const pointer = new V1_PureModelContextPointer(protocol, sdlcInfo);
+
         // data
         const data = new V1_PureModelContextData();
         data.origin = new V1_PureModelContextPointer(protocol);
-        data.elements = [this.elementToProtocol<V1_Service>(service)];
+        const serviceProtocol = this.elementToProtocol<V1_Service>(service);
+
+        // override the URL pattern if specified
+        if (options?.TEMPORARY__semiInteractiveOverridePattern) {
+          serviceProtocol.pattern =
+            options.TEMPORARY__semiInteractiveOverridePattern;
+        }
+
+        data.elements = [serviceProtocol];
+
         // SDLC info
         // TODO: We may need to add `runtime` pointers if the runtime defned in the service is a packageable runtime
         // and not embedded.
@@ -2177,7 +2197,12 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
       }
     }
     return V1_buildServiceRegistrationResult(
-      await this.engine.registerService(input, server, executionMode),
+      await this.engine.registerService(
+        input,
+        server,
+        executionMode,
+        Boolean(options?.TEMPORARY__useStoreModel),
+      ),
     );
   }
 
@@ -2236,8 +2261,18 @@ export class V1_PureGraphManager extends AbstractPureGraphManager {
     );
   }
 
-  async getQueryContent(queryId: string): Promise<string> {
-    return (await this.engine.getQuery(queryId)).content;
+  async getQueryInfo(queryId: string): Promise<QueryInfo> {
+    const query = await this.engine.getQuery(queryId);
+    return {
+      name: query.name,
+      id: query.id,
+      versionId: query.versionId,
+      groupId: query.groupId,
+      artifactId: query.artifactId,
+      mapping: query.mapping,
+      runtime: query.runtime,
+      content: query.content,
+    };
   }
 
   async createQuery(query: Query, graph: PureModel): Promise<Query> {

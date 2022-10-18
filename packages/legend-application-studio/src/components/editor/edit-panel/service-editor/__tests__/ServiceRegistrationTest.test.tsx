@@ -28,11 +28,10 @@ import TEST_DATA__serviceEntities from '../../../../editor/edit-panel/service-ed
 import {
   type PlainObject,
   integrationTest,
-  MOBX__disableSpyOrMock,
-  MOBX__enableSpyOrMock,
   prettyCONSTName,
 } from '@finos/legend-shared';
 import {
+  TEST_DATA__DefaultDepotInfo,
   TEST_DATA__DefaultSDLCInfo,
   TEST__openElementFromExplorerTree,
   TEST__provideMockedEditorStore,
@@ -51,7 +50,7 @@ import {
 } from '@finos/legend-graph';
 import { TEST__getLegendStudioApplicationConfig } from '../../../../../stores/EditorStoreTestUtils.js';
 import { LegendStudioPluginManager } from '../../../../../application/LegendStudioPluginManager.js';
-import { service_deleteOwner } from '../../../../../stores/graphModifier/DSLService_GraphModifierHelper.js';
+import { service_deleteOwner } from '../../../../../stores/shared/modifier/DSL_Service_GraphModifierHelper.js';
 
 let renderResult: RenderResult;
 
@@ -72,7 +71,6 @@ const setup = async (
                 managementUrl: 'int.services.com',
                 modes: [
                   ServiceExecutionMode.FULL_INTERACTIVE,
-                  ServiceExecutionMode.FULL_INTERACTIVE_LIGHT,
                   ServiceExecutionMode.SEMI_INTERACTIVE,
                   ServiceExecutionMode.PROD,
                 ],
@@ -83,7 +81,6 @@ const setup = async (
                 managementUrl: 'dev.services.com',
                 modes: [
                   ServiceExecutionMode.FULL_INTERACTIVE,
-                  ServiceExecutionMode.FULL_INTERACTIVE_LIGHT,
                   ServiceExecutionMode.SEMI_INTERACTIVE,
                   ServiceExecutionMode.PROD,
                 ],
@@ -118,6 +115,7 @@ const setup = async (
     projects: [],
     projectData: [],
     projectDependency: [],
+    projectDependencyInfo: TEST_DATA__DefaultDepotInfo.dependencyInfo,
   });
   return MOCK__editorStore;
 };
@@ -162,20 +160,20 @@ test(
       '/myservice',
       'id1',
     );
-    MOBX__enableSpyOrMock();
+
     jest
       .spyOn(
         MOCK__editorStore.graphManagerState.graphManager,
         'registerService',
       )
-      .mockResolvedValue(result);
+      .mockReturnValue(Promise.resolve(result));
     jest
       .spyOn(
         MOCK__editorStore.graphManagerState.graphManager,
         'activateService',
       )
-      .mockResolvedValue();
-    MOBX__disableSpyOrMock();
+      .mockReturnValue(Promise.resolve());
+
     await TEST__openElementFromExplorerTree('test::myService', renderResult);
     const editPanelHeader = await waitFor(() =>
       renderResult.getByTestId(LEGEND_STUDIO_TEST_ID.EDIT_PANEL__HEADER_TABS),
@@ -202,7 +200,7 @@ test(
     await waitFor(() => getByText(registrationEditor, 'Service Type'));
     await waitFor(() => getByText(registrationEditor, 'Project Version'));
     const registrationState = serviceEditorState.registrationState;
-    expect(registrationState.executionModes).toHaveLength(4);
+    expect(registrationState.executionModes).toHaveLength(3);
     const versions = MOCK__editorStore.sdlcState.projectVersions;
     expect(versions).toHaveLength(2);
     // TODO: rewrite how we test 'dropdown', once the issue of the dropdown options not showing is resolved
@@ -265,20 +263,20 @@ test(
       '/myservice',
       'id1',
     );
-    MOBX__enableSpyOrMock();
+
     jest
       .spyOn(
         MOCK__editorStore.graphManagerState.graphManager,
         'registerService',
       )
-      .mockResolvedValue(result);
+      .mockReturnValue(Promise.resolve(result));
     jest
       .spyOn(
         MOCK__editorStore.graphManagerState.graphManager,
         'activateService',
       )
-      .mockResolvedValue();
-    MOBX__disableSpyOrMock();
+      .mockReturnValue(Promise.resolve());
+
     await TEST__openElementFromExplorerTree('test::myService', renderResult);
     const editPanelHeader = await waitFor(() =>
       renderResult.getByTestId(LEGEND_STUDIO_TEST_ID.EDIT_PANEL__HEADER_TABS),

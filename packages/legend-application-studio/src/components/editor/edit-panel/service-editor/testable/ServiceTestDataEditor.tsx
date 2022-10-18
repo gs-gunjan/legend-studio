@@ -46,13 +46,18 @@ import type { EmbeddedDataTypeOption } from '../../../../../stores/editor-state/
 import { EmbeddedDataEditor } from '../../data-editor/EmbeddedDataEditor.js';
 import { EmbeddedDataType } from '../../../../../stores/editor-state/ExternalFormatState.js';
 import { flowResult } from 'mobx';
-import { buildElementOption } from '@finos/legend-application';
+import {
+  buildElementOption,
+  useApplicationStore,
+} from '@finos/legend-application';
 import { prettyCONSTName } from '@finos/legend-shared';
-import type { DSLData_LegendStudioApplicationPlugin_Extension } from '../../../../../stores/DSLData_LegendStudioApplicationPlugin_Extension.js';
+import type { DSL_Data_LegendStudioApplicationPlugin_Extension } from '../../../../../stores/DSL_Data_LegendStudioApplicationPlugin_Extension.js';
+import { useEditorStore } from '../../../EditorStoreProvider.js';
 
 export const ConnectionTestDataEditor = observer(
   (props: { connectionTestDataState: ConnectionTestDataState }) => {
     const { connectionTestDataState } = props;
+    const applicationStore = useApplicationStore();
     const isReadOnly =
       connectionTestDataState.testDataState.testSuiteState.testableState
         .serviceEditorState.isReadOnly;
@@ -66,10 +71,10 @@ export const ConnectionTestDataEditor = observer(
     };
     const generateTestData = (): void => {
       flowResult(connectionTestDataState.generateTestData()).catch(
-        connectionTestDataState.editorStore.applicationStore
-          .alertUnhandledError,
+        applicationStore.alertUnhandledError,
       );
     };
+
     return (
       <div className="service-test-data-editor">
         <div className="service-test-suite-editor__header">
@@ -209,7 +214,9 @@ const ConnectionTestDataItem = observer(
 export const NewConnectionDataModal = observer(
   (props: { testDataState: ServiceTestDataState }) => {
     const { testDataState } = props;
-    const dataElementOptions = testDataState.editorStore.dataOptions;
+    const editorStore = useEditorStore();
+    const dataElementOptions =
+      editorStore.graphManagerState.usableDataElements.map(buildElementOption);
     const newConnectionState = testDataState.newConnectionDataState;
     const dataElement = newConnectionState.dataElement;
     const selectedDataElement = dataElement
@@ -246,14 +253,6 @@ export const NewConnectionDataModal = observer(
           (c) => c.connectionId === selectedConnection?.value.id,
         ),
       );
-    const handleSubmit = (): void => {
-      const connection = newConnectionState.connection;
-      const data = newConnectionState.embeddedDataType;
-      if (connection && data) {
-        testDataState.createConnectionTestData();
-        closeModal();
-      }
-    };
     const onConnectionSelectionChange = (val: {
       label: string;
       value?: IdentifiedConnection;
@@ -271,12 +270,12 @@ export const NewConnectionDataModal = observer(
           value: newConnectionState.embeddedDataType.value,
         }
       : undefined;
-    const extraOptionTypes = testDataState.editorStore.pluginManager
+    const extraOptionTypes = editorStore.pluginManager
       .getApplicationPlugins()
       .flatMap(
         (plugin) =>
           (
-            plugin as DSLData_LegendStudioApplicationPlugin_Extension
+            plugin as DSL_Data_LegendStudioApplicationPlugin_Extension
           ).getExtraEmbeddedDataTypeOptions?.() ?? [],
       );
     const embeddedOptions = [
@@ -302,7 +301,15 @@ export const NewConnectionDataModal = observer(
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
         <form
-          onSubmit={handleSubmit}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const connection = newConnectionState.connection;
+            const data = newConnectionState.embeddedDataType;
+            if (connection && data) {
+              testDataState.createConnectionTestData();
+              closeModal();
+            }
+          }}
           className="modal service-test-data-modal modal--dark"
         >
           <div className="modal__header">
@@ -365,7 +372,7 @@ export const NewConnectionDataModal = observer(
           </div>
           <div className="modal__footer">
             <button
-              type="button"
+              type="button" // prevent this toggler being activated on form submission
               className="btn btn--dark"
               onClick={closeModal}
             >

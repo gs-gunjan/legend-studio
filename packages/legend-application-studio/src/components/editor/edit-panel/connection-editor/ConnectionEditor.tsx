@@ -26,14 +26,17 @@ import {
 } from '../../../../stores/editor-state/element-editor-state/connection/ConnectionEditorState.js';
 import { UnsupportedEditorPanel } from '../../../editor/edit-panel/UnsupportedElementEditor.js';
 import type { Class } from '@finos/legend-graph';
-import { CustomSelectorInput, LockIcon } from '@finos/legend-art';
+import { CustomSelectorInput, LockIcon, PanelContent } from '@finos/legend-art';
 import { useEditorStore } from '../../EditorStoreProvider.js';
-import type { DSLMapping_LegendStudioApplicationPlugin_Extension } from '../../../../stores/DSLMapping_LegendStudioApplicationPlugin_Extension.js';
+import type { DSL_Mapping_LegendStudioApplicationPlugin_Extension } from '../../../../stores/DSL_Mapping_LegendStudioApplicationPlugin_Extension.js';
 import {
   modelConnection_setClass,
   modelConnection_setUrl,
-} from '../../../../stores/graphModifier/DSLMapping_GraphModifierHelper.js';
-import { useApplicationNavigationContext } from '@finos/legend-application';
+} from '../../../../stores/shared/modifier/DSL_Mapping_GraphModifierHelper.js';
+import {
+  buildElementOption,
+  useApplicationNavigationContext,
+} from '@finos/legend-application';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../../stores/LegendStudioApplicationNavigationContext.js';
 
 const ModelConnectionEditor = observer(
@@ -46,7 +49,8 @@ const ModelConnectionEditor = observer(
     const connection = connectionValueState.connection;
     const editorStore = useEditorStore();
     // classOptions
-    const classOptions = editorStore.classOptions;
+    const classOptions =
+      editorStore.graphManagerState.usableClasses.map(buildElementOption);
     const sourceClass = connection.class.value;
     const onSourceClassChange = (val: { label: string; value: Class }): void =>
       modelConnection_setClass(connection, val.value);
@@ -140,7 +144,7 @@ export const ConnectionEditor = observer(
         const extraConnectionEditorRenderers = plugins.flatMap(
           (plugin) =>
             (
-              plugin as DSLMapping_LegendStudioApplicationPlugin_Extension
+              plugin as DSL_Mapping_LegendStudioApplicationPlugin_Extension
             ).getExtraConnectionEditorRenderers?.() ?? [],
         );
         for (const editorRenderer of extraConnectionEditorRenderers) {
@@ -167,7 +171,7 @@ export const ConnectionEditor = observer(
             </div>
           </div>
         </div>
-        <div className="panel__content">{renderConnectionValueEditor()}</div>
+        <PanelContent>{renderConnectionValueEditor()}</PanelContent>
       </div>
     );
   },

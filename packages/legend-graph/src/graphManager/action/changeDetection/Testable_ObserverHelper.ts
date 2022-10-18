@@ -15,6 +15,7 @@
  */
 
 import { computed, makeObservable, observable } from 'mobx';
+import { ServiceTest } from '../../../DSL_Service_Exports.js';
 import { ServiceTest } from '../../../DSLService_Exports.js';
 import { MappingTest } from '../../../graph/metamodel/pure/packageableElements/mapping/MappingTest.js';
 import { MappingTestSuite } from '../../../graph/metamodel/pure/packageableElements/mapping/MappingTestSuite.js';
@@ -27,8 +28,9 @@ import type {
   AtomicTest,
   TestSuite,
 } from '../../../graph/metamodel/pure/test/Test.js';
+import type { Testable_PureGraphManagerPlugin_Extension } from '../../Testable_PureGraphManagerPlugin_Extension.js';
 import { type ObserverContext, skipObserved } from './CoreObserverHelper.js';
-import { observe_ExternalFormatData } from './DSLData_ObserverHelper.js';
+import { observe_ExternalFormatData } from './DSL_Data_ObserverHelper.js';
 import {
   observe_MappingTest,
   observe_MappingTestSuite,
@@ -36,9 +38,9 @@ import {
 import {
   observe_ServiceTest,
   observe_ServiceTestSuite,
-} from './DSLService_ObserverHelper.js';
+} from './DSL_Service_ObserverHelper.js';
 
-const observe_EqualTo = skipObserved((metamodel: EqualTo): EqualTo => {
+export const observe_EqualTo = skipObserved((metamodel: EqualTo): EqualTo => {
   makeObservable(metamodel, {
     id: observable,
     expected: observable,
@@ -48,17 +50,19 @@ const observe_EqualTo = skipObserved((metamodel: EqualTo): EqualTo => {
   return metamodel;
 });
 
-const observe_EqualToTDS = skipObserved((metamodel: EqualToTDS): EqualToTDS => {
-  makeObservable(metamodel, {
-    id: observable,
-    expected: observable,
-    hashCode: computed,
-  });
-  observe_ExternalFormatData(metamodel.expected);
-  return metamodel;
-});
+export const observe_EqualToTDS = skipObserved(
+  (metamodel: EqualToTDS): EqualToTDS => {
+    makeObservable(metamodel, {
+      id: observable,
+      expected: observable,
+      hashCode: computed,
+    });
+    observe_ExternalFormatData(metamodel.expected);
+    return metamodel;
+  },
+);
 
-const observe_EqualToJson = skipObserved(
+export const observe_EqualToJson = skipObserved(
   (metamodel: EqualToJson): EqualToJson => {
     makeObservable(metamodel, {
       id: observable,
@@ -72,12 +76,29 @@ const observe_EqualToJson = skipObserved(
   },
 );
 
-export function observe_AtomicTest(metamodel: AtomicTest): AtomicTest {
+export function observe_AtomicTest(
+  metamodel: AtomicTest,
+  context: ObserverContext,
+): AtomicTest {
   if (metamodel instanceof ServiceTest) {
     return observe_ServiceTest(metamodel);
   } else if (metamodel instanceof MappingTest) {
     return observe_MappingTest(metamodel);
   }
+  const extraAtomicTestBuilder = context.plugins.flatMap(
+    (plugin) =>
+      (
+        plugin as Testable_PureGraphManagerPlugin_Extension
+      ).getExtraAtomicTestObservers?.() ?? [],
+  );
+
+  for (const builder of extraAtomicTestBuilder) {
+    const atomicTestBuilder = builder(metamodel, context);
+    if (atomicTestBuilder) {
+      return atomicTestBuilder;
+    }
+  }
+
   return metamodel;
 }
 

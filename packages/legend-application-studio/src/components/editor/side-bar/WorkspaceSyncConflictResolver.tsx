@@ -26,6 +26,7 @@ import {
   InfoCircleIcon,
   TimesIcon,
   Dialog,
+  PanelContent,
 } from '@finos/legend-art';
 import type {
   EntityChangeConflict,
@@ -137,7 +138,7 @@ export const WorkspaceSyncConflictResolver = observer(() => {
                           {changes.length + conflicts.length}
                         </div>
                       </div>
-                      <div className="panel__content">
+                      <PanelContent>
                         {!hadResolvedAllConflicts && (
                           <>
                             {conflicts
@@ -182,7 +183,7 @@ export const WorkspaceSyncConflictResolver = observer(() => {
                                 openDiff={openChange(diff)}
                               />
                             ))}
-                      </div>
+                      </PanelContent>
                     </div>
                   </ResizablePanelGroup>
                 </div>
@@ -220,7 +221,7 @@ export const WorkspaceSyncConflictResolver = observer(() => {
                             className="workspace-sync-conflict-resolver__header__tab__close-btn"
                             onClick={closeTab(mergedState)}
                             tabIndex={-1}
-                            title={'Close'}
+                            title="Close"
                           >
                             <TimesIcon />
                           </button>
@@ -229,7 +230,7 @@ export const WorkspaceSyncConflictResolver = observer(() => {
                     ))}
                   </div>
                 </div>
-                <div className="panel__content">
+                <PanelContent>
                   {updateConflictState.currentDiffEditorState instanceof
                     EntityChangeConflictEditorState && (
                     <EntityChangeConflictEditor
@@ -246,27 +247,21 @@ export const WorkspaceSyncConflictResolver = observer(() => {
                       }
                     />
                   )}
-                </div>
+                </PanelContent>
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>
         <div className="modal__footer">
           <button
-            type="button"
-            className="btn btn--primary btn--dark"
+            className="btn btn--dark"
             disabled={Boolean(conflicts.length)}
             title="Apply Resolutions"
             onClick={applyResolutions}
           >
             Apply Resolutions
           </button>
-          <button
-            type="button"
-            title="Aborts"
-            className="btn btn--dark"
-            onClick={abort}
-          >
+          <button className="btn btn--dark" title="Aborts" onClick={abort}>
             Abort
           </button>
         </div>

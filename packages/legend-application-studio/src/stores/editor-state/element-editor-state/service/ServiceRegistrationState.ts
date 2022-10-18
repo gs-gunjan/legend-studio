@@ -28,15 +28,23 @@ import {
   UnsupportedOperationError,
   getNullableFirstElement,
   assertTrue,
+  URL_SEPARATOR,
+  filterByType,
 } from '@finos/legend-shared';
 import { LEGEND_STUDIO_APP_EVENT } from '../../../LegendStudioAppEvent.js';
 import { Version } from '@finos/legend-server-sdlc';
 import {
   type Service,
   type ServiceRegistrationResult,
+  type PureExecution,
   ServiceExecutionMode,
+  buildLambdaVariableExpressions,
+  VariableExpression,
+  TYPICAL_MULTIPLICITY_TYPE,
+  generateMultiplicityString,
+  multiplicityComparator,
 } from '@finos/legend-graph';
-import { ServiceRegistrationEnvInfo } from '../../../../application/LegendStudioApplicationConfig.js';
+import { ServiceRegistrationEnvironmentConfig } from '../../../../application/LegendStudioApplicationConfig.js';
 import {
   ActionAlertActionType,
   ActionAlertType,
@@ -44,12 +52,23 @@ import {
 
 export const LATEST_PROJECT_REVISION = 'Latest Project Revision';
 
+export const generateServiceManagementUrl = (
+  baseUrl: string,
+  serviceUrlPattern: string,
+): string =>
+  `${baseUrl}${
+    URL_SEPARATOR +
+    encodeURIComponent(
+      serviceUrlPattern[0] === URL_SEPARATOR
+        ? serviceUrlPattern.substring(1)
+        : serviceUrlPattern,
+    )
+  }`;
+
 const getServiceExecutionMode = (mode: string): ServiceExecutionMode => {
   switch (mode) {
     case ServiceExecutionMode.FULL_INTERACTIVE:
       return ServiceExecutionMode.FULL_INTERACTIVE;
-    case ServiceExecutionMode.FULL_INTERACTIVE_LIGHT:
-      return ServiceExecutionMode.FULL_INTERACTIVE_LIGHT;
     case ServiceExecutionMode.SEMI_INTERACTIVE:
       return ServiceExecutionMode.SEMI_INTERACTIVE;
     case ServiceExecutionMode.PROD:
@@ -61,45 +80,27 @@ const getServiceExecutionMode = (mode: string): ServiceExecutionMode => {
   }
 };
 
-const URL_SEPARATOR = '/';
-
 interface ServiceVersionOption {
   label: string;
   value: Version | string;
 }
 
-export enum SERVICE_REGISTRATION_PHASE {
-  REGISTERING_SERVICE = 'REGISTERING_SERVICE',
-  ACTIVATING_SERVICE = 'ACTIVATING_SERVICE',
-}
-
-const isFullInteractiveMode = (
-  mode: ServiceExecutionMode | string | undefined,
-): boolean => {
-  if (
-    mode === ServiceExecutionMode.FULL_INTERACTIVE ||
-    mode === ServiceExecutionMode.FULL_INTERACTIVE_LIGHT
-  ) {
-    return true;
-  }
-  return false;
-};
-
 export class ServiceRegistrationState {
   readonly editorStore: EditorStore;
   readonly service: Service;
-  readonly registrationOptions: ServiceRegistrationEnvInfo[] = [];
+  readonly registrationOptions: ServiceRegistrationEnvironmentConfig[] = [];
   registrationState = ActionState.create();
   serviceEnv?: string | undefined;
   serviceExecutionMode?: ServiceExecutionMode | undefined;
   projectVersion?: Version | string | undefined;
   activatePostRegistration = true;
   enableModesWithVersioning: boolean;
+  TEMPORARY__useStoreModel = false;
 
   constructor(
     editorStore: EditorStore,
     service: Service,
-    registrationOptions: ServiceRegistrationEnvInfo[],
+    registrationOptions: ServiceRegistrationEnvironmentConfig[],
     enableModesWithVersioning: boolean,
   ) {
     makeAutoObservable(this, {
@@ -107,6 +108,7 @@ export class ServiceRegistrationState {
       executionModes: computed,
       updateVersion: action,
       setProjectVersion: action,
+      setUseStoreModelWithFullInteractive: action,
       initialize: action,
       updateType: action,
       updateEnv: action,
@@ -130,9 +132,11 @@ export class ServiceRegistrationState {
   setProjectVersion(val: Version | string | undefined): void {
     this.projectVersion = val;
   }
-
   setActivatePostRegistration(val: boolean): void {
     this.activatePostRegistration = val;
+  }
+  setUseStoreModelWithFullInteractive(val: boolean): void {
+    this.TEMPORARY__useStoreModel = val;
   }
 
   initialize(): void {
@@ -161,19 +165,19 @@ export class ServiceRegistrationState {
     this.setServiceExecutionMode(this.executionModes[0]);
   }
 
-  get options(): ServiceRegistrationEnvInfo[] {
+  get options(): ServiceRegistrationEnvironmentConfig[] {
     if (this.enableModesWithVersioning) {
       return this.registrationOptions;
     }
     return this.registrationOptions
       .map((_envConfig) => {
-        const envConfig = new ServiceRegistrationEnvInfo();
+        const envConfig = new ServiceRegistrationEnvironmentConfig();
         envConfig.env = _envConfig.env;
         envConfig.executionUrl = _envConfig.executionUrl;
         envConfig.managementUrl = _envConfig.managementUrl;
         // NOTE: For projects that we cannot create a version for, only fully-interactive mode is supported
-        envConfig.modes = _envConfig.modes.filter((mode) =>
-          isFullInteractiveMode(mode),
+        envConfig.modes = _envConfig.modes.filter(
+          (mode) => mode === ServiceExecutionMode.FULL_INTERACTIVE,
         );
         return envConfig;
       })
@@ -189,7 +193,7 @@ export class ServiceRegistrationState {
   get versionOptions(): ServiceVersionOption[] | undefined {
     if (
       this.enableModesWithVersioning &&
-      !isFullInteractiveMode(this.serviceExecutionMode)
+      this.serviceExecutionMode !== ServiceExecutionMode.FULL_INTERACTIVE
     ) {
       const options: ServiceVersionOption[] =
         this.editorStore.sdlcState.projectVersions.map((version) => ({
@@ -225,9 +229,7 @@ export class ServiceRegistrationState {
       const projectConfig = guaranteeNonNullable(
         this.editorStore.projectConfigurationEditorState.projectConfiguration,
       );
-      this.registrationState.setMessage(
-        SERVICE_REGISTRATION_PHASE.REGISTERING_SERVICE,
-      );
+      this.registrationState.setMessage(`Registering service...`);
       const serviceRegistrationResult =
         (yield this.editorStore.graphManagerState.graphManager.registerService(
           this.service,
@@ -237,11 +239,12 @@ export class ServiceRegistrationState {
           versionInput,
           serverUrl,
           guaranteeNonNullable(this.serviceExecutionMode),
+          {
+            TEMPORARY__useStoreModel: this.TEMPORARY__useStoreModel,
+          },
         )) as ServiceRegistrationResult;
       if (this.activatePostRegistration) {
-        this.registrationState.setMessage(
-          SERVICE_REGISTRATION_PHASE.ACTIVATING_SERVICE,
-        );
+        this.registrationState.setMessage(`Activating service...`);
         yield this.editorStore.graphManagerState.graphManager.activateService(
           serverUrl,
           serviceRegistrationResult.serviceInstanceId,
@@ -249,31 +252,25 @@ export class ServiceRegistrationState {
       }
       assertNonEmptyString(
         serviceRegistrationResult.pattern,
-        'Service registration pattern is missing',
+        'Service registration pattern is missing or empty',
       );
-      const message = `Service with pattern ${
-        serviceRegistrationResult.pattern
-      } registered ${this.activatePostRegistration ? 'and activated ' : ''}`;
-      const encodedServicePattern =
-        URL_SEPARATOR +
-        encodeURIComponent(
-          serviceRegistrationResult.pattern[0] === URL_SEPARATOR
-            ? serviceRegistrationResult.pattern.substring(1)
-            : serviceRegistrationResult.pattern,
-        );
-      this.editorStore.setActionAlertInfo({
-        message,
+
+      this.editorStore.applicationStore.setActionAlertInfo({
+        message: `Service with pattern ${
+          serviceRegistrationResult.pattern
+        } registered ${this.activatePostRegistration ? 'and activated ' : ''}`,
         prompt: 'You can now launch and monitor the operation of your service',
         type: ActionAlertType.STANDARD,
-        onEnter: (): void => this.editorStore.setBlockGlobalHotkeys(true),
-        onClose: (): void => this.editorStore.setBlockGlobalHotkeys(false),
         actions: [
           {
             label: 'Launch Service',
             type: ActionAlertActionType.PROCEED,
             handler: (): void => {
-              this.editorStore.applicationStore.navigator.openNewWindow(
-                `${config.managementUrl}${encodedServicePattern}`,
+              this.editorStore.applicationStore.navigator.visitAddress(
+                generateServiceManagementUrl(
+                  config.managementUrl,
+                  serviceRegistrationResult.pattern,
+                ),
               );
             },
             default: true,
@@ -322,5 +319,37 @@ export class ServiceRegistrationState {
         'Service version can not be empty in Semi-interactive and Prod service type',
       );
     }
+
+    // validate service parameter multiplicities
+    const supportedServiceParamMultiplicties = [
+      TYPICAL_MULTIPLICITY_TYPE.ONE,
+      TYPICAL_MULTIPLICITY_TYPE.ZEROMANY,
+      TYPICAL_MULTIPLICITY_TYPE.ZEROONE,
+    ].map((p) =>
+      this.editorStore.graphManagerState.graph.getTypicalMultiplicity(p),
+    );
+    const invalidParams = buildLambdaVariableExpressions(
+      (this.service.execution as PureExecution).func,
+      this.editorStore.graphManagerState,
+    )
+      .filter(filterByType(VariableExpression))
+      .filter(
+        (p) =>
+          !supportedServiceParamMultiplicties.some((m) =>
+            multiplicityComparator(m, p.multiplicity),
+          ),
+      );
+    assertTrue(
+      invalidParams.length === 0,
+      `Parameter(s)${invalidParams.map(
+        (p) =>
+          ` ${p.name}: [${generateMultiplicityString(
+            p.multiplicity.lowerBound,
+            p.multiplicity.upperBound,
+          )}]`,
+      )} has/have unsupported multiplicity. Supported multiplicities include ${supportedServiceParamMultiplicties.map(
+        (m) => ` [${generateMultiplicityString(m.lowerBound, m.upperBound)}]`,
+      )}.`,
+    );
   }
 }

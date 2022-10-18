@@ -16,7 +16,13 @@
 
 import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { clsx, ChevronUpIcon, ChevronDownIcon, XIcon } from '@finos/legend-art';
+import {
+  clsx,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  XIcon,
+  PanelContent,
+} from '@finos/legend-art';
 import { Console } from './Console.js';
 import { AUX_PANEL_MODE } from '../../../stores/EditorConfig.js';
 import { isNonNullable } from '@finos/legend-shared';
@@ -51,7 +57,7 @@ export const AuxiliaryPanel = observer(() => {
       mode: AUX_PANEL_MODE.DEV_TOOL,
       name: 'DEVELOPER TOOLS',
       icon: undefined,
-      isVisible: editorStore.isDevToolEnabled,
+      isVisible: true,
     },
   };
 
@@ -100,7 +106,7 @@ export const AuxiliaryPanel = observer(() => {
             className="auxiliary-panel__header__action"
             onClick={toggleExpandAuxPanel}
             tabIndex={-1}
-            title={'Toggle expand/collapse'}
+            title="Toggle expand/collapse"
           >
             {editorStore.auxPanelDisplayState.isMaximized ? (
               <ChevronDownIcon />
@@ -112,13 +118,13 @@ export const AuxiliaryPanel = observer(() => {
             className="auxiliary-panel__header__action"
             onClick={closePanel}
             tabIndex={-1}
-            title={'Close'}
+            title="Close"
           >
             <XIcon />
           </button>
         </div>
       </div>
-      <div className="panel__content">
+      <PanelContent>
         {isTabVisible(AUX_PANEL_MODE.CONSOLE) && (
           <div className="auxiliary-panel__content__tab">
             <Console />
@@ -129,7 +135,7 @@ export const AuxiliaryPanel = observer(() => {
             <DevTool />
           </div>
         )}
-      </div>
+      </PanelContent>
     </div>
   );
 });

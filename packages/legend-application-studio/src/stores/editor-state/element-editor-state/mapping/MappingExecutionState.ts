@@ -43,13 +43,13 @@ import {
   toGrammarString,
   isValidJSONString,
   createUrlStringFromData,
-  losslessStringify,
+  stringifyLosslessJSON,
   guaranteeType,
   ContentType,
   generateEnumerableNameFromToken,
   tryToFormatLosslessJSONString,
 } from '@finos/legend-shared';
-import { createMockDataForMappingElementSource } from '../../../shared/MockDataUtil.js';
+import { createMockDataForMappingElementSource } from '../../../shared/MockDataUtils.js';
 import {
   type InputData,
   type Mapping,
@@ -104,30 +104,30 @@ import {
   ActionAlertActionType,
   ActionAlertType,
   ExecutionPlanState,
-  LambdaEditorState,
   TAB_SIZE,
 } from '@finos/legend-application';
 import {
   objectInputData_setData,
   runtime_addIdentifiedConnection,
   runtime_addMapping,
-} from '../../../graphModifier/DSLMapping_GraphModifierHelper.js';
-import { flatData_setData } from '../../../graphModifier/StoreFlatData_GraphModifierHelper.js';
+} from '../../../shared/modifier/DSL_Mapping_GraphModifierHelper.js';
+import { flatData_setData } from '../../../shared/modifier/STO_FlatData_GraphModifierHelper.js';
 import {
   service_addTestSuite,
   service_initNewService,
   service_setExecution,
-} from '../../../graphModifier/DSLService_GraphModifierHelper.js';
+} from '../../../shared/modifier/DSL_Service_GraphModifierHelper.js';
 import {
   localH2DatasourceSpecification_setTestDataSetupCsv,
   localH2DatasourceSpecification_setTestDataSetupSqls,
   relationalInputData_setData,
-} from '../../../graphModifier/StoreRelational_GraphModifierHelper.js';
+} from '../../../shared/modifier/STO_Relational_GraphModifierHelper.js';
 import {
   createEmptyEqualToJsonAssertion,
   createBareExternalFormat,
 } from '../../../shared/testable/TestableUtils.js';
 import { SERIALIZATION_FORMAT } from '../service/testable/ServiceTestEditorState.js';
+import { LambdaEditorState } from '@finos/legend-query-builder';
 
 export class MappingExecutionQueryState extends LambdaEditorState {
   editorStore: EditorStore;
@@ -752,7 +752,7 @@ export class MappingExecutionState {
             },
           )) as ExecutionResult;
         this.setExecutionResultText(
-          losslessStringify(
+          stringifyLosslessJSON(
             extractExecutionResultValues(result),
             undefined,
             TAB_SIZE,
@@ -863,12 +863,10 @@ export class MappingExecutionState {
           );
         }
       } else {
-        this.editorStore.setActionAlertInfo({
+        this.editorStore.applicationStore.setActionAlertInfo({
           message: 'Mapping execution input data is already set',
           prompt: 'Do you want to regenerate the input data?',
           type: ActionAlertType.CAUTION,
-          onEnter: (): void => this.editorStore.setBlockGlobalHotkeys(true),
-          onClose: (): void => this.editorStore.setBlockGlobalHotkeys(false),
           actions: [
             {
               label: 'Regenerate',

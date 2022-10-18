@@ -27,7 +27,7 @@ import {
   filterByType,
 } from '@finos/legend-shared';
 import { ElementEditorState } from './ElementEditorState.js';
-import type { RuntimeExplorerTreeNodeData } from '../../shared/TreeUtil.js';
+import type { RuntimeExplorerTreeNodeData } from '../../shared/TreeUtils.js';
 import type { TreeData } from '@finos/legend-art';
 import { ConnectionEditorState } from './connection/ConnectionEditorState.js';
 import { getMappingElementSource } from './mapping/MappingEditorState.js';
@@ -66,15 +66,15 @@ import {
   getAllIdentifiedConnections,
   generateIdentifiedConnectionId,
 } from '@finos/legend-graph';
-import type { DSLMapping_LegendStudioApplicationPlugin_Extension } from '../../DSLMapping_LegendStudioApplicationPlugin_Extension.js';
-import { packageableElementReference_setValue } from '../../graphModifier/DomainGraphModifierHelper.js';
+import type { DSL_Mapping_LegendStudioApplicationPlugin_Extension } from '../../DSL_Mapping_LegendStudioApplicationPlugin_Extension.js';
+import { packageableElementReference_setValue } from '../../shared/modifier/DomainGraphModifierHelper.js';
 import {
   runtime_addIdentifiedConnection,
   runtime_addMapping,
   runtime_addUniqueStoreConnectionsForStore,
   runtime_deleteIdentifiedConnection,
   runtime_deleteMapping,
-} from '../../graphModifier/DSLMapping_GraphModifierHelper.js';
+} from '../../shared/modifier/DSL_Mapping_GraphModifierHelper.js';
 
 export const getClassMappingStore = (
   setImplementation: SetImplementation,
@@ -98,7 +98,7 @@ export const getClassMappingStore = (
         .flatMap(
           (plugin) =>
             (
-              plugin as DSLMapping_LegendStudioApplicationPlugin_Extension
+              plugin as DSL_Mapping_LegendStudioApplicationPlugin_Extension
             ).getExtraInstanceSetImplementationStoreExtractors?.() ?? [],
         );
     for (const extractor of extraInstanceSetImplementationStoreExtractors) {
@@ -504,7 +504,7 @@ export class IdentifiedConnectionsPerStoreEditorTabState extends IdentifiedConne
       .flatMap(
         (plugin) =>
           (
-            plugin as DSLMapping_LegendStudioApplicationPlugin_Extension
+            plugin as DSL_Mapping_LegendStudioApplicationPlugin_Extension
           ).getExtraDefaultConnectionValueBuilders?.() ?? [],
       );
 

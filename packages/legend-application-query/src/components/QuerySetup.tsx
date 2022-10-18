@@ -22,12 +22,14 @@ import {
   clsx,
   CustomSelectorInput,
   PanelLoadingIndicator,
-  PencilIcon,
   PlusIcon,
   RobotIcon,
   SearchIcon,
   UserIcon,
   QuestionCircleIcon,
+  DroidIcon,
+  ManageSearchIcon,
+  ArrowCirceUpIcon,
 } from '@finos/legend-art';
 import {
   debounce,
@@ -38,16 +40,19 @@ import { flowResult } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  generateCreateQueryEditorRoute,
+  generateMappingQueryCreatorRoute,
   generateExistingQueryEditorRoute,
-  generateServiceQueryEditorRoute,
+  generateServiceQueryCreatorRoute,
 } from '../stores/LegendQueryRouter.js';
 import {
   type QuerySetupState,
   type ServiceExecutionOption,
-  CreateQuerySetupState,
-  ExistingQuerySetupState,
-  ServiceQuerySetupState,
+  CreateMappingQuerySetupState,
+  EditExistingQuerySetupState,
+  CloneServiceQuerySetupState,
+  UpdateExistingServiceQuerySetupState,
+  LoadProjectServiceQuerySetupState,
+  QueryProductionizationSetupState,
 } from '../stores/QuerySetupStore.js';
 import {
   useQuerySetupStore,
@@ -57,55 +62,45 @@ import {
   type ProjectData,
   LATEST_VERSION_ALIAS,
   SNAPSHOT_VERSION_ALIAS,
-  compareSemVerVersions,
 } from '@finos/legend-server-depot';
-import type {
-  LightQuery,
-  Mapping,
-  PackageableRuntime,
-} from '@finos/legend-graph';
+import { compareSemVerVersions } from '@finos/legend-storage';
+import type { Mapping, PackageableRuntime } from '@finos/legend-graph';
 import {
   type PackageableElementOption,
   useApplicationStore,
   buildElementOption,
+  EDITOR_LANGUAGE,
+  TextInputEditor,
 } from '@finos/legend-application';
+import {
+  type ServiceOption,
+  type QueryOption,
+  buildServiceOption,
+  formatServiceOptionLabel,
+  buildQueryOption,
+} from '@finos/legend-query-builder';
+import { useLegendQueryApplicationStore } from './LegendQueryBaseStoreProvider.js';
 
-type QueryOption = { label: string; value: LightQuery };
-const buildQueryOption = (query: LightQuery): QueryOption => ({
-  label: query.name,
-  value: query,
-});
-
-const ExistingQuerySetup = observer(
-  (props: { querySetupState: ExistingQuerySetupState }) => {
+const EditExistingQuerySetup = observer(
+  (props: { querySetupState: EditExistingQuerySetupState }) => {
     const { querySetupState } = props;
     const applicationStore = useApplicationStore();
     const setupStore = useQuerySetupStore();
     const querySearchRef = useRef<SelectComponent>(null);
     const [searchText, setSearchText] = useState('');
+
+    // actions
     const back = (): void => {
       setupStore.setSetupState(undefined);
-      querySetupState.setCurrentQuery(undefined);
     };
     const next = (): void => {
       if (querySetupState.currentQuery) {
-        applicationStore.navigator.goTo(
+        applicationStore.navigator.goToLocation(
           generateExistingQueryEditorRoute(querySetupState.currentQuery.id),
         );
       }
-      setupStore.setSetupState(undefined);
     };
     const canProceed = querySetupState.currentQuery;
-
-    // show current user queries only
-    const toggleShowCurrentUserQueriesOnly = (): void => {
-      querySetupState.setShowCurrentUserQueriesOnly(
-        !querySetupState.showCurrentUserQueriesOnly,
-      );
-      flowResult(querySetupState.loadQueries(searchText)).catch(
-        applicationStore.alertUnhandledError,
-      );
-    };
 
     // query
     const queryOptions = querySetupState.queries.map(buildQueryOption);
@@ -137,7 +132,10 @@ const ExistingQuerySetup = observer(
       }
       return (
         <div className="query-setup__existing-query__query-option">
-          <div className="query-setup__existing-query__query-option__label">
+          <div
+            className="query-setup__existing-query__query-option__label"
+            title={option.label}
+          >
             {option.label}
           </div>
           {querySetupState.showCurrentUserQueriesOnly && (
@@ -185,6 +183,15 @@ const ExistingQuerySetup = observer(
       }
     };
 
+    // show current user queries only
+    const toggleShowCurrentUserQueriesOnly = (): void => {
+      querySetupState.setShowCurrentUserQueriesOnly(
+        !querySetupState.showCurrentUserQueriesOnly,
+      );
+      debouncedLoadQueries.cancel();
+      debouncedLoadQueries(searchText);
+    };
+
     useEffect(() => {
       flowResult(querySetupState.loadQueries('')).catch(
         applicationStore.alertUnhandledError,
@@ -214,7 +221,7 @@ const ExistingQuerySetup = observer(
             })}
             onClick={next}
             disabled={!canProceed}
-            title="Proceed"
+            title="Edit query"
           >
             <ArrowRightIcon />
           </button>
@@ -255,6 +262,249 @@ const ExistingQuerySetup = observer(
               </button>
             </div>
           </div>
+          <div className="query-setup__existing-query__preview">
+            <PanelLoadingIndicator
+              isLoading={querySetupState.loadQueryState.isInProgress}
+            />
+            {querySetupState.currentQuery && (
+              <>
+                {!querySetupState.currentQueryInfo && (
+                  <BlankPanelContent>{`Can't preview query`}</BlankPanelContent>
+                )}
+                {querySetupState.currentQueryInfo && (
+                  <TextInputEditor
+                    inputValue={querySetupState.currentQueryInfo.content}
+                    isReadOnly={true}
+                    language={EDITOR_LANGUAGE.PURE}
+                    showMiniMap={false}
+                    hideGutter={true}
+                  />
+                )}
+              </>
+            )}
+            {!querySetupState.currentQuery && (
+              <BlankPanelContent>No query to preview</BlankPanelContent>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+
+const QueryProductionizationSetup = observer(
+  (props: { querySetupState: QueryProductionizationSetupState }) => {
+    const { querySetupState } = props;
+    const applicationStore = useApplicationStore();
+    const setupStore = useQuerySetupStore();
+    const querySearchRef = useRef<SelectComponent>(null);
+    const [searchText, setSearchText] = useState('');
+
+    // actions
+    const back = (): void => {
+      setupStore.setSetupState(undefined);
+    };
+    const next = (): void => {
+      if (querySetupState.currentQuery) {
+        querySetupState
+          .loadQueryProductionizer()
+          .catch(applicationStore.alertUnhandledError);
+      }
+    };
+    const canProceed = querySetupState.currentQuery;
+
+    // query
+    const queryOptions = querySetupState.queries.map(buildQueryOption);
+    const selectedQueryOption = querySetupState.currentQuery
+      ? buildQueryOption(querySetupState.currentQuery)
+      : null;
+    const onQueryOptionChange = (option: QueryOption | null): void => {
+      if (option?.value !== querySetupState.currentQuery) {
+        querySetupState.setCurrentQuery(option?.value.id);
+      }
+    };
+
+    // search text
+    const debouncedLoadQueries = useMemo(
+      () =>
+        debounce((input: string): void => {
+          flowResult(querySetupState.loadQueries(input)).catch(
+            applicationStore.alertUnhandledError,
+          );
+        }, 500),
+      [applicationStore, querySetupState],
+    );
+    const onSearchTextChange = (value: string): void => {
+      if (value !== searchText) {
+        setSearchText(value);
+        debouncedLoadQueries.cancel();
+        debouncedLoadQueries(value);
+      }
+    };
+
+    useEffect(() => {
+      flowResult(querySetupState.loadQueries('')).catch(
+        applicationStore.alertUnhandledError,
+      );
+    }, [querySetupState, applicationStore]);
+
+    useEffect(() => {
+      querySearchRef.current?.focus();
+    }, []);
+
+    return (
+      <div className="query-setup__wizard query-setup__productionize-query">
+        <div className="query-setup__wizard__header query-setup__productionize-query__header">
+          <button
+            className="query-setup__wizard__header__btn"
+            onClick={back}
+            title="Back to Main Menu"
+          >
+            <ArrowLeftIcon />
+          </button>
+          <div className="query-setup__wizard__header__title">
+            Productionizing an existing query...
+          </div>
+          <button
+            className={clsx('query-setup__wizard__header__btn', {
+              'query-setup__wizard__header__btn--ready': canProceed,
+            })}
+            onClick={next}
+            disabled={!canProceed}
+            title="Productionize query"
+          >
+            <ArrowRightIcon />
+          </button>
+        </div>
+        <div className="query-setup__wizard__content">
+          <div className="query-setup__wizard__group query-setup__wizard__group--inline">
+            <div className="query-setup__wizard__group__title">
+              <SearchIcon />
+            </div>
+            <CustomSelectorInput
+              ref={querySearchRef}
+              className="query-setup__wizard__selector"
+              options={queryOptions}
+              isLoading={querySetupState.loadQueriesState.isInProgress}
+              onInputChange={onSearchTextChange}
+              inputValue={searchText}
+              onChange={onQueryOptionChange}
+              value={selectedQueryOption}
+              placeholder="Search for query by name..."
+              isClearable={true}
+              escapeClearsValue={true}
+              darkMode={true}
+            />
+          </div>
+          <div className="query-setup__productionize-query__preview">
+            <PanelLoadingIndicator
+              isLoading={querySetupState.loadQueryState.isInProgress}
+            />
+            {querySetupState.currentQuery && (
+              <>
+                {!querySetupState.currentQueryInfo && (
+                  <BlankPanelContent>{`Can't preview query`}</BlankPanelContent>
+                )}
+                {querySetupState.currentQueryInfo && (
+                  <TextInputEditor
+                    inputValue={querySetupState.currentQueryInfo.content}
+                    isReadOnly={true}
+                    language={EDITOR_LANGUAGE.PURE}
+                    showMiniMap={false}
+                    hideGutter={true}
+                  />
+                )}
+              </>
+            )}
+            {!querySetupState.currentQuery && (
+              <BlankPanelContent>No query to preview</BlankPanelContent>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+
+export const UpdateExistingServiceQuerySetup = observer(
+  (props: { querySetupState: UpdateExistingServiceQuerySetupState }) => {
+    const { querySetupState } = props;
+    const applicationStore = useLegendQueryApplicationStore();
+    const setupStore = useQuerySetupStore();
+    const serviceSearchRef = useRef<SelectComponent>(null);
+    const [searchText, setSearchText] = useState('');
+
+    const back = (): void => {
+      setupStore.setSetupState(undefined);
+    };
+
+    const serviceOptions = querySetupState.services.map(buildServiceOption);
+    const onServiceOptionChange = (option: ServiceOption): void => {
+      querySetupState
+        .loadServiceUpdater(option.value)
+        .catch(applicationStore.alertUnhandledError);
+    };
+
+    // search text
+    const debouncedLoadServices = useMemo(
+      () =>
+        debounce((input: string): void => {
+          flowResult(querySetupState.loadServices(input)).catch(
+            applicationStore.alertUnhandledError,
+          );
+        }, 500),
+      [applicationStore, querySetupState],
+    );
+    const onSearchTextChange = (value: string): void => {
+      if (value !== searchText) {
+        setSearchText(value);
+        debouncedLoadServices.cancel();
+        debouncedLoadServices(value);
+      }
+    };
+
+    useEffect(() => {
+      flowResult(querySetupState.loadServices('')).catch(
+        applicationStore.alertUnhandledError,
+      );
+    }, [querySetupState, applicationStore]);
+
+    useEffect(() => {
+      serviceSearchRef.current?.focus();
+    }, []);
+
+    return (
+      <div className="query-setup__wizard query-setup__existing-service-query">
+        <div className="query-setup__wizard__header query-setup__existing-service-query__header">
+          <button
+            className="query-setup__wizard__header__btn"
+            onClick={back}
+            title="Back to Main Menu"
+          >
+            <ArrowLeftIcon />
+          </button>
+          <div className="query-setup__wizard__header__title">
+            Updating an existing service query...
+          </div>
+        </div>
+        <div className="query-setup__wizard__content">
+          <div className="query-setup__wizard__group query-setup__wizard__group--inline query-setup__existing-service-query__search-bar">
+            <div className="query-setup__wizard__group__title">
+              <SearchIcon />
+            </div>
+            <CustomSelectorInput
+              ref={serviceSearchRef}
+              className="query-setup__wizard__selector"
+              options={serviceOptions}
+              isLoading={querySetupState.loadServicesState.isInProgress}
+              onInputChange={onSearchTextChange}
+              inputValue={searchText}
+              onChange={onServiceOptionChange}
+              placeholder="Search for service..."
+              darkMode={true}
+              formatOptionLabel={formatServiceOptionLabel}
+            />
+          </div>
         </div>
       </div>
     );
@@ -273,15 +523,81 @@ const buildVersionOption = (version: string): VersionOption => ({
   value: version,
 });
 
-const ServiceQuerySetup = observer(
-  (props: { querySetupState: ServiceQuerySetupState }) => {
+const LoadProjectServiceQuerySetup = observer(
+  (props: { querySetupState: LoadProjectServiceQuerySetupState }) => {
     const { querySetupState } = props;
     const applicationStore = useApplicationStore();
     const setupStore = useQuerySetupStore();
     const back = (): void => {
       setupStore.setSetupState(undefined);
-      querySetupState.setCurrentVersionId(undefined);
-      querySetupState.setCurrentProject(undefined);
+    };
+
+    // project
+    const projectOptions = querySetupState.projects.map(buildProjectOption);
+    const projectSelectorPlaceholder = querySetupState.loadProjectsState
+      .isInProgress
+      ? 'Loading projects'
+      : querySetupState.loadProjectsState.hasFailed
+      ? 'Error fetching projects'
+      : querySetupState.projects.length
+      ? 'Choose a project'
+      : 'You have no projects, please create or acquire access for at least one';
+    const onProjectOptionChange = (option: ProjectOption): void => {
+      querySetupState
+        .loadProjectServiceUpdater(option.value)
+        .catch(applicationStore.alertUnhandledError);
+    };
+
+    useEffect(() => {
+      flowResult(querySetupState.loadProjects()).catch(
+        applicationStore.alertUnhandledError,
+      );
+    }, [querySetupState, applicationStore]);
+
+    return (
+      <div className="query-setup__wizard query-setup__existing-service-query">
+        <div className="query-setup__wizard__header query-setup__service-query__header">
+          <button
+            className="query-setup__wizard__header__btn"
+            onClick={back}
+            title="Back to Main Menu"
+          >
+            <ArrowLeftIcon />
+          </button>
+          <div className="query-setup__wizard__header__title">
+            Load service query from a project...
+          </div>
+        </div>
+        <div className="query-setup__wizard__content">
+          <div className="query-setup__wizard__group query-setup__wizard__group--inline query-setup__existing-service-query__search-bar">
+            <CustomSelectorInput
+              className="query-setup__wizard__selector"
+              options={projectOptions}
+              disabled={
+                querySetupState.loadProjectsState.isInProgress ||
+                !projectOptions.length
+              }
+              isLoading={querySetupState.loadProjectsState.isInProgress}
+              onChange={onProjectOptionChange}
+              placeholder={projectSelectorPlaceholder}
+              darkMode={true}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+
+const CloneServiceQuerySetup = observer(
+  (props: { querySetupState: CloneServiceQuerySetupState }) => {
+    const { querySetupState } = props;
+    const applicationStore = useApplicationStore();
+    const setupStore = useQuerySetupStore();
+
+    // actions
+    const back = (): void => {
+      setupStore.setSetupState(undefined);
     };
     const next = (): void => {
       if (
@@ -289,8 +605,8 @@ const ServiceQuerySetup = observer(
         querySetupState.currentVersionId &&
         querySetupState.currentServiceExecutionOption
       ) {
-        applicationStore.navigator.goTo(
-          generateServiceQueryEditorRoute(
+        applicationStore.navigator.goToLocation(
+          generateServiceQueryCreatorRoute(
             querySetupState.currentProject.groupId,
             querySetupState.currentProject.artifactId,
             querySetupState.currentVersionId,
@@ -299,7 +615,6 @@ const ServiceQuerySetup = observer(
           ),
         );
       }
-      setupStore.setSetupState(undefined);
     };
     const canProceed =
       querySetupState.currentProject &&
@@ -412,7 +727,7 @@ const ServiceQuerySetup = observer(
             <ArrowLeftIcon />
           </button>
           <div className="query-setup__wizard__header__title">
-            Loading a service query...
+            Clone an existing service query...
           </div>
           <button
             className={clsx('query-setup__wizard__header__btn', {
@@ -420,7 +735,7 @@ const ServiceQuerySetup = observer(
             })}
             onClick={next}
             disabled={!canProceed}
-            title="Proceed"
+            title="Create a new query"
           >
             <ArrowRightIcon />
           </button>
@@ -510,15 +825,15 @@ const ServiceQuerySetup = observer(
   },
 );
 
-const CreateQuerySetup = observer(
-  (props: { querySetupState: CreateQuerySetupState }) => {
+const CreateMappingQuerySetup = observer(
+  (props: { querySetupState: CreateMappingQuerySetupState }) => {
     const { querySetupState } = props;
     const applicationStore = useApplicationStore();
     const setupStore = useQuerySetupStore();
+
+    // actions
     const back = (): void => {
       setupStore.setSetupState(undefined);
-      querySetupState.setCurrentVersionId(undefined);
-      querySetupState.setCurrentProject(undefined);
     };
     const next = (): void => {
       if (
@@ -527,8 +842,8 @@ const CreateQuerySetup = observer(
         querySetupState.currentMapping &&
         querySetupState.currentRuntime
       ) {
-        applicationStore.navigator.goTo(
-          generateCreateQueryEditorRoute(
+        applicationStore.navigator.goToLocation(
+          generateMappingQueryCreatorRoute(
             querySetupState.currentProject.groupId,
             querySetupState.currentProject.artifactId,
             querySetupState.currentVersionId,
@@ -537,7 +852,6 @@ const CreateQuerySetup = observer(
           ),
         );
       }
-      setupStore.setSetupState(undefined);
     };
     const canProceed =
       querySetupState.currentProject &&
@@ -678,7 +992,7 @@ const CreateQuerySetup = observer(
             })}
             onClick={next}
             disabled={!canProceed}
-            title="Proceed"
+            title="Create a new query"
           >
             <ArrowRightIcon />
           </button>
@@ -805,11 +1119,19 @@ const QuerySetupLandingPage = observer(() => {
       <Fragment key={config.key}>{config.renderer(setupStore)}</Fragment>
     ));
   const editQuery = (): void =>
-    setupStore.setSetupState(new ExistingQuerySetupState(setupStore));
-  const loadServiceQuery = (): void =>
-    setupStore.setSetupState(new ServiceQuerySetupState(setupStore));
-  const createQuery = (): void =>
-    setupStore.setSetupState(new CreateQuerySetupState(setupStore));
+    setupStore.setSetupState(new EditExistingQuerySetupState(setupStore));
+  const updateServiceQuery = (): void =>
+    setupStore.setSetupState(
+      new UpdateExistingServiceQuerySetupState(setupStore),
+    );
+  const cloneServiceQuery = (): void =>
+    setupStore.setSetupState(new CloneServiceQuerySetupState(setupStore));
+  const createMappingQuery = (): void =>
+    setupStore.setSetupState(new CreateMappingQuerySetupState(setupStore));
+  const loadServiceQueryFromProject = (): void =>
+    setupStore.setSetupState(new LoadProjectServiceQuerySetupState(setupStore));
+  const productionizeQuery = (): void =>
+    setupStore.setSetupState(new QueryProductionizationSetupState(setupStore));
 
   useEffect(() => {
     setupStore.initialize();
@@ -834,7 +1156,7 @@ const QuerySetupLandingPage = observer(() => {
                 onClick={editQuery}
               >
                 <div className="query-setup__landing-page__option__icon">
-                  <PencilIcon className="query-setup__landing-page__icon--edit" />
+                  <ManageSearchIcon className="query-setup__landing-page__icon--search" />
                 </div>
                 <div className="query-setup__landing-page__option__label">
                   Load an existing query
@@ -842,25 +1164,58 @@ const QuerySetupLandingPage = observer(() => {
               </button>
               {extraQuerySetupOptions}
               <button
-                className="query-setup__landing-page__option query-setup__landing-page__option--advanced query-setup__landing-page__option--service-query"
-                onClick={loadServiceQuery}
-              >
-                <div className="query-setup__landing-page__option__icon">
-                  <RobotIcon />
-                </div>
-                <div className="query-setup__landing-page__option__label">
-                  Load query from a service
-                </div>
-              </button>
-              <button
                 className="query-setup__landing-page__option query-setup__landing-page__option--advanced query-setup__landing-page__option--create-query"
-                onClick={createQuery}
+                onClick={createMappingQuery}
               >
                 <div className="query-setup__landing-page__option__icon">
                   <PlusIcon />
                 </div>
                 <div className="query-setup__landing-page__option__label">
-                  Create a new query
+                  Create new query on a mapping
+                </div>
+              </button>
+              <button
+                className="query-setup__landing-page__option query-setup__landing-page__option--advanced query-setup__landing-page__option--service-query"
+                onClick={cloneServiceQuery}
+              >
+                <div className="query-setup__landing-page__option__icon">
+                  <RobotIcon />
+                </div>
+                <div className="query-setup__landing-page__option__label">
+                  Clone an existing service query
+                </div>
+              </button>
+              <button
+                className="query-setup__landing-page__option query-setup__landing-page__option--advanced query-setup__landing-page__option--service-query"
+                onClick={updateServiceQuery}
+              >
+                <div className="query-setup__landing-page__option__icon">
+                  <DroidIcon />
+                </div>
+                <div className="query-setup__landing-page__option__label">
+                  Update an existing service query
+                </div>
+              </button>
+              <button
+                className="query-setup__landing-page__option query-setup__landing-page__option--advanced query-setup__landing-page__option--service-query"
+                onClick={loadServiceQueryFromProject}
+              >
+                <div className="query-setup__landing-page__option__icon">
+                  <DroidIcon />
+                </div>
+                <div className="query-setup__landing-page__option__label">
+                  Load service query from a project
+                </div>
+              </button>
+              <button
+                className="query-setup__landing-page__option query-setup__landing-page__option--advanced query-setup__landing-page__option--service-query"
+                onClick={productionizeQuery}
+              >
+                <div className="query-setup__landing-page__option__icon">
+                  <ArrowCirceUpIcon />
+                </div>
+                <div className="query-setup__landing-page__option__label">
+                  Productionize an existing query
                 </div>
               </button>
             </div>
@@ -878,12 +1233,18 @@ export const QuerySetup = withQuerySetupStore(
     const renderQuerySetupScreen = (
       setupState: QuerySetupState,
     ): React.ReactNode => {
-      if (setupState instanceof ExistingQuerySetupState) {
-        return <ExistingQuerySetup querySetupState={setupState} />;
-      } else if (setupState instanceof ServiceQuerySetupState) {
-        return <ServiceQuerySetup querySetupState={setupState} />;
-      } else if (setupState instanceof CreateQuerySetupState) {
-        return <CreateQuerySetup querySetupState={setupState} />;
+      if (setupState instanceof EditExistingQuerySetupState) {
+        return <EditExistingQuerySetup querySetupState={setupState} />;
+      } else if (setupState instanceof CreateMappingQuerySetupState) {
+        return <CreateMappingQuerySetup querySetupState={setupState} />;
+      } else if (setupState instanceof CloneServiceQuerySetupState) {
+        return <CloneServiceQuerySetup querySetupState={setupState} />;
+      } else if (setupState instanceof UpdateExistingServiceQuerySetupState) {
+        return <UpdateExistingServiceQuerySetup querySetupState={setupState} />;
+      } else if (setupState instanceof LoadProjectServiceQuerySetupState) {
+        return <LoadProjectServiceQuerySetup querySetupState={setupState} />;
+      } else if (setupState instanceof QueryProductionizationSetupState) {
+        return <QueryProductionizationSetup querySetupState={setupState} />;
       }
       const extraQuerySetupRenderers = setupStore.pluginManager
         .getApplicationPlugins()

@@ -1,5 +1,52 @@
 # @finos/legend-application
 
+## 9.0.1
+
+## 9.0.0
+
+### Major Changes
+
+- [#1520](https://github.com/finos/legend-studio/pull/1520) [`240875e8`](https://github.com/finos/legend-studio/commit/240875e869c95d7d228756a66eec1e82a45b8884) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Move `value specification` logic like `LambdaEditor`, `BasicValueSpecificationEditor` from `@finos/legend-application` to `@finos/legend-query-builder`
+
+- [#1520](https://github.com/finos/legend-studio/pull/1520) [`240875e8`](https://github.com/finos/legend-studio/commit/240875e869c95d7d228756a66eec1e82a45b8884) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Rework `ApplicationNavigator` and renamed its methods; also added support for blocking platform navigation (e.g. web-browser's back/forward buttons).
+
+### Minor Changes
+
+- [#1520](https://github.com/finos/legend-studio/pull/1520) [`240875e8`](https://github.com/finos/legend-studio/commit/240875e869c95d7d228756a66eec1e82a45b8884) ([@akphi](https://github.com/akphi)) - Add `Backdrop` to `LegendApplicationComponentFrameworkProvider` and allow controling this backdrop from `ApplicationStore`
+
+## 8.0.2
+
+## 8.0.1
+
+## 8.0.0
+
+### Major Changes
+
+- [#1488](https://github.com/finos/legend-studio/pull/1488) [`a90b4698`](https://github.com/finos/legend-studio/commit/a90b469846363058ac7efffcbfb8cf0070582609) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** `ApplicationStore` typings has been updated to genericize on the type of the plugin manager instead of the plugin, i.e. class
+
+  ```ts
+  class ApplicationStore<
+    T extends LegendApplicationConfig,
+    V extends LegendApplicationPluginManager<LegendApplicationPlugin>,
+  >
+  ```
+
+### Patch Changes
+
+- [#1486](https://github.com/finos/legend-studio/pull/1486) [`4eb73868`](https://github.com/finos/legend-studio/commit/4eb73868a6f6041967252ec27b65ec15cdcc7edf) ([@xannem](https://github.com/xannem)) - Improve search algorithm for virtual assistant to enhance user experience [#1294](https://github.com/finos/legend-studio/issues/1294)
+
+## 7.2.1
+
+## 7.2.0
+
+### Minor Changes
+
+- [#1476](https://github.com/finos/legend-studio/pull/1476) [`293f2345`](https://github.com/finos/legend-studio/commit/293f2345cd7dcc7e97fc4b6b21c7d274a1407176) ([@akphi](https://github.com/akphi)) - Add `<DndProvider backend={html5Backend}>` to `<LegendApplicationComponentFrameworkProvider>`.
+
+## 7.1.7
+
+## 7.1.6
+
 ## 7.1.5
 
 ## 7.1.4

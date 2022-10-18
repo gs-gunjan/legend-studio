@@ -20,7 +20,6 @@ import {
   type IDisposable,
   editor as monacoEditorAPI,
   languages as monacoLanguagesAPI,
-  KeyCode,
 } from 'monaco-editor';
 import {
   ContextMenu,
@@ -36,6 +35,8 @@ import {
   normalizeLineEnding,
   MoreHorizontalIcon,
   HackerIcon,
+  PanelContent,
+  useResizeDetector,
 } from '@finos/legend-art';
 import {
   TAB_SIZE,
@@ -44,12 +45,12 @@ import {
   useApplicationStore,
   type DocumentationEntry,
   useApplicationNavigationContext,
+  createPassThroughOnKeyHandler,
 } from '@finos/legend-application';
-import { useResizeDetector } from 'react-resize-detector';
 import {
   type ElementDragSource,
   CORE_DND_TYPE,
-} from '../../../stores/shared/DnDUtil.js';
+} from '../../../stores/shared/DnDUtils.js';
 import { useDrop } from 'react-dnd';
 import type {
   DSL_LegendStudioApplicationPlugin_Extension,
@@ -98,9 +99,12 @@ import {
   MAPPING_WITH_M2M_CLASS_MAPPING_SNIPPET,
   MAPPING_WITH_ENUMERATION_MAPPING_SNIPPET,
   MAPPING_WITH_RELATIONAL_CLASS_MAPPING_SNIPPET,
+  POST_PROCESSOR_RELATIONAL_DATABASE_CONNECTION_SNIPPET,
+  createConnectionSnippetWithPostProcessorSuggestionSnippet,
 } from '../../../stores/LegendStudioCodeSnippets.js';
-import type { DSLData_LegendStudioApplicationPlugin_Extension } from '../../../stores/DSLData_LegendStudioApplicationPlugin_Extension.js';
+import type { DSL_Data_LegendStudioApplicationPlugin_Extension } from '../../../stores/DSL_Data_LegendStudioApplicationPlugin_Extension.js';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../stores/LegendStudioApplicationNavigationContext.js';
+import type { STO_Relational_LegendStudioApplicationPlugin_Extension } from '../../../stores/STO_Relational_LegendStudioApplicationPlugin_Extension.js';
 
 const getSectionParserNameFromLineText = (
   lineText: string,
@@ -523,6 +527,14 @@ const getParserElementSnippetSuggestions = (
       ];
     }
     case PURE_PARSER.CONNECTION: {
+      const embeddedPostProcessorSnippetSuggestions = editorStore.pluginManager
+        .getApplicationPlugins()
+        .flatMap(
+          (plugin) =>
+            (
+              plugin as STO_Relational_LegendStudioApplicationPlugin_Extension
+            ).getExtraPostProcessorSnippetSuggestions?.() ?? [],
+        );
       return [
         {
           text: PURE_CONNECTION_NAME.JSON_MODEL_CONNECTION,
@@ -544,7 +556,18 @@ const getParserElementSnippetSuggestions = (
           description: 'relational database connection',
           insertText: RELATIONAL_DATABASE_CONNECTION_SNIPPET,
         },
-        // TODO: extension mehcanism for connection and relational database connection
+        {
+          text: PURE_CONNECTION_NAME.RELATIONAL_DATABASE_CONNECTION,
+          description: 'relational database connection with post-processor',
+          insertText: POST_PROCESSOR_RELATIONAL_DATABASE_CONNECTION_SNIPPET,
+        },
+        ...embeddedPostProcessorSnippetSuggestions.map((suggestion) => ({
+          text: PURE_CONNECTION_NAME.RELATIONAL_DATABASE_CONNECTION,
+          description: suggestion.description,
+          insertText: createConnectionSnippetWithPostProcessorSuggestionSnippet(
+            suggestion.text,
+          ),
+        })),
       ];
     }
     case PURE_PARSER.RUNTIME: {
@@ -603,7 +626,7 @@ const getParserElementSnippetSuggestions = (
         .flatMap(
           (plugin) =>
             (
-              plugin as DSLData_LegendStudioApplicationPlugin_Extension
+              plugin as DSL_Data_LegendStudioApplicationPlugin_Extension
             ).getExtraEmbeddedDataSnippetSuggestions?.() ?? [],
         );
       return [
@@ -794,21 +817,7 @@ export const GrammarTextEditor = observer(() => {
         // but if we do that on first load, the cursor will not jump to the current element
         // also, it's better to place that logic in an effect that watches for the regex string
       });
-      _editor.onKeyDown((event) => {
-        if (event.keyCode === KeyCode.F9) {
-          event.preventDefault();
-          event.stopPropagation();
-          flowResult(editorStore.graphState.globalCompileInTextMode()).catch(
-            applicationStore.alertUnhandledError,
-          );
-        } else if (event.keyCode === KeyCode.F8) {
-          event.preventDefault();
-          event.stopPropagation();
-          flowResult(editorStore.toggleTextMode()).catch(
-            applicationStore.alertUnhandledError,
-          );
-        }
-      });
+      _editor.onKeyDown((event) => createPassThroughOnKeyHandler());
       disableEditorHotKeys(_editor);
       _editor.focus(); // focus on the editor initially
       setEditor(_editor);
@@ -816,13 +825,13 @@ export const GrammarTextEditor = observer(() => {
   }, [editorStore, applicationStore, editor, grammarTextEditorState]);
 
   // Drag and Drop
-  const extraDnDTypes = editorStore.pluginManager
+  const extraElementDragTypes = editorStore.pluginManager
     .getApplicationPlugins()
     .flatMap(
       (plugin) =>
         (
           plugin as DSL_LegendStudioApplicationPlugin_Extension
-        ).getExtraPureGrammarTextEditorDnDTypes?.() ?? [],
+        ).getExtraPureGrammarTextEditorDragElementTypes?.() ?? [],
     );
   const handleDrop = useCallback(
     (item: ElementDragSource): void => {
@@ -837,7 +846,7 @@ export const GrammarTextEditor = observer(() => {
   const [, dropConnector] = useDrop<ElementDragSource>(
     () => ({
       accept: [
-        ...extraDnDTypes,
+        ...extraElementDragTypes,
         CORE_DND_TYPE.PROJECT_EXPLORER_PACKAGE,
         CORE_DND_TYPE.PROJECT_EXPLORER_CLASS,
         CORE_DND_TYPE.PROJECT_EXPLORER_ASSOCIATION,
@@ -858,7 +867,7 @@ export const GrammarTextEditor = observer(() => {
 
       drop: (item) => handleDrop(item),
     }),
-    [extraDnDTypes, handleDrop],
+    [extraElementDragTypes, handleDrop],
   );
   dropConnector(textEditorRef);
 
@@ -1233,11 +1242,11 @@ export const GrammarTextEditor = observer(() => {
           </button>
         </div>
       </ContextMenu>
-      <div className="panel__content edit-panel__content">
+      <PanelContent className="edit-panel__content">
         <div ref={ref} className="text-editor__container">
           <div className="text-editor__body" ref={textEditorRef} />
         </div>
-      </div>
+      </PanelContent>
     </div>
   );
 });

@@ -15,16 +15,14 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { ACTIVITY_MODE } from '../../stores/EditorConfig.js';
+import { ACTIVITY_MODE, AUX_PANEL_MODE } from '../../stores/EditorConfig.js';
 import { LEGEND_STUDIO_TEST_ID } from '../LegendStudioTestID.js';
 import {
-  CheckIcon,
   clsx,
   DropdownMenu,
   RepoIcon,
   MenuContent,
   MenuContentItem,
-  MenuContentItemIcon,
   MenuContentItemLabel,
   GitPullRequestIcon,
   GitMergeIcon,
@@ -48,16 +46,14 @@ import { useLegendStudioApplicationStore } from '../LegendStudioBaseStoreProvide
 const SettingsMenu = observer(
   forwardRef<HTMLDivElement, unknown>(function SettingsMenu(props, ref) {
     const editorStore = useEditorStore();
-    const toggleDevTool = (): void => {
-      editorStore.setDevTool(!editorStore.isDevToolEnabled);
+    const showDeveloperTool = (): void => {
+      editorStore.auxPanelDisplayState.open();
+      editorStore.setActiveAuxPanelMode(AUX_PANEL_MODE.DEV_TOOL);
     };
 
     return (
       <MenuContent ref={ref} className="activity-bar__setting__menu">
-        <MenuContentItem onClick={toggleDevTool}>
-          <MenuContentItemIcon>
-            {editorStore.isDevToolEnabled ? <CheckIcon /> : null}
-          </MenuContentItemIcon>
+        <MenuContentItem onClick={showDeveloperTool}>
           <MenuContentItemLabel>Show Developer Tool</MenuContentItemLabel>
         </MenuContentItem>
       </MenuContent>
@@ -87,15 +83,13 @@ export const ActivityBarMenu: React.FC = () => {
   // documentation
   const goToDocumentation = (): void => {
     if (appDocUrl) {
-      applicationStore.navigator.openNewWindow(appDocUrl);
+      applicationStore.navigator.visitAddress(appDocUrl);
     }
   };
   // go to setup page
-  const goToSetupPage = (): void =>
-    applicationStore.navigator.openNewWindow(
-      applicationStore.navigator.generateLocation(
-        generateSetupRoute(undefined),
-      ),
+  const goToWorkspaceSetup = (): void =>
+    applicationStore.navigator.visitAddress(
+      applicationStore.navigator.generateAddress(generateSetupRoute(undefined)),
     );
   // help
   const openHelp = (): void => {
@@ -142,9 +136,9 @@ export const ActivityBarMenu: React.FC = () => {
             <MenuContentDivider />
             <MenuContentItem
               className="app__header__menu__item"
-              onClick={goToSetupPage}
+              onClick={goToWorkspaceSetup}
             >
-              Back to Setup
+              Back to workspace setup
             </MenuContentItem>
           </MenuContent>
         }

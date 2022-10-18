@@ -20,7 +20,6 @@ import {
   type IKeyboardEvent,
   editor as monacoEditorAPI,
 } from 'monaco-editor';
-import { useResizeDetector } from 'react-resize-detector';
 import {
   disposeEditor,
   disableEditorHotKeys,
@@ -28,13 +27,21 @@ import {
   resetLineNumberGutterWidth,
   getEditorValue,
   normalizeLineEnding,
+  useResizeDetector,
 } from '@finos/legend-art';
 import { type EDITOR_LANGUAGE, EDITOR_THEME, TAB_SIZE } from '../../const.js';
 import { useApplicationStore } from '../ApplicationStoreProvider.js';
+import { forceDispatchKeyboardEvent } from '../LegendApplicationComponentFrameworkProvider.js';
 
-export type TextInputEditorOnKeyDownEventHandler = {
-  matcher: (event: IKeyboardEvent) => boolean;
-  action: (event: IKeyboardEvent) => void;
+/**
+ * NOTE: `monaco-editor` does not bubble `keydown` event in natural order, we will
+ * have to manually do this in order to take advantage of application keyboard shortcuts service
+ * Also, we want to first stop propagation to prevent the original keyboard event from triggering
+ * some unexpected hotkey in some flows we don't know about.
+ */
+export const createPassThroughOnKeyHandler = () => (event: IKeyboardEvent) => {
+  event.stopPropagation();
+  forceDispatchKeyboardEvent(event.browserEvent);
 };
 
 export const TextInputEditor: React.FC<{
@@ -47,7 +54,6 @@ export const TextInputEditor: React.FC<{
     | (monacoEditorAPI.IEditorOptions & monacoEditorAPI.IGlobalEditorOptions)
     | undefined;
   updateInput?: ((val: string) => void) | undefined;
-  onKeyDownEventHandlers?: TextInputEditorOnKeyDownEventHandler[] | undefined;
 }> = (props) => {
   const {
     inputValue,
@@ -57,7 +63,6 @@ export const TextInputEditor: React.FC<{
     showMiniMap,
     hideGutter,
     extraEditorOptions,
-    onKeyDownEventHandlers,
   } = props;
   const applicationStore = useApplicationStore();
   const [editor, setEditor] = useState<
@@ -78,7 +83,6 @@ export const TextInputEditor: React.FC<{
    */
   const value = normalizeLineEnding(inputValue);
   const textInputRef = useRef<HTMLDivElement>(null);
-
   const { ref, width, height } = useResizeDetector<HTMLDivElement>();
 
   useEffect(() => {
@@ -128,15 +132,9 @@ export const TextInputEditor: React.FC<{
     // dispose to avoid trigger hotkeys multiple times
     // for a more extensive note on this, see `LambdaEditor`
     onKeyDownEventDisposer.current?.dispose();
-    onKeyDownEventDisposer.current = editor.onKeyDown((event) => {
-      onKeyDownEventHandlers?.forEach((handler) => {
-        if (handler.matcher(event)) {
-          event.preventDefault();
-          event.stopPropagation();
-          handler.action(event);
-        }
-      });
-    });
+    onKeyDownEventDisposer.current = editor.onKeyDown(
+      createPassThroughOnKeyHandler(),
+    );
 
     // Set the text value and editor options
     const currentValue = getEditorValue(editor);

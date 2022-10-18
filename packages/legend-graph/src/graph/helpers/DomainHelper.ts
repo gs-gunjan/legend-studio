@@ -39,6 +39,7 @@ import {
   uniqBy,
   UnsupportedOperationError,
   returnUndefOnError,
+  filterByType,
 } from '@finos/legend-shared';
 import { createPath } from '../MetaModelUtils.js';
 import type { BasicModel } from '../BasicModel.js';
@@ -218,9 +219,14 @@ export const getRawGenericType = <T extends Type>(
   clazz: Clazz<T>,
 ): T => guaranteeType<T>(genericType.rawType, clazz);
 
-export const isElementReadOnly = (element: PackageableElement): boolean =>
-  returnUndefOnError(() => getElementRootPackage(element))?.name !==
+export const isMainGraphElement = (
+  element: PackageableElement,
+): element is PackageableElement =>
+  returnUndefOnError(() => getElementRootPackage(element))?.name ===
   ROOT_PACKAGE_NAME.MAIN;
+
+export const isElementReadOnly = (element: PackageableElement): boolean =>
+  !isMainGraphElement(element);
 
 export const isDependencyElement = (
   element: PackageableElement,
@@ -401,15 +407,26 @@ export const getAllSubclasses = (c: Class): Class[] => {
   return Array.from(visitedClasses);
 };
 
+export const getMilestoningGeneratedProperties = (_class: Class): Property[] =>
+  _class._generatedMilestonedProperties.filter(filterByType(Property));
+
 /**
  * Get class and its supertypes' properties recursively, duplications and loops are handled (Which should be caught by compiler)
  */
-export const getAllClassProperties = (_class: Class): Property[] =>
+export const getAllClassProperties = (
+  _class: Class,
+  includeGeneratedMilestoning?: boolean | undefined,
+): Property[] =>
   uniqBy(
     getAllSuperclasses(_class)
       .concat(_class)
       .map((c) => c.propertiesFromAssociations.concat(c.properties))
-      .flat(),
+      .flat()
+      .concat(
+        includeGeneratedMilestoning
+          ? getMilestoningGeneratedProperties(_class)
+          : [],
+      ),
     (property) => property.name,
   );
 
@@ -426,7 +443,9 @@ export const getAllClassDerivedProperties = (
 
 export const getClassProperty = (_class: Class, name: string): Property =>
   guaranteeNonNullable(
-    getAllClassProperties(_class).find((property) => property.name === name),
+    getAllClassProperties(_class, true).find(
+      (property) => property.name === name,
+    ),
     `Can't find property '${name}' in class '${_class.path}'`,
   );
 
@@ -552,6 +571,12 @@ export const getMultiplicityDescription = (
       : `Must have at least ${multiplicity.lowerBound} values(s)`
   }`;
 };
+
+export const multiplicityComparator = (
+  mul1: Multiplicity,
+  mul2: Multiplicity,
+): boolean =>
+  mul1.upperBound === mul2.upperBound && mul1.lowerBound === mul2.lowerBound;
 
 export const isElementDeprecated = (
   element: AnnotatedElement | Class,

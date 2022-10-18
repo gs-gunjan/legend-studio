@@ -26,24 +26,21 @@ import {
   ArrowLeftIcon,
   CustomSelectorInput,
   SearchIcon,
-  createFilter,
 } from '@finos/legend-art';
 import { useQuerySetupStore } from '@finos/legend-application-query';
-import { generateGAVCoordinates } from '@finos/legend-server-depot';
+import { generateGAVCoordinates } from '@finos/legend-storage';
 import { debounce } from '@finos/legend-shared';
 import { flowResult } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type {
-  DataSpaceQuerySetupState,
-  DataSpaceContext,
-} from '../../stores/query/DataSpaceQuerySetupState.js';
+import type { DataSpaceQuerySetupState } from '../../stores/query/DataSpaceQuerySetupState.js';
 import { DataSpaceViewer } from '../DataSpaceViewer.js';
+import type { DataSpaceInfo } from '../../stores/query/DataSpaceInfo.js';
 
-type DataSpaceOption = { label: string; value: DataSpaceContext };
-const buildDataSpaceOption = (value: DataSpaceContext): DataSpaceOption => ({
+type DataSpaceOption = { label: string; value: DataSpaceInfo };
+const buildDataSpaceOption = (value: DataSpaceInfo): DataSpaceOption => ({
   label: value.title ?? value.name,
-  value: value,
+  value,
 });
 
 export const DataspaceQuerySetup = observer(
@@ -72,28 +69,19 @@ export const DataspaceQuerySetup = observer(
 
     const back = (): void => {
       setupStore.setSetupState(undefined);
-      querySetupState.setCurrentDataSpace(undefined);
     };
 
-    // query
+    // data space
     const dataSpaceOptions =
       querySetupState.dataSpaces.map(buildDataSpaceOption);
     const selectedDataSpaceOption = querySetupState.currentDataSpace
       ? buildDataSpaceOption(querySetupState.currentDataSpace)
       : null;
     const onDataSpaceOptionChange = (option: DataSpaceOption | null): void => {
-      if (option?.value !== querySetupState.currentDataSpace) {
-        querySetupState.setCurrentDataSpace(option?.value);
-        querySetupState.setDataSpaceViewerState(undefined);
-      }
+      querySetupState.setCurrentDataSpace(option?.value);
+      querySetupState.setDataSpaceViewerState(undefined);
     };
-    const filterOption = createFilter({
-      ignoreCase: true,
-      ignoreAccents: false,
-      stringify: (option: DataSpaceOption): string =>
-        `${option.label} - ${option.value.path}`,
-    });
-    const formatQueryOptionLabel = (
+    const formatDataSpaceOptionLabel = (
       option: DataSpaceOption,
     ): React.ReactNode => (
       <div
@@ -177,7 +165,7 @@ export const DataspaceQuerySetup = observer(
             })}
             onClick={next}
             disabled={!canProceed}
-            title="Proceed"
+            title="Create a new query"
           >
             <ArrowRightIcon />
           </button>
@@ -196,12 +184,11 @@ export const DataspaceQuerySetup = observer(
               inputValue={searchText}
               onChange={onDataSpaceOptionChange}
               value={selectedDataSpaceOption}
-              placeholder="Search for data space by name..."
+              placeholder="Search for data space..."
               isClearable={true}
               escapeClearsValue={true}
               darkMode={true}
-              filterOption={filterOption}
-              formatOptionLabel={formatQueryOptionLabel}
+              formatOptionLabel={formatDataSpaceOptionLabel}
             />
             <button
               className={clsx('query-setup__data-space__use-snapshot-btn', {

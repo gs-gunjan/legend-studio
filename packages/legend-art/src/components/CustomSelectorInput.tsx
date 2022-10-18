@@ -79,7 +79,7 @@ const CustomMenuList: React.FC<{
       <FixedSizeList
         className={selectProps.darkMode ? 'selector-menu--dark' : ''}
         ref={listRef}
-        width={'100%'}
+        width="100%"
         height={Math.min(children.length, MAX_OPTIONS_LENGTH) * ROW_HEIGHT}
         itemCount={children.length}
         itemSize={ROW_HEIGHT}
@@ -98,7 +98,7 @@ const CustomMenuList: React.FC<{
         selectProps.darkMode ? 'selector-menu--dark' : ''
       }`}
     >
-      No match found
+      {selectProps.noMatchMessage ?? 'No match found'}
     </div>
   );
 };
@@ -144,12 +144,12 @@ const ClearIndicator: React.FC<{
 export interface SelectOption {
   label: string;
   value?: string;
-  __isNew__?: boolean;
 }
 
 interface CustomSelectorInputProps extends Props<SelectOption, true> {
   className?: string;
   allowCreating?: boolean;
+  noMatchMessage?: string;
   disabled?: boolean;
   darkMode?: boolean;
   hasError?: boolean;
@@ -165,6 +165,7 @@ export const CustomSelectorInput = forwardRef<
   const {
     option,
     allowCreating,
+    noMatchMessage,
     disabled,
     components,
     className,
@@ -212,7 +213,7 @@ export const CustomSelectorInput = forwardRef<
         MenuList: CustomMenuList,
         ...components,
       }}
-      {...{ ...innerProps, darkMode }}
+      {...{ ...innerProps, darkMode, noMatchMessage }}
     />
   );
 });

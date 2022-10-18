@@ -35,13 +35,14 @@ import {
   CheckCircleIcon,
   PauseCircleIcon,
   BanIcon,
+  PanelContent,
 } from '@finos/legend-art';
-import { formatDistanceToNow } from 'date-fns';
 import { LEGEND_STUDIO_TEST_ID } from '../../LegendStudioTestID.js';
 import { flowResult } from 'mobx';
 import { WorkflowJobStatus, WorkflowStatus } from '@finos/legend-server-sdlc';
 import {
   EDITOR_LANGUAGE,
+  TextInputEditor,
   useApplicationStore,
 } from '@finos/legend-application';
 import {
@@ -53,11 +54,11 @@ import {
   WorkflowTreeNodeData,
 } from '../../../stores/sidebar-state/WorkflowManagerState.js';
 import {
+  formatDistanceToNow,
   guaranteeNonNullable,
   guaranteeType,
   isNonNullable,
 } from '@finos/legend-shared';
-import { StudioTextInputEditor } from '../../shared/StudioTextInputEditor.js';
 
 const getWorkflowStatusIcon = (
   workflowStatus: WorkflowStatus,
@@ -230,7 +231,7 @@ const WorkflowJobLogsViewer = observer(
             </div>
           </div>
           <div className="modal__body">
-            <StudioTextInputEditor
+            <TextInputEditor
               inputValue={logs}
               isReadOnly={true}
               language={EDITOR_LANGUAGE.TEXT}
@@ -280,9 +281,9 @@ const WorkflowExplorerContextMenu = observer(
     };
     const visitWeburl = (): void => {
       if (node instanceof WorkflowJobTreeNodeData) {
-        applicationStore.navigator.openNewWindow(node.workflowJob.webURL);
+        applicationStore.navigator.visitAddress(node.workflowJob.webURL);
       } else if (node instanceof WorkflowTreeNodeData) {
-        applicationStore.navigator.openNewWindow(node.workflow.webURL);
+        applicationStore.navigator.visitAddress(node.workflow.webURL);
       }
     };
 
@@ -373,7 +374,7 @@ const WorkflowTreeNodeContainer: React.FC<
             rel="noopener noreferrer"
             target="_blank"
             href={node.workflow.webURL}
-            title={'See workflow detail'}
+            title="See workflow detail"
           >
             <div className="workflow-manager__item__link__content">
               <span className="workflow-manager__item__link__content__id">
@@ -395,7 +396,7 @@ const WorkflowTreeNodeContainer: React.FC<
             rel="noopener noreferrer"
             target="_blank"
             href={node.workflowJob.webURL}
-            title={'See job detail'}
+            title="See job detail"
           >
             <div className="workflow-manager__item__link__content">
               <span className="workflow-manager__item__link__content__id">
@@ -520,7 +521,7 @@ export const WorkflowManager = observer(
                 {workflowManagerState.workflowStates.length}
               </div>
             </div>
-            <div className="panel__content">{renderWorkflowContent()}</div>
+            <PanelContent>{renderWorkflowContent()}</PanelContent>
           </div>
         </div>
       </div>

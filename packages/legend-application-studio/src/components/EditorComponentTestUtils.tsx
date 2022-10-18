@@ -22,18 +22,14 @@ import {
   waitFor,
   getByText,
 } from '@testing-library/react';
-import { Router } from 'react-router';
-import { createMemoryHistory } from 'history';
 import { LEGEND_STUDIO_TEST_ID } from './LegendStudioTestID.js';
 import { EditorStore } from '../stores/EditorStore.js';
 import { Editor } from './editor/Editor.js';
-import { generateEditorRoute } from '../stores/LegendStudioRouter.js';
 import {
-  type PlainObject,
-  type TEMPORARY__JestMock,
-  MOBX__disableSpyOrMock,
-  MOBX__enableSpyOrMock,
-} from '@finos/legend-shared';
+  generateEditorRoute,
+  LEGEND_STUDIO_ROUTE_PATTERN,
+} from '../stores/LegendStudioRouter.js';
+import type { PlainObject, TEMPORARY__JestMock } from '@finos/legend-shared';
 import { LegendStudioPluginManager } from '../application/LegendStudioPluginManager.js';
 import type { Entity } from '@finos/legend-storage';
 import {
@@ -63,6 +59,7 @@ import {
   type ProjectVersionEntities,
   TEST__DepotServerClientProvider,
   TEST__getTestDepotServerClient,
+  type ProjectDependencyInfo,
 } from '@finos/legend-server-depot';
 import { LegendStudioBaseStoreProvider } from './LegendStudioBaseStoreProvider.js';
 import {
@@ -71,6 +68,9 @@ import {
   TEST__getTestApplicationStore,
   LegendApplicationComponentFrameworkProvider,
   WebApplicationNavigator,
+  Router,
+  createMemoryHistory,
+  Route,
 } from '@finos/legend-application';
 import { TEST__getLegendStudioApplicationConfig } from '../stores/EditorStoreTestUtils.js';
 import type { LegendStudioApplicationStore } from '../stores/LegendStudioBaseStore.js';
@@ -128,14 +128,17 @@ export const TEST_DATA__DefaultSDLCInfo = {
   ],
 };
 
+export const TEST_DATA__DefaultDepotInfo = {
+  dependencyInfo: {
+    tree: [],
+    conflicts: [],
+  },
+};
+
 export const TEST__LegendStudioBaseStoreProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => (
-  <LegendStudioBaseStoreProvider
-    pluginManager={LegendStudioPluginManager.create()}
-  >
-    {children}
-  </LegendStudioBaseStoreProvider>
+  <LegendStudioBaseStoreProvider>{children}</LegendStudioBaseStoreProvider>
 );
 
 export const TEST__provideMockedEditorStore = (customization?: {
@@ -160,7 +163,6 @@ export const TEST__provideMockedEditorStore = (customization?: {
       customization?.depotServerClient ?? TEST__getTestDepotServerClient(),
       customization?.graphManagerState ??
         TEST__getTestGraphManagerState(customization?.pluginManager),
-      pluginManager,
     );
   const MockedEditorStoreProvider = require('./editor/EditorStoreProvider.js'); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
   MockedEditorStoreProvider.useEditorStore = jest.fn();
@@ -226,6 +228,7 @@ export const TEST__setUpEditor = async (
     projects: PlainObject<ProjectData>[];
     projectData: PlainObject<ProjectData>[];
     projectDependency: PlainObject<ProjectVersionEntities>[];
+    projectDependencyInfo: PlainObject<ProjectDependencyInfo>;
   },
 ): Promise<RenderResult> => {
   const {
@@ -240,45 +243,43 @@ export const TEST__setUpEditor = async (
     projectData,
     projects,
     projectDependency,
+    projectDependencyInfo,
   } = data;
-  // mock editor initialization data
-
-  MOBX__enableSpyOrMock();
 
   // SDLC
   jest
     .spyOn(MOCK__editorStore.sdlcServerClient, 'getProject')
-    .mockResolvedValue(project);
+    .mockReturnValue(Promise.resolve(project));
   jest
     .spyOn(MOCK__editorStore.sdlcServerClient, 'getWorkspace')
-    .mockResolvedValue(workspace);
+    .mockReturnValue(Promise.resolve(workspace));
   jest
     .spyOn(MOCK__editorStore.sdlcServerClient, 'getVersions')
-    .mockResolvedValue(projectVersions);
+    .mockReturnValue(Promise.resolve(projectVersions));
   jest
     .spyOn(MOCK__editorStore.sdlcServerClient, 'getRevision')
-    .mockResolvedValue(curentRevision);
+    .mockReturnValue(Promise.resolve(curentRevision));
   jest
     .spyOn(
       MOCK__editorStore.sdlcServerClient,
       'checkIfWorkspaceIsInConflictResolutionMode',
     )
-    .mockResolvedValue(false);
+    .mockReturnValue(Promise.resolve(false));
   jest
     .spyOn(MOCK__editorStore.sdlcServerClient, 'isWorkspaceOutdated')
-    .mockResolvedValue(false);
+    .mockReturnValue(Promise.resolve(false));
   jest
     .spyOn(MOCK__editorStore.sdlcServerClient, 'getEntities')
-    .mockResolvedValue(entities);
+    .mockReturnValue(Promise.resolve(entities));
   jest
     .spyOn(MOCK__editorStore.sdlcServerClient, 'getConfiguration')
-    .mockResolvedValue(projectConfiguration);
+    .mockReturnValue(Promise.resolve(projectConfiguration));
   jest
     .spyOn(
       MOCK__editorStore.sdlcServerClient,
       'getLatestProjectStructureVersion',
     )
-    .mockResolvedValue(latestProjectStructureVersion);
+    .mockReturnValue(Promise.resolve(latestProjectStructureVersion));
   MOCK__editorStore.sdlcServerClient._setFeatures(
     SDLCServerFeaturesConfiguration.serialization.fromJson({
       canCreateProject: true,
@@ -289,23 +290,26 @@ export const TEST__setUpEditor = async (
   // depot
   jest
     .spyOn(MOCK__editorStore.depotServerClient, 'getProjects')
-    .mockResolvedValue(projects);
+    .mockReturnValue(Promise.resolve(projects));
   jest
     .spyOn(MOCK__editorStore.depotServerClient, 'getProjectById')
-    .mockResolvedValue(projectData);
+    .mockReturnValue(Promise.resolve(projectData));
   jest
     .spyOn(MOCK__editorStore.depotServerClient, 'collectDependencyEntities')
-    .mockResolvedValue(projectDependency);
+    .mockReturnValue(Promise.resolve(projectDependency));
+  jest
+    .spyOn(MOCK__editorStore.depotServerClient, 'analyzeDependencyTree')
+    .mockReturnValue(Promise.resolve(projectDependencyInfo));
 
   // TODO: we need to think of how we will mock these calls when we modularize
-  MOCK__editorStore.graphManagerState.graphManager.initialize =
-    jest.fn<TEMPORARY__JestMock>();
+  const graphManagerState = MOCK__editorStore.graphManagerState;
+  graphManagerState.graphManager.initialize = jest.fn<TEMPORARY__JestMock>();
   jest
     .spyOn(
-      MOCK__editorStore.graphManagerState.graphManager,
+      graphManagerState.graphManager,
       'getAvailableGenerationConfigurationDescriptions',
     )
-    .mockResolvedValue(availableGenerationDescriptions);
+    .mockReturnValue(Promise.resolve(availableGenerationDescriptions));
 
   // mock change detections (since we do not test them now)
   MOCK__editorStore.changeDetectionState.workspaceLocalLatestRevisionState.buildEntityHashesIndex =
@@ -318,7 +322,6 @@ export const TEST__setUpEditor = async (
     jest.fn<TEMPORARY__JestMock>();
   MOCK__editorStore.workspaceUpdaterState.fetchLatestCommittedReviews =
     jest.fn<TEMPORARY__JestMock>();
-  MOBX__disableSpyOrMock();
 
   const history = createMemoryHistory({
     initialEntries: [
@@ -344,7 +347,9 @@ export const TEST__setUpEditor = async (
             <TEST__GraphManagerStateProvider>
               <TEST__LegendStudioBaseStoreProvider>
                 <LegendApplicationComponentFrameworkProvider>
-                  <Editor />
+                  <Route path={[LEGEND_STUDIO_ROUTE_PATTERN.EDIT_WORKSPACE]}>
+                    <Editor />
+                  </Route>
                 </LegendApplicationComponentFrameworkProvider>
               </TEST__LegendStudioBaseStoreProvider>
             </TEST__GraphManagerStateProvider>
@@ -362,20 +367,14 @@ export const TEST__setUpEditor = async (
   );
   // assert immutable models have been model
   await waitFor(() =>
-    expect(
-      MOCK__editorStore.graphManagerState.systemBuildState.hasSucceeded,
-    ).toBe(true),
+    expect(graphManagerState.systemBuildState.hasSucceeded).toBe(true),
   );
   await waitFor(() =>
-    expect(
-      MOCK__editorStore.graphManagerState.dependenciesBuildState.hasSucceeded,
-    ).toBe(true),
+    expect(graphManagerState.dependenciesBuildState.hasSucceeded).toBe(true),
   );
   // assert main model has been build
   await waitFor(() =>
-    expect(
-      MOCK__editorStore.graphManagerState.graphBuildState.hasSucceeded,
-    ).toBe(true),
+    expect(graphManagerState.graphBuildState.hasSucceeded).toBe(true),
   );
   // assert explorer trees have been built and rendered
   await waitFor(() =>
@@ -403,6 +402,7 @@ export const TEST__setUpEditorWithDefaultSDLCData = (
     projects?: PlainObject<ProjectData>[];
     projectData?: PlainObject<ProjectData>[];
     projectDependency?: PlainObject<ProjectVersionEntities>[];
+    projectDependencyInfo?: PlainObject<ProjectDependencyInfo>;
   },
 ): Promise<RenderResult> =>
   TEST__setUpEditor(MOCK__editorStore, {
@@ -421,5 +421,6 @@ export const TEST__setUpEditorWithDefaultSDLCData = (
     projects: [],
     projectData: [],
     projectDependency: [],
+    projectDependencyInfo: TEST_DATA__DefaultDepotInfo.dependencyInfo,
     ...overrides,
   });

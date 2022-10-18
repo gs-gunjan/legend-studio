@@ -53,7 +53,6 @@ export {
   FaInfoCircle as InfoCircleIcon,
   FaCompress as CompressIcon,
   FaMap as MapIcon,
-  FaFlask as FlaskIcon,
   FaPlay as PlayIcon,
   FaGripVertical as VerticalDragHandleIcon,
   FaRobot as RobotIcon,
@@ -104,6 +103,7 @@ export {
   FaFolder as FolderIcon,
   FaFileCode as FileCodeIcon,
   FaCodeBranch as CodeBranchIcon,
+  FaArrowAltCircleUp as ArrowCirceUpIcon,
   FaArrowAltCircleLeft as ArrowCircleLeftIcon,
   FaRegStopCircle as EmptyStopCircleIcon,
   FaAsterisk as AsteriskIcon,
@@ -139,6 +139,7 @@ export {
   FaDatabase as DatabaseIcon,
   FaServer as ServerIcon,
   FaTable as TableIcon,
+  FaArchive as ArchiveIcon,
 } from 'react-icons/fa';
 export {
   GiWaterDrop as WaterDropIcon,
@@ -147,6 +148,7 @@ export {
   GiHouseKeys as HouseKeys,
 } from 'react-icons/gi';
 export {
+  MdManageSearch as ManageSearchIcon, // to be reviewed
   MdModeEdit as PencilIcon,
   MdTextFields as StringTypeIcon,
   MdMoreVert as MoreVerticalIcon,
@@ -165,6 +167,7 @@ export {
   MdAssistant as AssistantIcon,
   MdSettingsEthernet as SettingsEthernetIcon,
   MdLink as LinkIcon,
+  MdReviews as ReviewIcon,
 } from 'react-icons/md';
 export {
   VscError as ErrorIcon,
@@ -174,6 +177,7 @@ export {
   VscRunAll as RunAllIcon,
   VscRunErrors as RunErrorsIcon,
   VscOpenPreview as OpenPreviewIcon,
+  VscDiff as DiffIcon,
 } from 'react-icons/vsc';
 export {
   GoChevronDown as ChevronDownIcon,
@@ -185,7 +189,6 @@ export {
   GoCloudDownload as CloudDownloadIcon,
   GoCloudUpload as CloudUploadIcon,
   GoSync as SyncIcon,
-  GoRepo as RepoIcon,
   GoGitBranch as GitBranchIcon,
   GoX as XIcon,
   GoPlug as PluginIcon,
@@ -196,6 +199,7 @@ export {
   IoFileTrayFullOutline as FileTrayIcon,
   IoMenuOutline as MenuIcon,
   IoBeaker as BeakerIcon,
+  IoFlaskSharp as FlaskIcon,
 } from 'react-icons/io5';
 export {
   BsFillTriangleFill as FilledTriangleIcon,
@@ -228,8 +232,11 @@ export {
 export {
   RiShapeLine as ShapeLineIcon,
   RiTestTubeFill as TestTubeIcon,
+  RiRobotFill as DroidIcon,
 } from 'react-icons/ri';
 export {
   TbArrowsJoin2 as ArrowsJoinIcon,
   TbArrowsSplit2 as ArrowsSplitIcon,
+  TbMathFunction as FunctionIcon,
+  TbBook as RepoIcon,
 } from 'react-icons/tb';

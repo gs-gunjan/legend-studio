@@ -15,8 +15,6 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { useParams } from 'react-router';
-import { Link } from 'react-router-dom';
 import {
   clsx,
   HammerIcon,
@@ -33,30 +31,30 @@ import { LEGEND_STUDIO_TEST_ID } from '../LegendStudioTestID.js';
 import { ACTIVITY_MODE } from '../../stores/EditorConfig.js';
 import {
   generateSetupRoute,
-  type EditorPathParams,
-  type GroupEditorPathParams,
+  type WorkspaceEditorPathParams,
 } from '../../stores/LegendStudioRouter.js';
 import { flowResult } from 'mobx';
 import { useEditorStore } from './EditorStoreProvider.js';
 import { WorkspaceType } from '@finos/legend-server-sdlc';
 import { useLegendStudioApplicationStore } from '../LegendStudioBaseStoreProvider.js';
+import { useParams } from '@finos/legend-application';
+import { guaranteeNonNullable } from '@finos/legend-shared';
 
 export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
   const { actionsDisabled } = props;
-  const params = useParams<EditorPathParams | GroupEditorPathParams>();
+  const params = useParams<WorkspaceEditorPathParams>();
   const editorStore = useEditorStore();
   const applicationStore = useLegendStudioApplicationStore();
   const isInConflictResolutionMode = editorStore.isInConflictResolutionMode;
   // SDLC
   const projectId = params.projectId;
-  const workspaceType = (params as { groupWorkspaceId: string | undefined })
-    .groupWorkspaceId
+  const workspaceType = params.groupWorkspaceId
     ? WorkspaceType.GROUP
     : WorkspaceType.USER;
-  const workspaceId =
-    workspaceType === WorkspaceType.GROUP
-      ? (params as GroupEditorPathParams).groupWorkspaceId
-      : (params as EditorPathParams).workspaceId;
+  const workspaceId = guaranteeNonNullable(
+    params.groupWorkspaceId ?? params.workspaceId,
+    `Workspace/group workspace ID is not provided`,
+  );
   const currentProject = editorStore.sdlcState.currentProject;
   const goToWorkspaceUpdater = (): void =>
     editorStore.setActiveActivity(
@@ -123,10 +121,12 @@ export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
   const handleTextModeClick = applicationStore.guardUnhandledError(() =>
     flowResult(editorStore.toggleTextMode()),
   );
-  const compile = applicationStore.guardUnhandledError(() =>
+  const compile = applicationStore.guardUnhandledError(
     editorStore.isInGrammarTextMode
-      ? flowResult(editorStore.graphState.globalCompileInTextMode())
-      : flowResult(editorStore.graphState.globalCompileInFormMode()),
+      ? () => flowResult(editorStore.graphState.globalCompileInTextMode())
+      : async () => {
+          await flowResult(editorStore.graphState.globalCompileInFormMode());
+        },
   );
   const generate = applicationStore.guardUnhandledError(() =>
     flowResult(editorStore.graphState.graphGenerationState.globalGenerate()),
@@ -149,19 +149,35 @@ export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
           <div className="editor__status-bar__workspace__icon">
             <CodeBranchIcon />
           </div>
-          <div className="editor__status-bar__workspace__project">
-            <Link to={generateSetupRoute(projectId)}>
-              {currentProject?.name ?? 'unknown'}
-            </Link>
-          </div>
+          <button
+            className="editor__status-bar__workspace__project"
+            title="Go back to workspace setup using the specified project"
+            tabIndex={-1}
+            onClick={(): void =>
+              applicationStore.navigator.visitAddress(
+                applicationStore.navigator.generateAddress(
+                  generateSetupRoute(projectId),
+                ),
+              )
+            }
+          >
+            {currentProject?.name ?? 'unknown'}
+          </button>
           /
-          <div className="editor__status-bar__workspace__workspace">
-            <Link
-              to={generateSetupRoute(projectId, workspaceId, workspaceType)}
-            >
-              {workspaceId}
-            </Link>
-          </div>
+          <button
+            className="editor__status-bar__workspace__workspace"
+            title="Go back to workspace setup using the specified workspace"
+            tabIndex={-1}
+            onClick={(): void =>
+              applicationStore.navigator.visitAddress(
+                applicationStore.navigator.generateAddress(
+                  generateSetupRoute(projectId, workspaceId, workspaceType),
+                ),
+              )
+            }
+          >
+            {workspaceId}
+          </button>
           {workspaceOutOfSync && (
             <button
               className="editor__status-bar__workspace__status"

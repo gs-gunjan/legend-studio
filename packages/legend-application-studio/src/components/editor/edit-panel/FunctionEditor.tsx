@@ -24,7 +24,7 @@ import {
   CORE_DND_TYPE,
   type UMLEditorElementDropTarget,
   type ElementDragSource,
-} from '../../../stores/shared/DnDUtil.js';
+} from '../../../stores/shared/DnDUtils.js';
 import {
   prettyCONSTName,
   UnsupportedOperationError,
@@ -42,6 +42,8 @@ import {
   PanelEntryDropZonePlaceholder,
   DragPreviewLayer,
   useDragPreviewLayer,
+  Panel,
+  PanelContent,
 } from '@finos/legend-art';
 import { LEGEND_STUDIO_TEST_ID } from '../../LegendStudioTestID.js';
 import {
@@ -64,7 +66,6 @@ import {
   MULTIPLICITY_INFINITE,
   Unit,
   Type,
-  Multiplicity,
   Enumeration,
   Class,
   PrimitiveType,
@@ -79,8 +80,8 @@ import {
   type PackageableElementOption,
   useApplicationNavigationContext,
   useApplicationStore,
+  buildElementOption,
 } from '@finos/legend-application';
-import { StudioLambdaEditor } from '../../shared/StudioLambdaEditor.js';
 import { getElementIcon } from '../../shared/ElementIconUtils.js';
 import {
   function_setReturnType,
@@ -92,13 +93,14 @@ import {
   annotatedElement_deleteStereotype,
   annotatedElement_deleteTaggedValue,
   function_swapParameters,
-} from '../../../stores/graphModifier/DomainGraphModifierHelper.js';
+} from '../../../stores/shared/modifier/DomainGraphModifierHelper.js';
 import {
   rawVariableExpression_setMultiplicity,
   rawVariableExpression_setName,
   rawVariableExpression_setType,
-} from '../../../stores/graphModifier/ValueSpecificationGraphModifierHelper.js';
+} from '../../../stores/shared/modifier/RawValueSpecificationGraphModifierHelper.js';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../stores/LegendStudioApplicationNavigationContext.js';
+import { LambdaEditor } from '@finos/legend-query-builder';
 
 enum FUNCTION_PARAMETER_TYPE {
   CLASS = 'CLASS',
@@ -143,7 +145,10 @@ const ParameterBasicEditor = observer(
       rawVariableExpression_setName(parameter, event.target.value);
     // Type
     const [isEditingType, setIsEditingType] = useState(false);
-    const typeOptions = editorStore.classPropertyGenericTypeOptions;
+    const typeOptions =
+      editorStore.graphManagerState.usableClassPropertyTypes.map(
+        buildElementOption,
+      );
     const paramType = parameter.type.value;
     const typeName = getFunctionParameterType(paramType);
     const filterOption = createFilter({
@@ -185,7 +190,7 @@ const ParameterBasicEditor = observer(
       if (!isNaN(lBound) && (uBound === undefined || !isNaN(uBound))) {
         rawVariableExpression_setMultiplicity(
           parameter,
-          new Multiplicity(lBound, uBound),
+          editorStore.graphManagerState.graph.getMultiplicity(lBound, uBound),
         );
       }
     };
@@ -262,7 +267,7 @@ const ParameterBasicEditor = observer(
               value={parameter.name}
               spellCheck={false}
               onChange={changeValue}
-              placeholder={`Parameter name`}
+              placeholder="Parameter name"
             />
             {!isReadOnly && isEditingType && (
               <CustomSelectorInput
@@ -270,7 +275,7 @@ const ParameterBasicEditor = observer(
                 options={typeOptions}
                 onChange={changeType}
                 value={selectedType}
-                placeholder={'Choose a data type or enumeration'}
+                placeholder="Choose a type..."
                 filterOption={filterOption}
               />
             )}
@@ -306,7 +311,7 @@ const ParameterBasicEditor = observer(
                     className="property-basic-editor__type__visit-btn"
                     onClick={openElement}
                     tabIndex={-1}
-                    title={'Visit element'}
+                    title="Visit element"
                   >
                     <ArrowCircleRightIcon />
                   </button>
@@ -338,7 +343,7 @@ const ParameterBasicEditor = observer(
                     className="property-basic-editor__type__visit-btn"
                     onClick={openElement}
                     tabIndex={-1}
-                    title={'Visit element'}
+                    title="Visit element"
                   >
                     <ArrowCircleRightIcon />
                   </button>
@@ -370,7 +375,7 @@ const ParameterBasicEditor = observer(
                 disabled={isReadOnly}
                 onClick={deleteParameter}
                 tabIndex={-1}
-                title={'Remove'}
+                title="Remove"
               >
                 <TimesIcon />
               </button>
@@ -392,7 +397,10 @@ const ReturnTypeEditor = observer(
     const editorStore = useEditorStore();
     // Type
     const [isEditingType, setIsEditingType] = useState(false);
-    const typeOptions = editorStore.classPropertyGenericTypeOptions;
+    const typeOptions =
+      editorStore.graphManagerState.usableClassPropertyTypes.map(
+        buildElementOption,
+      );
     const typeName = getFunctionParameterType(returnType.value);
     const filterOption = createFilter({
       ignoreCase: true,
@@ -436,7 +444,7 @@ const ReturnTypeEditor = observer(
       if (!isNaN(lBound) && (uBound === undefined || !isNaN(uBound))) {
         function_setReturnMultiplicity(
           functionElement,
-          new Multiplicity(lBound, uBound),
+          editorStore.graphManagerState.graph.getMultiplicity(lBound, uBound),
         );
       }
     };
@@ -461,7 +469,7 @@ const ReturnTypeEditor = observer(
             options={typeOptions}
             onChange={changeType}
             value={selectedType}
-            placeholder={'Choose a data type or enumeration'}
+            placeholder="Choose a type..."
             filterOption={filterOption}
           />
         )}
@@ -497,7 +505,7 @@ const ReturnTypeEditor = observer(
                 className="property-basic-editor__type__visit-btn"
                 onClick={openElement}
                 tabIndex={-1}
-                title={'Visit element'}
+                title="Visit element"
               >
                 <ArrowCircleRightIcon />
               </button>
@@ -529,7 +537,7 @@ const ReturnTypeEditor = observer(
                 className="property-basic-editor__type__visit-btn"
                 onClick={openElement}
                 tabIndex={-1}
-                title={'Visit element'}
+                title="Visit element"
               >
                 <ArrowCircleRightIcon />
               </button>
@@ -617,7 +625,6 @@ export const FunctionMainEditor = observer(
       }),
       [handleDropParameter],
     );
-
     return (
       <div className="panel__content function-editor__element">
         <div className="function-editor__element__item">
@@ -630,7 +637,7 @@ export const FunctionMainEditor = observer(
               disabled={isReadOnly}
               onClick={addParameter}
               tabIndex={-1}
-              title={'Add Parameter'}
+              title="Add Parameter"
             >
               <PlusIcon />
             </button>
@@ -678,8 +685,8 @@ export const FunctionMainEditor = observer(
               ),
             })}
           >
-            <StudioLambdaEditor
-              className={'function-editor__element__lambda-editor'}
+            <LambdaEditor
+              className="function-editor__element__lambda-editor"
               disabled={
                 lambdaEditorState.isConvertingFunctionBodyToString || isReadOnly
               }
@@ -810,7 +817,7 @@ export const FunctionEditor = observer(() => {
 
   return (
     <div className="function-editor">
-      <div className="panel">
+      <Panel>
         <div className="panel__header">
           <div className="panel__header__title">
             {isReadOnly && (
@@ -857,7 +864,7 @@ export const FunctionEditor = observer(() => {
             isReadOnly={isReadOnly}
           />
         ) : (
-          <div className="panel__content">
+          <PanelContent>
             {selectedTab === FUNCTION_SPEC_TAB.TAGGED_VALUES && (
               <div
                 ref={dropTaggedValueRef}
@@ -898,9 +905,9 @@ export const FunctionEditor = observer(() => {
                 ))}
               </div>
             )}
-          </div>
+          </PanelContent>
         )}
-      </div>
+      </Panel>
     </div>
   );
 });

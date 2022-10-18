@@ -1,5 +1,85 @@
 # @finos/legend-application-studio
 
+## 18.1.0
+
+### Minor Changes
+
+- [#1514](https://github.com/finos/legend-studio/pull/1514) [`34c29c4e`](https://github.com/finos/legend-studio/commit/34c29c4e6d0f04d3f57c42528a8cb16d05261434) ([@xannem](https://github.com/xannem)) - Support configuring project platforms [#1505](https://github.com/finos/legend-studio/issues/1505)
+
+## 18.0.2
+
+## 18.0.1
+
+### Patch Changes
+
+- [#1504](https://github.com/finos/legend-studio/pull/1504) [`02703feb`](https://github.com/finos/legend-studio/commit/02703febd5f0f1f44174baf984162a305444c546) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support showing duplicated property mappings for properties of type other than `class` (i.e. `primitive`, `enumeration`, etc.) ([#1461](https://github.com/finos/legend-studio/issues/1461)).
+
+- [#1538](https://github.com/finos/legend-studio/pull/1538) [`34d6f9dd`](https://github.com/finos/legend-studio/commit/34d6f9dd933db20056f2e1b6ec483aafc13eb8aa) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add service parameter multiplicity validation during service registration ([#1539](https://github.com/finos/legend-studio/issues/1539)).
+
+## 18.0.0
+
+### Major Changes
+
+- [#1502](https://github.com/finos/legend-studio/pull/1502) [`81757c5c`](https://github.com/finos/legend-studio/commit/81757c5c3ff514adcc532d118ec58e830938109b) ([@xannem](https://github.com/xannem)) - **BREAKING CHANGE:** Renamed `ConnectionEditor_BooleanEditor` to `PanelFormBooleanEditor`, `PanelTextEditor` to `PanelFormTextEditor`
+
+### Minor Changes
+
+- [#1508](https://github.com/finos/legend-studio/pull/1508) [`10b9bc4e`](https://github.com/finos/legend-studio/commit/10b9bc4e617e1f48dfad7571523394b9103dc7f6) ([@chloeminkyung](https://github.com/chloeminkyung)) - Add `TestBatch` to Testable model and incorporate into GlobalTestRunner.
+
+- [#1506](https://github.com/finos/legend-studio/pull/1506) [`6b299d55`](https://github.com/finos/legend-studio/commit/6b299d55c603521ffdd61d9bd17d6fa58589beb7) ([@akphi](https://github.com/akphi)) - Add a new screen to support productionizing `query` into `service`.
+
+## 17.0.0
+
+### Major Changes
+
+- [#1488](https://github.com/finos/legend-studio/pull/1488) [`a90b4698`](https://github.com/finos/legend-studio/commit/a90b469846363058ac7efffcbfb8cf0070582609) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** No longer export `WorkspaceSetup` component and store-provider.
+
+- [#1488](https://github.com/finos/legend-studio/pull/1488) [`a90b4698`](https://github.com/finos/legend-studio/commit/a90b469846363058ac7efffcbfb8cf0070582609) ([@akphi](https://github.com/akphi)) - Renamed `DSLGenerationSpecification_*` plugin extension to `DSLGeneration_*`
+
+### Minor Changes
+
+- [#1488](https://github.com/finos/legend-studio/pull/1488) [`a90b4698`](https://github.com/finos/legend-studio/commit/a90b469846363058ac7efffcbfb8cf0070582609) ([@akphi](https://github.com/akphi)) - Rework `workspace setup` screen to use `typeahead` instead of loading all available projects, which can be expensive to load. Also remove project selector from workspace creator modal dialog.
+
+- [#1488](https://github.com/finos/legend-studio/pull/1488) [`a90b4698`](https://github.com/finos/legend-studio/commit/a90b469846363058ac7efffcbfb8cf0070582609) ([@akphi](https://github.com/akphi)) - Allow configuring the suggested `group ID` during projection creation via the config field `extensions.core.projectCreationGroupIdSuggestion`.
+
+### Patch Changes
+
+- [#1488](https://github.com/finos/legend-studio/pull/1488) [`a90b4698`](https://github.com/finos/legend-studio/commit/a90b469846363058ac7efffcbfb8cf0070582609) ([@akphi](https://github.com/akphi)) - Fix a bug where `Measure` element cannot be created from explorer panel dropdown action and context-menu.
+
+## 16.0.2
+
+## 16.0.1
+
+### Patch Changes
+
+- [#1485](https://github.com/finos/legend-studio/pull/1485) [`b2d2281c`](https://github.com/finos/legend-studio/commit/b2d2281c40ef04724951ebac78eae940eddc290c) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add viewer for dependency tree and dependency conflict in configuration editor.
+
+## 16.0.0
+
+### Major Changes
+
+- [#1476](https://github.com/finos/legend-studio/pull/1476) [`293f2345`](https://github.com/finos/legend-studio/commit/293f2345cd7dcc7e97fc4b6b21c7d274a1407176) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** For `LegendStudioApplicationPlugin`, renamed `getExtraElementProjectExplorerDnDTypeGetters()` to `getExtraDragElementClassifiers()` and `getExtraPureGrammarTextEditorDnDTypes()` to `getExtraPureGrammarTextEditorDragElementTypes()`. For `StoreRelational_LegendStudioApplicationPlugin_Extension`, renamed `getExtraDatasourceSpecificationTypeGetters()` to `getExtraDatasourceSpecificationClassifiers()` and `getExtraAuthenticationStrategyTypeGetters()` to `getExtraAuthenticationStrategyClassifiers()`.
+
+- [#1476](https://github.com/finos/legend-studio/pull/1476) [`293f2345`](https://github.com/finos/legend-studio/commit/293f2345cd7dcc7e97fc4b6b21c7d274a1407176) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Removed `getExtraMappingExecutionQueryEditorActionConfigurations()`, `getExtraMappingTestQueryEditorActionConfigurations()`, and `getExtraServiceQueryEditorActionConfigurations()`;
+
+### Minor Changes
+
+- [#1481](https://github.com/finos/legend-studio/pull/1481) [`4fd88c58`](https://github.com/finos/legend-studio/commit/4fd88c58b66dd3033db1f2f45e4cbedd0420b57e) ([@xannem](https://github.com/xannem)) - Add suggestion code snippet for relational database connection post-processor.
+
+## 15.2.0
+
+### Minor Changes
+
+- [#1434](https://github.com/finos/legend-studio/pull/1434) [`138d9989`](https://github.com/finos/legend-studio/commit/138d9989b59ae3e816e19a149f842f24754ec9d9) ([@xannem](https://github.com/xannem)) - Add form editor for post-processor ([#945](https://github.com/finos/legend-studio/issues/945)).
+
+## 15.1.0
+
+### Minor Changes
+
+- [#1464](https://github.com/finos/legend-studio/pull/1464) [`c8208ca6`](https://github.com/finos/legend-studio/commit/c8208ca63e3c4fefb5fc744e58d42c1715a51245) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add use `TEMPORARY__storeModel` option to `FULL_INTERACTIVE` service execution mode.
+
+- [#1454](https://github.com/finos/legend-studio/pull/1454) [`579ab722`](https://github.com/finos/legend-studio/commit/579ab722b80baf8f59725bd42eb97302fd2663cf) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add `FULL_INTERACTIVE_LIGHT` as a service registration mode.
+
 ## 15.0.1
 
 ## 15.0.0

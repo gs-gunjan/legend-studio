@@ -36,10 +36,11 @@ import type {
   FunctionExpression,
   SimpleFunctionExpression,
   AbstractPropertyExpression,
-} from './SimpleFunctionExpression.js';
+} from './Expression.js';
 import type { INTERNAL__UnknownValueSpecification } from './INTERNAL__UnknownValueSpecification.js';
 import type { VariableExpression } from './VariableExpression.js';
 import type { INTERNAL__PropagatedValue } from './INTERNAL__PropagatedValue.js';
+import type { Hashable } from '@finos/legend-shared';
 
 export interface ValueSpecificationVisitor<T> {
   visit_RootGraphFetchTreeInstanceValue(
@@ -79,7 +80,12 @@ export interface ValueSpecificationVisitor<T> {
   ): T;
 }
 
-export abstract class ValueSpecification {
+export abstract class ValueSpecification implements Hashable {
+  /**
+   * Currently, we don't do type-inferencing
+   *
+   * @discrepancy model
+   */
   genericType?: GenericTypeReference | undefined;
   multiplicity!: Multiplicity;
 
@@ -90,6 +96,8 @@ export abstract class ValueSpecification {
     this.multiplicity = multiplicity;
     this.genericType = genericTypeReference;
   }
+
+  abstract get hashCode(): string;
 
   abstract accept_ValueSpecificationVisitor<T>(
     visitor: ValueSpecificationVisitor<T>,

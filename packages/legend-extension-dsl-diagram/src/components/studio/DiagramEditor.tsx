@@ -14,15 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  useRef,
-  useState,
-  useEffect,
-  useCallback,
-  Fragment,
-  forwardRef,
-} from 'react';
-import { useResizeDetector } from 'react-resize-detector';
+import { useRef, useState, useEffect, useCallback, forwardRef } from 'react';
 import { type DropTargetMonitor, useDrop } from 'react-dnd';
 import { observer } from 'mobx-react-lite';
 import {
@@ -43,7 +35,7 @@ import {
 import {
   type ResizablePanelHandlerProps,
   ContextMenu,
-  getControlledResizablePanelProps,
+  getCollapsiblePanelGroupProps,
   BasePopover,
   BlankPanelContent,
   CaretDownIcon,
@@ -79,13 +71,14 @@ import {
   AlignTopIcon,
   AlignMiddleIcon,
   AlignBottomIcon,
+  useResizeDetector,
 } from '@finos/legend-art';
 import {
   type Type,
+  type Multiplicity,
   Class,
   DerivedProperty,
   Property,
-  Multiplicity,
   ELEMENT_PATH_DELIMITER,
   MULTIPLICITY_INFINITE,
   GenericType,
@@ -94,16 +87,14 @@ import {
   isValidPathIdentifier,
   resolvePackagePathAndElementName,
 } from '@finos/legend-graph';
-import {
-  guaranteeNonNullable,
-  isNonNullable,
-  prettyCONSTName,
-} from '@finos/legend-shared';
+import { guaranteeNonNullable, prettyCONSTName } from '@finos/legend-shared';
 import { flowResult } from 'mobx';
 import {
   type PackageableElementOption,
   useApplicationStore,
   useApplicationNavigationContext,
+  buildElementOption,
+  useCommands,
 } from '@finos/legend-application';
 import {
   ClassFormEditor,
@@ -113,16 +104,16 @@ import {
   property_setName,
   property_setGenericType,
   property_setMultiplicity,
+  queryClass,
 } from '@finos/legend-application-studio';
-import { cleanUpDeadReferencesInDiagram } from '../../graph/helpers/DSLDiagram_Helper.js';
-import { Point } from '../../graph/metamodel/pure/packageableElements/diagram/geometry/DSLDiagram_Point.js';
-import type { DSLDiagram_LegendStudioApplicationPlugin_Extension } from './DSLDiagram_LegendStudioApplicationPlugin_Extension.js';
+import { cleanUpDeadReferencesInDiagram } from '../../graph/helpers/DSL_Diagram_Helper.js';
+import { Point } from '../../graph/metamodel/pure/packageableElements/diagram/geometry/DSL_Diagram_Point.js';
 import {
   classView_setHideProperties,
   classView_setHideStereotypes,
   classView_setHideTaggedValues,
-} from '../../stores/studio/DSLDiagram_GraphModifierHelper.js';
-import { DSL_DIAGRAM_LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../stores/studio/DSLDiagram_LegendStudioApplicationNavigationContext.js';
+} from '../../stores/studio/DSL_Diagram_GraphModifierHelper.js';
+import { DSL_DIAGRAM_LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../stores/studio/DSL_Diagram_LegendStudioApplicationNavigationContext.js';
 
 const DiagramEditorContextMenu = observer(
   forwardRef<
@@ -133,28 +124,22 @@ const DiagramEditorContextMenu = observer(
   >(function DiagramEditorContextMenu(props, ref) {
     const { diagramEditorState } = props;
     const editorStore = useEditorStore();
-    const extraClassViewContextMenuItems =
-      diagramEditorState.contextMenuClassView
-        ? editorStore.pluginManager
-            .getApplicationPlugins()
-            .flatMap(
-              (plugin) =>
-                (
-                  plugin as DSLDiagram_LegendStudioApplicationPlugin_Extension
-                ).getExtraClassViewContextMenuItemRendererConfigurations?.() ??
-                [],
-            )
-            .filter(isNonNullable)
-            .map((config) => (
-              <Fragment key={config.key}>
-                {config.renderer(
-                  diagramEditorState,
-                  guaranteeNonNullable(diagramEditorState.contextMenuClassView),
-                )}
-              </Fragment>
-            ))
-        : [];
-    return <MenuContent>{extraClassViewContextMenuItems}</MenuContent>;
+
+    // actions
+    const buildQuery = editorStore.applicationStore.guardUnhandledError(
+      async () => {
+        const classView = guaranteeNonNullable(
+          diagramEditorState.contextMenuClassView,
+        );
+        await queryClass(classView.class.value, editorStore);
+      },
+    );
+
+    return (
+      <MenuContent>
+        <MenuContentItem onClick={buildQuery}>Query...</MenuContentItem>
+      </MenuContent>
+    );
   }),
 );
 
@@ -679,24 +664,30 @@ const DiagramEditorOverlay = observer(
           .width,
       );
 
+    // layout
+    const sidePanelCollapsiblePanelGroupProps = getCollapsiblePanelGroupProps(
+      diagramEditorState.sidePanelDisplayState.size === 0,
+      {
+        classes: ['diagram-editor__overlay__panel'],
+        onStopResize: resizeSidePanel,
+        size: diagramEditorState.sidePanelDisplayState.size,
+      },
+    );
+
     return (
       <ResizablePanelGroup
         className="diagram-editor__overlay"
         orientation="vertical"
       >
-        <ResizablePanel minSize={300}>
+        <ResizablePanel
+          {...sidePanelCollapsiblePanelGroupProps.remainingPanel}
+          minSize={300}
+        >
           <div className="diagram-editor__view-finder" />
         </ResizablePanel>
         <ResizablePanelSplitter className="diagram-editor__overlay__panel-resizer" />
         <ResizablePanel
-          {...getControlledResizablePanelProps(
-            diagramEditorState.sidePanelDisplayState.size === 0,
-            {
-              classes: ['diagram-editor__overlay__panel'],
-              onStopResize: resizeSidePanel,
-              size: diagramEditorState.sidePanelDisplayState.size,
-            },
-          )}
+          {...sidePanelCollapsiblePanelGroupProps.collapsiblePanel}
           direction={-1}
         >
           <div className="panel diagram-editor__side-panel">
@@ -976,6 +967,7 @@ const DiagramEditorInlinePropertyMultiplicityEditor = observer(
     const [upperBound, setUpperBound] = useState<string | number>(
       value.upperBound ?? MULTIPLICITY_INFINITE,
     );
+    const editorStore = useEditorStore();
     const updateMultiplicity = (
       lower: number | string,
       upper: number | string,
@@ -988,7 +980,9 @@ const DiagramEditorInlinePropertyMultiplicityEditor = observer(
           ? upper
           : parseInt(upper, 10);
       if (!isNaN(lBound) && (uBound === undefined || !isNaN(uBound))) {
-        updateValue(new Multiplicity(lBound, uBound));
+        updateValue(
+          editorStore.graphManagerState.graph.getMultiplicity(lBound, uBound),
+        );
       }
     };
     const changeLowerBound: React.ChangeEventHandler<HTMLInputElement> = (
@@ -1061,7 +1055,10 @@ const DiagramEditorInlinePropertyEditorContent = observer(
 
     // Type
     const currentPropertyType = property.genericType.value.rawType;
-    const propertyTypeOptions = editorStore.classPropertyGenericTypeOptions;
+    const propertyTypeOptions =
+      editorStore.graphManagerState.usableClassPropertyTypes.map(
+        buildElementOption,
+      );
     const propertyTypeFilterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
@@ -1103,7 +1100,7 @@ const DiagramEditorInlinePropertyEditorContent = observer(
             options={propertyTypeOptions}
             onChange={changePropertyType}
             value={selectedPropertyType}
-            placeholder="Choose a data type or enumeration"
+            placeholder="Choose a type..."
             darkMode={true}
             filterOption={propertyTypeFilterOption}
           />
@@ -1196,7 +1193,6 @@ const DiagramEditorDiagramCanvas = observer(
         renderer.render();
         renderer.autoRecenter();
       }
-      return diagramEditorState.cleanUp();
     }, [diagramCanvasRef, diagramEditorState]);
 
     useEffect(() => {
@@ -1438,6 +1434,8 @@ export const DiagramEditor = observer(() => {
   useApplicationNavigationContext(
     DSL_DIAGRAM_LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY.DIAGRAM_EDITOR,
   );
+
+  useCommands(diagramEditorState);
 
   return (
     <div className="diagram-editor">

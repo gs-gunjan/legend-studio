@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-import { Redirect, Route, Switch } from 'react-router';
 import { observer } from 'mobx-react-lite';
 import { LEGEND_QUERY_ROUTE_PATTERN } from '../stores/LegendQueryRouter.js';
 import { QuerySetup } from './QuerySetup.js';
 import {
-  CreateQueryEditor,
+  MappingQueryCreator,
   ExistingQueryEditor,
-  ServiceQueryEditor,
+  ServiceQueryCreator,
 } from './QueryEditor.js';
 import { DepotServerClientProvider } from '@finos/legend-server-depot';
 import {
   generateExtensionUrlPattern,
   LegendApplicationComponentFrameworkProvider,
+  Redirect,
+  Route,
+  Switch,
 } from '@finos/legend-application';
-import type { LegendQueryPluginManager } from '../application/LegendQueryPluginManager.js';
 import type { LegendQueryApplicationConfig } from '../application/LegendQueryApplicationConfig.js';
 import {
   LegendQueryBaseStoreProvider,
@@ -51,18 +52,18 @@ const LegendQueryApplicationRoot = observer(() => {
         />
         <Route
           exact={true}
-          path={LEGEND_QUERY_ROUTE_PATTERN.EXISTING_QUERY}
+          path={LEGEND_QUERY_ROUTE_PATTERN.EDIT_EXISTING_QUERY}
           component={ExistingQueryEditor}
         />
         <Route
           exact={true}
-          path={LEGEND_QUERY_ROUTE_PATTERN.SERVICE_QUERY}
-          component={ServiceQueryEditor}
+          path={LEGEND_QUERY_ROUTE_PATTERN.CREATE_FROM_SERVICE_QUERY}
+          component={ServiceQueryCreator}
         />
         <Route
           exact={true}
-          path={LEGEND_QUERY_ROUTE_PATTERN.CREATE_QUERY}
-          component={CreateQueryEditor}
+          path={LEGEND_QUERY_ROUTE_PATTERN.CREATE_FROM_MAPPING_QUERY}
+          component={MappingQueryCreator}
         />
         {extraApplicationPageEntries.map((entry) => (
           <Route
@@ -79,21 +80,16 @@ const LegendQueryApplicationRoot = observer(() => {
 });
 
 export const LegendQueryApplication = observer(
-  (props: {
-    config: LegendQueryApplicationConfig;
-    pluginManager: LegendQueryPluginManager;
-  }) => {
-    const { config, pluginManager } = props;
+  (props: { config: LegendQueryApplicationConfig }) => {
+    const { config } = props;
 
     return (
       <DepotServerClientProvider
         config={{
           serverUrl: config.depotServerUrl,
-          TEMPORARY__useLegacyDepotServerAPIRoutes:
-            config.TEMPORARY__useLegacyDepotServerAPIRoutes,
         }}
       >
-        <LegendQueryBaseStoreProvider pluginManager={pluginManager}>
+        <LegendQueryBaseStoreProvider>
           <LegendApplicationComponentFrameworkProvider>
             <LegendQueryApplicationRoot />
           </LegendApplicationComponentFrameworkProvider>

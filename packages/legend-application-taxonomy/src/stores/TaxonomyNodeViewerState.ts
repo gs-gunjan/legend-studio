@@ -17,10 +17,11 @@
 import {
   type DataSpaceAnalysisResult,
   DataSpaceViewerState,
-  getDSLDataSpaceGraphManagerExtension,
+  DSL_DataSpace_getGraphManagerExtension,
+  retrieveAnalyticsResultCache,
 } from '@finos/legend-extension-dsl-data-space';
 import type { ClassView } from '@finos/legend-extension-dsl-diagram';
-import type { Entity } from '@finos/legend-storage';
+import { type Entity, parseProjectIdentifier } from '@finos/legend-storage';
 import { ProjectData } from '@finos/legend-server-depot';
 import {
   type GeneratorFn,
@@ -37,8 +38,9 @@ import {
   computed,
 } from 'mobx';
 import {
-  generateDataSpaceQueryEditorUrl,
-  generateStudioProjectViewUrl,
+  EXTERNAL_APPLICATION_NAVIGATION__generateDataSpaceQueryEditorUrl,
+  EXTERNAL_APPLICATION_NAVIGATION__generateStudioProjectViewUrl,
+  EXTERNAL_APPLICATION_NAVIGATION__generateStudioSDLCProjectViewUrl,
 } from './LegendTaxonomyRouter.js';
 import type {
   DataSpaceTaxonomyContext,
@@ -140,14 +142,21 @@ export class TaxonomyNodeViewerState {
 
       // analyze data space
       this.initDataSpaceViewerState.setMessage(`Analyzing data space...`);
-      const analysisResult = (yield getDSLDataSpaceGraphManagerExtension(
+      const analysisResult = (yield DSL_DataSpace_getGraphManagerExtension(
         this.explorerStore.graphManagerState.graphManager,
       ).analyzeDataSpace(
         dataSpaceTaxonomyContext.path,
         entities,
         dependencyEntitiesIndex,
+        () =>
+          retrieveAnalyticsResultCache(
+            project.groupId,
+            project.artifactId,
+            versionId,
+            dataSpaceTaxonomyContext.path,
+            this.explorerStore.depotServerClient,
+          ),
       )) as DataSpaceAnalysisResult;
-
       const dataSpaceViewerState = new DataSpaceViewerState(
         dataSpaceTaxonomyContext.groupId,
         dataSpaceTaxonomyContext.artifactId,
@@ -160,14 +169,53 @@ export class TaxonomyNodeViewerState {
             _versionId: string,
             entityPath: string | undefined,
           ): void => {
-            this.explorerStore.applicationStore.navigator.openNewWindow(
-              generateStudioProjectViewUrl(
+            this.explorerStore.applicationStore.navigator.visitAddress(
+              EXTERNAL_APPLICATION_NAVIGATION__generateStudioProjectViewUrl(
                 this.explorerStore.applicationStore.config.studioUrl,
                 _groupId,
                 _artifactId,
                 _versionId,
                 entityPath,
               ),
+            );
+          },
+          viewSDLCProject: (
+            _groupId: string,
+            _artifactId: string,
+            entityPath: string | undefined,
+          ): void => {
+            const view = async (): Promise<void> => {
+              // fetch project data
+              const _project = ProjectData.serialization.fromJson(
+                await this.explorerStore.depotServerClient.getProject(
+                  _groupId,
+                  _artifactId,
+                ),
+              );
+              // find the matching SDLC instance
+              const projectIDPrefix = parseProjectIdentifier(
+                _project.projectId,
+              ).prefix;
+              const matchingSDLCEntry =
+                this.explorerStore.applicationStore.config.studioInstances.find(
+                  (entry) => entry.sdlcProjectIDPrefix === projectIDPrefix,
+                );
+              if (matchingSDLCEntry) {
+                this.explorerStore.applicationStore.navigator.visitAddress(
+                  EXTERNAL_APPLICATION_NAVIGATION__generateStudioSDLCProjectViewUrl(
+                    matchingSDLCEntry.url,
+                    _project.projectId,
+                    entityPath,
+                  ),
+                );
+              } else {
+                this.explorerStore.applicationStore.notifyWarning(
+                  `Can't find the corresponding SDLC instance to view the SDLC project`,
+                );
+              }
+            };
+            view().catch(
+              this.explorerStore.applicationStore.alertUnhandledError,
             );
           },
           onDiagramClassDoubleClick: (classView: ClassView): void =>
@@ -187,8 +235,8 @@ export class TaxonomyNodeViewerState {
 
   queryDataSpace(classPath?: string | undefined): void {
     if (this.dataSpaceViewerState) {
-      this.explorerStore.applicationStore.navigator.openNewWindow(
-        generateDataSpaceQueryEditorUrl(
+      this.explorerStore.applicationStore.navigator.visitAddress(
+        EXTERNAL_APPLICATION_NAVIGATION__generateDataSpaceQueryEditorUrl(
           this.explorerStore.applicationStore.config.queryUrl,
           this.dataSpaceViewerState.groupId,
           this.dataSpaceViewerState.artifactId,

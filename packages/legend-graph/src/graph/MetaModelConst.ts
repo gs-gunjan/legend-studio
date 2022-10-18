@@ -82,7 +82,7 @@ export const AUTO_IMPORTS = [
   // 'meta::pure::metamodel::function::property',
   // 'meta::pure::metamodel::extension',
   // 'meta::pure::metamodel::import',
-  // 'meta::pure::functions::date',
+  'meta::pure::functions::date',
   // 'meta::pure::functions::string',
   // 'meta::pure::functions::collection',
   // 'meta::pure::functions::meta',
@@ -125,8 +125,12 @@ export enum CORE_PURE_PATH {
   GENERATION_SPECIFICATION = 'meta::pure::generation::metamodel::GenerationSpecification',
   SECTION_INDEX = 'meta::pure::metamodel::section::SectionIndex',
   DATA_ELEMENT = 'meta::pure::data::DataElement',
+
+  // TDS
+  TDS_ROW = 'meta::pure::tds::TDSRow',
 }
 
+export const PURE_DOC_TAG = 'doc';
 export const PURE_DEPRECATED_STEREOTYPE = 'deprecated';
 
 export enum MILESTONING_STEREOTYPE {
@@ -142,9 +146,8 @@ export enum MILESTONING_VERSION_PROPERTY_SUFFIX {
 
 export const MILESTONING_START_DATE_PARAMETER_NAME = 'start';
 export const MILESTONING_END_DATE_PARAMETER_NAME = 'end';
-export const DEFAULT_PROCESSING_DATE_MILESTONING_PARAMETER_NAME =
-  'processingDate';
-export const DEFAULT_BUSINESS_DATE_MILESTONING_PARAMETER_NAME = 'businessDate';
+export const PROCESSING_DATE_MILESTONING_PROPERTY_NAME = 'processingDate';
+export const BUSINESS_DATE_MILESTONING_PROPERTY_NAME = 'businessDate';
 
 export enum PackageableElementPointerType {
   STORE = 'STORE',

@@ -48,10 +48,6 @@ const ActionAlertContent = observer((props: { info: ActionAlertInfo }) => {
     actions.find((action) => action.default)?.handler?.();
     handleClose();
   };
-  const onSubmit = (event: React.FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    handleSubmit();
-  };
 
   return (
     <Dialog
@@ -62,7 +58,10 @@ const ActionAlertContent = observer((props: { info: ActionAlertInfo }) => {
       }}
     >
       <form
-        onSubmit={onSubmit}
+        onSubmit={(event) => {
+          event.preventDefault();
+          handleSubmit();
+        }}
         className={`modal search-modal modal--dark blocking-alert blocking-alert--${(
           type ?? ActionAlertType.STANDARD
         ).toLowerCase()}`}
@@ -106,7 +105,7 @@ const ActionAlertContent = observer((props: { info: ActionAlertInfo }) => {
           })}
           {!actions.length && (
             <button
-              type="button"
+              type="button" // prevent this toggler being activated on form submission
               className="btn btn--dark blocking-alert__action--standard"
               onClick={handleClose}
             >

@@ -51,15 +51,15 @@ import {
   CreateNewElementModal,
 } from './CreateNewElementModal.js';
 import { useDrag } from 'react-dnd';
-import { ElementDragSource } from '../../../stores/shared/DnDUtil.js';
+import { ElementDragSource } from '../../../stores/shared/DnDUtils.js';
 import { LEGEND_STUDIO_TEST_ID } from '../../LegendStudioTestID.js';
 import { ACTIVITY_MODE } from '../../../stores/EditorConfig.js';
-import { getTreeChildNodes } from '../../../stores/shared/PackageTreeUtil.js';
-import type { PackageTreeNodeData } from '../../../stores/shared/TreeUtil.js';
+import { getTreeChildNodes } from '../../../stores/shared/PackageTreeUtils.js';
+import type { PackageTreeNodeData } from '../../../stores/shared/TreeUtils.js';
 import {
   type GenerationTreeNodeData,
   getFileGenerationChildNodes,
-} from '../../../stores/shared/FileGenerationTreeUtil.js';
+} from '../../../stores/shared/FileGenerationTreeUtils.js';
 import { FileGenerationTree } from '../../editor/edit-panel/element-generation-editor/FileGenerationEditor.js';
 import { generateViewEntityRoute } from '../../../stores/LegendStudioRouter.js';
 import { toTitleCase } from '@finos/legend-shared';
@@ -75,10 +75,13 @@ import {
   isSystemElement,
   isDependencyElement,
   isElementReadOnly,
+  Class,
+  isMainGraphElement,
 } from '@finos/legend-graph';
 import { useApplicationStore } from '@finos/legend-application';
-import { PACKAGEABLE_ELEMENT_TYPE } from '../../../stores/shared/ModelUtil.js';
+import { PACKAGEABLE_ELEMENT_TYPE } from '../../../stores/shared/ModelClassifierUtils.js';
 import { useLegendStudioApplicationStore } from '../../LegendStudioBaseStoreProvider.js';
+import { queryClass } from '../edit-panel/uml-editor/ClassQueryBuilder.js';
 
 const ElementRenamer = observer(() => {
   const editorStore = useEditorStore();
@@ -96,8 +99,16 @@ const ElementRenamer = observer(() => {
     element instanceof Package || path.includes(ELEMENT_PATH_DELIMITER);
   const isValidElementPath =
     (element instanceof Package && isValidPath(path)) || isValidFullPath(path);
-  const existingElement =
-    editorStore.graphManagerState.graph.getNullableElement(path, true);
+  let existingElement = editorStore.graphManagerState.graph.getNullableElement(
+    path,
+    true,
+  );
+  existingElement =
+    existingElement instanceof Package
+      ? isMainGraphElement(existingElement)
+        ? existingElement
+        : undefined
+      : existingElement;
   const isElementUnique = !existingElement || existingElement === element;
   const elementRenameValidationErrorMessage = !isElementPathNonEmpty
     ? `Element path cannot be empty`
@@ -198,6 +209,23 @@ const ExplorerContextMenu = observer(
         ? node.packageableElement
         : undefined
       : editorStore.graphManagerState.graph.root;
+    const elementTypes = ([PACKAGEABLE_ELEMENT_TYPE.PACKAGE] as string[])
+      .concat(editorStore.getSupportedElementTypes())
+      .filter(
+        // NOTE: we can only create package in root
+        (type) =>
+          _package !== editorStore.graphManagerState.graph.root ||
+          type === PACKAGEABLE_ELEMENT_TYPE.PACKAGE,
+      );
+
+    // actions
+    const buildQuery = editorStore.applicationStore.guardUnhandledError(
+      async () => {
+        if (node?.packageableElement instanceof Class) {
+          await queryClass(node.packageableElement, editorStore);
+        }
+      },
+    );
     const removeElement = (): void => {
       if (node) {
         flowResult(editorStore.deleteElement(node.packageableElement)).catch(
@@ -214,8 +242,8 @@ const ExplorerContextMenu = observer(
     };
     const openElementInViewerMode = (): void => {
       if (node && projectId) {
-        applicationStore.navigator.openNewWindow(
-          applicationStore.navigator.generateLocation(
+        applicationStore.navigator.visitAddress(
+          applicationStore.navigator.generateAddress(
             generateViewEntityRoute(projectId, node.packageableElement.path),
           ),
         );
@@ -225,7 +253,7 @@ const ExplorerContextMenu = observer(
       if (node) {
         applicationStore
           .copyTextToClipboard(
-            applicationStore.navigator.generateLocation(
+            applicationStore.navigator.generateAddress(
               editorStore.editorMode.generateElementLink(
                 node.packageableElement.path,
               ),
@@ -237,20 +265,10 @@ const ExplorerContextMenu = observer(
           .catch(applicationStore.alertUnhandledError);
       }
     };
-
     const createNewElement =
       (type: string): (() => void) =>
       (): void =>
         editorStore.newElementState.openModal(type, _package);
-
-    const elementTypes = ([PACKAGEABLE_ELEMENT_TYPE.PACKAGE] as string[])
-      .concat(editorStore.getSupportedElementTypes())
-      .filter(
-        // NOTE: we can only create package in root
-        (type) =>
-          _package !== editorStore.graphManagerState.graph.root ||
-          type === PACKAGEABLE_ELEMENT_TYPE.PACKAGE,
-      );
 
     if (_package && !isReadOnly) {
       return (
@@ -281,6 +299,7 @@ const ExplorerContextMenu = observer(
 
     return (
       <MenuContent data-testid={LEGEND_STUDIO_TEST_ID.EXPLORER_CONTEXT_MENU}>
+        <MenuContentItem onClick={buildQuery}>Query...</MenuContentItem>
         {extraExplorerContextMenuItems}
         {!isReadOnly && node && (
           <>
@@ -333,7 +352,7 @@ const ProjectConfig = observer(() => {
       <button
         className="tree-view__node__label explorer__package-tree__node__label"
         tabIndex={-1}
-        title={'Project configuration'}
+        title="Project configuration"
       >
         config
       </button>

@@ -37,7 +37,7 @@ import { ElementEditorState } from './editor-state/element-editor-state/ElementE
 import { GraphGenerationState } from './editor-state/GraphGenerationState.js';
 import { MODEL_IMPORT_NATIVE_INPUT_TYPE } from './editor-state/ModelImporterState.js';
 import type { DSL_LegendStudioApplicationPlugin_Extension } from './LegendStudioApplicationPlugin.js';
-import type { Entity } from '@finos/legend-storage';
+import { type Entity, generateGAVCoordinates } from '@finos/legend-storage';
 import {
   type EntityChange,
   type ProjectDependency,
@@ -49,19 +49,16 @@ import {
   ProjectVersionEntities,
   ProjectData,
   ProjectDependencyCoordinates,
-  generateGAVCoordinates,
+  ProjectDependencyInfo,
 } from '@finos/legend-server-depot';
 import {
-  type SetImplementation,
   type PackageableElement,
   GRAPH_MANAGER_EVENT,
   CompilationError,
   EngineError,
   extractSourceInformationCoordinates,
   Package,
-  PureInstanceSetImplementation,
   Profile,
-  OperationSetImplementation,
   PrimitiveType,
   Enumeration,
   Class,
@@ -70,8 +67,6 @@ import {
   ConcreteFunctionDefinition,
   Service,
   FlatData,
-  FlatDataInstanceSetImplementation,
-  EmbeddedFlatDataPropertyMapping,
   PackageableConnection,
   PackageableRuntime,
   FileGenerationSpecification,
@@ -80,9 +75,6 @@ import {
   Unit,
   Database,
   SectionIndex,
-  RootRelationalInstanceSetImplementation,
-  EmbeddedRelationalInstanceSetImplementation,
-  AggregationAwareSetImplementation,
   DependencyGraphBuilderError,
   GraphDataDeserializationError,
   GraphBuilderError,
@@ -91,23 +83,31 @@ import {
   DataElement,
 } from '@finos/legend-graph';
 import {
-  type LambdaEditorState,
   ActionAlertActionType,
   ActionAlertType,
 } from '@finos/legend-application';
-import { CONFIGURATION_EDITOR_TAB } from './editor-state/ProjectConfigurationEditorState.js';
-import type { DSLMapping_LegendStudioApplicationPlugin_Extension } from './DSLMapping_LegendStudioApplicationPlugin_Extension.js';
-import { graph_dispose } from './graphModifier/GraphModifierHelper.js';
 import {
-  PACKAGEABLE_ELEMENT_TYPE,
-  SET_IMPLEMENTATION_TYPE,
-} from './shared/ModelUtil.js';
+  CONFIGURATION_EDITOR_TAB,
+  getConflictsString,
+} from './editor-state/ProjectConfigurationEditorState.js';
+import { graph_dispose } from './shared/modifier/GraphModifierHelper.js';
+import { PACKAGEABLE_ELEMENT_TYPE } from './shared/ModelClassifierUtils.js';
 import { GlobalTestRunnerState } from './sidebar-state/testable/GlobalTestRunnerState.js';
+import { LEGEND_STUDIO_APP_EVENT } from './LegendStudioAppEvent.js';
+import type { LambdaEditorState } from '@finos/legend-query-builder';
 
 export enum GraphBuilderStatus {
   SUCCEEDED = 'SUCCEEDED',
   FAILED = 'FAILED',
   REDIRECTED_TO_TEXT_MODE = 'REDIRECTED_TO_TEXT_MODE',
+}
+
+export enum FormModeCompilationOutcome {
+  SKIPPED = 'SKIPPED',
+  SUCCEEDED = 'SUCCEEDED',
+  FAILED = 'FAILED',
+  FAILED_WITH_ERROR_REVEALED = 'FAILED_WITH_ERROR_REVEALED',
+  FAILED_AND_FALLBACK_TO_TEXT_MODE = 'FAILED_AND_FALLBACK_TO_TEXTMODE',
 }
 
 export interface GraphBuilderResult {
@@ -130,7 +130,6 @@ export class EditorGraphState {
       editorStore: false,
       graphGenerationState: false,
       getPackageableElementType: false,
-      getSetImplementationType: false,
       hasCompilationError: computed,
       clearCompilationError: action,
     });
@@ -363,7 +362,7 @@ export class EditorGraphState {
 
   private redirectToModelImporterForDebugging(error: Error): void {
     if (this.editorStore.isInConflictResolutionMode) {
-      this.editorStore.setBlockingAlert({
+      this.editorStore.applicationStore.setBlockingAlert({
         message: `Can't de-serialize graph model from entities`,
         prompt: `Please refresh the application and abort conflict resolution`,
       });
@@ -461,13 +460,13 @@ export class EditorGraphState {
     message?: string;
     disableNotificationOnSuccess?: boolean;
     openConsole?: boolean;
-  }): GeneratorFn<void> {
+  }): GeneratorFn<FormModeCompilationOutcome> {
     assertTrue(
       this.editorStore.isInFormMode,
       'Editor must be in form mode to call this method',
     );
     if (this.checkIfApplicationUpdateOperationIsRunning()) {
-      return;
+      return FormModeCompilationOutcome.SKIPPED;
     }
     this.isRunningGlobalCompile = true;
     try {
@@ -490,6 +489,7 @@ export class EditorGraphState {
           'Compiled successfully',
         );
       }
+      return FormModeCompilationOutcome.SUCCEEDED;
     } catch (error) {
       assertErrorThrown(error);
       // TODO: we probably should make this pattern of error the handling for all other exceptions in the codebase
@@ -548,19 +548,22 @@ export class EditorGraphState {
           this.editorStore.applicationStore.notifyWarning(
             `Can't enter text mode. Transformation to grammar text failed: ${error2.message}`,
           );
-          return;
+          return FormModeCompilationOutcome.FAILED;
         }
         this.editorStore.setGraphEditMode(GRAPH_EDITOR_MODE.GRAMMAR_TEXT);
         yield flowResult(
           this.globalCompileInTextMode({
             ignoreBlocking: true,
             suppressCompilationFailureMessage: true,
+            disableNotificationOnSuccess: options?.disableNotificationOnSuccess,
           }),
         );
+        return FormModeCompilationOutcome.FAILED_AND_FALLBACK_TO_TEXT_MODE;
       } else {
         this.editorStore.applicationStore.notifyWarning(
           `Compilation failed: ${error.message}`,
         );
+        return FormModeCompilationOutcome.FAILED_WITH_ERROR_REVEALED;
       }
     } finally {
       this.isRunningGlobalCompile = false;
@@ -570,8 +573,9 @@ export class EditorGraphState {
   // TODO: when we support showing multiple notifications, we can take this `suppressCompilationFailureMessage` out as
   // we can show the transition between form mode and text mode warning and the compilation failure warning at the same time
   *globalCompileInTextMode(options?: {
-    ignoreBlocking?: boolean;
-    suppressCompilationFailureMessage?: boolean;
+    ignoreBlocking?: boolean | undefined;
+    suppressCompilationFailureMessage?: boolean | undefined;
+    disableNotificationOnSuccess?: boolean | undefined;
     openConsole?: boolean;
   }): GeneratorFn<void> {
     assertTrue(
@@ -595,7 +599,13 @@ export class EditorGraphState {
           this.editorStore.grammarTextEditorState.graphGrammarText,
           this.editorStore.graphManagerState.graph,
         )) as Entity[];
-      this.editorStore.applicationStore.notifySuccess('Compiled successfully');
+
+      if (!options?.disableNotificationOnSuccess) {
+        this.editorStore.applicationStore.notifySuccess(
+          'Compiled successfully',
+        );
+      }
+
       yield flowResult(this.updateGraphAndApplication(entities));
     } catch (error) {
       assertErrorThrown(error);
@@ -631,7 +641,7 @@ export class EditorGraphState {
     try {
       this.isApplicationLeavingTextMode = true;
       this.clearCompilationError();
-      this.editorStore.setBlockingAlert({
+      this.editorStore.applicationStore.setBlockingAlert({
         message: 'Compiling graph before leaving text mode...',
         showLoading: true,
       });
@@ -643,9 +653,12 @@ export class EditorGraphState {
             // surpress the modal to reveal error properly in the text editor
             // if the blocking modal is not dismissed, the edior will not be able to gain focus as modal has a focus trap
             // therefore, the editor will not be able to get the focus
-            { onError: () => this.editorStore.setBlockingAlert(undefined) },
+            {
+              onError: () =>
+                this.editorStore.applicationStore.setBlockingAlert(undefined),
+            },
           )) as Entity[];
-        this.editorStore.setBlockingAlert({
+        this.editorStore.applicationStore.setBlockingAlert({
           message: 'Leaving text mode and rebuilding graph...',
           showLoading: true,
         });
@@ -675,13 +688,11 @@ export class EditorGraphState {
           this.editorStore.applicationStore.notifyWarning(
             `Compilation failed: ${error.message}`,
           );
-          this.editorStore.setActionAlertInfo({
+          this.editorStore.applicationStore.setActionAlertInfo({
             message: 'Project is not in a compiled state',
             prompt:
               'All changes made since the last time the graph was built successfully will be lost',
             type: ActionAlertType.CAUTION,
-            onEnter: (): void => this.editorStore.setBlockGlobalHotkeys(true),
-            onClose: (): void => this.editorStore.setBlockGlobalHotkeys(false),
             actions: [
               {
                 label: 'Discard Changes',
@@ -706,7 +717,7 @@ export class EditorGraphState {
       );
     } finally {
       this.isApplicationLeavingTextMode = false;
-      this.editorStore.setBlockingAlert(undefined);
+      this.editorStore.applicationStore.setBlockingAlert(undefined);
     }
   }
 
@@ -1037,7 +1048,7 @@ export class EditorGraphState {
         const dependencyEntities = dependencyEntitiesJson.map((e) =>
           ProjectVersionEntities.serialization.fromJson(e),
         );
-        const dependencyProjects = new Set<string>();
+        const dependencyProjects = new Map<string, Set<string>>();
         dependencyEntities.forEach((dependencyInfo) => {
           const projectId = dependencyInfo.id;
           // There are a few validations that must be done:
@@ -1050,21 +1061,61 @@ export class EditorGraphState {
           //    e.g. model::someClass -> project1::v1_0_0::model::someClass
           //    But this is a rare and advanced use-case which we will not attempt to handle now.
           if (dependencyProjects.has(projectId)) {
-            const projectVersions = dependencyEntities
-              .filter((e) => e.id === projectId)
-              .map((e) => e.versionId);
-            throw new UnsupportedOperationError(
-              `Depending on multiple versions of a project is not supported. Found dependency on project '${projectId}' with versions: ${projectVersions.join(
-                ', ',
-              )}.`,
+            dependencyProjects.get(projectId)?.add(dependencyInfo.versionId);
+          } else {
+            dependencyProjects.set(
+              dependencyInfo.id,
+              new Set<string>([dependencyInfo.versionId]),
             );
           }
           dependencyEntitiesIndex.set(
             dependencyInfo.id,
             dependencyInfo.entities,
           );
-          dependencyProjects.add(dependencyInfo.id);
         });
+        const hasConflicts = Array.from(dependencyProjects.entries()).find(
+          ([k, v]) => v.size > 1,
+        );
+        if (hasConflicts) {
+          let dependencyInfo: ProjectDependencyInfo | undefined;
+          try {
+            const dependencyTree =
+              (yield this.editorStore.depotServerClient.analyzeDependencyTree(
+                dependencyCoordinates.map((e) =>
+                  ProjectDependencyCoordinates.serialization.toJson(e),
+                ),
+              )) as PlainObject<ProjectVersionEntities>;
+            dependencyInfo =
+              ProjectDependencyInfo.serialization.fromJson(dependencyTree);
+          } catch (error) {
+            assertErrorThrown(error);
+            this.editorStore.applicationStore.log.error(
+              LogEvent.create(LEGEND_STUDIO_APP_EVENT.DEPOT_MANAGER_FAILURE),
+              error,
+            );
+          }
+          const startErrorMessage =
+            'Depending on multiple versions of a project is not supported. Found conflicts:\n';
+          if (dependencyInfo?.conflicts) {
+            throw new UnsupportedOperationError(
+              startErrorMessage + getConflictsString(dependencyInfo),
+            );
+          } else {
+            throw new UnsupportedOperationError(
+              startErrorMessage +
+                Array.from(dependencyProjects.entries())
+                  .map(([k, v]) => {
+                    if (v.size > 1) {
+                      `project: ${k}\n versions: \n${Array.from(
+                        v.values(),
+                      ).join('\n')}`;
+                    }
+                    return '';
+                  })
+                  .join('\n'),
+            );
+          }
+        }
       }
     } catch (error) {
       assertErrorThrown(error);
@@ -1131,17 +1182,6 @@ export class EditorGraphState {
   }
 
   // -------------------------------------------------- UTILITIES -----------------------------------------------------
-  /**
-   * NOTE: Notice how this utility draws resources from all of metamodels and uses `instanceof` to classify behavior/response.
-   * As such, methods in this utility cannot be placed in place they should belong to.
-   *
-   * For example: `getSetImplemetnationType` cannot be placed in `SetImplementation` because of circular module dependency
-   * So this utility is born for such purpose, to avoid circular module dependency, and it should just be used for only that
-   * Other utilities that really should reside in the domain-specific meta model should be placed in the meta model module.
-   *
-   * NOTE: We expect the need for these methods will eventually go away as we complete modularization. But we need these
-   * methods here so that we can load plugins.
-   */
 
   getPackageableElementType(element: PackageableElement): string {
     if (element instanceof PrimitiveType) {
@@ -1189,7 +1229,7 @@ export class EditorGraphState {
         (plugin) =>
           (
             plugin as DSL_LegendStudioApplicationPlugin_Extension
-          ).getExtraElementTypeGetters?.() ?? [],
+          ).getExtraElementClassifiers?.() ?? [],
       );
     for (const labelGetter of extraElementTypeLabelGetters) {
       const label = labelGetter(element);
@@ -1199,46 +1239,6 @@ export class EditorGraphState {
     }
     throw new UnsupportedOperationError(
       `Can't get type label for element '${element.path}': no compatible label getter available from plugins`,
-    );
-  }
-
-  getSetImplementationType(setImplementation: SetImplementation): string {
-    if (setImplementation instanceof PureInstanceSetImplementation) {
-      return SET_IMPLEMENTATION_TYPE.PUREINSTANCE;
-    } else if (setImplementation instanceof OperationSetImplementation) {
-      return SET_IMPLEMENTATION_TYPE.OPERATION;
-    } else if (setImplementation instanceof FlatDataInstanceSetImplementation) {
-      return SET_IMPLEMENTATION_TYPE.FLAT_DATA;
-    } else if (setImplementation instanceof EmbeddedFlatDataPropertyMapping) {
-      return SET_IMPLEMENTATION_TYPE.EMBEDDED_FLAT_DATA;
-    } else if (
-      setImplementation instanceof RootRelationalInstanceSetImplementation
-    ) {
-      return SET_IMPLEMENTATION_TYPE.RELATIONAL;
-    } else if (
-      setImplementation instanceof EmbeddedRelationalInstanceSetImplementation
-    ) {
-      return SET_IMPLEMENTATION_TYPE.EMBEDDED_RELATIONAL;
-    } else if (setImplementation instanceof AggregationAwareSetImplementation) {
-      return SET_IMPLEMENTATION_TYPE.AGGREGATION_AWARE;
-    }
-    const extraSetImplementationClassifiers = this.editorStore.pluginManager
-      .getApplicationPlugins()
-      .flatMap(
-        (plugin) =>
-          (
-            plugin as DSLMapping_LegendStudioApplicationPlugin_Extension
-          ).getExtraSetImplementationClassifiers?.() ?? [],
-      );
-    for (const Classifier of extraSetImplementationClassifiers) {
-      const setImplementationClassifier = Classifier(setImplementation);
-      if (setImplementationClassifier) {
-        return setImplementationClassifier;
-      }
-    }
-    throw new UnsupportedOperationError(
-      `Can't classify set implementation: no compatible classifer available from plugins`,
-      setImplementation,
     );
   }
 }

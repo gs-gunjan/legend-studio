@@ -29,7 +29,7 @@ import {
   CORE_DND_TYPE,
   type ElementDragSource,
   type UMLEditorElementDropTarget,
-} from '../../../../stores/shared/DnDUtil.js';
+} from '../../../../stores/shared/DnDUtils.js';
 import { UnsupportedEditorPanel } from '../../../editor/edit-panel/UnsupportedElementEditor.js';
 import {
   clsx,
@@ -55,6 +55,8 @@ import {
   ArrowsJoinIcon,
   ArrowsSplitIcon,
   PanelDropZone,
+  Panel,
+  PanelContent,
 } from '@finos/legend-art';
 import { ServiceExecutionQueryEditor } from '../../../editor/edit-panel/service-editor/ServiceExecutionQueryEditor.js';
 import { useEditorStore } from '../../EditorStoreProvider.js';
@@ -68,7 +70,10 @@ import {
   validate_PureExecutionMapping,
 } from '@finos/legend-graph';
 import { guaranteeNonNullable } from '@finos/legend-shared';
-import type { PackageableElementOption } from '@finos/legend-application';
+import {
+  buildElementOption,
+  type PackageableElementOption,
+} from '@finos/legend-application';
 
 const PureExecutionContextConfigurationEditor = observer(
   (props: {
@@ -87,7 +92,8 @@ const PureExecutionContextConfigurationEditor = observer(
       executionContext.mapping.value,
     );
     const mapping = executionContext.mapping.value;
-    const mappingOptions = editorStore.mappingOptions;
+    const mappingOptions =
+      editorStore.graphManagerState.usableMappings.map(buildElementOption);
     const noMappingLabel = (
       <div
         className="service-execution-editor__configuration__mapping-option--empty"
@@ -243,7 +249,7 @@ const PureExecutionContextConfigurationEditor = observer(
     );
 
     return (
-      <div className="panel__content">
+      <PanelContent>
         <PanelDropZone
           dropTargetConnector={dropMappingOrRuntimeRef}
           isDragOver={isMappingOrRuntimeDragOver && !isReadOnly}
@@ -266,7 +272,7 @@ const PureExecutionContextConfigurationEditor = observer(
                 className="btn--dark btn--sm service-execution-editor__configuration__item__btn"
                 onClick={visitMapping}
                 tabIndex={-1}
-                title={'See mapping'}
+                title="See mapping"
               >
                 <LongArrowRightIcon />
               </button>
@@ -301,7 +307,7 @@ const PureExecutionContextConfigurationEditor = observer(
                   className="btn--sm btn--dark service-execution-editor__configuration__item__btn"
                   onClick={visitRuntime}
                   tabIndex={-1}
-                  title={'See runtime'}
+                  title="See runtime"
                 >
                   <LongArrowRightIcon />
                 </button>
@@ -314,7 +320,7 @@ const PureExecutionContextConfigurationEditor = observer(
             </div>
           </div>
         </PanelDropZone>
-      </div>
+      </PanelContent>
     );
   },
 );
@@ -328,10 +334,6 @@ export const ChangeExecutionModal = observer(
     const closeModal = (): void => executionState.setShowChangeExecModal(false);
     const isChangingToMulti =
       executionState instanceof SingleServicePureExecutionState;
-    const handleSubmit = (): void => {
-      executionState.changeExecution();
-      closeModal();
-    };
     const renderChangeExecution = (): React.ReactNode => {
       if (executionState instanceof SingleServicePureExecutionState) {
         const keyValue = executionState.multiExecutionKey;
@@ -349,7 +351,7 @@ export const ChangeExecutionModal = observer(
             spellCheck={false}
             value={keyValue}
             onChange={onChange}
-            placeholder={`Multi Execution Key Name`}
+            placeholder="Multi Execution Key Name"
             validationErrorMessage={validationMessage}
           />
         );
@@ -398,7 +400,11 @@ export const ChangeExecutionModal = observer(
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
         <form
-          onSubmit={handleSubmit}
+          onSubmit={(event) => {
+            event.preventDefault();
+            executionState.changeExecution();
+            closeModal();
+          }}
           className="modal modal--dark search-modal"
         >
           <div className="modal__title">
@@ -435,7 +441,7 @@ const PureSingleExecutionEditor = observer(
 
     return (
       <div className="service-execution-editor__execution">
-        <div className="panel">
+        <Panel>
           <div className="panel__content service-editor__content">
             <PureExecutionContextConfigurationEditor
               pureExecutionState={singleExecutionState}
@@ -444,7 +450,7 @@ const PureSingleExecutionEditor = observer(
               }
             />
           </div>
-        </div>
+        </Panel>
       </div>
     );
   },
@@ -547,11 +553,6 @@ export const NewExecutionParameterModal = observer(
 
     const closeModal = (): void =>
       executionState.setNewKeyParameterModal(false);
-    const handleSubmit = (): void => {
-      executionState.addExecutionParameter(keyValue);
-      setKeyValue('');
-      closeModal();
-    };
     const onChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
       setKeyValue(event.target.value);
     };
@@ -563,7 +564,12 @@ export const NewExecutionParameterModal = observer(
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
         <form
-          onSubmit={handleSubmit}
+          onSubmit={(event) => {
+            event.preventDefault();
+            executionState.addExecutionParameter(keyValue);
+            setKeyValue('');
+            closeModal();
+          }}
           className="modal modal--dark search-modal"
         >
           <div className="modal__title">New Execution Context</div>
@@ -573,7 +579,7 @@ export const NewExecutionParameterModal = observer(
               spellCheck={false}
               value={keyValue}
               onChange={onChange}
-              placeholder={`Key execution name`}
+              placeholder="Key execution name"
               validationErrorMessage={validationMessage}
             />
           </div>
@@ -601,10 +607,6 @@ const RenameModal = observer(
   }) => {
     const { val, isReadOnly, showModal, closeModal, setValue } = props;
     const [inputValue, setInputValue] = useState(val);
-    const handleSubmit = (): void => {
-      setValue(inputValue);
-      closeModal();
-    };
     const changeValue: React.ChangeEventHandler<HTMLInputElement> = (event) => {
       setInputValue(event.target.value);
     };
@@ -616,7 +618,11 @@ const RenameModal = observer(
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
         <form
-          onSubmit={handleSubmit}
+          onSubmit={(event) => {
+            event.preventDefault();
+            setValue(inputValue);
+            closeModal();
+          }}
           className="modal modal--dark search-modal"
         >
           <div className="modal__title">Rename</div>
@@ -812,7 +818,7 @@ const ServicePureExecutionEditor = observer(
           </ResizablePanelSplitter>
           <ResizablePanel minSize={56}>
             <div className="service-execution-editor__content">
-              <div className="panel">
+              <Panel>
                 <div className="panel__header">
                   <div className="panel__header__title">
                     <div className="panel__header__title__label service-editor__execution__label--test">
@@ -855,7 +861,7 @@ const ServicePureExecutionEditor = observer(
                     />
                   )}
                 </div>
-              </div>
+              </Panel>
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

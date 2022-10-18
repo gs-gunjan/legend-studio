@@ -50,7 +50,7 @@ import {
   type ServerClientConfig,
   type TracerService,
 } from '@finos/legend-shared';
-import type { LightQuery, Query } from './action/query/Query.js';
+import type { LightQuery, Query, QueryInfo } from './action/query/Query.js';
 import type { Entity } from '@finos/legend-storage';
 import type { QuerySearchSpecification } from './action/query/QuerySearchSpecification.js';
 import type { ExternalFormatDescription } from './action/externalFormat/ExternalFormatDescription.js';
@@ -67,7 +67,7 @@ import type {
   MappingModelCoverageAnalysisResult,
   RawMappingModelCoverageAnalysisResult,
 } from './action/analytics/MappingModelCoverageAnalysis.js';
-import type { SchemaSet } from '../graph/metamodel/pure/packageableElements/externalFormat/schemaSet/DSLExternalFormat_SchemaSet.js';
+import type { SchemaSet } from '../graph/metamodel/pure/packageableElements/externalFormat/schemaSet/DSL_ExternalFormat_SchemaSet.js';
 
 export interface TEMPORARY__EngineSetupConfig {
   env: string;
@@ -92,6 +92,11 @@ export interface ExecutionOptions {
    */
   useLosslessParse?: boolean | undefined;
   serializationFormat?: EXECUTION_SERIALIZATION_FORMAT | undefined;
+}
+
+export interface ServiceRegistrationOptions {
+  TEMPORARY__useStoreModel?: boolean | undefined;
+  TEMPORARY__semiInteractiveOverridePattern?: string | undefined;
 }
 
 export abstract class AbstractPureGraphManagerExtension {
@@ -230,6 +235,7 @@ export abstract class AbstractPureGraphManager {
 
   // ------------------------------------------- Compile -------------------------------------------
 
+  abstract compileEntities(entities: Entity[]): Promise<void>;
   abstract compileGraph(
     graph: PureModel,
     options?: { onError?: () => void; keepSourceInformation?: boolean },
@@ -381,6 +387,7 @@ export abstract class AbstractPureGraphManager {
     version: string | undefined,
     server: string,
     executionMode: ServiceExecutionMode,
+    options?: ServiceRegistrationOptions,
   ): Promise<ServiceRegistrationResult>;
   abstract activateService(
     serviceUrl: string,
@@ -404,7 +411,7 @@ export abstract class AbstractPureGraphManager {
   ): Promise<LightQuery[]>;
   abstract getLightQuery(queryId: string): Promise<LightQuery>;
   abstract getQuery(queryId: string, graph: PureModel): Promise<Query>;
-  abstract getQueryContent(queryId: string): Promise<string>;
+  abstract getQueryInfo(queryId: string): Promise<QueryInfo>;
   abstract createQuery(query: Query, graph: PureModel): Promise<Query>;
   abstract updateQuery(query: Query, graph: PureModel): Promise<Query>;
   abstract deleteQuery(queryId: string): Promise<void>;

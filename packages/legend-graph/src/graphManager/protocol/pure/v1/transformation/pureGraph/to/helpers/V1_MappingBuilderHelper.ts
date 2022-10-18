@@ -65,10 +65,10 @@ import { RelationalInputData } from '../../../../../../../../graph/metamodel/pur
 import {
   getAllClassMappings,
   getObjectInputType,
-} from '../../../../../../../../graph/helpers/DSLMapping_Helper.js';
-import { getRelationalInputType } from '../../../../../../../../graph/helpers/StoreRelational_Helper.js';
+} from '../../../../../../../../graph/helpers/DSL_Mapping_Helper.js';
+import { getRelationalInputType } from '../../../../../../../../graph/helpers/STO_Relational_Helper.js';
 import { getEnumValue } from '../../../../../../../../graph/helpers/DomainHelper.js';
-import { V1_getIncludedMappingPath } from '../../../../helpers/V1_DSLMapping_Helper.js';
+import { V1_getIncludedMappingPath } from '../../../../helpers/V1_DSL_Mapping_Helper.js';
 import type { V1_MappingTestSuite } from '../../../../model/packageableElements/mapping/V1_MappingTestSuite.js';
 import { MappingTestSuite } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingTestSuite.js';
 import { V1_MappingTest } from '../../../../model/packageableElements/mapping/V1_MappingTest.js';

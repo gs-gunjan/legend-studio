@@ -29,7 +29,7 @@ import {
   populateDirectoryTreeNodeChildren,
   buildGenerationDirectory,
   reprocessOpenNodes,
-} from '../shared/FileGenerationTreeUtil.js';
+} from '../shared/FileGenerationTreeUtils.js';
 import {
   type GeneratorFn,
   assertErrorThrown,
@@ -54,7 +54,7 @@ import {
   fileGeneration_addConfigurationProperty,
   fileGeneration_addScopeElement,
   fileGeneration_deleteScopeElement,
-} from '../graphModifier/DSLGeneration_GraphModifierHelper.js';
+} from '../shared/modifier/DSL_Generation_GraphModifierHelper.js';
 
 export class FileGenerationState {
   editorStore: EditorStore;
