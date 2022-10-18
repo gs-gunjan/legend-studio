@@ -24,6 +24,8 @@ import {
   ContextMenu,
   Dialog,
   BlankPanelPlaceholder,
+  Panel,
+  LockIcon,
 } from '@finos/legend-art';
 import { observer } from 'mobx-react-lite';
 import type { ServiceTestSuite } from '@finos/legend-graph';
@@ -36,6 +38,7 @@ import type {
   ServiceTestableState,
   ServiceTestSuiteState,
 } from '../../../../../stores/editor-state/element-editor-state/service/testable/ServiceTestableState.js';
+import { UnsupportedEditorPanel } from '../../UnsupportedElementEditor.js';
 
 export const ServiceTestSuiteEditor = observer(
   (props: { serviceTestSuiteState: ServiceTestSuiteState }) => {
@@ -226,6 +229,36 @@ export const ServiceTestableEditor = observer(
             />
           )}
         </div>
+      </div>
+    );
+  },
+);
+
+export const ServiceTestableUnsupportedEditor = observer(
+  (props: { serviceTestableState: ServiceTestableState }) => {
+    const { serviceTestableState } = props;
+    const serviceEditorState = serviceTestableState.serviceEditorState;
+    const isReadOnly = serviceEditorState.isReadOnly;
+    return (
+      <div className="unsupported-element-editor">
+        <Panel>
+          <div className="panel__header">
+            <div className="panel__header__title">
+              {isReadOnly && (
+                <div className="uml-element-editor__header__lock">
+                  <LockIcon />
+                </div>
+              )}
+              <div className="panel__header__title__label">Service Tests</div>
+            </div>
+          </div>
+          <div className="panel__content unsupported-element-editor__content">
+            <UnsupportedEditorPanel
+              text="Can't display and edit service tests in form mode"
+              isReadOnly={isReadOnly}
+            />
+          </div>
+        </Panel>
       </div>
     );
   },
