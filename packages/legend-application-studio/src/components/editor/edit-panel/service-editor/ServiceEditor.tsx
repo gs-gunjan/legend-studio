@@ -46,8 +46,14 @@ import {
   service_setPattern,
   service_updateOwner,
 } from '../../../../stores/shared/modifier/DSL_Service_GraphModifierHelper.js';
-import { validate_ServicePattern } from '@finos/legend-graph';
-import { ServiceTestableEditor } from './testable/ServiceTestableEditor.js';
+import {
+  PureSingleExecution,
+  validate_ServicePattern,
+} from '@finos/legend-graph';
+import {
+  ServiceTestableEditor,
+  ServiceTestableUnsupportedEditor,
+} from './testable/ServiceTestableEditor.js';
 import { useApplicationNavigationContext } from '@finos/legend-application';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../../stores/LegendStudioApplicationNavigationContext.js';
 
@@ -429,7 +435,9 @@ export const ServiceEditor = observer(() => {
     editorStore.applicationStore.config.options
       .TEMPORARY__serviceRegistrationConfig.length,
   );
-
+  const cannotOpenServiceTestEditor =
+    service.execution instanceof PureSingleExecution &&
+    service.execution.runtime === undefined;
   useApplicationNavigationContext(
     LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY.SERVICE_EDITOR,
   );
@@ -473,8 +481,13 @@ export const ServiceEditor = observer(() => {
           {selectedTab === SERVICE_TAB.REGISTRATION && (
             <ServiceRegistrationEditor />
           )}
-          {selectedTab === SERVICE_TAB.TEST && (
+          {selectedTab === SERVICE_TAB.TEST && !cannotOpenServiceTestEditor && (
             <ServiceTestableEditor
+              serviceTestableState={serviceState.testableState}
+            />
+          )}
+          {selectedTab === SERVICE_TAB.TEST && cannotOpenServiceTestEditor && (
+            <ServiceTestableUnsupportedEditor
               serviceTestableState={serviceState.testableState}
             />
           )}
