@@ -102,7 +102,6 @@ const transformTestData = (
 
 export const V1_transformServiceTest = (
   element: ServiceTest,
-  context: V1_GraphTransformerContext,
 ): V1_ServiceTest => {
   const serviceTest = new V1_ServiceTest();
   serviceTest.id = element.id;
