@@ -71,7 +71,7 @@ export const V1_transformAtomicTest = (
   context: V1_GraphTransformerContext,
 ): V1_AtomicTest => {
   if (value instanceof ServiceTest) {
-    return V1_transformServiceTest(value, context);
+    return V1_transformServiceTest(value);
   } else if (value instanceof MappingTest) {
     return V1_transformMappingTest(value, context);
   }
