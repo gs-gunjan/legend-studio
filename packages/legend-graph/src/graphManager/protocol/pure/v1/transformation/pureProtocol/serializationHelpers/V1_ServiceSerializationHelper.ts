@@ -83,7 +83,7 @@ import {
 } from '../../../model/packageableElements/service/V1_DEPRECATED__ServiceTest.js';
 import type { PureProtocolProcessorPlugin } from '../../../../PureProtocolProcessorPlugin.js';
 import type { V1_TestSuite } from '../../../model/test/V1_TestSuite.js';
-import { ATOMIC_TEST_TYPE } from '../../../../../../../index.js';
+import { ATOMIC_TEST_TYPE } from '../../../../../../../graph/MetaModelConst.js';
 
 export const V1_SERVICE_ELEMENT_PROTOCOL_TYPE = 'service';
 
