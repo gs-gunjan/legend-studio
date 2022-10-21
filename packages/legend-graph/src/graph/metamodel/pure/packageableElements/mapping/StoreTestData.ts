@@ -27,7 +27,7 @@ export class StoreTestData implements Hashable {
   get hashCode(): string {
     return hashArray([
       CORE_HASH_STRUCTURE.STORE_TEST_DATA,
-      this.store?.valueForSerialization ?? '',
+      this.store.valueForSerialization ?? '',
       this.data,
     ]);
   }
