@@ -23,7 +23,10 @@ import {
   guaranteeType,
   UnsupportedOperationError,
 } from '@finos/legend-shared';
-import { PRIMITIVE_TYPE } from '../../../../../../../../graph/MetaModelConst.js';
+import {
+  MODEL_STORE_NAME,
+  PRIMITIVE_TYPE,
+} from '../../../../../../../../graph/MetaModelConst.js';
 import { fromElementPathToMappingElementId } from '../../../../../../../../graph/MetaModelUtils.js';
 import { Type } from '../../../../../../../../graph/metamodel/pure/packageableElements/domain/Type.js';
 import type { Mapping } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/Mapping.js';
@@ -40,7 +43,7 @@ import { FlatDataInputData } from '../../../../../../../../graph/metamodel/pure/
 import { ExpectedOutputMappingTestAssert } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/ExpectedOutputMappingTestAssert.js';
 import type { Class } from '../../../../../../../../graph/metamodel/pure/packageableElements/domain/Class.js';
 import { InferableMappingElementIdImplicitValue } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/InferableMappingElementId.js';
-import type { PackageableElementImplicitReference } from '../../../../../../../../graph/metamodel/pure/packageableElements/PackageableElementReference.js';
+import { PackageableElementImplicitReference } from '../../../../../../../../graph/metamodel/pure/packageableElements/PackageableElementReference.js';
 import { EnumValueImplicitReference } from '../../../../../../../../graph/metamodel/pure/packageableElements/domain/EnumValueReference.js';
 import { MappingInclude } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/MappingInclude.js';
 import { SubstituteStore } from '../../../../../../../../graph/metamodel/pure/packageableElements/mapping/SubstituteStore.js';
@@ -212,7 +215,14 @@ const buildStoreTestData = (
   context: V1_GraphBuilderContext,
 ): StoreTestData => {
   const storeTestData = new StoreTestData();
-  storeTestData.store = element.store;
+  if (element.store === MODEL_STORE_NAME) {
+    storeTestData.store = PackageableElementImplicitReference.create(
+      context.graph.modelStore,
+      element.store,
+    );
+  } else {
+    storeTestData.store = context.resolveStore(element.store);
+  }
   storeTestData.data = V1_buildEmbeddedData(element.data, context);
   return storeTestData;
 };

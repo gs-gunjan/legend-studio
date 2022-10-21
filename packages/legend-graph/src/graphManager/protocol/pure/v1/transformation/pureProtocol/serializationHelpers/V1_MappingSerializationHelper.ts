@@ -41,7 +41,10 @@ import {
   usingModelSchema,
   optionalCustom,
 } from '@finos/legend-shared';
-import { PRIMITIVE_TYPE } from '../../../../../../../graph/MetaModelConst.js';
+import {
+  ATOMIC_TEST_TYPE,
+  PRIMITIVE_TYPE,
+} from '../../../../../../../graph/MetaModelConst.js';
 import type { V1_InputData } from '../../../model/packageableElements/mapping/V1_InputData.js';
 import { V1_Mapping } from '../../../model/packageableElements/mapping/V1_Mapping.js';
 import { V1_DEPRECATED__MappingTest } from '../../../model/packageableElements/mapping/V1_DEPRECATED__MappingTest.js';
@@ -121,7 +124,6 @@ import {
 } from './V1_DataElementSerializationHelper.js';
 import { V1_MappingTest } from '../../../model/packageableElements/mapping/V1_MappingTest.js';
 import type { V1_TestSuite } from '../../../model/test/V1_TestSuite.js';
-import { V1_AtomicTestType } from './V1_TestSerializationEnum.js';
 
 enum V1_ClassMappingType {
   OPERATION = 'operation',
@@ -869,7 +871,7 @@ export const V1_storeTestDataModelSchema = (
   });
 
 export const V1_mappingTestModelSchema = createModelSchema(V1_MappingTest, {
-  _type: usingConstantValueSchema(V1_AtomicTestType.MAPPING_TEST),
+  _type: usingConstantValueSchema(ATOMIC_TEST_TYPE.MAPPING_TEST),
   assertions: list(
     custom(
       (val) => V1_serializeTestAssertion(val),

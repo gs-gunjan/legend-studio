@@ -342,7 +342,7 @@ const transformStoreTestData = (
 ): V1_StoreTestData => {
   const testData = new V1_StoreTestData();
   testData.data = V1_transformEmbeddedData(element.data, context);
-  testData.store = element.store;
+  testData.store = element.store.valueForSerialization ?? '';
   return testData;
 };
 

@@ -21,7 +21,7 @@ import type { InputData } from './InputData.js';
 import type { RawLambda } from '../../rawValueSpecification/RawLambda.js';
 
 /**
- * TODO: Remove once migration from `ServiceTest_Legacy` to `ServiceTest` is complete
+ * TODO: Remove once migration from `MappingTest_Legacy` to `MappingTest` is complete
  * @deprecated
  */
 export class DEPRECATED__MappingTest implements Hashable {

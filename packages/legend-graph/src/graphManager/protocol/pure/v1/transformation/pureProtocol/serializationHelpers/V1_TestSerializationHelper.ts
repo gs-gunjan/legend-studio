@@ -30,6 +30,7 @@ import {
   serialize,
   SKIP,
 } from 'serializr';
+import { ATOMIC_TEST_TYPE } from '../../../../../../../graph/MetaModelConst.js';
 import type { PureProtocolProcessorPlugin } from '../../../../PureProtocolProcessorPlugin.js';
 import type { Testable_PureProtocolProcessorPlugin_Extension } from '../../../../Testable_PureProtocolProcessorPlugin_Extension.js';
 import { V1_MappingTest } from '../../../model/packageableElements/mapping/V1_MappingTest.js';
@@ -63,7 +64,6 @@ import {
   V1_serviceTestModelSchema,
   V1_serviceTestSuiteModelSchema,
 } from './V1_ServiceSerializationHelper.js';
-import { V1_AtomicTestType } from './V1_TestSerializationEnum.js';
 
 enum V1_AssertionStatusType {
   ASSERT_FAIL = 'assertFail',
@@ -261,9 +261,9 @@ export const V1_deserializeAtomicTest = (
   plugins: PureProtocolProcessorPlugin[],
 ): V1_AtomicTest => {
   switch (json._type) {
-    case V1_AtomicTestType.SERVICE_TEST:
+    case ATOMIC_TEST_TYPE.SERVICE_TEST:
       return deserialize(V1_serviceTestModelSchema, json);
-    case V1_AtomicTestType.MAPPING_TEST:
+    case ATOMIC_TEST_TYPE.MAPPING_TEST:
       return deserialize(V1_mappingTestModelSchema, json);
     default: {
       const extraAtomicTestProtocolDeserializers = plugins.flatMap(

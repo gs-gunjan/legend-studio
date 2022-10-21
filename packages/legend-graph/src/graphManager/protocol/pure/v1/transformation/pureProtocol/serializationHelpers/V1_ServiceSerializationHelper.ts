@@ -83,7 +83,7 @@ import {
 } from '../../../model/packageableElements/service/V1_DEPRECATED__ServiceTest.js';
 import type { PureProtocolProcessorPlugin } from '../../../../PureProtocolProcessorPlugin.js';
 import type { V1_TestSuite } from '../../../model/test/V1_TestSuite.js';
-import { V1_AtomicTestType } from './V1_TestSerializationEnum.js';
+import { ATOMIC_TEST_TYPE } from '../../../../../../../index.js';
 
 export const V1_SERVICE_ELEMENT_PROTOCOL_TYPE = 'service';
 
@@ -126,7 +126,7 @@ export const V1_testDataModelSchema = (
   });
 
 export const V1_serviceTestModelSchema = createModelSchema(V1_ServiceTest, {
-  _type: usingConstantValueSchema(V1_AtomicTestType.SERVICE_TEST),
+  _type: usingConstantValueSchema(ATOMIC_TEST_TYPE.SERVICE_TEST),
   assertions: list(
     custom(
       (val) => V1_serializeTestAssertion(val),

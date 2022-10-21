@@ -60,6 +60,11 @@ export enum PRIMITIVE_TYPE {
   LATESTDATE = 'LatestDate',
 }
 
+export enum ATOMIC_TEST_TYPE {
+  SERVICE_TEST = 'serviceTest',
+  MAPPING_TEST = 'mappingTest',
+}
+
 export enum TYPICAL_MULTIPLICITY_TYPE {
   ONE = 'one',
   ZEROONE = 'zeroone',
