@@ -24,6 +24,7 @@
 // - Association mapping - stores
 // - MappingTest - inputData - flatdata
 // - MappingTest - inputData - class
+// - MappingTestData - storeTestData - class
 export const TEST_DATA__MappingRoundtrip = [
   {
     path: 'test::tClass',
@@ -1296,3 +1297,935 @@ export const TEST_DATA__Relational_LocalPropertyMappingRoundtrip = [
     classifierPath: 'meta::pure::mapping::Mapping',
   },
 ];
+
+export const TEST_DATA__MappingTestSuiteRoundtrip = [
+  {
+    "path": "test::Address",
+    "content": {
+      "_type": "class",
+      "name": "Address",
+      "superTypes": [],
+      "originalMilestonedProperties": [],
+      "properties": [
+        {
+          "name": "streetNumber",
+          "type": "Integer",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "streetName",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "stateInfo",
+          "type": "test::StateInfo",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        }
+      ],
+      "qualifiedProperties": [],
+      "stereotypes": [],
+      "taggedValues": [],
+      "constraints": [],
+      "package": "test"
+    },
+    "classifierPath": "meta::pure::metamodel::type::Class"
+  },
+  {
+    "path": "test::model",
+    "content": {
+      "_type": "class",
+      "name": "model",
+      "superTypes": [],
+      "originalMilestonedProperties": [],
+      "properties": [
+        {
+          "name": "name",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        }
+      ],
+      "qualifiedProperties": [],
+      "stereotypes": [],
+      "taggedValues": [],
+      "constraints": [],
+      "package": "test"
+    },
+    "classifierPath": "meta::pure::metamodel::type::Class"
+  },
+  {
+    "path": "test::data::MyData",
+    "content": {
+      "_type": "dataElement",
+      "name": "MyData",
+      "stereotypes": [],
+      "taggedValues": [],
+      "data": {
+        "_type": "externalFormat",
+        "contentType": "application/json",
+        "data": "{\"name\":\"john doe\",\"id\":\"77\"}"
+      },
+      "package": "test::data"
+    },
+    "classifierPath": "meta::pure::data::DataElement"
+  },
+  {
+    "path": "test::data::MyTestData",
+    "content": {
+      "_type": "dataElement",
+      "name": "MyTestData",
+      "stereotypes": [],
+      "taggedValues": [],
+      "data": {
+        "_type": "externalFormat",
+        "contentType": "application/json",
+        "data": "{\"ame\": ame 35\",\"  \"id\": 82,\"  \"streetNumber\": 86,\"  \"streetName\": \"streetName 99\",\"  \"pinCode\": 94,\"  \"stateName\": \"stateName 21\"}"
+      },
+      "package": "test::data"
+    },
+    "classifierPath": "meta::pure::data::DataElement"
+  },
+  {
+    "path": "test::changedTestModel",
+    "content": {
+      "_type": "class",
+      "name": "changedTestModel",
+      "superTypes": [],
+      "originalMilestonedProperties": [],
+      "properties": [
+        {
+          "name": "name",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "id",
+          "type": "Integer",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "streetNumber",
+          "type": "Integer",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "streetName",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "pinCode",
+          "type": "Integer",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "stateName",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        }
+      ],
+      "qualifiedProperties": [],
+      "stereotypes": [],
+      "taggedValues": [],
+      "constraints": [],
+      "package": "test"
+    },
+    "classifierPath": "meta::pure::metamodel::type::Class"
+  },
+  {
+    "path": "test::PersonModel",
+    "content": {
+      "_type": "class",
+      "name": "PersonModel",
+      "superTypes": [],
+      "originalMilestonedProperties": [],
+      "properties": [
+        {
+          "name": "name",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "id",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "address",
+          "type": "test::Address",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        }
+      ],
+      "qualifiedProperties": [],
+      "stereotypes": [],
+      "taggedValues": [],
+      "constraints": [],
+      "package": "test"
+    },
+    "classifierPath": "meta::pure::metamodel::type::Class"
+  },
+  {
+    "path": "test::changedModel",
+    "content": {
+      "_type": "class",
+      "name": "changedModel",
+      "superTypes": [],
+      "originalMilestonedProperties": [],
+      "properties": [
+        {
+          "name": "name",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "id",
+          "type": "Integer",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        }
+      ],
+      "qualifiedProperties": [],
+      "stereotypes": [],
+      "taggedValues": [],
+      "constraints": [],
+      "package": "test"
+    },
+    "classifierPath": "meta::pure::metamodel::type::Class"
+  },
+  {
+    "path": "test::StateInfo",
+    "content": {
+      "_type": "class",
+      "name": "StateInfo",
+      "superTypes": [],
+      "originalMilestonedProperties": [],
+      "properties": [
+        {
+          "name": "stateName",
+          "type": "String",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        },
+        {
+          "name": "pinCode",
+          "type": "Integer",
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "stereotypes": [],
+          "taggedValues": []
+        }
+      ],
+      "qualifiedProperties": [],
+      "stereotypes": [],
+      "taggedValues": [],
+      "constraints": [],
+      "package": "test"
+    },
+    "classifierPath": "meta::pure::metamodel::type::Class"
+  },
+  {
+    "path": "test::modelToModelTestMapping",
+    "content": {
+      "_type": "mapping",
+      "classMappings": [
+        {
+          "_type": "pureInstance",
+          "class": "test::PersonModel",
+          "propertyMappings": [
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::PersonModel",
+                "property": "name"
+              },
+              "source": "",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "property",
+                    "parameters": [
+                      {
+                        "_type": "var",
+                        "name": "src"
+                      }
+                    ],
+                    "property": "name"
+                  }
+                ],
+                "parameters": []
+              }
+            },
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::PersonModel",
+                "property": "id"
+              },
+              "source": "",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "func",
+                    "function": "toString",
+                    "parameters": [
+                      {
+                        "_type": "property",
+                        "parameters": [
+                          {
+                            "_type": "var",
+                            "name": "src"
+                          }
+                        ],
+                        "property": "id"
+                      }
+                    ]
+                  }
+                ],
+                "parameters": []
+              }
+            },
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::PersonModel",
+                "property": "address"
+              },
+              "source": "",
+              "target": "test_Address",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "var",
+                    "name": "src"
+                  }
+                ],
+                "parameters": []
+              }
+            }
+          ],
+          "root": true,
+          "srcClass": "test::changedTestModel"
+        },
+        {
+          "_type": "pureInstance",
+          "class": "test::Address",
+          "propertyMappings": [
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::Address",
+                "property": "streetNumber"
+              },
+              "source": "",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "property",
+                    "parameters": [
+                      {
+                        "_type": "var",
+                        "name": "src"
+                      }
+                    ],
+                    "property": "streetNumber"
+                  }
+                ],
+                "parameters": []
+              }
+            },
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::Address",
+                "property": "streetName"
+              },
+              "source": "",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "property",
+                    "parameters": [
+                      {
+                        "_type": "var",
+                        "name": "src"
+                      }
+                    ],
+                    "property": "streetName"
+                  }
+                ],
+                "parameters": []
+              }
+            },
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::Address",
+                "property": "stateInfo"
+              },
+              "source": "",
+              "target": "test_StateInfo",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "var",
+                    "name": "src"
+                  }
+                ],
+                "parameters": []
+              }
+            }
+          ],
+          "root": true,
+          "srcClass": "test::changedTestModel"
+        },
+        {
+          "_type": "pureInstance",
+          "class": "test::StateInfo",
+          "propertyMappings": [
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::StateInfo",
+                "property": "stateName"
+              },
+              "source": "",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "property",
+                    "parameters": [
+                      {
+                        "_type": "var",
+                        "name": "src"
+                      }
+                    ],
+                    "property": "stateName"
+                  }
+                ],
+                "parameters": []
+              }
+            },
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::StateInfo",
+                "property": "pinCode"
+              },
+              "source": "",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "property",
+                    "parameters": [
+                      {
+                        "_type": "var",
+                        "name": "src"
+                      }
+                    ],
+                    "property": "pinCode"
+                  }
+                ],
+                "parameters": []
+              }
+            }
+          ],
+          "root": true,
+          "srcClass": "test::changedTestModel"
+        }
+      ],
+      "enumerationMappings": [],
+      "includedMappings": [],
+      "name": "modelToModelTestMapping",
+      "package": "test",
+      "testSuites": [
+        {
+          "_type": "mappingTestSuite",
+          "id": "testSuite1",
+          "storeTestDatas": [
+            {
+              "data": {
+                "_type": "modelStore",
+                "instances": {
+                  "test::changedTestModel": {
+                    "_type": "pair",
+                    "first": {
+                      "_type": "packageableElementPtr",
+                      "fullPath": "generated::default__generatedBindingForTestData__test_modelToModelTestMapping__testSuite1"
+                    },
+                    "second": {
+                      "_type": "packageableElementPtr",
+                      "fullPath": "test::data::MyTestData"
+                    }
+                  }
+                }
+              },
+              "store": "ModelStore"
+            }
+          ],
+          "tests": [
+            {
+              "_type": "mappingTest",
+              "assertions": [
+                {
+                  "_type": "equalToJson",
+                  "expected": {
+                    "_type": "externalFormat",
+                    "contentType": "application/json",
+                    "data": "{\"id\":\"82\",\"address\":{\"streetName\":\"streetName 99\",\"stateInfo\":{\"pinCode\":94,\"stateName\":\"stateName 21\"}}}"
+                  },
+                  "id": "assert1"
+                }
+              ],
+              "id": "test1",
+              "query": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "func",
+                    "function": "serialize",
+                    "parameters": [
+                      {
+                        "_type": "func",
+                        "function": "graphFetch",
+                        "parameters": [
+                          {
+                            "_type": "func",
+                            "function": "getAll",
+                            "parameters": [
+                              {
+                                "_type": "packageableElementPtr",
+                                "fullPath": "test::PersonModel"
+                              }
+                            ]
+                          },
+                          {
+                            "_type": "rootGraphFetchTree",
+                            "class": "test::PersonModel",
+                            "subTrees": [
+                              {
+                                "_type": "propertyGraphFetchTree",
+                                "parameters": [],
+                                "property": "id",
+                                "subTrees": []
+                              },
+                              {
+                                "_type": "propertyGraphFetchTree",
+                                "parameters": [],
+                                "property": "address",
+                                "subTrees": [
+                                  {
+                                    "_type": "propertyGraphFetchTree",
+                                    "parameters": [],
+                                    "property": "streetName",
+                                    "subTrees": []
+                                  },
+                                  {
+                                    "_type": "propertyGraphFetchTree",
+                                    "parameters": [],
+                                    "property": "stateInfo",
+                                    "subTrees": [
+                                      {
+                                        "_type": "propertyGraphFetchTree",
+                                        "parameters": [],
+                                        "property": "pinCode",
+                                        "subTrees": []
+                                      },
+                                      {
+                                        "_type": "propertyGraphFetchTree",
+                                        "parameters": [],
+                                        "property": "stateName",
+                                        "subTrees": []
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "_type": "rootGraphFetchTree",
+                        "class": "test::PersonModel",
+                        "subTrees": [
+                          {
+                            "_type": "propertyGraphFetchTree",
+                            "parameters": [],
+                            "property": "id",
+                            "subTrees": []
+                          },
+                          {
+                            "_type": "propertyGraphFetchTree",
+                            "parameters": [],
+                            "property": "address",
+                            "subTrees": [
+                              {
+                                "_type": "propertyGraphFetchTree",
+                                "parameters": [],
+                                "property": "streetName",
+                                "subTrees": []
+                              },
+                              {
+                                "_type": "propertyGraphFetchTree",
+                                "parameters": [],
+                                "property": "stateInfo",
+                                "subTrees": [
+                                  {
+                                    "_type": "propertyGraphFetchTree",
+                                    "parameters": [],
+                                    "property": "pinCode",
+                                    "subTrees": []
+                                  },
+                                  {
+                                    "_type": "propertyGraphFetchTree",
+                                    "parameters": [],
+                                    "property": "stateName",
+                                    "subTrees": []
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "parameters": []
+              }
+            }
+          ]
+        }
+      ],
+      "tests": []
+    },
+    "classifierPath": "meta::pure::mapping::Mapping"
+  },
+  {
+    "path": "generated::default__generatedBindingForTestData__test_modelToModelTestMapping__testSuite1",
+    "content": {
+      "_type": "binding",
+      "contentType": "application/json",
+      "includedStores": [],
+      "modelUnit": {
+        "packageableElementExcludes": [],
+        "packageableElementIncludes": [
+          "test::changedTestModel"
+        ]
+      },
+      "name": "default__generatedBindingForTestData__test_modelToModelTestMapping__testSuite1",
+      "package": "generated"
+    },
+    "classifierPath": "meta::external::shared::format::binding::Binding"
+  },
+  {
+    "path": "generated::default__generatedBindingForTestData__test_modelToModelMapping__testSuite1",
+    "content": {
+      "_type": "binding",
+      "contentType": "application/json",
+      "includedStores": [],
+      "modelUnit": {
+        "packageableElementExcludes": [],
+        "packageableElementIncludes": [
+          "test::model"
+        ]
+      },
+      "name": "default__generatedBindingForTestData__test_modelToModelMapping__testSuite1",
+      "package": "generated"
+    },
+    "classifierPath": "meta::external::shared::format::binding::Binding"
+  },
+  {
+    "path": "test::modelToModelMapping",
+    "content": {
+      "_type": "mapping",
+      "classMappings": [
+        {
+          "_type": "pureInstance",
+          "class": "test::changedModel",
+          "propertyMappings": [
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::changedModel",
+                "property": "name"
+              },
+              "source": "",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "property",
+                    "parameters": [
+                      {
+                        "_type": "var",
+                        "name": "src"
+                      }
+                    ],
+                    "property": "name"
+                  }
+                ],
+                "parameters": []
+              }
+            },
+            {
+              "_type": "purePropertyMapping",
+              "explodeProperty": false,
+              "property": {
+                "class": "test::changedModel",
+                "property": "id"
+              },
+              "source": "",
+              "transform": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "func",
+                    "function": "parseInteger",
+                    "parameters": [
+                      {
+                        "_type": "property",
+                        "parameters": [
+                          {
+                            "_type": "var",
+                            "name": "src"
+                          }
+                        ],
+                        "property": "id"
+                      }
+                    ]
+                  }
+                ],
+                "parameters": []
+              }
+            }
+          ],
+          "root": true,
+          "srcClass": "test::model"
+        }
+      ],
+      "enumerationMappings": [],
+      "includedMappings": [],
+      "name": "modelToModelMapping",
+      "package": "test",
+      "testSuites": [
+        {
+          "_type": "mappingTestSuite",
+          "id": "testSuite1",
+          "storeTestDatas": [
+            {
+              "data": {
+                "_type": "modelStore",
+                "instances": {
+                  "test::model": {
+                    "_type": "pair",
+                    "first": {
+                      "_type": "packageableElementPtr",
+                      "fullPath": "generated::default__generatedBindingForTestData__test_modelToModelMapping__testSuite1"
+                    },
+                    "second": {
+                      "_type": "packageableElementPtr",
+                      "fullPath": "test::data::MyData"
+                    }
+                  }
+                }
+              },
+              "store": "ModelStore"
+            }
+          ],
+          "tests": [
+            {
+              "_type": "mappingTest",
+              "assertions": [
+                {
+                  "_type": "equalToJson",
+                  "expected": {
+                    "_type": "externalFormat",
+                    "contentType": "application/json",
+                    "data": "{\"id\" : 77, \"name\" : \"john doe\"}"
+                  },
+                  "id": "assert1"
+                }
+              ],
+              "id": "test1",
+              "query": {
+                "_type": "lambda",
+                "body": [
+                  {
+                    "_type": "func",
+                    "function": "serialize",
+                    "parameters": [
+                      {
+                        "_type": "func",
+                        "function": "graphFetch",
+                        "parameters": [
+                          {
+                            "_type": "func",
+                            "function": "getAll",
+                            "parameters": [
+                              {
+                                "_type": "packageableElementPtr",
+                                "fullPath": "test::changedModel"
+                              }
+                            ]
+                          },
+                          {
+                            "_type": "rootGraphFetchTree",
+                            "class": "test::changedModel",
+                            "subTrees": [
+                              {
+                                "_type": "propertyGraphFetchTree",
+                                "parameters": [],
+                                "property": "id",
+                                "subTrees": []
+                              },
+                              {
+                                "_type": "propertyGraphFetchTree",
+                                "parameters": [],
+                                "property": "name",
+                                "subTrees": []
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "_type": "rootGraphFetchTree",
+                        "class": "test::changedModel",
+                        "subTrees": [
+                          {
+                            "_type": "propertyGraphFetchTree",
+                            "parameters": [],
+                            "property": "id",
+                            "subTrees": []
+                          },
+                          {
+                            "_type": "propertyGraphFetchTree",
+                            "parameters": [],
+                            "property": "name",
+                            "subTrees": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "parameters": []
+              }
+            }
+          ]
+        }
+      ],
+      "tests": []
+    },
+    "classifierPath": "meta::pure::mapping::Mapping"
+  }
+];
+
