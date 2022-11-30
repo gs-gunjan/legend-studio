@@ -95,6 +95,7 @@ import {
   getRootRecordType,
   getSection,
 } from '../../../../../../../graph/helpers/STO_FlatData_Helper.js';
+import type { ExecutionEnvironmentInstance } from '../../../../../../../graph/metamodel/pure/packageableElements/service/ExecutionEnvironmentInstance.js';
 
 export const V1_buildFullPath = (
   packagePath: string | undefined,
@@ -504,6 +505,13 @@ export class V1_GraphBuilderContext {
     path: string,
   ): PackageableElementImplicitReference<Service> =>
     this.createImplicitPackageableElementReference(path, this.graph.getService);
+  resolveExecutionEnvironmentInstance = (
+    path: string,
+  ): PackageableElementImplicitReference<ExecutionEnvironmentInstance> =>
+    this.createImplicitPackageableElementReference(
+      path,
+      this.graph.getExecutionEnvironmentInstance,
+    );
   resolveConnection = (
     path: string,
   ): PackageableElementImplicitReference<PackageableConnection> =>

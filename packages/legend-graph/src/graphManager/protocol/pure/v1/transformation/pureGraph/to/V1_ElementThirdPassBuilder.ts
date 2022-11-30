@@ -59,6 +59,7 @@ import type { V1_SectionIndex } from '../../../model/packageableElements/section
 import { GraphBuilderError } from '../../../../../../../graphManager/GraphManagerUtils.js';
 import type { V1_DataElement } from '../../../model/packageableElements/data/V1_DataElement.js';
 import { V1_TEMPORARY_buildMilestoningClass } from './helpers/V1_MilestoneBuilderHelper.js';
+import type { V1_ExecutionEnvironmentInstance } from '../../../model/packageableElements/service/V1_ExecutionEnvironmentInstance.js';
 
 export class V1_ElementThirdPassBuilder
   implements V1_PackageableElementVisitor<void>
@@ -206,6 +207,12 @@ export class V1_ElementThirdPassBuilder
   }
 
   visit_Service(element: V1_Service): void {
+    throw new UnsupportedOperationError();
+  }
+
+  visit_ExecutionEnvironmentInstance(
+    element: V1_ExecutionEnvironmentInstance,
+  ): void {
     throw new UnsupportedOperationError();
   }
 

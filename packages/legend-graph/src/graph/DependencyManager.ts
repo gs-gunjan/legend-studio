@@ -150,6 +150,11 @@ export class DependencyManager {
     this,
     (dep: BasicModel, path: string) => dep.getOwnNullableService(path),
   );
+  getOwnNullableExecutionEnvironment = buildDependencyElementGetter(
+    this,
+    (dep: BasicModel, path: string) =>
+      dep.getOwnNullableExecutionEnvironment(path),
+  );
   getOwnNullableGenerationSpecification = buildDependencyElementGetter(
     this,
     (dep: BasicModel, path: string) =>

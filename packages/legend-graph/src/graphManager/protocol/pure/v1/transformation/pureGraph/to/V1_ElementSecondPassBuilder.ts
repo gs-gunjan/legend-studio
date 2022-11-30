@@ -85,6 +85,8 @@ import { V1_DataElementReference } from '../../../model/data/V1_EmbeddedData.js'
 import { V1_buildFunctionSignature } from '../../../helpers/V1_DomainHelper.js';
 import { getFunctionName } from '../../../../../../../graph/helpers/DomainHelper.js';
 import { GraphBuilderError } from '../../../../../../GraphManagerUtils.js';
+import type { V1_ExecutionEnvironmentInstance } from '../../../model/packageableElements/service/V1_ExecutionEnvironmentInstance.js';
+import { V1_buildExecutionParameters } from './helpers/V1_ExecutionEnvironmentInstanceHelper.js';
 
 export class V1_ElementSecondPassBuilder
   implements V1_PackageableElementVisitor<void>
@@ -340,6 +342,18 @@ export class V1_ElementSecondPassBuilder
     );
     sectionIndex.sections = element.sections.map((section) =>
       V1_buildSection(section, this.context, sectionIndex),
+    );
+  }
+
+  visit_ExecutionEnvironmentInstance(
+    element: V1_ExecutionEnvironmentInstance,
+  ): void {
+    const executionEnvironment =
+      this.context.currentSubGraph.getOwnExecutionEnvironment(
+        V1_buildFullPath(element.package, element.name),
+      );
+    executionEnvironment.executionParameters = element.executionParameters.map(
+      (params) => V1_buildExecutionParameters(params, this.context),
     );
   }
 

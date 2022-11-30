@@ -91,6 +91,11 @@ export const AUTO_IMPORTS = [
   'meta::pure::profiles',
 ];
 
+export enum EXECUTION_PARAMETERS {
+  SINGLE_EXECUTION_PARAMETERS = 'singleExecutionParameters',
+  MULTI_EXECUTION_PARAMETERS = 'multiExecutionParameters',
+}
+
 export enum CORE_PURE_PATH {
   ANY = 'meta::pure::metamodel::type::Any',
   NIL = 'meta::pure::metamodel::type::Nil',

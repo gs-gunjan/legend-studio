@@ -57,6 +57,7 @@ import type { DataElement } from '../graph/metamodel/pure/packageableElements/da
 import type { Testable } from '../graph/metamodel/pure/test/Testable.js';
 import type { PackageableElement } from '../graph/metamodel/pure/packageableElements/PackageableElement.js';
 import type { SectionIndex } from '../graph/metamodel/pure/packageableElements/section/SectionIndex.js';
+import type { ExecutionEnvironmentInstance } from './metamodel/pure/packageableElements/service/ExecutionEnvironmentInstance.js';
 
 /**
  * CoreModel holds meta models which are constant and basic building block of the graph. Since throughout the lifetime
@@ -434,6 +435,16 @@ export class PureModel extends BasicModel {
         this.dependencyManager.getOwnNullableService(path) ??
         this.systemModel.getOwnNullableService(path),
       `Can't find service '${path}'`,
+    );
+  getExecutionEnvironmentInstance = (
+    path: string,
+  ): ExecutionEnvironmentInstance =>
+    guaranteeNonNullable(
+      this.getOwnNullableExecutionEnvironment(path) ??
+        this.generationModel.getOwnNullableExecutionEnvironment(path) ??
+        this.dependencyManager.getOwnNullableExecutionEnvironment(path) ??
+        this.systemModel.getOwnNullableExecutionEnvironment(path),
+      `Can't find execution environment '${path}'`,
     );
   getConnection = (path: string): PackageableConnection =>
     guaranteeNonNullable(

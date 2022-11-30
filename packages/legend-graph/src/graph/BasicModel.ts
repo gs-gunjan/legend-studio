@@ -66,6 +66,7 @@ import {
 } from '../graph/helpers/DomainHelper.js';
 import { DataElement } from '../graph/metamodel/pure/packageableElements/data/DataElement.js';
 import type { Testable } from '../graph/metamodel/pure/test/Testable.js';
+import { ExecutionEnvironmentInstance } from './metamodel/pure/packageableElements/service/ExecutionEnvironmentInstance.js';
 
 const FORBIDDEN_EXTENSION_ELEMENT_CLASS = new Set([
   PackageableElement,
@@ -117,6 +118,10 @@ export abstract class BasicModel {
   private readonly connectionsIndex = new Map<string, PackageableConnection>();
   private readonly runtimesIndex = new Map<string, PackageableRuntime>();
   private readonly servicesIndex = new Map<string, Service>();
+  private readonly executionEnvironmentsIndex = new Map<
+    string,
+    ExecutionEnvironmentInstance
+  >();
   private readonly generationSpecificationsIndex = new Map<
     string,
     GenerationSpecification
@@ -188,6 +193,9 @@ export abstract class BasicModel {
   }
   get ownServices(): Service[] {
     return Array.from(this.servicesIndex.values());
+  }
+  get ownExecutionEnvironments(): ExecutionEnvironmentInstance[] {
+    return Array.from(this.executionEnvironmentsIndex.values());
   }
   get ownRuntimes(): PackageableRuntime[] {
     return Array.from(this.runtimesIndex.values());
@@ -274,6 +282,10 @@ export abstract class BasicModel {
     this.runtimesIndex.get(path);
   getOwnNullableService = (path: string): Service | undefined =>
     this.servicesIndex.get(path);
+  getOwnNullableExecutionEnvironment = (
+    path: string,
+  ): ExecutionEnvironmentInstance | undefined =>
+    this.executionEnvironmentsIndex.get(path);
   getOwnNullableGenerationSpecification = (
     path: string,
   ): GenerationSpecification | undefined =>
@@ -361,6 +373,11 @@ export abstract class BasicModel {
       this.getOwnNullableService(path),
       `Can't find service '${path}'`,
     );
+  getOwnExecutionEnvironment = (path: string): ExecutionEnvironmentInstance =>
+    guaranteeNonNullable(
+      this.getOwnNullableExecutionEnvironment(path),
+      `Can't find execution environment '${path}'`,
+    );
   getOwnGenerationSpecification = (path: string): GenerationSpecification =>
     guaranteeNonNullable(
       this.getOwnNullableGenerationSpecification(path),
@@ -418,6 +435,12 @@ export abstract class BasicModel {
   setOwnService(path: string, val: Service): void {
     this.servicesIndex.set(path, val);
   }
+  setOwnExecutionEnvironmentInstance(
+    path: string,
+    val: ExecutionEnvironmentInstance,
+  ): void {
+    this.executionEnvironmentsIndex.set(path, val);
+  }
   setOwnGenerationSpecification(
     path: string,
     val: GenerationSpecification,
@@ -457,6 +480,7 @@ export abstract class BasicModel {
       ...this.ownGenerationSpecifications,
       ...this.ownFileGenerations,
       ...this.ownDataElements,
+      ...this.ownExecutionEnvironments,
       ...this.extensions.flatMap((extension) => extension.elements),
     ];
   }
@@ -498,6 +522,7 @@ export abstract class BasicModel {
       this.storesIndex.get(path) ??
       this.mappingsIndex.get(path) ??
       this.servicesIndex.get(path) ??
+      this.executionEnvironmentsIndex.get(path) ??
       this.runtimesIndex.get(path) ??
       this.connectionsIndex.get(path) ??
       this.fileGenerationsIndex.get(path) ??
@@ -588,6 +613,8 @@ export abstract class BasicModel {
       this.functionsIndex.delete(element.path);
     } else if (element instanceof Service) {
       this.servicesIndex.delete(element.path);
+    } else if (element instanceof ExecutionEnvironmentInstance) {
+      this.executionEnvironmentsIndex.delete(element.path);
     } else if (element instanceof PackageableRuntime) {
       this.runtimesIndex.delete(element.path);
     } else if (element instanceof PackageableConnection) {
@@ -705,6 +732,9 @@ export abstract class BasicModel {
     } else if (element instanceof Service) {
       this.servicesIndex.delete(oldPath);
       this.servicesIndex.set(newPath, element);
+    } else if (element instanceof ExecutionEnvironmentInstance) {
+      this.executionEnvironmentsIndex.delete(oldPath);
+      this.executionEnvironmentsIndex.set(newPath, element);
     } else if (element instanceof PackageableRuntime) {
       this.runtimesIndex.delete(oldPath);
       this.runtimesIndex.set(newPath, element);

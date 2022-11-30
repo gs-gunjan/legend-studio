@@ -66,6 +66,8 @@ import type {
 import type { V1_GraphTransformerContext } from './V1_GraphTransformerContext.js';
 import type { DataElement } from '../../../../../../../graph/metamodel/pure/packageableElements/data/DataElement.js';
 import { V1_transformDataElement } from './V1_DataElementTransformer.js';
+import type { ExecutionEnvironmentInstance } from '../../../../../../../graph/metamodel/pure/packageableElements/service/ExecutionEnvironmentInstance.js';
+import { V1_transformExecutionEnvironmentInstance } from './V1_ExecutionEnvironmentInstanceTransformer.js';
 
 class V1_PackageableElementTransformer
   implements PackageableElementVisitor<V1_PackageableElement>
@@ -148,6 +150,12 @@ class V1_PackageableElementTransformer
 
   visit_Service(element: Service): V1_PackageableElement {
     return V1_transformService(element, this.context);
+  }
+
+  visit_ExecutionEnvironmentInstance(
+    element: ExecutionEnvironmentInstance,
+  ): V1_PackageableElement {
+    return V1_transformExecutionEnvironmentInstance(element, this.context);
   }
 
   visit_PackageableRuntime(element: PackageableRuntime): V1_PackageableElement {

@@ -50,6 +50,7 @@ import type { V1_SectionIndex } from '../../../model/packageableElements/section
 import { V1_buildAssociationMapping } from './helpers/V1_AssociationMappingHelper.js';
 import { V1_buildMilestoningProperties } from './helpers/V1_MilestoneBuilderHelper.js';
 import type { V1_DataElement } from '../../../model/packageableElements/data/V1_DataElement.js';
+import type { V1_ExecutionEnvironmentInstance } from '../../../model/packageableElements/service/V1_ExecutionEnvironmentInstance.js';
 
 export class V1_ElementFourthPassBuilder
   implements V1_PackageableElementVisitor<void>
@@ -142,6 +143,12 @@ export class V1_ElementFourthPassBuilder
   }
 
   visit_Service(element: V1_Service): void {
+    throw new UnsupportedOperationError();
+  }
+
+  visit_ExecutionEnvironmentInstance(
+    element: V1_ExecutionEnvironmentInstance,
+  ): void {
     throw new UnsupportedOperationError();
   }
 
