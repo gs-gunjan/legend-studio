@@ -281,6 +281,7 @@ export const observe_Service = skipObservedWithContext(
       owners: observable,
       documentation: observable,
       autoActivateUpdates: observable,
+      defaultParameters: observable,
       execution: observable,
       test: observable,
       tests: observable,
@@ -294,6 +295,7 @@ export const observe_Service = skipObservedWithContext(
     if (metamodel.test) {
       observe_ServiceTest_Legacy(metamodel.test);
     }
+    metamodel.defaultParameters.forEach(observe_ParameterValue);
     metamodel.tests.forEach((m) => observe_ServiceTestSuite(m, context));
     return metamodel;
   },

@@ -252,6 +252,9 @@ export const V1_transformService = (
   service.stereotypes = element.stereotypes.map(V1_transformStereotype);
   service.taggedValues = element.taggedValues.map(V1_transformTaggedValue);
   service.autoActivateUpdates = element.autoActivateUpdates;
+  service.defaultParameters = element.defaultParameters.map(
+    V1_transformParameterValue,
+  );
   service.documentation = element.documentation;
   service.execution = transformServiceExecution(element.execution, context);
   service.owners = element.owners;

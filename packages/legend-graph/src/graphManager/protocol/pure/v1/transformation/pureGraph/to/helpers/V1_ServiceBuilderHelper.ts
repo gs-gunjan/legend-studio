@@ -89,7 +89,9 @@ const buildConnectionTestData = (
   return connectionTestData;
 };
 
-const buildParameterValue = (element: V1_ParameterValue): ParameterValue => {
+export const V1_buildParameterValue = (
+  element: V1_ParameterValue,
+): ParameterValue => {
   const parameterValue = new ParameterValue();
   parameterValue.name = element.name;
   parameterValue.value = element.value;
@@ -118,7 +120,7 @@ export const V1_buildServiceTest = (
   serviceTest.__parent = parentSuite;
   serviceTest.serializationFormat = element.serializationFormat;
   serviceTest.parameters = element.parameters.map((parameter) =>
-    buildParameterValue(parameter),
+    V1_buildParameterValue(parameter),
   );
   serviceTest.keys = element.keys;
   serviceTest.assertions = element.assertions.map((assertion) =>

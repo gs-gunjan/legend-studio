@@ -24,6 +24,7 @@ import {
 import type { DEPRECATED__ServiceTest } from './DEPRECATED__ServiceTest.js';
 import type { ServiceTestSuite } from './ServiceTestSuite.js';
 import type { Testable } from '../../test/Testable.js';
+import type { ParameterValue } from './ParameterValue.js';
 
 export const DEFAULT_SERVICE_PATTERN = '/';
 
@@ -32,6 +33,7 @@ export class Service extends PackageableElement implements Hashable, Testable {
   owners: string[] = [];
   documentation = '';
   autoActivateUpdates = true;
+  defaultParameters: ParameterValue[] = [];
   execution!: ServiceExecution;
   test?: DEPRECATED__ServiceTest | undefined;
   tests: ServiceTestSuite[] = [];
@@ -56,6 +58,7 @@ export class Service extends PackageableElement implements Hashable, Testable {
       hashArray(this.owners),
       this.documentation,
       this.autoActivateUpdates.toString(),
+      hashArray(this.defaultParameters),
       this.execution,
       this.test ?? '',
       hashArray(this.tests),

@@ -346,6 +346,24 @@ export const V1_serviceModelSchema = (
   createModelSchema(V1_Service, {
     _type: usingConstantValueSchema(V1_SERVICE_ELEMENT_PROTOCOL_TYPE),
     autoActivateUpdates: primitive(),
+    defaultParameters: custom(
+      (values) =>
+        serializeArray(
+          values,
+          (value) => serialize(V1_parameterValueModelSchema, value),
+          {
+            skipIfEmpty: true,
+          },
+        ),
+      (values) =>
+        deserializeArray(
+          values,
+          (v) => deserialize(V1_parameterValueModelSchema, v),
+          {
+            skipIfEmpty: false,
+          },
+        ),
+    ),
     documentation: primitive(),
     execution: custom(
       (val) => V1_serializeServiceExecution(val),

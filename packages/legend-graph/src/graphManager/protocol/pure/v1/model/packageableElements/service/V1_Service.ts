@@ -25,6 +25,7 @@ import type { V1_StereotypePtr } from '../../../model/packageableElements/domain
 import type { V1_TaggedValue } from '../../../model/packageableElements/domain/V1_TaggedValue.js';
 import type { V1_DEPRECATED__ServiceTest } from './V1_DEPRECATED__ServiceTest.js';
 import type { V1_TestSuite } from '../../test/V1_TestSuite.js';
+import type { V1_ParameterValue } from './V1_ParameterValue.js';
 
 export class V1_Service extends V1_PackageableElement implements Hashable {
   stereotypes: V1_StereotypePtr[] = [];
@@ -33,6 +34,7 @@ export class V1_Service extends V1_PackageableElement implements Hashable {
   owners: string[] = [];
   documentation!: string;
   autoActivateUpdates = true;
+  defaultParameters: V1_ParameterValue[] = [];
   execution!: V1_ServiceExecution;
   test?: V1_DEPRECATED__ServiceTest | undefined;
   testSuites: V1_TestSuite[] = [];
@@ -47,6 +49,7 @@ export class V1_Service extends V1_PackageableElement implements Hashable {
       hashArray(this.owners),
       this.documentation,
       this.autoActivateUpdates.toString(),
+      hashArray(this.defaultParameters),
       this.execution,
       this.test ?? '',
       hashArray(this.testSuites),

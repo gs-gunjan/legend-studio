@@ -53,6 +53,7 @@ import {
 import {
   V1_buildServiceExecution,
   V1_buildLegacyServiceTest,
+  V1_buildParameterValue,
 } from './helpers/V1_ServiceBuilderHelper.js';
 import {
   V1_buildEnumerationMapping,
@@ -317,6 +318,9 @@ export class V1_ElementSecondPassBuilder
     service.documentation = element.documentation;
     service.autoActivateUpdates = element.autoActivateUpdates;
     // NOTE: process execution before the test, so we can do some check between test and execution (such matching type, keys, etc.)
+    service.defaultParameters = element.defaultParameters.map(
+      V1_buildParameterValue,
+    );
     service.execution = V1_buildServiceExecution(
       element.execution,
       this.context,
