@@ -200,6 +200,7 @@ export class RedshiftDatasourceSpecification
     this.endpointURL = endpointURL;
     this.port = port;
   }
+
   get hashCode(): string {
     return hashArray([
       CORE_HASH_STRUCTURE.REDSHIFT_DATASOURCE_SPECIFICATION,
@@ -235,6 +236,96 @@ export class BigQueryDatasourceSpecification
       this.defaultDataset,
       this.proxyHost ?? '',
       this.proxyPort ?? '',
+    ]);
+  }
+}
+
+export class SpannerDatasourceSpecification
+  extends DatasourceSpecification
+  implements Hashable
+{
+  projectId!: string;
+  instanceId!: string;
+  databaseId!: string;
+  proxyHost?: string | undefined;
+  proxyPort?: string | undefined;
+
+  constructor(
+    projectId: string,
+    instanceId: string,
+    databaseId: string,
+    proxyHost: string | undefined,
+    proxyPort: string | undefined,
+  ) {
+    super();
+    this.projectId = projectId;
+    this.instanceId = instanceId;
+    this.databaseId = databaseId;
+    this.proxyHost = proxyHost;
+    this.proxyPort = proxyPort;
+  }
+
+  get hashCode(): string {
+    return hashArray([
+      CORE_HASH_STRUCTURE.SPANNER_DATASOURCE_SPECIFICATION,
+      this.projectId,
+      this.instanceId,
+      this.databaseId,
+      this.proxyHost ?? '',
+      this.proxyPort ?? '',
+    ]);
+  }
+}
+export class TrinoSslSpecification implements Hashable {
+  ssl: boolean;
+  trustStorePathVaultReference?: string | undefined;
+  trustStorePasswordVaultReference?: string | undefined;
+
+  constructor(ssl: boolean) {
+    this.ssl = ssl;
+  }
+
+  get hashCode(): string {
+    return hashArray([
+      CORE_HASH_STRUCTURE.TRINO_SSL_SPECIFICATION,
+      this.ssl.toString(),
+      this.trustStorePathVaultReference ?? '',
+      this.trustStorePasswordVaultReference ?? '',
+    ]);
+  }
+}
+
+export class TrinoDatasourceSpecification
+  extends DatasourceSpecification
+  implements Hashable
+{
+  host: string;
+  port: number;
+  sslSpecification: TrinoSslSpecification;
+  catalog?: string | undefined;
+  schema?: string | undefined;
+  clientTags?: string | undefined;
+
+  constructor(
+    host: string,
+    port: number,
+    sslSpecification: TrinoSslSpecification,
+  ) {
+    super();
+    this.host = host;
+    this.port = port;
+    this.sslSpecification = sslSpecification;
+  }
+
+  get hashCode(): string {
+    return hashArray([
+      CORE_HASH_STRUCTURE.TRINO_DATASOURCE_SPECIFICATION,
+      this.host,
+      this.port.toString(),
+      this.sslSpecification,
+      this.catalog ?? '',
+      this.schema ?? '',
+      this.clientTags ?? '',
     ]);
   }
 }

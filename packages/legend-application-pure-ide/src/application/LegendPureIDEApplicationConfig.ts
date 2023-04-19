@@ -47,12 +47,18 @@ export class LegendPureIDEApplicationConfig extends LegendApplicationConfig {
       input.configData.pure,
       `Can't configure application: 'pure' field is missing`,
     );
-    this.pureUrl = guaranteeNonEmptyString(
-      input.configData.pure.url,
-      `Can't configure application: 'pure.url' field is missing or empty`,
+    this.pureUrl = LegendApplicationConfig.resolveAbsoluteUrl(
+      guaranteeNonEmptyString(
+        input.configData.pure.url,
+        `Can't configure application: 'pure.url' field is missing or empty`,
+      ),
     );
     if (input.configData.pure.dynamic !== undefined) {
       this.useDynamicPureServer = Boolean(input.configData.pure.dynamic);
     }
+  }
+
+  override getDefaultApplicationStorageKey(): string {
+    return 'legend-pure-ide';
   }
 }

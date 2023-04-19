@@ -129,3 +129,43 @@
     border-radius: 0.2rem;
   }
 }
+
+.dnd__entry__container {
+  width: 100%;
+  position: relative;
+}
+
+.dnd__entry__placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 1;
+}
+
+.dnd__entry__handle__container {
+  float: left;
+  cursor: move;
+  // NOTE: we need to ensure drag handle needs to be at least above placeholder in the stacking context,
+  // else while dragging and the placeholder is displayed, we would lose the handle
+  position: relative;
+  z-index: 1;
+
+  &--dragging {
+    // hide the drag handle while dragging to avoid showing it in front
+    // of the placeholder
+    opacity: 0;
+  }
+}
+
+.dnd__entry__placeholder__content {
+  border: 0.2rem dashed var(--color-light-grey-300);
+  height: 100%;
+  background: var(--color-dark-grey-100);
+}
+
+.dnd__placeholder--light {
+  border: 0.2rem dashed var(--color-light-grey-300);
+  background: var(--color-light-grey-0);
+  height: 100%;
+}

@@ -15,10 +15,6 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import {
-  DEFAULT_NOTIFICATION_HIDE_TIME,
-  NOTIFCATION_SEVERITY,
-} from '../stores/ApplicationStore.js';
 import { useApplicationStore } from './ApplicationStoreProvider.js';
 import {
   Notification,
@@ -35,10 +31,14 @@ import {
   clsx,
 } from '@finos/legend-art';
 import { useState } from 'react';
+import {
+  DEFAULT_NOTIFICATION_HIDE_TIME,
+  NOTIFCATION_SEVERITY,
+} from '../stores/NotificationService.js';
 
 export const NotificationManager = observer(() => {
   const applicationStore = useApplicationStore();
-  const notification = applicationStore.notification;
+  const notification = applicationStore.notificationService.notification;
   const isOpen = Boolean(notification);
   const message = notification?.message ?? '';
   const severity = notification?.severity ?? NOTIFCATION_SEVERITY.INFO;
@@ -81,11 +81,11 @@ export const NotificationManager = observer(() => {
       break;
   }
   const handleClose = (): void => {
-    applicationStore.setNotification(undefined);
+    applicationStore.notificationService.setNotification(undefined);
     setIsExpanded(false);
   };
   const handleCopy = applicationStore.guardUnhandledError(() =>
-    applicationStore.copyTextToClipboard(message),
+    applicationStore.clipboardService.copyTextToClipboard(message),
   );
   const toggleExpansion = (): void => setIsExpanded(!isExpanded);
 
@@ -114,8 +114,8 @@ export const NotificationManager = observer(() => {
       open={isOpen}
       // setting the auto-hide duration to null will stop it from hiding automatically
       autoHideDuration={
-        applicationStore.notification
-          ? applicationStore.notification.autoHideDuration ?? null
+        notification
+          ? notification.autoHideDuration ?? null
           : DEFAULT_NOTIFICATION_HIDE_TIME
       }
       onClose={onSnackbarAutoHideOrClickAway}
@@ -151,7 +151,6 @@ export const NotificationManager = observer(() => {
         action={[
           <button
             className="notification__action"
-            id="expand_button"
             key="expand"
             onClick={toggleExpansion}
             tabIndex={-1}

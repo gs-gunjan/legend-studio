@@ -23,14 +23,16 @@ import {
   getByPlaceholderText,
   act,
 } from '@testing-library/react';
-import { integrationTest, toTitleCase } from '@finos/legend-shared';
+import { toTitleCase } from '@finos/legend-shared';
+import { integrationTest } from '@finos/legend-shared/test';
 import {
   TEST__provideMockedEditorStore,
   TEST__setUpEditorWithDefaultSDLCData,
-} from '../../../EditorComponentTestUtils.js';
-import { LEGEND_STUDIO_TEST_ID } from '../../../LegendStudioTestID.js';
-import type { EditorStore } from '../../../../stores/EditorStore.js';
-import { PACKAGEABLE_ELEMENT_TYPE } from '../../../../stores/shared/ModelClassifierUtils.js';
+} from '../../__test-utils__/EditorComponentTestUtils.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../../../__lib__/LegendStudioTesting.js';
+import type { EditorStore } from '../../../../stores/editor/EditorStore.js';
+import { PACKAGEABLE_ELEMENT_TYPE } from '../../../../stores/editor/utils/ModelClassifierUtils.js';
+import { MockedMonacoEditorInstance } from '@finos/legend-lego/code-editor/test';
 
 const addRootPackage = async (
   packagePath: string,
@@ -97,6 +99,7 @@ test(
 
 // TODO: add connection, runtime, text, etc.
 test(integrationTest('Create elements with no drivers'), async () => {
+  MockedMonacoEditorInstance.getValue.mockReturnValue('');
   const ROOT_PACKAGE_NAME = 'model';
   await addRootPackage(ROOT_PACKAGE_NAME, renderResult);
   await createNewElementOnRootPackage(

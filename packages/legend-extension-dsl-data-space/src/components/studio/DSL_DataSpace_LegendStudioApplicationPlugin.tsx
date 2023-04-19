@@ -31,6 +31,10 @@ import {
   type PureGrammarParserElementSnippetSuggestionsGetter,
   UnsupportedElementEditorState,
   LegendStudioApplicationPlugin,
+  type ExplorerContextMenuItemRendererConfiguration,
+  type EditorExtensionStateCreator,
+  type EditorExtensionComponentRendererConfiguration,
+  type PureGrammarElementLabeler,
 } from '@finos/legend-application-studio';
 import {
   PackageableElementExplicitReference,
@@ -42,21 +46,23 @@ import {
   DataSpace,
   DataSpaceExecutionContext,
 } from '../../graph/metamodel/pure/model/packageableElements/dataSpace/DSL_DataSpace_DataSpace.js';
-import { DSL_DATA_SPACE_LEGEND_STUDIO_DOCUMENTATION_KEY } from './DSL_DataSpace_LegendStudioDocumentation.js';
-import {
-  PURE_GRAMMAR_DATA_SPACE_ELEMENT_TYPE_LABEL,
-  PURE_GRAMMAR_DATA_SPACE_PARSER_NAME,
-} from '../../graphManager/DSL_DataSpace_PureGraphManagerPlugin.js';
-import { SIMPLE_DATA_SPACE_SNIPPET } from './DSL_DataSpace_CodeSnippets.js';
-import type {
-  DocumentationEntry,
-  PureGrammarTextSuggestion,
-} from '@finos/legend-application';
+import { DSL_DATA_SPACE_LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../__lib__/studio/DSL_DataSpace_LegendStudioDocumentation.js';
+import { SIMPLE_DATA_SPACE_SNIPPET } from '../../__lib__/studio/DSL_DataSpace_LegendStudioCodeSnippet.js';
+import type { DocumentationEntry } from '@finos/legend-application';
 import { DataSpaceIcon } from '../DSL_DataSpace_Icon.js';
+import { DataSpacePreviewState } from '../../stores/studio/DataSpacePreviewState.js';
+import {
+  DataSpacePreviewDialog,
+  DataSpacePreviewAction,
+} from './DataSpacePreviewAction.js';
+import type { PureGrammarTextSuggestion } from '@finos/legend-lego/code-editor';
 
 const DATA_SPACE_ELEMENT_TYPE = 'DATA SPACE';
 const DATA_SPACE_ELEMENT_PROJECT_EXPLORER_DND_TYPE =
   'PROJECT_EXPLORER_DATA_SPACE';
+
+const PURE_GRAMMAR_DATA_SPACE_PARSER_NAME = 'DataSpace';
+const PURE_GRAMMAR_DATA_SPACE_ELEMENT_TYPE_LABEL = 'DataSpace';
 
 export class DSL_DataSpace_LegendStudioApplicationPlugin
   extends LegendStudioApplicationPlugin
@@ -70,6 +76,52 @@ export class DSL_DataSpace_LegendStudioApplicationPlugin
     return [
       DSL_DATA_SPACE_LEGEND_STUDIO_DOCUMENTATION_KEY.CONCEPT_ELEMENT_DATA_SPACE,
       DSL_DATA_SPACE_LEGEND_STUDIO_DOCUMENTATION_KEY.GRAMMAR_PARSER,
+    ];
+  }
+
+  override getExtraExplorerContextMenuItemRendererConfigurations(): ExplorerContextMenuItemRendererConfiguration[] {
+    return [
+      {
+        key: 'data-space-preview',
+        renderer: (editorStore, element) => {
+          if (element instanceof DataSpace) {
+            return <DataSpacePreviewAction dataSpace={element} />;
+          }
+          return undefined;
+        },
+      },
+    ];
+  }
+
+  override getExtraEditorExtensionStateCreators(): EditorExtensionStateCreator[] {
+    return [(editorStore) => new DataSpacePreviewState(editorStore)];
+  }
+
+  override getExtraEditorExtensionComponentRendererConfigurations(): EditorExtensionComponentRendererConfiguration[] {
+    return [
+      {
+        key: 'data-space-preview',
+        renderer: (editorStore) => <DataSpacePreviewDialog />,
+      },
+    ];
+  }
+
+  getExtraPureGrammarParserNames(): string[] {
+    return [PURE_GRAMMAR_DATA_SPACE_PARSER_NAME];
+  }
+
+  getExtraPureGrammarKeywords(): string[] {
+    return [PURE_GRAMMAR_DATA_SPACE_ELEMENT_TYPE_LABEL];
+  }
+
+  getExtraPureGrammarElementLabelers(): PureGrammarElementLabeler[] {
+    return [
+      (element: PackageableElement): string | undefined => {
+        if (element instanceof DataSpace) {
+          return PURE_GRAMMAR_DATA_SPACE_ELEMENT_TYPE_LABEL;
+        }
+        return undefined;
+      },
     ];
   }
 

@@ -1,0 +1,117 @@
+Class model::DummyClass
+{
+}
+
+Class domain::DummyDomain
+{
+}
+
+Enum model::DummyEnum
+{
+}
+
+Enum model::target::_DummyEnum
+{
+}
+
+
+###Mapping
+Mapping model::DummyMapping
+(
+)
+
+
+###Runtime
+Runtime model::DummyRuntime
+{
+  mappings:
+  [
+    model::DummyMapping
+  ];
+}
+
+
+###Diagram
+Diagram model::DummyDiagram
+{
+}
+
+
+###Service
+Service model::MyService
+{
+  pattern: '/somePattern';
+  documentation: '';
+  autoActivateUpdates: true;
+  execution: Single
+  {
+    query: |'';
+    mapping: model::DummyMapping;
+    runtime: model::DummyRuntime;
+  }
+  testSuites:
+  [
+
+  ]
+}
+
+
+###DataSpace
+DataSpace <<meta::pure::profiles::typemodifiers.abstract>> {doc.doc = 'bla'} model::dataSpace
+{
+  executionContexts:
+  [
+    {
+      name: 'Context 1';
+      title: 'Context 1 Title';
+      description: 'some information about the context';
+      mapping: model::DummyMapping;
+      defaultRuntime: model::DummyRuntime;
+    }
+  ];
+  defaultExecutionContext: 'Context 1';
+  title: 'Untitled';
+  description: 'some description';
+  diagrams:
+  [
+    {
+      title: 'Diag 1';
+      description: 'some information about the diagram';
+      diagram: model::DummyDiagram;
+    },
+    {
+      title: 'Diag 2';
+      diagram: model::DummyDiagram;
+    }
+  ];
+  elements:
+  [
+    model,
+    domain::DummyDomain,
+    -model::DummyClass,
+    -model::target
+  ];
+  executables:
+  [
+    {
+      title: 'Exec 1';
+      description: 'some information about the executable';
+      executable: model::MyService;
+    },
+    {
+      title: 'Exec 2';
+      executable: model::MyService;
+    }
+  ];
+  supportInfo: Combined {
+    documentationUrl: 'https://example.org';
+    website: 'https://example.org/website';
+    faqUrl: 'https://example.org/faq';
+    supportUrl: 'https://example.org/support';
+    emails:
+    [
+      'someEmail@test.org',
+      'someEmail2@test.org'
+    ];
+  };
+}

@@ -22,7 +22,7 @@ import {
   flowResult,
   flow,
 } from 'mobx';
-import type { EditorStore } from '../EditorStore.js';
+import type { EditorStore } from './EditorStore.js';
 import {
   type Clazz,
   type GeneratorFn,
@@ -31,12 +31,12 @@ import {
   UnsupportedOperationError,
   guaranteeNonNullable,
 } from '@finos/legend-shared';
-import { decorateRuntimeWithNewMapping } from '../editor-state/element-editor-state/RuntimeEditorState.js';
+import { decorateRuntimeWithNewMapping } from './editor-state/element-editor-state/RuntimeEditorState.js';
 import type { DSL_LegendStudioApplicationPlugin_Extension } from '../LegendStudioApplicationPlugin.js';
 import {
   type FileGenerationTypeOption,
   DEFAULT_GENERATION_SPECIFICATION_NAME,
-} from '../editor-state/GraphGenerationState.js';
+} from './editor-state/GraphGenerationState.js';
 import {
   type PackageableElement,
   type Runtime,
@@ -75,29 +75,29 @@ import {
   Multiplicity,
   PrimitiveType,
 } from '@finos/legend-graph';
-import type { DSL_Mapping_LegendStudioApplicationPlugin_Extension } from '../DSL_Mapping_LegendStudioApplicationPlugin_Extension.js';
+import type { DSL_Mapping_LegendStudioApplicationPlugin_Extension } from '../extensions/DSL_Mapping_LegendStudioApplicationPlugin_Extension.js';
 import {
   packageableConnection_setConnectionValue,
   runtime_addMapping,
-} from '../shared/modifier/DSL_Mapping_GraphModifierHelper.js';
+} from '../graph-modifier/DSL_Mapping_GraphModifierHelper.js';
 import {
   fileGeneration_setScopeElements,
   fileGeneration_setType,
   generationSpecification_addGenerationElement,
-} from '../shared/modifier/DSL_Generation_GraphModifierHelper.js';
+} from '../graph-modifier/DSL_Generation_GraphModifierHelper.js';
 import {
   service_initNewService,
   service_setExecution,
-} from '../shared/modifier/DSL_Service_GraphModifierHelper.js';
-import type { EmbeddedDataTypeOption } from '../editor-state/element-editor-state/data/DataEditorState.js';
-import { dataElement_setEmbeddedData } from '../shared/modifier/DSL_Data_GraphModifierHelper.js';
-import { PACKAGEABLE_ELEMENT_TYPE } from '../shared/ModelClassifierUtils.js';
+} from '../graph-modifier/DSL_Service_GraphModifierHelper.js';
+import type { EmbeddedDataTypeOption } from './editor-state/element-editor-state/data/DataEditorState.js';
+import { dataElement_setEmbeddedData } from '../graph-modifier/DSL_Data_GraphModifierHelper.js';
+import { PACKAGEABLE_ELEMENT_TYPE } from './utils/ModelClassifierUtils.js';
 import {
   buildElementOption,
   type PackageableElementOption,
-} from '@finos/legend-application';
-import { EmbeddedDataType } from '../editor-state/ExternalFormatState.js';
-import { createEmbeddedData } from '../editor-state/element-editor-state/data/EmbeddedDataState.js';
+} from '@finos/legend-lego/graph-editor';
+import { EmbeddedDataType } from './editor-state/ExternalFormatState.js';
+import { createEmbeddedData } from './editor-state/element-editor-state/data/EmbeddedDataState.js';
 
 export const resolvePackageAndElementName = (
   _package: Package,
@@ -143,7 +143,7 @@ export const handlePostCreateAction = async (
         DEFAULT_GENERATION_SPECIFICATION_NAME,
       );
       await flowResult(
-        editorStore.addElement(
+        editorStore.graphEditorMode.addElement(
           generationSpec,
           guaranteeNonNullable(generationElement.package).path,
           false,
@@ -338,7 +338,7 @@ export class NewRelationalDatabaseConnectionDriver extends NewConnectionValueDri
 
 export class NewPackageableConnectionDriver extends NewElementDriver<PackageableConnection> {
   store: Store;
-  newConnectionValueDriver: NewConnectionValueDriver<Connection>;
+  newConnectionValueDriver: NewConnectionValueDriver<Connection> | undefined;
 
   constructor(editorStore: EditorStore) {
     super(editorStore);
@@ -356,7 +356,7 @@ export class NewPackageableConnectionDriver extends NewElementDriver<Packageable
   }
 
   geDriverConnectionType(): string {
-    return this.newConnectionValueDriver.getConnectionType();
+    return this.newConnectionValueDriver?.getConnectionType() ?? '';
   }
 
   changeConnectionState(val: string): void {
@@ -391,9 +391,11 @@ export class NewPackageableConnectionDriver extends NewElementDriver<Packageable
             return;
           }
         }
-        throw new UnsupportedOperationError(
-          `Can't create new connection driver for type: no compatible creator available from plugins`,
-          val,
+        this.editorStore.applicationStore.notificationService.notifyError(
+          new UnsupportedOperationError(
+            `Can't create new connection driver for type: no compatible creator available from plugins`,
+            val,
+          ),
         );
       }
     }
@@ -401,7 +403,7 @@ export class NewPackageableConnectionDriver extends NewElementDriver<Packageable
 
   getNewConnectionValueDriverBasedOnStore(
     store: Store,
-  ): NewConnectionValueDriver<Connection> {
+  ): NewConnectionValueDriver<Connection> | undefined {
     if (store instanceof ModelStore) {
       return new NewPureModelConnectionDriver(this.editorStore);
     } else if (store instanceof FlatData) {
@@ -423,29 +425,37 @@ export class NewPackageableConnectionDriver extends NewElementDriver<Packageable
         return driver;
       }
     }
-    throw new UnsupportedOperationError(
-      `Can't create new connection driver for store: no compatible creator available from plugins`,
-      store,
+    this.editorStore.applicationStore.notificationService.notifyError(
+      new UnsupportedOperationError(
+        `Can't create new connection driver for store: no compatible creator available from plugins`,
+        store,
+      ),
     );
+    return undefined;
   }
 
   setStore(store: Store): void {
-    this.store = store;
-    this.newConnectionValueDriver =
-      this.getNewConnectionValueDriverBasedOnStore(store);
+    const newDriver = this.getNewConnectionValueDriverBasedOnStore(store);
+    if (newDriver) {
+      this.store = store;
+      this.newConnectionValueDriver = newDriver;
+    }
+    return;
   }
 
   get isValid(): boolean {
-    return this.newConnectionValueDriver.isValid;
+    return this.newConnectionValueDriver?.isValid ?? true;
   }
 
   createElement(name: string): PackageableConnection {
     const connection = new PackageableConnection(name);
-    packageableConnection_setConnectionValue(
-      connection,
-      this.newConnectionValueDriver.createConnection(this.store),
-      this.editorStore.changeDetectionState.observerContext,
-    ); // default to model store
+    if (this.newConnectionValueDriver) {
+      packageableConnection_setConnectionValue(
+        connection,
+        this.newConnectionValueDriver.createConnection(this.store),
+        this.editorStore.changeDetectionState.observerContext,
+      ); // default to model store
+    }
     return connection;
   }
 }
@@ -555,7 +565,7 @@ export class NewFileGenerationDriver extends NewElementDriver<FileGenerationSpec
   }
 }
 
-// Note: Main reason for driver is to disallow if generation specification already exists
+// NOTE: Main reason for driver is to disallow if generation specification already exists
 export class NewGenerationSpecificationDriver extends NewElementDriver<GenerationSpecification> {
   constructor(editorStore: EditorStore) {
     super(editorStore);
@@ -778,7 +788,11 @@ export class NewElementState {
       } else {
         const element = this.createElement(elementName);
         yield flowResult(
-          this.editorStore.addElement(element, packagePath, true),
+          this.editorStore.graphEditorMode.addElement(
+            element,
+            packagePath,
+            true,
+          ),
         );
 
         // post creation handling

@@ -29,14 +29,16 @@ import { useContext, useEffect } from 'react';
 import {
   generateQuerySetupRoute,
   generateServiceQueryCreatorRoute,
-} from '../stores/LegendQueryRouter.js';
+} from '../__lib__/LegendQueryNavigation.js';
 import {
   LATEST_VERSION_ALIAS,
   SNAPSHOT_VERSION_ALIAS,
-  useDepotServerClient,
 } from '@finos/legend-server-depot';
 import { useApplicationStore } from '@finos/legend-application';
-import { useLegendQueryApplicationStore } from './LegendQueryBaseStoreProvider.js';
+import {
+  useLegendQueryApplicationStore,
+  useLegendQueryBaseStore,
+} from './LegendQueryFrameworkProvider.js';
 import {
   CloneServiceQuerySetupStore,
   type ServiceExecutionOption,
@@ -55,9 +57,13 @@ const CloneServiceQuerySetupStoreProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const applicationStore = useLegendQueryApplicationStore();
-  const depotServerClient = useDepotServerClient();
+  const baseStore = useLegendQueryBaseStore();
   const store = useLocalObservable(
-    () => new CloneServiceQuerySetupStore(applicationStore, depotServerClient),
+    () =>
+      new CloneServiceQuerySetupStore(
+        applicationStore,
+        baseStore.depotServerClient,
+      ),
   );
   return (
     <BaseQuerySetupStoreContext.Provider value={store}>
@@ -79,7 +85,9 @@ const CloneQueryServiceSetupContent = observer(() => {
 
   // actions
   const back = (): void => {
-    applicationStore.navigator.goToLocation(generateQuerySetupRoute());
+    applicationStore.navigationService.navigator.goToLocation(
+      generateQuerySetupRoute(),
+    );
   };
   const next = (): void => {
     if (
@@ -87,7 +95,7 @@ const CloneQueryServiceSetupContent = observer(() => {
       querySetupState.currentVersionId &&
       querySetupState.currentServiceExecutionOption
     ) {
-      applicationStore.navigator.goToLocation(
+      applicationStore.navigationService.navigator.goToLocation(
         generateServiceQueryCreatorRoute(
           querySetupState.currentProject.groupId,
           querySetupState.currentProject.artifactId,

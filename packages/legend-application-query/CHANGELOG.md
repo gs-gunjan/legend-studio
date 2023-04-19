@@ -1,5 +1,113 @@
 # @finos/legend-application-query
 
+## 12.0.2
+
+## 12.0.1
+
+## 12.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE**: Adapted to use new `LegendApplication` platform injection mechanism; testing utilities have been adjusted accordingly.
+
+## 11.0.16
+
+## 11.0.15
+
+## 11.0.14
+
+## 11.0.13
+
+## 11.0.12
+
+## 11.0.11
+
+## 11.0.10
+
+## 11.0.9
+
+## 11.0.8
+
+## 11.0.7
+
+### Patch Changes
+
+- [#2063](https://github.com/finos/legend-studio/pull/2063) [`7bd0dc79d`](https://github.com/finos/legend-studio/commit/7bd0dc79d5e803c0eb677b884f2f1ac48fb32b77) ([@akphi](https://github.com/akphi)) - Support relative URLs in application configuration.
+
+## 11.0.6
+
+## 11.0.5
+
+## 11.0.4
+
+## 11.0.3
+
+## 11.0.2
+
+## 11.0.1
+
+## 11.0.0
+
+### Major Changes
+
+- [#2019](https://github.com/finos/legend-studio/pull/2019) [`e31cc1bcb`](https://github.com/finos/legend-studio/commit/e31cc1bcbb61306b4b127788854775a8325bfa57) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed `*Telemetry` and `*EventService` wrappers around `TelemetryService` and `EventService` respectively to `*TelemetryHelper` and `*EventHelper` respectively.
+
+- [#2019](https://github.com/finos/legend-studio/pull/2019) [`e31cc1bcb`](https://github.com/finos/legend-studio/commit/e31cc1bcbb61306b4b127788854775a8325bfa57) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Removed `TEMPORARY__enableThemeSwitcher` application config, as now support different theming option (though only partial support for light themes).
+
+## 10.0.5
+
+## 10.0.4
+
+## 10.0.3
+
+## 10.0.2
+
+## 10.0.1
+
+## 10.0.0
+
+### Major Changes
+
+- [#1937](https://github.com/finos/legend-studio/pull/1937) [`176371264`](https://github.com/finos/legend-studio/commit/176371264c6b3af8a14cbe4ce6d2d75a50691173) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed event `query-editor.view-query -> query-editor.view-query.success`.
+
+### Patch Changes
+
+- [#1939](https://github.com/finos/legend-studio/pull/1939) [`a6cb0d1c7`](https://github.com/finos/legend-studio/commit/a6cb0d1c7b35ac0b71fd29473d3e84d0bf2161e6) ([@xannem](https://github.com/xannem)) - Increase readability of query builder icon option buttons
+
+## 9.1.0
+
+### Minor Changes
+
+- [#1940](https://github.com/finos/legend-studio/pull/1940) [`5febc1969`](https://github.com/finos/legend-studio/commit/5febc19692f6a766cc0b85615b8f98b440ff3d1c) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Set `sdlc` to `PureModel` when building graph to avoid unnecessary calls.
+
+### Patch Changes
+
+- [#1916](https://github.com/finos/legend-studio/pull/1916) [`66aebc576`](https://github.com/finos/legend-studio/commit/66aebc57678dd65024ade037932dc9b0fd3b402a) ([@xannem](https://github.com/xannem)) - Display name of query upon loading query builder.
+
+## 9.0.37
+
+## 9.0.36
+
+## 9.0.35
+
+## 9.0.34
+
+## 9.0.33
+
+## 9.0.32
+
+## 9.0.31
+
+## 9.0.30
+
+## 9.0.29
+
+## 9.0.28
+
+## 9.0.27
+
+## 9.0.26
+
 ## 9.0.25
 
 ## 9.0.24

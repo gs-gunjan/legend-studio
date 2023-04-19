@@ -18,17 +18,19 @@ import {
   guaranteeNonEmptyString,
   guaranteeNonNullable,
   type ExtensionsConfigurationData,
+  URL_SEPARATOR,
 } from '@finos/legend-shared';
 import type { LegendApplicationConfigurationInput } from './LegendApplication.js';
 import {
-  collectKeyedDocumnetationEntriesFromConfig,
-  collectContextualDocumnetationEntries,
+  collectKeyedDocumentationEntriesFromConfig,
+  collectContextualDocumentationEntries,
   type KeyedDocumentationEntry,
-  type DocumentationConfigEntry,
+  type DocumentationEntryData,
   type ContextualDocumentationConfig,
   type ContextualDocumentationEntry,
   type DocumentationRegistryEntry,
 } from '../stores/DocumentationService.js';
+import type { SettingOverrideConfigData } from '../stores/SettingService.js';
 
 export interface LegendApplicationVersionData {
   buildTime: string;
@@ -42,8 +44,12 @@ export interface LegendApplicationConfigurationData {
   documentation?: {
     url: string;
     registry?: DocumentationRegistryEntry[];
-    entries?: Record<string, DocumentationConfigEntry>;
+    entries?: Record<string, DocumentationEntryData>;
     contextualEntries?: ContextualDocumentationConfig;
+  };
+  application?: {
+    storageKey?: string;
+    settingsOverrides?: SettingOverrideConfigData;
   };
   // TODO: when we support vault-like settings, we could support `settingOverrides`
   // See https://github.com/finos/legend-studio/issues/407
@@ -53,11 +59,12 @@ export interface LegendApplicationConfigurationData {
 
 export abstract class LegendApplicationConfig {
   readonly appName: string;
-  readonly baseUrl: string;
+  readonly baseAddress: string;
   readonly env: string;
+  readonly applicationStorageKey: string;
 
   // documentation
-  readonly documentationUrl: string | undefined;
+  readonly documentationUrl?: string | undefined;
   readonly documentationRegistryEntries: DocumentationRegistryEntry[] = [];
   readonly keyedDocumentationEntries: KeyedDocumentationEntry[] = [];
   readonly contextualDocEntries: ContextualDocumentationEntry[] = [];
@@ -70,7 +77,7 @@ export abstract class LegendApplicationConfig {
   constructor(
     input: LegendApplicationConfigurationInput<LegendApplicationConfigurationData>,
   ) {
-    this.baseUrl = input.baseUrl;
+    this.baseAddress = input.baseAddress;
     this.appName = guaranteeNonEmptyString(
       input.configData.appName,
       `Can't configure application: 'appName' field is missing or empty`,
@@ -79,15 +86,18 @@ export abstract class LegendApplicationConfig {
       input.configData.env,
       `Can't configure application: 'env' field is missing or empty`,
     );
+    this.applicationStorageKey =
+      input.configData.application?.storageKey ??
+      this.getDefaultApplicationStorageKey();
 
     // Documentation
     this.documentationUrl = input.configData.documentation?.url;
     this.documentationRegistryEntries =
       input.configData.documentation?.registry ?? [];
-    this.keyedDocumentationEntries = collectKeyedDocumnetationEntriesFromConfig(
+    this.keyedDocumentationEntries = collectKeyedDocumentationEntriesFromConfig(
       input.configData.documentation?.entries ?? {},
     );
-    this.contextualDocEntries = collectContextualDocumnetationEntries(
+    this.contextualDocEntries = collectContextualDocumentationEntries(
       input.configData.documentation?.contextualEntries ?? {},
     );
 
@@ -105,4 +115,13 @@ export abstract class LegendApplicationConfig {
       `Can't collect application version: 'commitSHA' field is missing`,
     );
   }
+
+  protected static resolveAbsoluteUrl(url: string): string {
+    if (url.trim().startsWith(URL_SEPARATOR)) {
+      return window.location.origin + url;
+    }
+    return url;
+  }
+
+  abstract getDefaultApplicationStorageKey(): string;
 }

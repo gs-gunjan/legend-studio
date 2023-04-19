@@ -22,12 +22,11 @@ export * from './models/ProjectDependencyGraph.js';
 export * from './models/RawProjectDependencyReport.js';
 
 export { DepotServerClient } from './DepotServerClient.js';
-export * from './DepotServerClientProvider.js';
-
-export * from './DepotServerClientTestUtils.js';
 
 export * from './DepotVersionAliases.js';
 
 export * from './DepotEntityHelper.js';
 
 export * from './ProjectDependencyGraphReportHelper.js';
+
+export * from './models/ProjectVersionPlatformDependency.js';

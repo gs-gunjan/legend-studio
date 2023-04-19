@@ -18,12 +18,14 @@ import { test, describe, expect } from '@jest/globals';
 import { resolve, basename } from 'path';
 import fs from 'fs';
 import {
+  Core_GraphManagerPreset,
+  type V1_PureModelContextData,
+} from '@finos/legend-graph';
+import {
   TEST__buildGraphWithEntities,
   TEST__getTestGraphManagerState,
   TEST__GraphManagerPluginManager,
-  type V1_PureModelContextData,
-  DSL_ExternalFormat_GraphPreset,
-} from '@finos/legend-graph';
+} from '@finos/legend-graph/test';
 import {
   ContentType,
   HttpHeader,
@@ -88,7 +90,7 @@ const checkGrammarRoundtripMismatch = async (
   options?: GrammarRoundtripOptions,
 ): Promise<void> => {
   const pluginManager = new TEST__GraphManagerPluginManager();
-  pluginManager.usePresets([new DSL_ExternalFormat_GraphPreset()]).install();
+  pluginManager.usePresets([new Core_GraphManagerPreset()]).install();
   const graphManagerState = TEST__getTestGraphManagerState(pluginManager);
 
   if (options?.debug) {

@@ -20,29 +20,30 @@ import fs from 'fs';
 import axios, { type AxiosResponse } from 'axios';
 import {
   type PlainObject,
-  type TEMPORARY__JestMatcher,
   WebConsole,
-  Log,
+  LogService,
   LogEvent,
   ContentType,
   HttpHeader,
 } from '@finos/legend-shared';
+import { type TEMPORARY__JestMatcher } from '@finos/legend-shared/test';
 import {
   type V1_PackageableElement,
-  TEST__GraphManagerPluginManager,
-  TEST__buildGraphWithEntities,
-  TEST__checkGraphHashUnchanged,
-  TEST__getTestGraphManagerState,
   GRAPH_MANAGER_EVENT,
-  DSL_ExternalFormat_GraphPreset,
+  Core_GraphManagerPreset,
 } from '@finos/legend-graph';
-import { DSL_Text_GraphManagerPreset } from '@finos/legend-extension-dsl-text';
-import { DSL_Diagram_GraphManagerPreset as DSL_Diagram_GraphManagerPreset } from '@finos/legend-extension-dsl-diagram';
-import { DSL_DataSpace_GraphManagerPreset } from '@finos/legend-extension-dsl-data-space';
-import { DSL_Persistence_GraphManagerPreset } from '@finos/legend-extension-dsl-persistence';
-import { DSL_Mastery_GraphManagerPreset } from '@finos/legend-extension-dsl-mastery';
-import { DSL_PersistenceCloud_GraphManagerPreset } from '@finos/legend-extension-dsl-persistence-cloud';
-import { STO_ServiceStore_GraphManagerPreset } from '@finos/legend-extension-store-service-store';
+import {
+  TEST__checkGraphHashUnchanged,
+  TEST__buildGraphWithEntities,
+  TEST__getTestGraphManagerState,
+  TEST__GraphManagerPluginManager,
+} from '@finos/legend-graph/test';
+import { DSL_Text_GraphManagerPreset } from '@finos/legend-extension-dsl-text/graph';
+import { DSL_Diagram_GraphManagerPreset as DSL_Diagram_GraphManagerPreset } from '@finos/legend-extension-dsl-diagram/graph';
+import { DSL_DataSpace_GraphManagerPreset } from '@finos/legend-extension-dsl-data-space/graph';
+import { DSL_Persistence_GraphManagerPreset } from '@finos/legend-extension-dsl-persistence/graph';
+import { DSL_Mastery_GraphManagerPreset } from '@finos/legend-extension-dsl-mastery/graph';
+import { STO_ServiceStore_GraphManagerPreset } from '@finos/legend-extension-store-service-store/graph';
 
 const engineConfig = JSON.parse(
   fs.readFileSync(resolve(__dirname, '../../../engine-config.json'), {
@@ -85,12 +86,12 @@ type GrammarRoundtripOptions = {
 const logPhase = (
   phase: ROUNTRIP_TEST_PHASES,
   excludeConfig: ROUNTRIP_TEST_PHASES[] | typeof SKIP,
-  log: Log,
+  logService: LogService,
   debug?: boolean,
 ): void => {
   if (debug) {
     const skip = excludeConfig === SKIP || excludeConfig.includes(phase);
-    log.info(
+    logService.info(
       LogEvent.create(`${skip ? 'Skipping' : 'Running'} phase '${phase}'`),
     );
   }
@@ -98,11 +99,11 @@ const logPhase = (
 
 const logSuccess = (
   phase: ROUNTRIP_TEST_PHASES,
-  log: Log,
+  logService: LogService,
   debug?: boolean,
 ): void => {
   if (debug) {
-    log.info(LogEvent.create(`Success running phase '${phase}' `));
+    logService.info(LogEvent.create(`Success running phase '${phase}' `));
   }
 };
 
@@ -123,18 +124,17 @@ const checkGrammarRoundtrip = async (
   // See https://github.com/finos/legend-studio/issues/820
   pluginManager
     .usePresets([
+      new Core_GraphManagerPreset(),
       new DSL_Text_GraphManagerPreset(),
       new DSL_Diagram_GraphManagerPreset(),
       new DSL_DataSpace_GraphManagerPreset(),
-      new DSL_ExternalFormat_GraphPreset(),
       new DSL_Persistence_GraphManagerPreset(),
       new DSL_Mastery_GraphManagerPreset(),
-      new DSL_PersistenceCloud_GraphManagerPreset(),
       new STO_ServiceStore_GraphManagerPreset(),
     ])
     .usePlugins([new WebConsole()]);
   pluginManager.install();
-  const log = new Log();
+  const log = new LogService();
   log.registerPlugins(pluginManager.getLoggerPlugins());
   const graphManagerState = TEST__getTestGraphManagerState(pluginManager, log);
 
@@ -175,7 +175,7 @@ const checkGrammarRoundtrip = async (
   );
   if (options?.debug) {
     log.info(
-      LogEvent.create(GRAPH_MANAGER_EVENT.GRAPH_ENTITIES_FETCHED),
+      LogEvent.create(GRAPH_MANAGER_EVENT.FETCH_GRAPH_ENTITIES__SUCCESS),
       `[entities: ${entities.length}]`,
     );
   }
@@ -185,7 +185,7 @@ const checkGrammarRoundtrip = async (
   });
   if (options?.debug) {
     log.info(
-      LogEvent.create(GRAPH_MANAGER_EVENT.GRAPH_INITIALIZED),
+      LogEvent.create(GRAPH_MANAGER_EVENT.INITIALIZE_GRAPH__SUCCESS),
       Date.now() - startTime,
       'ms',
     );
@@ -196,7 +196,7 @@ const checkGrammarRoundtrip = async (
   );
   if (options?.debug) {
     log.info(
-      LogEvent.create(GRAPH_MANAGER_EVENT.GRAPH_PROTOCOL_SERIALIZED),
+      LogEvent.create(GRAPH_MANAGER_EVENT.SERIALIZE_GRAPH_PROTOCOL__SUCCESS),
       Date.now() - startTime,
       'ms',
     );

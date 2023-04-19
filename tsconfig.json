@@ -22,6 +22,7 @@
     { "path": "packages/legend-graph" },
     { "path": "packages/legend-query-builder" },
     { "path": "packages/legend-art" },
+    { "path": "packages/legend-lego" },
     { "path": "packages/legend-application" },
     // studio
     { "path": "packages/legend-application-studio" },
@@ -56,9 +57,6 @@
       "path": "packages/legend-extension-dsl-persistence"
     },
     {
-      "path": "packages/legend-extension-dsl-persistence-cloud"
-    },
-    {
       "path": "packages/legend-extension-dsl-mastery"
     },
     {
@@ -74,7 +72,7 @@
       "path": "packages/legend-extension-format-json-schema"
     },
     {
-      "path": "packages/legend-extension-format-morphir"
+      "path": "packages/legend-extension-format-graphql"
     },
     // fixtures
     {

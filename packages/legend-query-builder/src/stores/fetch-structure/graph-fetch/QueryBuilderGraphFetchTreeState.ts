@@ -24,6 +24,7 @@ import {
   PackageableElementExplicitReference,
   RootGraphFetchTree,
   getAllSuperclasses,
+  type Binding,
 } from '@finos/legend-graph';
 import {
   type QueryBuilderGraphFetchTreeData,
@@ -47,12 +48,205 @@ import {
 import type { LambdaFunctionBuilderOption } from '../../QueryBuilderValueSpecificationBuilderHelper.js';
 import { appendGraphFetch } from './QueryBuilderGraphFetchTreeValueSpecificationBuilder.js';
 import {
+  deepClone,
   guaranteeNonNullable,
   hashArray,
   type Hashable,
+  UnsupportedOperationError,
+  ContentType,
 } from '@finos/legend-shared';
-import { QUERY_BUILDER_HASH_STRUCTURE } from '../../../graphManager/QueryBuilderHashUtils.js';
+import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../../QueryBuilderStateHashUtils.js';
 import { isValueExpressionReferencedInValue } from '../../QueryBuilderValueSpecificationHelper.js';
+import type { ExportDataInfo } from '../../QueryBuilderResultState.js';
+
+export enum SERIALIZATION_TYPE {
+  PURE = 'PURE',
+  EXTERNAL_FORMAT = 'EXTERNAL_FORMAT',
+}
+
+export enum GRAPH_FETCH_EXPORT_DATA_FORMAT {
+  RESULT = 'RESULT',
+}
+
+const DEFAULT_PURE_CONFIG_TYPE_NAME = '@type';
+
+export class PureSerializationConfig {
+  typeKeyName: string;
+  includeType: boolean;
+  includeEnumType: boolean;
+  removePropertiesWithNullValues: boolean;
+  removePropertiesWithEmptySets: boolean;
+  fullyQualifiedTypePath: boolean;
+  includeObjectReference: boolean;
+
+  constructor() {
+    // default values
+    this.typeKeyName = DEFAULT_PURE_CONFIG_TYPE_NAME;
+    this.includeType = true;
+    this.includeEnumType = true;
+    this.removePropertiesWithNullValues = true;
+    this.removePropertiesWithEmptySets = false;
+    this.fullyQualifiedTypePath = true;
+    this.includeObjectReference = false;
+    makeObservable(this, {
+      typeKeyName: observable,
+      includeType: observable,
+      includeEnumType: observable,
+      removePropertiesWithNullValues: observable,
+      removePropertiesWithEmptySets: observable,
+      fullyQualifiedTypePath: observable,
+      includeObjectReference: observable,
+      setTypeName: action,
+      setIncludeObjectReference: action,
+      setIncludeType: action,
+      setFullyQualifiedTypePath: action,
+      setRemovePropertiesWithEmptySets: action,
+      setInclueEnumType: action,
+      setRemovePropertiesWithNullValues: action,
+    });
+  }
+
+  setTypeName(val: string): void {
+    this.typeKeyName = val;
+  }
+
+  setIncludeType(val: boolean): void {
+    this.includeType = val;
+  }
+
+  setInclueEnumType(val: boolean): void {
+    this.includeEnumType = val;
+  }
+
+  setRemovePropertiesWithNullValues(val: boolean): void {
+    this.removePropertiesWithNullValues = val;
+  }
+
+  setRemovePropertiesWithEmptySets(val: boolean): void {
+    this.removePropertiesWithEmptySets = val;
+  }
+
+  setFullyQualifiedTypePath(val: boolean): void {
+    this.fullyQualifiedTypePath = val;
+  }
+
+  setIncludeObjectReference(val: boolean): void {
+    this.includeObjectReference = val;
+  }
+}
+
+export abstract class GraphFetchSerializationState {
+  readonly queryBuilderGraphFetchTreeState: QueryBuilderGraphFetchTreeState;
+
+  constructor(graphFetchTreeState: QueryBuilderGraphFetchTreeState) {
+    this.queryBuilderGraphFetchTreeState = graphFetchTreeState;
+  }
+
+  abstract getLabel(): string;
+
+  abstract get serializationContentType(): ContentType;
+}
+
+export class GraphFetchPureSerializationState extends GraphFetchSerializationState {
+  config: PureSerializationConfig | undefined;
+  configModal = false;
+
+  constructor(graphFetchTreeState: QueryBuilderGraphFetchTreeState) {
+    super(graphFetchTreeState);
+    makeObservable(this, {
+      config: observable,
+      configModal: observable,
+      setConfigModal: action,
+    });
+  }
+
+  setConfig(value: PureSerializationConfig | undefined): void {
+    this.config = value;
+  }
+
+  setConfigModal(val: boolean): void {
+    this.configModal = val;
+  }
+
+  override getLabel(): string {
+    return SERIALIZATION_TYPE.PURE;
+  }
+
+  override get serializationContentType(): ContentType {
+    return ContentType.APPLICATION_JSON;
+  }
+}
+
+export class GraphFetchExternalFormatSerializationState extends GraphFetchSerializationState {
+  targetBinding: Binding;
+  treeData: QueryBuilderGraphFetchTreeData | undefined;
+
+  constructor(
+    graphFetchTreeState: QueryBuilderGraphFetchTreeState,
+    targetBinding: Binding,
+    treeData: QueryBuilderGraphFetchTreeData | undefined,
+  ) {
+    super(graphFetchTreeState);
+    makeObservable(this, {
+      targetBinding: observable,
+      treeData: observable.ref,
+      serializationContentType: computed,
+      setGraphFetchTree: action,
+    });
+    this.targetBinding = targetBinding;
+    this.treeData = treeData;
+  }
+
+  setBinding(value: Binding): void {
+    this.targetBinding = value;
+  }
+
+  setGraphFetchTree(val: QueryBuilderGraphFetchTreeData | undefined): void {
+    this.treeData = val;
+  }
+
+  addProperty(
+    node: QueryBuilderExplorerTreePropertyNodeData,
+    options?: {
+      refreshTreeData?: boolean;
+    },
+  ): void {
+    if (!this.treeData) {
+      this.queryBuilderGraphFetchTreeState.queryBuilderState.applicationStore.notificationService.notifyWarning(
+        `Can't add property: graph-fetch tree has not been properly initialized`,
+      );
+      return;
+    }
+    addQueryBuilderPropertyNode(
+      this.treeData,
+      this.queryBuilderGraphFetchTreeState.queryBuilderState.explorerState
+        .nonNullableTreeData,
+      node,
+      this.queryBuilderGraphFetchTreeState.queryBuilderState,
+    );
+    if (options?.refreshTreeData) {
+      this.setGraphFetchTree({ ...this.treeData });
+    }
+  }
+
+  override getLabel(): string {
+    return SERIALIZATION_TYPE.EXTERNAL_FORMAT;
+  }
+
+  override get serializationContentType(): ContentType {
+    const contentType = this.targetBinding.contentType;
+    if (Object.values(ContentType).includes(contentType as ContentType)) {
+      return contentType as ContentType;
+    } else {
+      // TEMP: need to investigate if flatdata should be returned as content type
+      // for now we will assume all flatdata is csv
+      if (contentType === 'application/x.flatdata') {
+        return ContentType.TEXT_CSV;
+      }
+      return ContentType.TEXT_PLAIN;
+    }
+  }
+}
 
 export class QueryBuilderGraphFetchTreeState
   extends QueryBuilderFetchStructureImplementationState
@@ -66,6 +260,11 @@ export class QueryBuilderGraphFetchTreeState
    */
   isChecked = false;
 
+  /**
+   * Used to describe how the graph fetch tree is serialized to the final result set
+   */
+  serializationState: GraphFetchSerializationState;
+
   constructor(
     queryBuilderState: QueryBuilderState,
     fetchStructureState: QueryBuilderFetchStructureState,
@@ -75,13 +274,18 @@ export class QueryBuilderGraphFetchTreeState
     makeObservable(this, {
       treeData: observable.ref,
       isChecked: observable,
+      serializationState: observable,
       TEMPORARY__showPostFetchStructurePanel: computed,
       setGraphFetchTree: action,
+      setSerializationState: action,
       setChecked: action,
+      initialize: action,
     });
 
     // try to initialize the graph-fetch tree data using the setup class
     this.updateTreeData(this.queryBuilderState.class);
+    // we will default to standard pure serialization with no config
+    this.serializationState = new GraphFetchPureSerializationState(this);
   }
 
   get type(): string {
@@ -139,8 +343,20 @@ export class QueryBuilderGraphFetchTreeState
     return Array.from(new Set(ids).values());
   }
 
-  get validationIssues(): string[] | undefined {
-    return undefined;
+  get fetchStructureValidationIssues(): string[] {
+    return [];
+  }
+
+  get allValidationIssues(): string[] {
+    return [];
+  }
+
+  override initialize(): void {
+    this.queryBuilderState.filterState.setShowPanel(true);
+  }
+
+  setSerializationState(val: GraphFetchSerializationState): void {
+    this.serializationState = val;
   }
 
   setGraphFetchTree(val: QueryBuilderGraphFetchTreeData | undefined): void {
@@ -163,6 +379,22 @@ export class QueryBuilderGraphFetchTreeState
     );
   }
 
+  override get exportDataFormatOptions(): string[] {
+    return [GRAPH_FETCH_EXPORT_DATA_FORMAT.RESULT];
+  }
+
+  override getExportDataInfo(format: string): ExportDataInfo {
+    if (format === GRAPH_FETCH_EXPORT_DATA_FORMAT.RESULT) {
+      return {
+        contentType: this.serializationState.serializationContentType,
+      };
+    } else {
+      throw new UnsupportedOperationError(
+        `Unsupported Graph Fetch export type ${format}`,
+      );
+    }
+  }
+
   onClassChange(_class: Class | undefined): void {
     this.updateTreeData(_class);
   }
@@ -181,7 +413,7 @@ export class QueryBuilderGraphFetchTreeState
     },
   ): void {
     if (!this.treeData) {
-      this.queryBuilderState.applicationStore.notifyWarning(
+      this.queryBuilderState.applicationStore.notificationService.notifyWarning(
         `Can't add property: graph-fetch tree has not been properly initialized`,
       );
       return;
@@ -207,11 +439,19 @@ export class QueryBuilderGraphFetchTreeState
 
   fetchProperty(node: QueryBuilderExplorerTreePropertyNodeData): void {
     this.addProperty(node, { refreshTreeData: true });
+    if (
+      this.serializationState instanceof
+      GraphFetchExternalFormatSerializationState
+    ) {
+      this.serializationState.addProperty(deepClone(node), {
+        refreshTreeData: true,
+      });
+    }
   }
 
   fetchProperties(nodes: QueryBuilderExplorerTreePropertyNodeData[]): void {
     if (!this.treeData) {
-      this.queryBuilderState.applicationStore.notifyWarning(
+      this.queryBuilderState.applicationStore.notificationService.notifyWarning(
         `Can't add property: graph-fetch tree has not been properly initialized`,
       );
       return;
@@ -224,7 +464,7 @@ export class QueryBuilderGraphFetchTreeState
 
   checkBeforeChangingImplementation(onChange: () => void): void {
     if (this.treeData?.rootIds.length) {
-      this.queryBuilderState.applicationStore.setActionAlertInfo({
+      this.queryBuilderState.applicationStore.alertService.setActionAlertInfo({
         message:
           'Current graph-fetch will be lost when switching to projection mode. Do you still want to proceed?',
         type: ActionAlertType.CAUTION,
@@ -261,7 +501,7 @@ export class QueryBuilderGraphFetchTreeState
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.GRAPH_FETCH_STATE,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.GRAPH_FETCH_STATE,
       this.isChecked.toString(),
       this.treeData?.tree ?? '',
     ]);

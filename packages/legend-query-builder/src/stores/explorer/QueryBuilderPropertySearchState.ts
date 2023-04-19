@@ -26,9 +26,11 @@ import {
 } from '@finos/legend-graph';
 import {
   ActionState,
+  FuzzySearchEngine,
   addUniqueEntry,
   deleteEntry,
   guaranteeNonNullable,
+  FuzzySearchAdvancedConfigState,
 } from '@finos/legend-shared';
 import {
   observable,
@@ -51,8 +53,6 @@ import {
   QueryBuilderExplorerTreeSubTypeNodeData,
 } from './QueryBuilderExplorerState.js';
 import type { QueryBuilderState } from '../QueryBuilderState.js';
-import { Fuse } from '@finos/legend-art';
-import { TextSearchAdvancedConfigState } from '@finos/legend-application';
 
 export class QueryBuilderPropertySearchState {
   queryBuilderState: QueryBuilderState;
@@ -71,8 +71,8 @@ export class QueryBuilderPropertySearchState {
   indexedExplorerTreeNodes: QueryBuilderExplorerTreeNodeData[] = [];
 
   // search
-  searchEngine: Fuse<QueryBuilderExplorerTreeNodeData>;
-  searchConfigurationState: TextSearchAdvancedConfigState;
+  searchEngine: FuzzySearchEngine<QueryBuilderExplorerTreeNodeData>;
+  searchConfigurationState: FuzzySearchAdvancedConfigState;
   searchState = ActionState.create();
   searchText = '';
   searchResults: QueryBuilderExplorerTreeNodeData[] = [];
@@ -112,10 +112,10 @@ export class QueryBuilderPropertySearchState {
     });
 
     this.queryBuilderState = queryBuilderState;
-    this.searchConfigurationState = new TextSearchAdvancedConfigState(
+    this.searchConfigurationState = new FuzzySearchAdvancedConfigState(
       (): void => this.search(),
     );
-    this.searchEngine = new Fuse(this.indexedExplorerTreeNodes);
+    this.searchEngine = new FuzzySearchEngine(this.indexedExplorerTreeNodes);
   }
 
   setIsSearchPanelOpen(val: boolean): void {
@@ -294,7 +294,7 @@ export class QueryBuilderPropertySearchState {
     }
 
     // indexing
-    this.searchEngine = new Fuse(this.indexedExplorerTreeNodes, {
+    this.searchEngine = new FuzzySearchEngine(this.indexedExplorerTreeNodes, {
       includeScore: true,
       shouldSort: true,
       // Ignore location when computing the search score

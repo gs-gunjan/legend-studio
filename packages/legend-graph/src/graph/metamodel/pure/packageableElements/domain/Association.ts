@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-import { type Hashable, type Writable, hashArray } from '@finos/legend-shared';
+import {
+  type Hashable,
+  type Writable,
+  hashArray,
+  guaranteeType,
+} from '@finos/legend-shared';
 import { CORE_HASH_STRUCTURE } from '../../../../../graph/Core_HashUtils.js';
 import {
   type PackageableElementVisitor,
   PackageableElement,
 } from '../PackageableElement.js';
-import type { Property } from './Property.js';
+import { Property } from './Property.js';
 import type { DerivedProperty } from './DerivedProperty.js';
 import type { AbstractProperty } from './AbstractProperty.js';
-import {
-  stub_Class,
-  stub_Property,
-} from '../../../../../graph/helpers/creator/DomainModelCreatorHelper.js';
+import { Class } from './Class.js';
+import { Multiplicity } from './Multiplicity.js';
+import { GenericTypeExplicitReference } from './GenericTypeReference.js';
+import { GenericType } from './GenericType.js';
 
 /**
  * Assocation needs exactly 2 properties (for 2 classes, not enumeration, not primitive), e.g.
@@ -62,12 +67,49 @@ export class Association extends PackageableElement implements Hashable {
 
     // NOTE: we might want to revisit this decision to initialize to association properties to stubs
     const properties: [Property, Property] = [
-      stub_Property(stub_Class(), stub_Class()),
-      stub_Property(stub_Class(), stub_Class()),
+      new Property(
+        '',
+        Multiplicity.ONE,
+        GenericTypeExplicitReference.create(new GenericType(new Class(''))),
+        new Class(''),
+      ),
+      new Property(
+        '',
+        Multiplicity.ONE,
+        GenericTypeExplicitReference.create(new GenericType(new Class(''))),
+        new Class(''),
+      ),
     ];
     (properties[0] as Writable<Property>)._OWNER = this;
     (properties[1] as Writable<Property>)._OWNER = this;
     this.properties = properties;
+  }
+
+  /**
+   * Make sure we clean up the properties added to classes through
+   * this association
+   *
+   * @internal model logic
+   */
+  override dispose(): void {
+    super.dispose();
+    // cleanup property classes' properties which were added through this association
+    const [propertyA, propertyB] = this.properties;
+    if (
+      propertyA.genericType.value.rawType instanceof Class &&
+      propertyB.genericType.value.rawType instanceof Class
+    ) {
+      const classA = guaranteeType(propertyA.genericType.value.rawType, Class);
+      const classB = guaranteeType(propertyB.genericType.value.rawType, Class);
+      classA.propertiesFromAssociations =
+        classA.propertiesFromAssociations.filter(
+          (property) => property !== propertyB,
+        );
+      classB.propertiesFromAssociations =
+        classB.propertiesFromAssociations.filter(
+          (property) => property !== propertyA,
+        );
+    }
   }
 
   protected override get _elementHashCode(): string {

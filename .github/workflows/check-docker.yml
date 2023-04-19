@@ -47,19 +47,19 @@ jobs:
             package: '@finos/legend-application-taxonomy-deployment'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3.5.2
       - name: Get Yarn cache directory path
         id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn config get cacheFolder)"
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
       - name: Setup Yarn cache
-        uses: actions/cache@v3
+        uses: actions/cache@v3.3.1
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: ${{ runner.os }}-yarn-
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v3.6.0
         with:
           node-version: 16
       - name: Install dependencies
@@ -67,7 +67,7 @@ jobs:
       - name: Build image
         run: yarn workspace ${{ matrix.package }} build-dry:docker ${{ github.sha }}
       - name: Scan image for security issues
-        uses: aquasecurity/trivy-action@0.8.0
+        uses: aquasecurity/trivy-action@0.9.2
         with:
           # TODO: we should probably also setup misconfiguration scanning
           # See https://github.com/aquasecurity/trivy-action#using-trivy-to-scan-infrastucture-as-code
@@ -75,12 +75,13 @@ jobs:
           image-ref: ${{ matrix.image }}:${{ github.sha }}
           format: table
           exit-code: 1
-          # Ignore unpatched/unfixed vulnerabilities/CVEs
+          # Ignore vulnerabilities/CVEs declared as unpatched/unfixed
           ignore-unfixed: true
           severity: CRITICAL
           # Since we use finos/legend-shared-server static server
           # We might better off ignore CVEs coming from static server code, as they should be flagged
-          # on the static server codebase instead using `--vuln-type os`
+          # on the static server codebase instead, but we should potentially revisit this decision
+          vuln-type: os
           # Manually increase timeout as the default 2-minute is not enough
           # See https://github.com/aquasecurity/trivy/issues/802
           timeout: 10m

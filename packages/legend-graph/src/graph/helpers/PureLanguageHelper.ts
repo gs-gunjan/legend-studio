@@ -43,6 +43,7 @@ export enum PURE_ELEMENT_NAME {
   FILE_GENERATION = 'FileGeneration',
   GENERATION_SPECIFICATION = 'GenerationSpecification',
   DATA_ELEMENT = 'Data',
+  EXECUTION_ENVIRONMENT = 'ExecutionEnvironment',
 }
 
 export enum PURE_CONNECTION_NAME {
@@ -151,7 +152,7 @@ export const generateFunctionPrettyName = (
         )}]`,
     )
     .join(', ')})` +
-  `: ${element.returnType.value.name}[${generateMultiplicityString(
+  `: ${element.returnType.value.path}[${generateMultiplicityString(
     element.returnMultiplicity.lowerBound,
     element.returnMultiplicity.upperBound,
   )}]`;

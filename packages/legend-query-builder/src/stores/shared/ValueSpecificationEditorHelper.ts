@@ -16,14 +16,11 @@
 
 import {
   type PureModel,
-  type InstanceValue,
   VariableExpression,
   type ValueSpecification,
   type Type,
   type Enum,
   CollectionInstanceValue,
-  DATE_FORMAT,
-  DATE_TIME_FORMAT,
   Enumeration,
   EnumValueExplicitReference,
   EnumValueInstanceValue,
@@ -35,53 +32,75 @@ import {
   PRIMITIVE_TYPE,
   INTERNAL__PropagatedValue,
   SimpleFunctionExpression,
+  type ObserverContext,
 } from '@finos/legend-graph';
-import {
-  addDays,
-  formatDate,
-  Randomizer,
-  UnsupportedOperationError,
-} from '@finos/legend-shared';
+import { Randomizer, UnsupportedOperationError } from '@finos/legend-shared';
 import { generateDefaultValueForPrimitiveType } from '../QueryBuilderValueSpecificationHelper.js';
-import { instanceValue_setValues } from './ValueSpecificationModifierHelper.js';
+import {
+  instanceValue_setValues,
+  valueSpecification_setGenericType,
+} from './ValueSpecificationModifierHelper.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../graph/QueryBuilderMetaModelConst.js';
 
-const createMockPrimitiveProperty = (
+const VAR_DEFAULT_NAME = 'var';
+
+export const createSupportedFunctionExpression = (
+  supportedFuncName: string,
+  expectedReturnType: Type,
+): SimpleFunctionExpression => {
+  const funcExpression = new SimpleFunctionExpression(supportedFuncName);
+  valueSpecification_setGenericType(
+    funcExpression,
+    GenericTypeExplicitReference.create(new GenericType(expectedReturnType)),
+  );
+  return funcExpression;
+};
+
+const createMockPrimitiveValueSpecification = (
   primitiveType: PrimitiveType,
   propertyName: string,
-): string | number | boolean => {
+  observerContext: ObserverContext,
+): ValueSpecification => {
+  const primitiveTypeName = primitiveType.name;
+  if (
+    primitiveTypeName === PRIMITIVE_TYPE.DATE ||
+    primitiveTypeName === PRIMITIVE_TYPE.DATETIME
+  ) {
+    return createSupportedFunctionExpression(
+      QUERY_BUILDER_SUPPORTED_FUNCTIONS.NOW,
+      PrimitiveType.DATETIME,
+    );
+  } else if (primitiveTypeName === PRIMITIVE_TYPE.STRICTDATE) {
+    return createSupportedFunctionExpression(
+      QUERY_BUILDER_SUPPORTED_FUNCTIONS.TODAY,
+      PrimitiveType.STRICTDATE,
+    );
+  }
+  const primitiveInstanceValue = new PrimitiveInstanceValue(
+    GenericTypeExplicitReference.create(new GenericType(primitiveType)),
+  );
   const randomizer = new Randomizer();
+  let value: string | boolean | number;
   switch (primitiveType.name) {
     case PRIMITIVE_TYPE.BOOLEAN:
-      return randomizer.getRandomItemInCollection([true, false]) ?? true;
+      value = randomizer.getRandomItemInCollection([true, false]) ?? true;
+      break;
     case PRIMITIVE_TYPE.FLOAT:
-      return randomizer.getRandomFloat();
+      value = randomizer.getRandomFloat();
+      break;
     case PRIMITIVE_TYPE.DECIMAL:
-      return randomizer.getRandomDouble();
+      value = randomizer.getRandomDouble();
+      break;
     case PRIMITIVE_TYPE.NUMBER:
     case PRIMITIVE_TYPE.INTEGER:
-      return randomizer.getRandomWholeNumber(100);
-    // NOTE that `Date` is the umbrella type that comprises `StrictDate` and `DateTime`, but for simplicity, we will generate `Date` as `StrictDate`
-    case PRIMITIVE_TYPE.DATE:
-    case PRIMITIVE_TYPE.STRICTDATE:
-      return formatDate(
-        randomizer.getRandomDate(
-          new Date(Date.now()),
-          addDays(Date.now(), 100),
-        ),
-        DATE_FORMAT,
-      );
-    case PRIMITIVE_TYPE.DATETIME:
-      return formatDate(
-        randomizer.getRandomDate(
-          new Date(Date.now()),
-          addDays(Date.now(), 100),
-        ),
-        DATE_TIME_FORMAT,
-      );
+      value = randomizer.getRandomWholeNumber(100);
+      break;
     case PRIMITIVE_TYPE.STRING:
     default:
-      return `${propertyName} ${randomizer.getRandomWholeNumber(100)}`;
+      value = `${propertyName} ${randomizer.getRandomWholeNumber(100)}`;
   }
+  instanceValue_setValues(primitiveInstanceValue, [value], observerContext);
+  return primitiveInstanceValue;
 };
 
 export const createMockEnumerationProperty = (
@@ -93,19 +112,21 @@ export const buildPrimitiveInstanceValue = (
   graph: PureModel,
   type: PRIMITIVE_TYPE,
   value: unknown,
+  observerContext: ObserverContext,
 ): PrimitiveInstanceValue => {
   const instance = new PrimitiveInstanceValue(
     GenericTypeExplicitReference.create(
       new GenericType(graph.getPrimitiveType(type)),
     ),
   );
-  instanceValue_setValues(instance, [value]);
+  instanceValue_setValues(instance, [value], observerContext);
   return instance;
 };
 
 export const buildDefaultInstanceValue = (
   graph: PureModel,
   type: Type,
+  observerContext: ObserverContext,
 ): ValueSpecification => {
   const path = type.path;
   switch (path) {
@@ -122,6 +143,7 @@ export const buildDefaultInstanceValue = (
         graph,
         path,
         generateDefaultValueForPrimitiveType(path),
+        observerContext,
       );
     }
     case PRIMITIVE_TYPE.DATE: {
@@ -129,6 +151,7 @@ export const buildDefaultInstanceValue = (
         graph,
         PRIMITIVE_TYPE.STRICTDATE,
         generateDefaultValueForPrimitiveType(path),
+        observerContext,
       );
     }
     default:
@@ -137,9 +160,11 @@ export const buildDefaultInstanceValue = (
           const enumValueInstanceValue = new EnumValueInstanceValue(
             GenericTypeExplicitReference.create(new GenericType(type)),
           );
-          instanceValue_setValues(enumValueInstanceValue, [
-            EnumValueExplicitReference.create(type.values[0] as Enum),
-          ]);
+          instanceValue_setValues(
+            enumValueInstanceValue,
+            [EnumValueExplicitReference.create(type.values[0] as Enum)],
+            observerContext,
+          );
           return enumValueInstanceValue;
         }
         throw new UnsupportedOperationError(
@@ -155,7 +180,8 @@ export const buildDefaultInstanceValue = (
 export const generateVariableExpressionMockValue = (
   parameter: VariableExpression,
   graph: PureModel,
-): InstanceValue | undefined => {
+  observerContext: ObserverContext,
+): ValueSpecification | undefined => {
   const varType = parameter.genericType?.value.rawType;
   const multiplicity = parameter.multiplicity;
   if ((!multiplicity.upperBound || multiplicity.upperBound > 1) && varType) {
@@ -165,29 +191,22 @@ export const generateVariableExpressionMockValue = (
     );
   }
   if (varType instanceof PrimitiveType) {
-    const primitiveInstanceValue = new PrimitiveInstanceValue(
-      GenericTypeExplicitReference.create(
-        varType === PrimitiveType.DATE
-          ? new GenericType(PrimitiveType.STRICTDATE)
-          : new GenericType(varType),
-      ),
+    return createMockPrimitiveValueSpecification(
+      varType,
+      VAR_DEFAULT_NAME,
+      observerContext,
     );
-    instanceValue_setValues(primitiveInstanceValue, [
-      createMockPrimitiveProperty(
-        varType,
-        parameter.name === '' ? 'myVar' : parameter.name,
-      ),
-    ]);
-    return primitiveInstanceValue;
   } else if (varType instanceof Enumeration) {
     const enumValueInstance = new EnumValueInstanceValue(
       GenericTypeExplicitReference.create(new GenericType(varType)),
     );
     const mock = createMockEnumerationProperty(varType);
     if (mock !== '') {
-      instanceValue_setValues(enumValueInstance, [
-        EnumValueExplicitReference.create(getEnumValue(varType, mock)),
-      ]);
+      instanceValue_setValues(
+        enumValueInstance,
+        [EnumValueExplicitReference.create(getEnumValue(varType, mock))],
+        observerContext,
+      );
     }
     return enumValueInstance;
   }

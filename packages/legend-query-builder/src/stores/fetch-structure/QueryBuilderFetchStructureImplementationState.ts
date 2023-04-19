@@ -26,6 +26,7 @@ import type { QueryBuilderExplorerTreePropertyNodeData } from '../explorer/Query
 import type { QueryBuilderState } from '../QueryBuilderState.js';
 import type { LambdaFunctionBuilderOption } from '../QueryBuilderValueSpecificationBuilderHelper.js';
 import type { QueryBuilderFetchStructureState } from './QueryBuilderFetchStructureState.js';
+import type { ExportDataInfo } from '../QueryBuilderResultState.js';
 
 export enum FETCH_STRUCTURE_IMPLEMENTATION {
   TABULAR_DATA_STRUCTURE = 'TABULAR_DATA_STRUCTURE',
@@ -44,7 +45,8 @@ export abstract class QueryBuilderFetchStructureImplementationState
   ) {
     makeObservable(this, {
       usedExplorerTreePropertyNodeIDs: computed,
-      validationIssues: computed,
+      fetchStructureValidationIssues: computed,
+      allValidationIssues: computed,
       hashCode: computed,
     });
 
@@ -54,7 +56,9 @@ export abstract class QueryBuilderFetchStructureImplementationState
 
   abstract get type(): string;
   abstract get usedExplorerTreePropertyNodeIDs(): string[];
-  abstract get validationIssues(): string[] | undefined;
+  abstract get fetchStructureValidationIssues(): string[];
+  abstract get allValidationIssues(): string[];
+
   abstract onClassChange(_class: Class | undefined): void;
   abstract revealCompilationError(compilationError: CompilationError): boolean;
   abstract clearCompilationError(): void;
@@ -68,9 +72,14 @@ export abstract class QueryBuilderFetchStructureImplementationState
     lambdaFunction: LambdaFunction,
     options?: LambdaFunctionBuilderOption,
   ): void;
+  abstract initialize(): void;
   abstract get hashCode(): string;
 
   get TEMPORARY__showPostFetchStructurePanel(): boolean {
     return this.queryBuilderState.filterState.showPanel;
   }
+
+  // export options
+  abstract get exportDataFormatOptions(): string[];
+  abstract getExportDataInfo(format: string): ExportDataInfo;
 }

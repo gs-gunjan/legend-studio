@@ -1,5 +1,61 @@
 # @finos/legend-server-depot
 
+## 5.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Remove `React`-style component provider for the server clients as well as their respective mocking/testing utilities.
+
+## 4.4.14
+
+## 4.4.13
+
+## 4.4.12
+
+## 4.4.11
+
+## 4.4.10
+
+## 4.4.9
+
+## 4.4.8
+
+## 4.4.7
+
+## 4.4.6
+
+## 4.4.5
+
+## 4.4.4
+
+## 4.4.3
+
+## 4.4.2
+
+## 4.4.1
+
+## 4.4.0
+
+## 4.3.2
+
+## 4.3.1
+
+## 4.3.0
+
+### Minor Changes
+
+- [#1876](https://github.com/finos/legend-studio/pull/1876) [`27aec4ed0`](https://github.com/finos/legend-studio/commit/27aec4ed06e99701c5b4e080312417af4d2b8899) ([@xannem](https://github.com/xannem)) - Add project dependants tab for project config
+
+## 4.2.9
+
+## 4.2.8
+
+## 4.2.7
+
+## 4.2.6
+
+## 4.2.5
+
 ## 4.2.4
 
 ## 4.2.3

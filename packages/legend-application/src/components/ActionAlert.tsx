@@ -19,7 +19,7 @@ import {
   ActionAlertActionType,
   ActionAlertType,
   type ActionAlertInfo,
-} from '../stores/ApplicationStore.js';
+} from '../stores/AlertService.js';
 import { observer } from 'mobx-react-lite';
 import { noop } from '@finos/legend-shared';
 import { useApplicationStore } from './ApplicationStoreProvider.js';
@@ -41,7 +41,7 @@ const ActionAlertContent = observer((props: { info: ActionAlertInfo }) => {
   const { title, message, prompt, type, onClose, onEnter, actions } = info;
   const handleClose = (): void => {
     onClose?.();
-    applicationStore.setActionAlertInfo(undefined);
+    applicationStore.alertService.setActionAlertInfo(undefined);
   };
   const handleEnter = (): void => onEnter?.();
   const handleSubmit = (): void => {
@@ -51,7 +51,7 @@ const ActionAlertContent = observer((props: { info: ActionAlertInfo }) => {
 
   return (
     <Dialog
-      open={Boolean(applicationStore.actionAlertInfo)}
+      open={Boolean(applicationStore.alertService.actionAlertInfo)}
       onClose={noop} // disallow closing dialog by using Esc key or clicking on the backdrop
       TransitionProps={{
         onEnter: handleEnter,
@@ -72,7 +72,7 @@ const ActionAlertContent = observer((props: { info: ActionAlertInfo }) => {
           <div className="blocking-alert__prompt-text">{prompt}</div>
         </ModalBody>
         <ModalFooter>
-          {actions.map((action) => {
+          {actions.map((action, idx) => {
             // NOTE: need to prevent default for the submit button, otherwise, we would get the warning "Form submission canceled because the form is not connected"
             // See https://stackoverflow.com/a/58234405
             const handler: React.ReactEventHandler<HTMLButtonElement> = (
@@ -82,9 +82,11 @@ const ActionAlertContent = observer((props: { info: ActionAlertInfo }) => {
               action.handler?.();
               handleClose();
             };
+
             return (
               <button
-                key={action.label}
+                // eslint-disable-next-line react/no-array-index-key
+                key={idx}
                 type={action.default ? 'submit' : 'button'}
                 className={`btn btn--dark ${getActionButtonClassName(
                   action.type ?? ActionAlertActionType.STANDARD,
@@ -114,7 +116,7 @@ const ActionAlertContent = observer((props: { info: ActionAlertInfo }) => {
 
 export const ActionAlert = observer(() => {
   const applicationStore = useApplicationStore();
-  const actionAlertInfo = applicationStore.actionAlertInfo;
+  const actionAlertInfo = applicationStore.alertService.actionAlertInfo;
 
   if (!actionAlertInfo) {
     return null;

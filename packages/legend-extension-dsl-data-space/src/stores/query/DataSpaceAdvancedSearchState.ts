@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
-import type { ClassView } from '@finos/legend-extension-dsl-diagram';
-import type { Class, GraphManagerState } from '@finos/legend-graph';
+import type { ClassView } from '@finos/legend-extension-dsl-diagram/graph';
+import {
+  GraphDataWithOrigin,
+  type Class,
+  type GraphManagerState,
+  LegendSDLC,
+} from '@finos/legend-graph';
 import {
   type StoredEntity,
   type DepotServerClient,
@@ -30,18 +35,18 @@ import {
   assertErrorThrown,
 } from '@finos/legend-shared';
 import { action, flow, flowResult, makeObservable, observable } from 'mobx';
-import { DSL_DataSpace_getGraphManagerExtension } from '../../graphManager/protocol/pure/DSL_DataSpace_PureGraphManagerExtension.js';
-import { DATA_SPACE_ELEMENT_CLASSIFIER_PATH } from '../../graphManager/protocol/pure/DSL_DataSpace_PureProtocolProcessorPlugin.js';
+import { DSL_DataSpace_getGraphManagerExtension } from '../../graph-manager/protocol/pure/DSL_DataSpace_PureGraphManagerExtension.js';
+import { DATA_SPACE_ELEMENT_CLASSIFIER_PATH } from '../../graph-manager/protocol/pure/DSL_DataSpace_PureProtocolProcessorPlugin.js';
 import { DataSpaceViewerState } from '../DataSpaceViewerState.js';
-import { generateDataSpaceQueryCreatorRoute } from './DSL_DataSpace_LegendQueryRouter.js';
+import { generateDataSpaceQueryCreatorRoute } from '../../__lib__/query/DSL_DataSpace_LegendQueryNavigation.js';
 import { type DataSpaceInfo, extractDataSpaceInfo } from './DataSpaceInfo.js';
 import {
   DEFAULT_TYPEAHEAD_SEARCH_LIMIT,
   DEFAULT_TYPEAHEAD_SEARCH_MINIMUM_SEARCH_LENGTH,
   type GenericLegendApplicationStore,
 } from '@finos/legend-application';
-import { retrieveAnalyticsResultCache } from '../../graphManager/action/analytics/DataSpaceAnalysisHelper.js';
-import type { DataSpaceAnalysisResult } from '../../graphManager/action/analytics/DataSpaceAnalysis.js';
+import { retrieveAnalyticsResultCache } from '../../graph-manager/action/analytics/DataSpaceAnalysisHelper.js';
+import type { DataSpaceAnalysisResult } from '../../graph-manager/action/analytics/DataSpaceAnalysis.js';
 
 export class DataSpaceAdvancedSearchState {
   readonly applicationStore: GenericLegendApplicationStore;
@@ -145,7 +150,7 @@ export class DataSpaceAdvancedSearchState {
     } catch (error) {
       assertErrorThrown(error);
       this.loadDataSpacesState.fail();
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
     }
   }
 
@@ -186,11 +191,20 @@ export class DataSpaceAdvancedSearchState {
       )) as DataSpaceAnalysisResult;
       this.dataSpaceViewerState = new DataSpaceViewerState(
         this.applicationStore,
+        this.graphManagerState,
         dataSpace.groupId,
         dataSpace.artifactId,
         dataSpace.versionId,
         analysisResult,
         {
+          retriveGraphData: () =>
+            new GraphDataWithOrigin(
+              new LegendSDLC(
+                dataSpace.groupId,
+                dataSpace.artifactId,
+                dataSpace.versionId,
+              ),
+            ),
           viewProject: this.viewProject,
           viewSDLCProject: this.viewSDLCProject,
           onDiagramClassDoubleClick: (classView: ClassView): void => {
@@ -202,7 +216,7 @@ export class DataSpaceAdvancedSearchState {
     } catch (error) {
       assertErrorThrown(error);
       this.loadDataSpaceState.fail();
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
     } finally {
       this.loadDataSpaceState.setMessage(undefined);
     }
@@ -210,7 +224,7 @@ export class DataSpaceAdvancedSearchState {
 
   *proceedToCreateQuery(_class?: Class): GeneratorFn<void> {
     if (this.dataSpaceViewerState) {
-      this.applicationStore.navigator.goToLocation(
+      this.applicationStore.navigationService.navigator.goToLocation(
         generateDataSpaceQueryCreatorRoute(
           this.dataSpaceViewerState.groupId,
           this.dataSpaceViewerState.artifactId,

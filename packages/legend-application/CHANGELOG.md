@@ -1,5 +1,171 @@
 # @finos/legend-application
 
+## 15.0.1
+
+## 15.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Move `Pure` language utilities to `@finos/legend-lego/code-editor`, move `PackageableElementOption` logic to `@finos/legend-lego/graph-editor`, move `DocumnetationLink`, `TabManager`, etc. to `@finos/legend-lego/application`.
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** `LegendApplication.loadApplication()` now takes a required parameter of type `ApplicationStore`. The base `ApplicationStore` itself has been re-written to have platform injected to it rather than having it dependent on the platform to initialize; as before, the current supported platform is `BrowserPlatform` which include `BrowserNavigator` which has been removed from `WebNavigator` -- the testing tooling has been updated accordingly. Also, we have slimmed down our testing tools further by removing redundant application test utilities such as `TEST__getApplicationStore()` and `TEST__provideMockedApplicationStore()`.
+
+  Renamed `LegendApplicationComponentFrameworkProvider` to `ApplicationComponentFrameworkProvider`
+
+  The idiomatic usage to render an application component now is as follows (using `LegendStudio` as an example):
+
+  ```ts
+  // LegendStudio.ts
+  export class LegendStudio extends LegendApplication {
+    // ...
+    async loadApplication(
+      applicationStore: LegendStudioApplicationStore,
+    ): Promise<void> {
+      createRoot(getApplicationRootElement()).render(
+        <ApplicationStoreProvider store={applicationStore}>
+          <LegendStudioWebApplication baseUrl={this.baseUrl} />
+        </ApplicationStoreProvider>,
+      );
+    }
+  }
+
+  // LegendStudioWebApplication.tsx
+  export const LegendStudioWebApplication = observer(
+    (props: { baseUrl: string }) => {
+      const { baseUrl } = props;
+
+      return (
+        // injects the browser platform to the application store
+        <BrowserEnvironmentProvider baseUrl={baseUrl}>
+          // provide application component framework
+          <LegendStudioFrameworkProvider>
+            // the web application router
+            <LegendStudioWebApplicationRouter />
+          </LegendStudioFrameworkProvider>
+        </BrowserEnvironmentProvider>
+      );
+    },
+  );
+  ```
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Moved all test utils to a separate export path `@finos/legend-application/test`;
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Simplify `getPackageableElementOptionFormatter()` to no longer need the graph to determine element origin
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE**: Renamed `ApplicationConfig.baseUrl` to `ApplicationConfig.baseAddress`, `LegendApplication.setup()`'s input `baseUrl` has also been renamed to `baseAddress`.
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Index local storage by application: top level application storage with index key default to the application name, e.g. `legend-studio`, `legend-query`, etc. This key is configurable via the config option `application.storageKey`. This change helps different legend applications being deployed on the same host have their settings separated.
+
+### Minor Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - Support transient query parameters in `BrowserNavigator`, these query parameter can be internalized (consumed and stored as state) by the application navigator and then removed from the URL without reloading the page.
+
+### Patch Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - Hide virtual assistant by default.
+
+## 14.0.4
+
+## 14.0.3
+
+## 14.0.2
+
+## 14.0.1
+
+## 14.0.0
+
+### Major Changes
+
+- [#2094](https://github.com/finos/legend-studio/pull/2094) [`7d8035415`](https://github.com/finos/legend-studio/commit/7d803541596f7dab018fae833eba01fdc7bbfcdb) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Moved execution plan viewer logic to `@finos/legend-query-builder`
+
+- [#2094](https://github.com/finos/legend-studio/pull/2094) [`7d8035415`](https://github.com/finos/legend-studio/commit/7d803541596f7dab018fae833eba01fdc7bbfcdb) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed `TextInputEditor` to `CodeEditor` and move it to `@finos/legend-lego/code-editor`. Moved unrelated documentation keys out of `LEGEND_APPLICATION_DOCUMENTATION_KEY`. Renamed `TextSearchAdvancedConfigMenu` and `TextSearchAdvancedConfigState` to `FuzzySearchAdvancedConfigMenu` and `FuzzySearchAdvancedConfigState` respectively.
+
+## 13.0.11
+
+## 13.0.10
+
+## 13.0.9
+
+## 13.0.8
+
+## 13.0.7
+
+### Patch Changes
+
+- [#2063](https://github.com/finos/legend-studio/pull/2063) [`7bd0dc79d`](https://github.com/finos/legend-studio/commit/7bd0dc79d5e803c0eb677b884f2f1ac48fb32b77) ([@akphi](https://github.com/akphi)) - Support relative URLs in application configuration.
+
+## 13.0.6
+
+## 13.0.5
+
+## 13.0.4
+
+## 13.0.3
+
+## 13.0.2
+
+## 13.0.1
+
+## 13.0.0
+
+### Major Changes
+
+- [#2019](https://github.com/finos/legend-studio/pull/2019) [`e31cc1bcb`](https://github.com/finos/legend-studio/commit/e31cc1bcbb61306b4b127788854775a8325bfa57) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed `DocumentationConfigEntry` to `DocumentationEntryData`
+
+- [#2019](https://github.com/finos/legend-studio/pull/2019) [`e31cc1bcb`](https://github.com/finos/legend-studio/commit/e31cc1bcbb61306b4b127788854775a8325bfa57) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Added partial support for configurable color themes: although, we lack proper support for light color themes in many other places across the apps, this mechanism sets the foundation for the themeing strategy we want to converge to. Legacy flag `LayoutService.TEMPORARY__isLightThemeEnabled` is kept for convenience, but underlying, the binary/boolean theme setting `TEMPORARY__application.layout.enableLightTheme` has been removed in favor of `application.layout.colorTheme` which now takes the color theme key, e.g. `legacy-light` (Legacy Light), `hc-light` (High-Contract Light), etc.
+
+## 12.0.1
+
+## 12.0.0
+
+### Major Changes
+
+- [#1987](https://github.com/finos/legend-studio/pull/1987) [`28ca8adae`](https://github.com/finos/legend-studio/commit/28ca8adaec6eb5e2cd850d247685489b21a5bfbb) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed services in `ApplicationStore`: `log -> logService`, `commandCenter -> commandService`, `navigator -> navigationService`. Moved `notification` logic inside of `NotificationService`, moved `alert` logic inside of `AlertService`.
+
+### Minor Changes
+
+- [#1874](https://github.com/finos/legend-studio/pull/1874) [`04a31ba2f`](https://github.com/finos/legend-studio/commit/04a31ba2f2790937cc2289b29fc89f4e59e351d2) ([@gayathrir11](https://github.com/gayathrir11)) - Add support for client-side storage to persist user settings
+
+## 11.0.3
+
+## 11.0.2
+
+## 11.0.1
+
+## 11.0.0
+
+### Major Changes
+
+- [#1937](https://github.com/finos/legend-studio/pull/1937) [`176371264`](https://github.com/finos/legend-studio/commit/176371264c6b3af8a14cbe4ce6d2d75a50691173) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed event `application.context.accessed -> application.context.access`, `application.virtual-assistant.documentation-entry.accessed -> application.virtual-assistant.documentation-entry.access`.
+
+## 10.2.18
+
+### Patch Changes
+
+- [#1936](https://github.com/finos/legend-studio/pull/1936) [`4ba7b5afb`](https://github.com/finos/legend-studio/commit/4ba7b5afb4e22741115fee9e74cfbe5a5a440a58) ([@akphi](https://github.com/akphi)) - Fix a problem where abort command (`Control+KeyC`) clash with copy command in `Windows`.
+
+## 10.2.17
+
+## 10.2.16
+
+## 10.2.15
+
+## 10.2.14
+
+## 10.2.13
+
+## 10.2.12
+
+## 10.2.11
+
+## 10.2.10
+
+## 10.2.9
+
+## 10.2.8
+
+## 10.2.7
+
 ## 10.2.6
 
 ## 10.2.5
@@ -157,7 +323,7 @@
 
 - [#1323](https://github.com/finos/legend-studio/pull/1323) [`dbbbd63b`](https://github.com/finos/legend-studio/commit/dbbbd63b3dda4229e7bf36fb59a0c7b3d525d775) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Make `LegendApplicationPluginManager` generic to the application plugin, e.g. `LegendApplicationPluginManager<LegendStudioApplicationPlugin>`, due to this, `ApplicationStore` is now also generic to the application plugin. We also removed `LegendApplication` prefix from certain classes and types to cleanup the codebase and make the code less clunky. In particular, the major renamed items are: `LegendApplicationAssistantService` -> `AssistantService`, `LegendApplicationDocumentationService` -> `DocumentationService`, `LegendApplicationNavigationContextService` -> `ApplicationNavigationContextService`, `LegendApplicationEventService` -> `EventService`, etc.
 
-* [#1295](https://github.com/finos/legend-studio/pull/1295) [`8b17cfa3`](https://github.com/finos/legend-studio/commit/8b17cfa3902686d539b819532c75666f80419648) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** We did some refactoring around `contextual documentation` config and types: renamed `LegendApplicationContextualDocumentationMapConfig` to `LegendApplicationContextualDocumentationConfig`, `collectContextualDocumnetationEntry()` -> `collectContextualDocumnetationEntries()` and `documentation.contextualDocMap` field in config to `documentation.contextualEntries`.
+* [#1295](https://github.com/finos/legend-studio/pull/1295) [`8b17cfa3`](https://github.com/finos/legend-studio/commit/8b17cfa3902686d539b819532c75666f80419648) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** We did some refactoring around `contextual documentation` config and types: renamed `LegendApplicationContextualDocumentationMapConfig` to `LegendApplicationContextualDocumentationConfig`, `collectContextualDocumentationEntry()` -> `collectContextualDocumentationEntries()` and `documentation.contextualDocMap` field in config to `documentation.contextualEntries`.
 
 ## 6.0.2
 

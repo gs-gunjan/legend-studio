@@ -102,6 +102,341 @@ export const TEST_DATA__simpleProjection = {
       ],
     },
   ],
+  parameters: [
+    {
+      _type: 'var',
+      class: 'String',
+      multiplicity: { lowerBound: 0, upperBound: 1 },
+      name: 'var_1',
+    },
+  ],
+};
+
+export const TEST_DATA_projectionWithWindowFunction = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'olapGroupBy',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'olapGroupBy',
+          parameters: [
+            {
+              _type: 'func',
+              function: 'project',
+              parameters: [
+                {
+                  _type: 'func',
+                  function: 'getAll',
+                  parameters: [
+                    {
+                      _type: 'packageableElementPtr',
+                      fullPath: 'model::pure::tests::model::simple::Person',
+                    },
+                  ],
+                },
+                {
+                  _type: 'collection',
+                  multiplicity: {
+                    lowerBound: 1,
+                    upperBound: 1,
+                  },
+                  values: [
+                    {
+                      _type: 'lambda',
+                      body: [
+                        {
+                          _type: 'property',
+                          parameters: [
+                            {
+                              _type: 'var',
+                              name: 'x',
+                            },
+                          ],
+                          property: 'age',
+                        },
+                      ],
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  _type: 'collection',
+                  multiplicity: {
+                    lowerBound: 1,
+                    upperBound: 1,
+                  },
+                  values: [
+                    {
+                      _type: 'string',
+                      value: 'Age',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              _type: 'collection',
+              multiplicity: {
+                lowerBound: 0,
+                upperBound: 0,
+              },
+              values: [],
+            },
+            {
+              _type: 'func',
+              function: 'func',
+              parameters: [
+                {
+                  _type: 'string',
+                  value: 'Age',
+                },
+                {
+                  _type: 'lambda',
+                  body: [
+                    {
+                      _type: 'func',
+                      function: 'sum',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                    },
+                  ],
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              _type: 'string',
+              value: 'sum Age',
+            },
+          ],
+        },
+        {
+          _type: 'collection',
+          multiplicity: {
+            lowerBound: 0,
+            upperBound: 0,
+          },
+          values: [],
+        },
+        {
+          _type: 'func',
+          function: 'func',
+          parameters: [
+            {
+              _type: 'string',
+              value: 'sum Age',
+            },
+            {
+              _type: 'lambda',
+              body: [
+                {
+                  _type: 'func',
+                  function: 'sum',
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                },
+              ],
+              parameters: [
+                {
+                  _type: 'var',
+                  name: 'x',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          _type: 'string',
+          value: 'sum sum Age',
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA_projectionWithInvalidWindowFunction = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'olapGroupBy',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'olapGroupBy',
+          parameters: [
+            {
+              _type: 'func',
+              function: 'project',
+              parameters: [
+                {
+                  _type: 'func',
+                  function: 'getAll',
+                  parameters: [
+                    {
+                      _type: 'packageableElementPtr',
+                      fullPath: 'model::pure::tests::model::simple::Person',
+                    },
+                  ],
+                },
+                {
+                  _type: 'collection',
+                  multiplicity: {
+                    lowerBound: 1,
+                    upperBound: 1,
+                  },
+                  values: [
+                    {
+                      _type: 'lambda',
+                      body: [
+                        {
+                          _type: 'property',
+                          parameters: [
+                            {
+                              _type: 'var',
+                              name: 'x',
+                            },
+                          ],
+                          property: 'age',
+                        },
+                      ],
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  _type: 'collection',
+                  multiplicity: {
+                    lowerBound: 1,
+                    upperBound: 1,
+                  },
+                  values: [
+                    {
+                      _type: 'string',
+                      value: 'Age',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              _type: 'collection',
+              multiplicity: {
+                lowerBound: 0,
+                upperBound: 0,
+              },
+              values: [],
+            },
+            {
+              _type: 'func',
+              function: 'func',
+              parameters: [
+                {
+                  _type: 'string',
+                  value: 'Age',
+                },
+                {
+                  _type: 'lambda',
+                  body: [
+                    {
+                      _type: 'func',
+                      function: 'sum',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                    },
+                  ],
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              _type: 'string',
+              value: 'sum Age',
+            },
+          ],
+        },
+        {
+          _type: 'collection',
+          multiplicity: {
+            lowerBound: 0,
+            upperBound: 0,
+          },
+          values: [],
+        },
+        {
+          _type: 'string',
+          value: 'sum sum Age',
+        },
+        {
+          _type: 'func',
+          function: 'func',
+          parameters: [
+            {
+              _type: 'string',
+              value: 'sum Age',
+            },
+            {
+              _type: 'lambda',
+              body: [
+                {
+                  _type: 'func',
+                  function: 'sum',
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                },
+              ],
+              parameters: [
+                {
+                  _type: 'var',
+                  name: 'x',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
   parameters: [],
 };
 
@@ -533,6 +868,120 @@ export const TEST_DATA__getAllWithOneConditionFilter = {
                 {
                   _type: 'string',
                   value: 'testFirstName',
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__getAllWithOneIntegerConditionFilter = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'model::pure::tests::model::simple::Person',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'equal',
+              parameters: [
+                {
+                  _type: 'property',
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                  property: 'age',
+                },
+                {
+                  _type: 'integer',
+                  value: 0,
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA_getAllWithOneFloatConditionFilter = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'model::pure::tests::model::simple::Person',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'equal',
+              parameters: [
+                {
+                  _type: 'property',
+                  parameters: [
+                    {
+                      _type: 'property',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                      property: 'firm',
+                    },
+                  ],
+                  property: 'averageEmployeesAge',
+                },
+                {
+                  _type: 'float',
+                  value: 0,
                 },
               ],
             },
@@ -1692,3 +2141,91 @@ export const TEST_DATA__simpleProjectionWithSubtypeFromSubtypeModel = {
   ],
   parameters: [],
 };
+
+export const TEST_DATA__simpeDateParameters = (
+  paramType: string,
+): { parameters?: object; body?: object; _type: string } => ({
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'take',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'project',
+          parameters: [
+            {
+              _type: 'func',
+              function: 'getAll',
+              parameters: [
+                {
+                  _type: 'packageableElementPtr',
+                  fullPath: 'model::pure::tests::model::simple::Person',
+                },
+              ],
+            },
+            {
+              _type: 'collection',
+              multiplicity: {
+                lowerBound: 1,
+                upperBound: 1,
+              },
+              values: [
+                {
+                  _type: 'lambda',
+                  body: [
+                    {
+                      _type: 'property',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                      property: 'age',
+                    },
+                  ],
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              _type: 'collection',
+              multiplicity: {
+                lowerBound: 1,
+                upperBound: 1,
+              },
+              values: [
+                {
+                  _type: 'string',
+                  value: 'Age',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          _type: 'integer',
+          value: 1000,
+        },
+      ],
+    },
+  ],
+  parameters: [
+    {
+      _type: 'var',
+      class: paramType,
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'var_1',
+    },
+  ],
+});

@@ -17,6 +17,7 @@
 export const MULTIPLICITY_INFINITE = '*';
 export const ELEMENT_PATH_DELIMITER = '::';
 export const MULTIPLICITY_RANGE_OPERATOR = '..';
+export const PROPERTY_ACCESSOR = '.';
 export const UNIT_PATH_DELIMITER = '~';
 export const LAMBDA_PIPE = '|';
 export const DEFAULT_SOURCE_PARAMETER_NAME = 'src';
@@ -98,9 +99,11 @@ export const AUTO_IMPORTS = [
 ];
 
 export enum CORE_PURE_PATH {
+  // type
   ANY = 'meta::pure::metamodel::type::Any',
   NIL = 'meta::pure::metamodel::type::Nil',
 
+  // profile
   PROFILE_DOC = 'meta::pure::profiles::doc',
   PROFILE_TEMPORAL = 'meta::pure::profiles::temporal',
 
@@ -117,13 +120,11 @@ export enum CORE_PURE_PATH {
   SERVICE = 'meta::legend::service::metamodel::Service',
   CONNECTION = 'meta::pure::runtime::PackageableConnection',
   RUNTIME = 'meta::pure::runtime::PackageableRuntime',
+  EXECUTION_ENVIRONMENT = 'meta::legend::service::metamodel::ExecutionEnvironmentInstance',
   FILE_GENERATION = 'meta::pure::generation::metamodel::GenerationConfiguration',
   GENERATION_SPECIFICATION = 'meta::pure::generation::metamodel::GenerationSpecification',
   SECTION_INDEX = 'meta::pure::metamodel::section::SectionIndex',
   DATA_ELEMENT = 'meta::pure::data::DataElement',
-
-  // TDS
-  TDS_ROW = 'meta::pure::tds::TDSRow',
 }
 
 export const PURE_DOC_TAG = 'doc';
@@ -146,6 +147,7 @@ export const PROCESSING_DATE_MILESTONING_PROPERTY_NAME = 'processingDate';
 export const BUSINESS_DATE_MILESTONING_PROPERTY_NAME = 'businessDate';
 
 export enum PackageableElementPointerType {
+  CLASS = 'CLASS',
   STORE = 'STORE',
   MAPPING = 'MAPPING',
   RUNTIME = 'RUNTIME',
@@ -153,32 +155,11 @@ export enum PackageableElementPointerType {
   SERVICE = 'SERVICE',
 }
 
-export const DURATION_UNIT = 'meta::pure::functions::date::DurationUnit';
-export const DAY_OF_WEEK = 'meta::pure::functions::date::DayOfWeek';
-
 export enum SUPPORTED_FUNCTIONS {
-  // date-time value helper functions
-  TODAY = 'meta::pure::functions::date::today',
-  NOW = 'meta::pure::functions::date::now',
-  FIRST_DAY_OF_WEEK = 'meta::pure::functions::date::firstDayOfThisWeek',
-  FIRST_DAY_OF_MONTH = 'meta::pure::functions::date::firstDayOfThisMonth',
-  FIRST_DAY_OF_QUARTER = 'meta::pure::functions::date::firstDayOfThisQuarter',
-  FIRST_DAY_OF_YEAR = 'meta::pure::functions::date::firstDayOfThisYear',
-  PREVIOUS_DAY_OF_WEEK = 'meta::pure::functions::date::previousDayOfWeek',
-  IS_ON_DAY = 'meta::pure::functions::date::isOnDay',
-  IS_ON_OR_AFTER_DAY = 'meta::pure::functions::date::isOnOrAfterDay',
-  IS_AFTER_DAY = 'meta::pure::functions::date::isAfterDay',
-  IS_ON_OR_BEFORE_DAY = 'meta::pure::functions::date::isOnOrBeforeDay',
-  IS_BEFORE_DAY = 'meta::pure::functions::date::isBeforeDay',
-
-  // adjust time
-  MINUS = 'meta::pure::functions::math::minus',
-  ADJUST = 'meta::pure::functions::date::adjust',
-  // variables
   LET = 'meta::pure::functions::lang::letFunction',
+  NEW = 'meta::pure::functions::meta::new',
 }
 
-// Date formats
 export const DATE_TIME_FORMAT_WITH_MILLISECONDS =
   "yyyy-MM-dd'T'HH:mm:ss.SSSxxxx";
 export const DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssxxxx";

@@ -29,9 +29,9 @@ import {
   type PlainObject,
   type GeneratorFn,
 } from '@finos/legend-shared';
-import type { Entity } from '@finos/legend-storage';
+import type { EntitiesWithOrigin, Entity } from '@finos/legend-storage';
 import { action, flow, flowResult, makeObservable, observable } from 'mobx';
-import { LEGEND_QUERY_APP_EVENT } from './LegendQueryAppEvent.js';
+import { LEGEND_QUERY_APP_EVENT } from '../__lib__/LegendQueryEvent.js';
 import type { LegendQueryApplicationStore } from './LegendQueryBaseStore.js';
 import { BaseQuerySetupStore } from './QuerySetupStore.js';
 import type { Service } from '@finos/legend-graph';
@@ -98,7 +98,7 @@ export class CloneServiceQuerySetupStore extends BaseQuerySetupStore {
       this.loadProjectsState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
       this.loadProjectsState.fail();
     }
   }
@@ -116,7 +116,7 @@ export class CloneServiceQuerySetupStore extends BaseQuerySetupStore {
       )) as Entity[];
       const dependencyEntitiesIndex = (yield flowResult(
         this.depotServerClient.getIndexedDependencyEntities(project, versionId),
-      )) as Map<string, Entity[]>;
+      )) as Map<string, EntitiesWithOrigin>;
 
       const serviceExecutionAnalysisResults = (yield flowResult(
         getQueryBuilderGraphManagerExtension(
@@ -140,11 +140,11 @@ export class CloneServiceQuerySetupStore extends BaseQuerySetupStore {
       this.loadServiceExecutionsState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.log.error(
+      this.applicationStore.logService.error(
         LogEvent.create(LEGEND_QUERY_APP_EVENT.GENERIC_FAILURE),
         error,
       );
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
       this.loadServiceExecutionsState.fail();
     }
   }

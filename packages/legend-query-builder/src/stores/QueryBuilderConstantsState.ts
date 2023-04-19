@@ -32,7 +32,7 @@ import {
   assertErrorThrown,
 } from '@finos/legend-shared';
 import { action, makeObservable, observable } from 'mobx';
-import { QUERY_BUILDER_HASH_STRUCTURE } from '../graphManager/QueryBuilderHashUtils.js';
+import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from './QueryBuilderStateHashUtils.js';
 import type { QueryBuilderState } from './QueryBuilderState.js';
 import { buildDefaultInstanceValue } from './shared/ValueSpecificationEditorHelper.js';
 import { valueSpecification_setGenericType } from './shared/ValueSpecificationModifierHelper.js';
@@ -57,11 +57,11 @@ export class QueryBuilderConstantExpressionState implements Hashable {
     this.queryBuilderState = queryBuilderState;
     this.value = observe_ValueSpecification(
       value,
-      this.queryBuilderState.observableContext,
+      this.queryBuilderState.observerContext,
     );
     observe_ValueSpecification(
       variable,
-      this.queryBuilderState.observableContext,
+      this.queryBuilderState.observerContext,
     );
     this.variable = variable;
   }
@@ -73,11 +73,14 @@ export class QueryBuilderConstantExpressionState implements Hashable {
         const valSpec = buildDefaultInstanceValue(
           this.queryBuilderState.graphManagerState.graph,
           type,
+          this.queryBuilderState.observerContext,
         );
         this.setValueSpec(valSpec);
       } catch (error) {
         assertErrorThrown(error);
-        this.queryBuilderState.applicationStore.notifyError(error.message);
+        this.queryBuilderState.applicationStore.notificationService.notifyError(
+          error.message,
+        );
       }
     }
   }
@@ -90,7 +93,7 @@ export class QueryBuilderConstantExpressionState implements Hashable {
     }
     this.value = observe_ValueSpecification(
       value,
-      this.queryBuilderState.observableContext,
+      this.queryBuilderState.observerContext,
     );
     const valueSpecType = value.genericType?.value.rawType;
     if (
@@ -106,7 +109,7 @@ export class QueryBuilderConstantExpressionState implements Hashable {
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.CONSTANT_EXPRESSION_STATE,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.CONSTANT_EXPRESSION_STATE,
       this.variable.name,
       this.value,
     ]);
@@ -166,7 +169,7 @@ export class QueryBuilderConstantsState implements Hashable {
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.CONSTANT_STATE,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.CONSTANT_STATE,
       hashArray(this.constants),
     ]);
   }

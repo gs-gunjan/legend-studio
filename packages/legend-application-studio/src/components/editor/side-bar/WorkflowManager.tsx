@@ -42,15 +42,12 @@ import {
   ModalHeaderActions,
   ModalTitle,
   Modal,
+  ModalFooterButton,
 } from '@finos/legend-art';
-import { LEGEND_STUDIO_TEST_ID } from '../../LegendStudioTestID.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../../__lib__/LegendStudioTesting.js';
 import { flowResult } from 'mobx';
 import { WorkflowJobStatus, WorkflowStatus } from '@finos/legend-server-sdlc';
-import {
-  EDITOR_LANGUAGE,
-  TextInputEditor,
-  useApplicationStore,
-} from '@finos/legend-application';
+import { useApplicationStore } from '@finos/legend-application';
 import {
   type WorkflowExplorerTreeNodeData,
   type WorkflowLogState,
@@ -58,13 +55,17 @@ import {
   type WorkflowState,
   WorkflowJobTreeNodeData,
   WorkflowTreeNodeData,
-} from '../../../stores/sidebar-state/WorkflowManagerState.js';
+} from '../../../stores/editor/sidebar-state/WorkflowManagerState.js';
 import {
   formatDistanceToNow,
   guaranteeNonNullable,
   guaranteeType,
   isNonNullable,
 } from '@finos/legend-shared';
+import {
+  CODE_EDITOR_LANGUAGE,
+  CodeEditor,
+} from '@finos/legend-lego/code-editor';
 
 const getWorkflowStatusIcon = (
   workflowStatus: WorkflowStatus,
@@ -237,20 +238,15 @@ const WorkflowJobLogsViewer = observer(
             </ModalHeaderActions>
           </ModalHeader>
           <ModalBody>
-            <TextInputEditor
+            <CodeEditor
               inputValue={logs}
               isReadOnly={true}
-              language={EDITOR_LANGUAGE.TEXT}
+              language={CODE_EDITOR_LANGUAGE.TEXT}
               showMiniMap={true}
             />
           </ModalBody>
           <ModalFooter>
-            <button
-              className="btn modal__footer__close-btn"
-              onClick={closeLogViewer}
-            >
-              Close
-            </button>
+            <ModalFooterButton text="Close" onClick={closeLogViewer} />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -287,9 +283,13 @@ const WorkflowExplorerContextMenu = observer(
     };
     const visitWeburl = (): void => {
       if (node instanceof WorkflowJobTreeNodeData) {
-        applicationStore.navigator.visitAddress(node.workflowJob.webURL);
+        applicationStore.navigationService.navigator.visitAddress(
+          node.workflowJob.webURL,
+        );
       } else if (node instanceof WorkflowTreeNodeData) {
-        applicationStore.navigator.visitAddress(node.workflow.webURL);
+        applicationStore.navigationService.navigator.visitAddress(
+          node.workflow.webURL,
+        );
       }
     };
 
@@ -387,11 +387,10 @@ const WorkflowTreeNodeContainer: React.FC<
                 #{node.label}
               </span>
               <span className="workflow-manager__item__link__content__created-at">
-                created{' '}
-                {formatDistanceToNow(node.workflow.createdAt, {
+                {`created ${formatDistanceToNow(node.workflow.createdAt, {
                   includeSeconds: true,
                   addSuffix: true,
-                })}
+                })}`}
               </span>
             </div>
           </a>
@@ -409,11 +408,10 @@ const WorkflowTreeNodeContainer: React.FC<
                 {node.workflowJob.name}
               </span>
               <span className="workflow-manager__item__link__content__created-at">
-                created{' '}
-                {formatDistanceToNow(node.workflowJob.createdAt, {
+                {`created ${formatDistanceToNow(node.workflowJob.createdAt, {
                   includeSeconds: true,
                   addSuffix: true,
-                })}
+                })}`}
               </span>
             </div>
           </a>

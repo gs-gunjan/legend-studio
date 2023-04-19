@@ -29,18 +29,16 @@ import { useContext, useEffect } from 'react';
 import {
   generateMappingQueryCreatorRoute,
   generateQuerySetupRoute,
-} from '../stores/LegendQueryRouter.js';
+} from '../__lib__/LegendQueryNavigation.js';
 import {
   LATEST_VERSION_ALIAS,
   SNAPSHOT_VERSION_ALIAS,
-  useDepotServerClient,
 } from '@finos/legend-server-depot';
+import { useApplicationStore } from '@finos/legend-application';
 import {
-  useApplicationStore,
-  buildElementOption,
-  type PackageableElementOption,
-} from '@finos/legend-application';
-import { useLegendQueryApplicationStore } from './LegendQueryBaseStoreProvider.js';
+  useLegendQueryApplicationStore,
+  useLegendQueryBaseStore,
+} from './LegendQueryFrameworkProvider.js';
 import { CreateMappingQuerySetupStore } from '../stores/CreateMappingQuerySetupStore.js';
 import {
   BaseQuerySetup,
@@ -52,14 +50,23 @@ import {
 } from './QuerySetup.js';
 import { compareSemVerVersions } from '@finos/legend-storage';
 import type { Mapping, PackageableRuntime } from '@finos/legend-graph';
+import {
+  buildElementOption,
+  getPackageableElementOptionFormatter,
+  type PackageableElementOption,
+} from '@finos/legend-lego/graph-editor';
 
 const CreateMappingQuerySetupStoreProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const applicationStore = useLegendQueryApplicationStore();
-  const depotServerClient = useDepotServerClient();
+  const baseStore = useLegendQueryBaseStore();
   const store = useLocalObservable(
-    () => new CreateMappingQuerySetupStore(applicationStore, depotServerClient),
+    () =>
+      new CreateMappingQuerySetupStore(
+        applicationStore,
+        baseStore.depotServerClient,
+      ),
   );
   return (
     <BaseQuerySetupStoreContext.Provider value={store}>
@@ -81,7 +88,9 @@ const CreateMappingQuerySetupContent = observer(() => {
 
   // actions
   const back = (): void => {
-    applicationStore.navigator.goToLocation(generateQuerySetupRoute());
+    applicationStore.navigationService.navigator.goToLocation(
+      generateQuerySetupRoute(),
+    );
   };
   const next = (): void => {
     if (
@@ -90,7 +99,7 @@ const CreateMappingQuerySetupContent = observer(() => {
       setupStore.currentMapping &&
       setupStore.currentRuntime
     ) {
-      applicationStore.navigator.goToLocation(
+      applicationStore.navigationService.navigator.goToLocation(
         generateMappingQueryCreatorRoute(
           setupStore.currentProject.groupId,
           setupStore.currentProject.artifactId,
@@ -173,9 +182,6 @@ const CreateMappingQuerySetupContent = observer(() => {
         value: setupStore.currentMapping,
       }
     : null;
-  const mappingSelectorPlaceholder = mappingOptions.length
-    ? 'Choose a mapping'
-    : 'No mapping available';
   const onMappingOptionChange = (
     option: PackageableElementOption<Mapping> | null,
   ): void => {
@@ -311,10 +317,17 @@ const CreateMappingQuerySetupContent = observer(() => {
                     disabled={!mappingOptions.length}
                     onChange={onMappingOptionChange}
                     value={selectedMappingOption}
-                    placeholder={mappingSelectorPlaceholder}
+                    placeholder={
+                      mappingOptions.length
+                        ? 'Choose a mapping'
+                        : 'No mapping available'
+                    }
                     isClearable={true}
                     escapeClearsValue={true}
                     darkMode={true}
+                    formatOptionLabel={getPackageableElementOptionFormatter({
+                      darkMode: true,
+                    })}
                   />
                 </div>
                 <div className="query-setup__wizard__group">
@@ -333,6 +346,9 @@ const CreateMappingQuerySetupContent = observer(() => {
                     isClearable={true}
                     escapeClearsValue={true}
                     darkMode={true}
+                    formatOptionLabel={getPackageableElementOptionFormatter({
+                      darkMode: true,
+                    })}
                   />
                 </div>
               </>

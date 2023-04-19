@@ -20,6 +20,7 @@ import {
   stringify as losslessStringify,
   parse as losslessParse,
 } from 'lossless-json';
+import CSVParser from 'papaparse';
 import { assertNonNullable } from '../error/AssertionUtils.js';
 
 export const capitalize = (value: string): string =>
@@ -31,7 +32,7 @@ export const toSentenceCase = (value: string | undefined): string =>
   (value ?? '').trim().replace(/^(?:\w+)\b/u, (val) => capitalize(val));
 
 export const TITLE_CASE_EXCEPTION_WORDS = [
-  // We follow AP style for simplicity
+  // We roughly follow AP style for simplicity
   // See https://en.wikipedia.org/wiki/Title_case
   'a',
   'an',
@@ -69,21 +70,29 @@ export const toTitleCase = (value: string | undefined): string =>
     .replace(/^(?:\w+)\b/u, (val) => capitalize(val))
     .replace(/\b(?:\w+)$/u, (val) => capitalize(val));
 
-export const prettyCONSTName = (value: string | undefined): string =>
-  toSentenceCase((value ?? '').toLowerCase())
-    .replace(/_(?:\w)/gu, (val) => val.toUpperCase())
-    .replace(/_/gu, ' ')
-    .trim();
-
-export const isCamelCase = (value: string | undefined): boolean =>
-  value !== undefined &&
-  value !== '' &&
-  Boolean(value.match(/^(?:[a-z])*(?:[A-Z][a-z]+)+$/u));
-
-export const prettyCamelCase = (value: string | undefined): string =>
-  toSentenceCase(value)
-    .replace(/(?:[A-Z])/gu, (val) => ` ${val}`)
-    .trim();
+export const prettyCONSTName = (value: string | undefined): string => {
+  if (!value) {
+    return '';
+  }
+  // This handles our constant naming convention, e.g. SOME_VALUE, __PRIVATE_VALUE__, etc.
+  if (value.trim().match(/^[A-Z_]+$/)) {
+    return toTitleCase(value.trim().replace(/_+/gu, ' ').toLowerCase());
+  }
+  return (
+    capitalize(value.trim())
+      // NOTE: here we must use capturing group as we also need to capture the breakpoint/separator as chunks
+      .split(/(?<chunk>[A-Z][a-z]+|[0-9]+)/)
+      .map((chunk) =>
+        chunk.toUpperCase() === chunk
+          ? chunk
+          : chunk.charAt(0).toUpperCase() + chunk.slice(1).toLowerCase(),
+      )
+      .filter(Boolean)
+      .join(' ')
+      .replace(/_+/gu, ' ')
+      .replace(/\s+/gu, ' ')
+  );
+};
 
 export const tryToFormatJSONString = (value: string, tabSize = 2): string => {
   try {
@@ -100,6 +109,50 @@ export const tryToMinifyJSONString = (value: string): string => {
     return value.replace(/\n\s*/g, '');
   }
 };
+
+/**
+ * NOTE: this splits a string value into an array of strings by using a
+ * delimiter of a comma if the string is only one line. However, if the
+ * string has multiple lines, the delimiter will not be applied. This is so
+ * that for an example input of multiple lines like
+ *       One, Comma in One
+ *       Two
+ *       Three
+ * will still equal 3 elements (['One, Comma in One', 'Two', 'Three']) rather than 4
+ */
+export const parseCSVString = (value: string): string[] | undefined => {
+  let parseData;
+  if (value.includes('\n')) {
+    parseData = value.trim().split(/\r?\n|\r|\n/g);
+    return parseData;
+  } else {
+    const parseResult = CSVParser.parse<string[]>(value.trim(), {
+      delimiter: ',',
+    });
+    parseData = parseResult.data.flat();
+    if (parseResult.errors.length) {
+      if (
+        parseResult.errors[0] &&
+        parseResult.errors[0].code === 'UndetectableDelimiter' &&
+        parseResult.errors[0].type === 'Delimiter' &&
+        parseResult.data.length === 1
+      ) {
+        // NOTE: this happens when the user only put one item in the value input
+        // we can go the other way by ensure the input has a comma but this is arguably neater
+        // as it tinkers with the parser
+      } else {
+        // there were some parsing error, escape
+        // NOTE: ideally, we could show a warning here
+      }
+      return undefined;
+    } else {
+      return parseData;
+    }
+  }
+};
+
+export const csvStringify = (value: unknown[]): string =>
+  CSVParser.unparse(value);
 
 /**
  * One very common use case is that we get the JSON as response from the server than we will convert this to a string and persist

@@ -67,7 +67,7 @@ import {
   type QueryBuilderPreviewData,
 } from '../QueryBuilderPreviewDataHelper.js';
 import { QueryBuilderPropertySearchState } from './QueryBuilderPropertySearchState.js';
-import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../graphManager/QueryBuilderSupportedFunctions.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../graph/QueryBuilderMetaModelConst.js';
 import { propertyExpression_setFunc } from '../shared/ValueSpecificationModifierHelper.js';
 
 export enum QUERY_BUILDER_EXPLORER_TREE_DND_TYPE {
@@ -660,7 +660,13 @@ export class QueryBuilderExplorerState {
   }
 
   *analyzeMappingModelCoverage(): GeneratorFn<void> {
-    if (this.queryBuilderState.mapping) {
+    // We will only refetch if the analysis result's mapping has changed.
+    // This makes the assumption that the mapping has not been edited, which is a valid assumption since query is not for editing mappings
+    if (
+      this.queryBuilderState.mapping &&
+      this.queryBuilderState.mapping !==
+        this.mappingModelCoverageAnalysisResult?.mapping
+    ) {
       this.mappingModelCoverageAnalysisState.inProgress();
       this.mappingModelCoverageAnalysisState.setMessage('Analyzing Mapping...');
       try {
@@ -673,7 +679,9 @@ export class QueryBuilderExplorerState {
         this.refreshTreeData();
       } catch (error) {
         assertErrorThrown(error);
-        this.queryBuilderState.applicationStore.notifyError(error.message);
+        this.queryBuilderState.applicationStore.notificationService.notifyError(
+          error.message,
+        );
       } finally {
         this.mappingModelCoverageAnalysisState.complete();
       }
@@ -685,7 +693,7 @@ export class QueryBuilderExplorerState {
   ): GeneratorFn<void> {
     const runtime = this.queryBuilderState.runtimeValue;
     if (!runtime) {
-      this.queryBuilderState.applicationStore.notifyWarning(
+      this.queryBuilderState.applicationStore.notificationService.notifyWarning(
         `Can't preview data for property '${node.property.name}': runtime is not specified`,
       );
       return;
@@ -698,7 +706,7 @@ export class QueryBuilderExplorerState {
       return;
     }
     if (this.previewDataState.isGeneratingPreviewData) {
-      this.queryBuilderState.applicationStore.notifyWarning(
+      this.queryBuilderState.applicationStore.notificationService.notifyWarning(
         `Can't preview data for property '${node.property.name}': another preview request is being executed`,
       );
       return;
@@ -780,7 +788,7 @@ export class QueryBuilderExplorerState {
       }
     } catch (error) {
       assertErrorThrown(error);
-      this.queryBuilderState.applicationStore.notifyWarning(
+      this.queryBuilderState.applicationStore.notificationService.notifyWarning(
         `Can't preview data for property '${node.property.name}'. Error: ${error.message}`,
       );
       this.previewDataState.setPreviewData(undefined);

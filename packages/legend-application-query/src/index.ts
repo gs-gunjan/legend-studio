@@ -14,22 +14,24 @@
  * limitations under the License.
  */
 
+// application
 export * from './application/LegendQuery.js';
-export * from './components/LegendQueryBaseStoreProvider.js';
-export * from './stores/LegendQueryBaseStore.js';
+export * from './application/LegendQueryApplicationConfig.js';
+export * from './application/LegendQueryPluginManager.js';
+
+export * from './__lib__/LegendQueryEvent.js';
+export * from './__lib__/LegendQueryEventHelper.js';
+export { generateExistingQueryEditorRoute } from './__lib__/LegendQueryNavigation.js';
 
 export {
-  QueryEditorStoreContext,
-  useQueryEditorStore,
-} from './components/QueryEditorStoreProvider.js';
-export { QueryEditor } from './components/QueryEditor.js';
+  useLegendQueryApplicationStore,
+  useLegendQueryBaseStore,
+} from './components/LegendQueryFrameworkProvider.js';
+export type { LegendQueryApplicationStore } from './stores/LegendQueryBaseStore.js';
 
-export { LegendQueryPluginManager } from './application/LegendQueryPluginManager.js';
-
+// stores
 export * from './stores/LegendQueryApplicationPlugin.js';
-export * from './stores/LegendQueryRouter.js';
 export { BaseQuerySetupStore } from './stores/QuerySetupStore.js';
-export { LegendQueryApplicationConfig } from './application/LegendQueryApplicationConfig.js';
 export {
   createViewProjectHandler,
   createViewSDLCProjectHandler,
@@ -37,9 +39,10 @@ export {
   ExistingQueryEditorStore,
   type QueryExportConfiguration,
 } from './stores/QueryEditorStore.js';
+
+// components
 export {
-  LegendQueryBaseStore,
-  type LegendQueryApplicationStore,
-} from './stores/LegendQueryBaseStore.js';
-export { LEGEND_QUERY_APP_EVENT } from './stores/LegendQueryAppEvent.js';
-export { LegendQueryEventService } from './stores/LegendQueryEventService.js';
+  QueryEditorStoreContext,
+  useQueryEditorStore,
+} from './components/QueryEditorStoreProvider.js';
+export { QueryEditor } from './components/QueryEditor.js';

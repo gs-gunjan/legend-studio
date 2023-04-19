@@ -15,7 +15,7 @@
  */
 
 import { useRef } from 'react';
-import { LEGEND_STUDIO_TEST_ID } from '../../LegendStudioTestID.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../../__lib__/LegendStudioTesting.js';
 import { observer } from 'mobx-react-lite';
 import {
   NewPackageableRuntimeDriver,
@@ -28,7 +28,7 @@ import {
   CONNECTION_TYPE,
 } from '../../../stores/editor/NewElementState.js';
 import { Dialog, compareLabelFn, CustomSelectorInput } from '@finos/legend-art';
-import type { EditorStore } from '../../../stores/EditorStore.js';
+import type { EditorStore } from '../../../stores/editor/EditorStore.js';
 import { prettyCONSTName } from '@finos/legend-shared';
 import type { DSL_LegendStudioApplicationPlugin_Extension } from '../../../stores/LegendStudioApplicationPlugin.js';
 import { useEditorStore } from '../EditorStoreProvider.js';
@@ -38,19 +38,19 @@ import {
   type Class,
   ELEMENT_PATH_DELIMITER,
 } from '@finos/legend-graph';
-import type { FileGenerationTypeOption } from '../../../stores/editor-state/GraphGenerationState.js';
+import type { FileGenerationTypeOption } from '../../../stores/editor/editor-state/GraphGenerationState.js';
 import { flowResult } from 'mobx';
+import { useApplicationStore } from '@finos/legend-application';
 import {
   buildElementOption,
   getPackageableElementOptionFormatter,
-  useApplicationStore,
   type PackageableElementOption,
-} from '@finos/legend-application';
-import type { EmbeddedDataTypeOption } from '../../../stores/editor-state/element-editor-state/data/DataEditorState.js';
-import type { DSL_Data_LegendStudioApplicationPlugin_Extension } from '../../../stores/DSL_Data_LegendStudioApplicationPlugin_Extension.js';
-import { PACKAGEABLE_ELEMENT_TYPE } from '../../../stores/shared/ModelClassifierUtils.js';
-import { EmbeddedDataType } from '../../../stores/editor-state/ExternalFormatState.js';
-import type { DSL_Mapping_LegendStudioApplicationPlugin_Extension } from '../../../stores/DSL_Mapping_LegendStudioApplicationPlugin_Extension.js';
+} from '@finos/legend-lego/graph-editor';
+import type { EmbeddedDataTypeOption } from '../../../stores/editor/editor-state/element-editor-state/data/DataEditorState.js';
+import type { DSL_Data_LegendStudioApplicationPlugin_Extension } from '../../../stores/extensions/DSL_Data_LegendStudioApplicationPlugin_Extension.js';
+import { PACKAGEABLE_ELEMENT_TYPE } from '../../../stores/editor/utils/ModelClassifierUtils.js';
+import { EmbeddedDataType } from '../../../stores/editor/editor-state/ExternalFormatState.js';
+import type { DSL_Mapping_LegendStudioApplicationPlugin_Extension } from '../../../stores/extensions/DSL_Mapping_LegendStudioApplicationPlugin_Extension.js';
 
 export const getElementTypeLabel = (
   editorStore: EditorStore,
@@ -233,7 +233,6 @@ const NewPureModelConnectionDriverEditor = observer(
             darkMode={true}
             formatOptionLabel={getPackageableElementOptionFormatter({
               darkMode: true,
-              pureModel: editorStore.graphManagerState.graph,
             })}
           />
         </div>
@@ -296,6 +295,10 @@ const NewConnectionDriverEditor = observer(() => {
   let storeOptions: { label: string; value?: Store | undefined }[] = [
     { label: 'ModelStore', value: undefined },
   ];
+  // TODO: we should think more about this and filter the store by the connection type
+  // or think about a way to completely revamp this workflow, maybe to let people select
+  // the store first and then the type of the connection
+  // See
   storeOptions = storeOptions.concat(
     editorStore.graphManagerState.usableStores
       .map(buildElementOption)
@@ -504,8 +507,9 @@ export const CreateNewElementModal = observer(() => {
         className="modal modal--dark search-modal"
       >
         <div className="modal__title">
-          Create a New{' '}
-          {getElementTypeLabel(editorStore, newElementState.type) ?? 'element'}
+          {`Create a New ${
+            getElementTypeLabel(editorStore, newElementState.type) ?? 'element'
+          }`}
         </div>
         <div>
           {newElementState.showType && (

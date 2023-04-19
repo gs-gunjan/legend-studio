@@ -26,10 +26,11 @@ import {
   type GeneratorFn,
   assertErrorThrown,
   LogEvent,
+  ActionState,
 } from '@finos/legend-shared';
 import { observable, action, flow, makeObservable, flowResult } from 'mobx';
 import type { QueryBuilderState } from './QueryBuilderState.js';
-import { TAB_SIZE } from '@finos/legend-application';
+import { DEFAULT_TAB_SIZE } from '@finos/legend-application';
 import { LambdaEditorState } from './shared/LambdaEditorState.js';
 
 export class QueryBuilderRawLambdaState {
@@ -59,6 +60,8 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
   rawLambdaState: QueryBuilderRawLambdaState;
   isConvertingLambdaToString = false;
   mode: QueryBuilderTextEditorMode | undefined;
+  closingQueryState = ActionState.create();
+
   /**
    * This is used to store the JSON string when viewing the query in JSON mode
    * TODO: consider moving this to another state if we need to simplify the logic of text-mode
@@ -106,7 +109,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
           (yield this.queryBuilderState.graphManagerState.graphManager.pureCodeToLambda(
             this.fullLambdaString,
             this.lambdaId,
-            { pruneSourceInformation: true },
+            { pruneSourceInformation: false },
           )) as RawLambda;
         this.setParserError(undefined);
         this.rawLambdaState.setLambda(lambda);
@@ -115,7 +118,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
         if (error instanceof ParserError) {
           this.setParserError(error);
         }
-        this.queryBuilderState.applicationStore.log.error(
+        this.queryBuilderState.applicationStore.logService.error(
           LogEvent.create(GRAPH_MANAGER_EVENT.PARSING_FAILURE),
           error,
         );
@@ -153,7 +156,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
         this.isConvertingLambdaToString = false;
       } catch (error) {
         assertErrorThrown(error);
-        this.queryBuilderState.applicationStore.log.error(
+        this.queryBuilderState.applicationStore.logService.error(
           LogEvent.create(GRAPH_MANAGER_EVENT.PARSING_FAILURE),
           error,
         );
@@ -179,7 +182,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
             ),
           ),
           null,
-          TAB_SIZE,
+          DEFAULT_TAB_SIZE,
         ),
       );
     }
@@ -187,18 +190,24 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
   }
 
   *closeModal(): GeneratorFn<void> {
+    this.closingQueryState.inProgress();
     if (this.mode === QueryBuilderTextEditorMode.TEXT) {
       yield flowResult(this.convertLambdaGrammarStringToObject());
       if (this.parserError) {
-        this.queryBuilderState.applicationStore.notifyError(
+        this.queryBuilderState.applicationStore.notificationService.notifyError(
           `Can't parse query. Please fix error before closing: ${this.parserError.message}`,
         );
       } else {
-        this.queryBuilderState.rebuildWithQuery(this.rawLambdaState.lambda);
+        this.queryBuilderState.rebuildWithQuery(this.rawLambdaState.lambda, {
+          preserveParameterValues: true,
+          preserveResult: true,
+        });
         this.setMode(undefined);
       }
       return;
     }
+    this.closingQueryState.complete();
+
     this.setMode(undefined);
   }
 }

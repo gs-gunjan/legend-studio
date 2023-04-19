@@ -22,20 +22,20 @@ import {
   guaranteeNonNullable,
 } from '@finos/legend-shared';
 import { action, observable, makeObservable, flow, flowResult } from 'mobx';
-import type { EditorStore } from './EditorStore.js';
+import type { PureIDEStore } from './PureIDEStore.js';
 
 export abstract class TreeState<
   T extends TreeNodeData & { isLoading: boolean },
   V,
 > {
-  readonly editorStore: EditorStore;
+  readonly ideStore: PureIDEStore;
 
   treeData?: TreeData<T>;
   selectedNode?: T | undefined;
   loadInitialDataState = ActionState.create();
   refreshDataState = ActionState.create();
 
-  constructor(editorStore: EditorStore) {
+  constructor(ideStore: PureIDEStore) {
     makeObservable(this, {
       treeData: observable.ref,
       loadInitialDataState: observable,
@@ -48,7 +48,7 @@ export abstract class TreeState<
       setSelectedNode: action,
     });
 
-    this.editorStore = editorStore;
+    this.ideStore = ideStore;
   }
 
   getTreeData(): TreeData<T> {
@@ -65,7 +65,7 @@ export abstract class TreeState<
 
   *initialize(): GeneratorFn<void> {
     if (this.loadInitialDataState.isInProgress) {
-      this.editorStore.applicationStore.notifyWarning(
+      this.ideStore.applicationStore.notificationService.notifyWarning(
         'Tree state initialization is in progress',
       );
       return;
@@ -76,7 +76,7 @@ export abstract class TreeState<
       this.loadInitialDataState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.notifyError(error);
+      this.ideStore.applicationStore.notificationService.notifyError(error);
       this.loadInitialDataState.fail();
     }
   }
@@ -119,7 +119,7 @@ export abstract class TreeState<
         this.refreshTree();
       } catch (error) {
         assertErrorThrown(error);
-        this.editorStore.applicationStore.notifyError(error);
+        this.ideStore.applicationStore.notificationService.notifyError(error);
       } finally {
         node.isLoading = false;
       }
@@ -127,6 +127,9 @@ export abstract class TreeState<
   }
 
   *refreshTreeData(): GeneratorFn<void> {
+    if (!this.treeData) {
+      return;
+    }
     const openingNodeIds = new Set(
       Array.from(this.getTreeData().nodes.values())
         .filter((node) => node.isOpen)
@@ -138,7 +141,7 @@ export abstract class TreeState<
       this.treeData = this.buildTreeData((yield this.getRootNodes()) as V[]);
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.notifyError(error);
+      this.ideStore.applicationStore.notificationService.notifyError(error);
       this.refreshDataState.fail();
       return;
     }

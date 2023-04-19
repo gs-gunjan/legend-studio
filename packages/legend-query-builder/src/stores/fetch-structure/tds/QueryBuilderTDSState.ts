@@ -35,6 +35,8 @@ import {
   filterByType,
   type Hashable,
   hashArray,
+  UnsupportedOperationError,
+  ContentType,
 } from '@finos/legend-shared';
 import type { QueryBuilderState } from '../../QueryBuilderState.js';
 import {
@@ -52,6 +54,7 @@ import {
   matchFunctionName,
   SimpleFunctionExpression,
   getAllSuperclasses,
+  EXECUTION_SERIALIZATION_FORMAT,
 } from '@finos/legend-graph';
 import {
   DEFAULT_LAMBDA_VARIABLE_NAME,
@@ -90,12 +93,19 @@ import {
 } from '@finos/legend-application';
 import type { LambdaFunctionBuilderOption } from '../../QueryBuilderValueSpecificationBuilderHelper.js';
 import { appendProjection } from './projection/QueryBuilderProjectionValueSpecificationBuilder.js';
-import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../graphManager/QueryBuilderSupportedFunctions.js';
-import { QUERY_BUILDER_HASH_STRUCTURE } from '../../../graphManager/QueryBuilderHashUtils.js';
-import { QueryBuilderOLAPGroupByState } from './olapGroupBy/QueryBuilderOLAPGroupByState.js';
-import type { QueryBuilderTDS_OLAPOperator } from './olapGroupBy/operators/QueryBuilderTDS_OLAPOperator.js';
-import { getQueryBuilderCoreOLAPGroupByOperators } from './olapGroupBy/QueryBuilderOLAPGroupByOperatorLoader.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../graph/QueryBuilderMetaModelConst.js';
+import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../../QueryBuilderStateHashUtils.js';
+import { QueryBuilderWindowState } from './window/QueryBuilderWindowState.js';
+import type { QueryBuilderTDS_WindowOperator } from './window/operators/QueryBuilderTDS_WindowOperator.js';
+import { getQueryBuilderCoreWindowOperators } from './window/QueryBuilderWindowGroupByOperatorLoader.js';
 import type { QueryBuilderTDSColumnState } from './QueryBuilderTDSColumnState.js';
+import { QUERY_BUILDER_SETTING_KEY } from '../../../__lib__/QueryBuilderSetting.js';
+import type { ExportDataInfo } from '../../QueryBuilderResultState.js';
+
+// TODO: should we support raw once externalize() is supported on TDS ?
+export enum TDS_EXECUTION_SERIALIZATION_FORMAT {
+  CSV = 'CSV',
+}
 
 export class QueryBuilderTDSState
   extends QueryBuilderFetchStructureImplementationState
@@ -103,19 +113,19 @@ export class QueryBuilderTDSState
 {
   readonly aggregationState: QueryBuilderAggregationState;
   readonly postFilterState: QueryBuilderPostFilterState;
-  readonly olapGroupByState: QueryBuilderOLAPGroupByState;
+  readonly windowState: QueryBuilderWindowState;
   readonly resultSetModifierState: QueryResultSetModifierState;
   projectionColumns: QueryBuilderProjectionColumnState[] = [];
   isConvertDerivationProjectionObjects = false;
-  showPostFilterPanel = false;
-  showOlapGroupByPanel = false;
+  showPostFilterPanel: boolean;
+  showWindowFuncPanel = false;
 
   postFilterOperators: QueryBuilderPostFilterOperator[] =
     getQueryBuilderCorePostFilterOperators();
   aggregationOperators: QueryBuilderAggregateOperator[] =
     getQueryBuilderCoreAggregrationOperators();
-  olapGroupByOperators: QueryBuilderTDS_OLAPOperator[] =
-    getQueryBuilderCoreOLAPGroupByOperators();
+  windowFuncOperators: QueryBuilderTDS_WindowOperator[] =
+    getQueryBuilderCoreWindowOperators();
 
   constructor(
     queryBuilderState: QueryBuilderState,
@@ -127,15 +137,16 @@ export class QueryBuilderTDSState
       projectionColumns: observable,
       isConvertDerivationProjectionObjects: observable,
       showPostFilterPanel: observable,
-      showOlapGroupByPanel: observable,
+      showWindowFuncPanel: observable,
       TEMPORARY__showPostFetchStructurePanel: computed,
       derivations: computed,
       hasParserError: computed,
       addColumn: action,
       moveColumn: action,
       replaceColumn: action,
+      initialize: action,
       setShowPostFilterPanel: action,
-      setShowOlapGroupByPanel: action,
+      setShowWindowFuncPanel: action,
       convertDerivationProjectionObjects: flow,
     });
 
@@ -148,10 +159,14 @@ export class QueryBuilderTDSState
       this,
       this.aggregationOperators,
     );
-    this.olapGroupByState = new QueryBuilderOLAPGroupByState(
+    this.windowState = new QueryBuilderWindowState(
       this,
-      this.olapGroupByOperators,
+      this.windowFuncOperators,
     );
+    this.showPostFilterPanel =
+      this.queryBuilderState.applicationStore.settingService.getBooleanValue(
+        QUERY_BUILDER_SETTING_KEY.SHOW_POST_FILTER_PANEL,
+      ) ?? false;
   }
 
   get type(): string {
@@ -173,7 +188,7 @@ export class QueryBuilderTDSState
   override get TEMPORARY__showPostFetchStructurePanel(): boolean {
     return (
       this.queryBuilderState.filterState.showPanel ||
-      this.showOlapGroupByPanel ||
+      this.showWindowFuncPanel ||
       this.showPostFilterPanel
     );
   }
@@ -252,7 +267,7 @@ export class QueryBuilderTDSState
     return Array.from(new Set(nodeIDs).values());
   }
 
-  get validationIssues(): string[] | undefined {
+  get fetchStructureValidationIssues(): string[] {
     const hasDuplicatedProjectionColumns = this.projectionColumns.some(
       (column) =>
         this.projectionColumns.filter((c) => c.columnName === column.columnName)
@@ -265,7 +280,16 @@ export class QueryBuilderTDSState
     if (hasNoProjectionColumns) {
       return ['Query has no projection columns'];
     }
-    return undefined;
+    return [];
+  }
+
+  get allValidationIssues(): string[] {
+    const fetchStructureValidationIssues = [
+      ...this.fetchStructureValidationIssues,
+      ...this.windowState.windowValidationIssues,
+    ];
+
+    return fetchStructureValidationIssues;
   }
 
   get tdsColumns(): QueryBuilderTDSColumnState[] {
@@ -279,8 +303,27 @@ export class QueryBuilderTDSState
     return [
       ...this.aggregationState.columns,
       ...projectionColumns,
-      ...this.olapGroupByState.olapColumns,
+      ...this.windowState.windowColumns,
     ];
+  }
+
+  override get exportDataFormatOptions(): string[] {
+    return [TDS_EXECUTION_SERIALIZATION_FORMAT.CSV];
+  }
+
+  override getExportDataInfo(format: string): ExportDataInfo {
+    switch (format) {
+      case TDS_EXECUTION_SERIALIZATION_FORMAT.CSV:
+        return {
+          contentType: ContentType.TEXT_CSV,
+          serializationFormat: EXECUTION_SERIALIZATION_FORMAT.CSV,
+        };
+
+      default:
+        throw new UnsupportedOperationError(
+          `Unsupported TDS export type ${format}`,
+        );
+    }
   }
 
   isDuplicateColumn(col: QueryBuilderTDSColumnState): boolean {
@@ -289,11 +332,17 @@ export class QueryBuilderTDSState
     );
   }
 
+  override initialize(): void {
+    this.queryBuilderState.filterState.setShowPanel(true);
+    this.setShowPostFilterPanel(false);
+    this.setShowWindowFuncPanel(false);
+  }
+
   isColumnInUse(tdsCol: QueryBuilderTDSColumnState): boolean {
     return Boolean(
       [
         ...this.postFilterState.referencedTDSColumns,
-        ...this.olapGroupByState.referencedTDSColumns,
+        ...this.windowState.referencedTDSColumns,
       ].find((col) => {
         if (col instanceof QueryBuilderAggregateColumnState) {
           return tdsCol instanceof QueryBuilderAggregateColumnState
@@ -320,8 +369,8 @@ export class QueryBuilderTDSState
     this.showPostFilterPanel = val;
   }
 
-  setShowOlapGroupByPanel(val: boolean): void {
-    this.showOlapGroupByPanel = val;
+  setShowWindowFuncPanel(val: boolean): void {
+    this.showWindowFuncPanel = val;
   }
 
   *convertDerivationProjectionObjects(): GeneratorFn<void> {
@@ -360,7 +409,7 @@ export class QueryBuilderTDSState
         });
       } catch (error) {
         assertErrorThrown(error);
-        this.queryBuilderState.applicationStore.log.error(
+        this.queryBuilderState.applicationStore.logService.error(
           LogEvent.create(GRAPH_MANAGER_EVENT.PARSING_FAILURE),
           error,
         );
@@ -426,6 +475,11 @@ export class QueryBuilderTDSState
     }
 
     changeEntry(this.projectionColumns, oldVal, newVal);
+  }
+
+  removeAllColumns(): void {
+    this.projectionColumns = [];
+    this.aggregationState.columns = [];
   }
 
   removeColumn(val: QueryBuilderProjectionColumnState): void {
@@ -603,6 +657,28 @@ export class QueryBuilderTDSState
     });
   }
 
+  checkBeforeClearingColumns(onChange: () => void): void {
+    this.queryBuilderState.applicationStore.alertService.setActionAlertInfo({
+      message:
+        'You will be clearing all projection columns. Do you still want to proceed?',
+      type: ActionAlertType.CAUTION,
+      actions: [
+        {
+          label: 'Proceed',
+          type: ActionAlertActionType.PROCEED_WITH_CAUTION,
+          handler: this.queryBuilderState.applicationStore.guardUnhandledError(
+            async () => onChange(),
+          ),
+        },
+        {
+          label: 'Cancel',
+          type: ActionAlertActionType.PROCEED,
+          default: true,
+        },
+      ],
+    });
+  }
+
   checkBeforeChangingImplementation(onChange: () => void): void {
     if (
       this.projectionColumns.length > 0
@@ -610,7 +686,7 @@ export class QueryBuilderTDSState
       // but we make the assumption that if there is no projection column, there should
       // not be any post-filter at all
     ) {
-      this.queryBuilderState.applicationStore.setActionAlertInfo({
+      this.queryBuilderState.applicationStore.alertService.setActionAlertInfo({
         message:
           this.showPostFilterPanel && this.postFilterState.nodes.size > 0
             ? 'With graph-fetch mode, post filter is not supported. Current projection columns and post filters will be lost when switching to the graph-fetch mode. Do you still want to proceed?'
@@ -655,7 +731,7 @@ export class QueryBuilderTDSState
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.PROJECTION_STATE,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.PROJECTION_STATE,
       hashArray(this.projectionColumns),
       this.aggregationState,
       this.postFilterState,

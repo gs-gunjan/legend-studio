@@ -16,10 +16,10 @@
 
 import {
   type PureGrammarTextSuggestion,
-  EDITOR_LANGUAGE,
+  CODE_EDITOR_LANGUAGE,
   isTokenOneOf,
   PURE_GRAMMAR_TOKEN,
-} from '@finos/legend-application';
+} from '@finos/legend-lego/code-editor';
 import {
   ELEMENT_PATH_DELIMITER,
   extractElementNameFromPath,
@@ -45,7 +45,7 @@ import {
   ElementSuggestion,
   VariableSuggestion,
 } from '../server/models/Suggestion.js';
-import type { EditorStore } from './EditorStore.js';
+import type { PureIDEStore } from './PureIDEStore.js';
 import {
   BLANK_CLASS_SNIPPET,
   BLANK_FUNCTION_SNIPPET,
@@ -62,13 +62,13 @@ import {
   SIMPLE_FUNCTION_SNIPPET,
   SIMPLE_PROFILE_SNIPPET,
   BLANK_DIAGRAM_SNIPPET,
-  COPYRIGHT_HEADER_SNIPPET,
-} from './LegendPureIDECodeSnippets.js';
+  getCopyrightHeaderSnippet,
+} from '../__lib__/LegendPureIDECodeSnippet.js';
 
 // NOTE: these are technically different parsers compared to the ones we have in `Legend Engine` so we will
 // not try to reuse the constants from DSL diagram
-const PURE_GRAMMAR_DIAGRAM_PARSER_NAME = 'Diagram';
-const PURE_GRAMMAR_DIAGRAM_ELEMENT_TYPE_LABEL = 'Diagram';
+export const PURE_GRAMMAR_DIAGRAM_PARSER_NAME = 'Diagram';
+export const PURE_GRAMMAR_DIAGRAM_ELEMENT_TYPE_LABEL = 'Diagram';
 
 export const collectParserKeywordSuggestions =
   (): PureGrammarTextSuggestion[] => [
@@ -233,13 +233,13 @@ export const getCopyrightHeaderSuggestions =
 
     results.push({
       label: {
-        label: `#copyright`,
+        label: `/copyright`,
         description: `(copyright header)`,
       },
       kind: monacoLanguagesAPI.CompletionItemKind.Snippet,
       insertTextRules:
         monacoLanguagesAPI.CompletionItemInsertTextRule.InsertAsSnippet,
-      insertText: COPYRIGHT_HEADER_SNIPPET,
+      insertText: getCopyrightHeaderSnippet(),
       // NOTE: only show this suggestion when the cursor is on the first line of the file
       range: {
         startLineNumber: 1,
@@ -338,18 +338,16 @@ const elementSuggestionToCompletionItem = (
   } as monacoLanguagesAPI.CompletionItem;
 };
 
-const INCOMPLETE_PATH_PATTERN =
-  /(?<incompletePath>(?:[a-zA-Z0-9_][a-zA-Z0-9_$]*::)+$)/;
+const INCOMPLETE_PATH_PATTERN = /(?<incompletePath>(?:\w[\w$]*::)+$)/;
 
 const ARROW_FUNCTION_USAGE_WITH_INCOMPLETE_PATH_PATTERN =
-  /->\s*(?:[a-zA-Z0-9_][a-zA-Z0-9_$]*::)+$/;
-const CONSTRUCTOR_USAGE_WITH_INCOMPLETE_PATH_PATTERN =
-  /\^\s*(?:[a-zA-Z0-9_][a-zA-Z0-9_$]*::)+$/;
+  /->\s*(?:\w[\w$]*::)+$/;
+const CONSTRUCTOR_USAGE_WITH_INCOMPLETE_PATH_PATTERN = /\^\s*(?:\w[\w$]*::)+$/;
 
 export const getIncompletePathSuggestions = async (
   position: IPosition,
   model: monacoEditorAPI.ITextModel,
-  editorStore: EditorStore,
+  ideStore: PureIDEStore,
 ): Promise<monacoLanguagesAPI.CompletionItem[]> => {
   const incompletePathMatch = model
     .getLineContent(position.lineNumber)
@@ -372,7 +370,7 @@ export const getIncompletePathSuggestions = async (
     let suggestions: ElementSuggestion[] = [];
     try {
       suggestions = (
-        await editorStore.client.getSuggestionsForIncompletePath(
+        await ideStore.client.getSuggestionsForIncompletePath(
           incompletePathMatch.groups.incompletePath.substring(
             0,
             incompletePathMatch.groups.incompletePath.length -
@@ -401,7 +399,7 @@ export const getIncompletePathSuggestions = async (
 };
 
 const IMPORT_STATEMENT_PATTERN =
-  /^\s*import\s+(?:(?<importPath>(?:(?:[a-zA-Z0-9_][a-zA-Z0-9_$]*)::)*[a-zA-Z0-9_][a-zA-Z0-9_$]*)::*)/;
+  /^\s*import\s+(?:(?<importPath>(?:(?:\w[\w$]*)::)*\w[\w$]*)::*)/;
 
 const getCurrentSectionImportPaths = (
   position: IPosition,
@@ -428,13 +426,13 @@ const getCurrentSectionImportPaths = (
     .filter(isNonNullable);
 };
 
-const ARROW_FUNCTION_USAGE_PATTERN = /->\s*(?:[a-zA-Z0-9_][a-zA-Z0-9_$]*)?$/;
-const CONSTRUCTOR_USAGE_PATTERN = /\^\s*(?:[a-zA-Z0-9_][a-zA-Z0-9_$]*)?$/;
+const ARROW_FUNCTION_USAGE_PATTERN = /->\s*(?:\w[\w$]*)?$/;
+const CONSTRUCTOR_USAGE_PATTERN = /\^\s*(?:\w[\w$]*)?$/;
 
 export const getIdentifierSuggestions = async (
   position: IPosition,
   model: monacoEditorAPI.ITextModel,
-  editorStore: EditorStore,
+  ideStore: PureIDEStore,
 ): Promise<monacoLanguagesAPI.CompletionItem[]> => {
   const importPaths = getCurrentSectionImportPaths(position, model);
   const isUsingArrowFunction = Boolean(
@@ -453,7 +451,7 @@ export const getIdentifierSuggestions = async (
   let suggestions: ElementSuggestion[] = [];
   try {
     suggestions = (
-      await editorStore.client.getSuggestionsForIdentifier(
+      await ideStore.client.getSuggestionsForIdentifier(
         importPaths,
         isUsingConstructor
           ? [ConceptType.CLASS]
@@ -477,13 +475,13 @@ export const getIdentifierSuggestions = async (
 export const getArrowFunctionSuggestions = async (
   position: IPosition,
   model: monacoEditorAPI.ITextModel,
-  editorStore: EditorStore,
+  ideStore: PureIDEStore,
 ): Promise<monacoLanguagesAPI.CompletionItem[]> => {
   const importPaths = getCurrentSectionImportPaths(position, model);
   let suggestions: ElementSuggestion[] = [];
   try {
     suggestions = (
-      await editorStore.client.getSuggestionsForIdentifier(importPaths, [
+      await ideStore.client.getSuggestionsForIdentifier(importPaths, [
         ConceptType.FUNCTION,
         ConceptType.NATIVE_FUNCTION,
       ])
@@ -533,12 +531,12 @@ const attributeSuggestionToCompletionItem = (
 };
 
 const ATTRIBUTE_ACCESSOR_PATTERN =
-  /^(?<owner>(?:(?:[a-zA-Z0-9_][a-zA-Z0-9_$]*)::)*[a-zA-Z0-9_][a-zA-Z0-9_$]*)\s*.$/;
+  /^(?<owner>(?:(?:\w[\w$]*)::)*\w[\w$]*)\s*.$/;
 
 export const getAttributeSuggestions = async (
   position: IPosition,
   model: monacoEditorAPI.ITextModel,
-  editorStore: EditorStore,
+  ideStore: PureIDEStore,
 ): Promise<monacoLanguagesAPI.CompletionItem[]> => {
   const attributeAccessorMatch = model
     .getLineContent(position.lineNumber)
@@ -550,7 +548,7 @@ export const getAttributeSuggestions = async (
     let suggestions: AttributeSuggestion[] = [];
     try {
       suggestions = (
-        await editorStore.client.getSuggestionsForAttribute(
+        await ideStore.client.getSuggestionsForAttribute(
           importPaths,
           attributeAccessorMatch.groups.owner,
         )
@@ -570,13 +568,13 @@ export const getAttributeSuggestions = async (
 export const getConstructorClassSuggestions = async (
   position: IPosition,
   model: monacoEditorAPI.ITextModel,
-  editorStore: EditorStore,
+  ideStore: PureIDEStore,
 ): Promise<monacoLanguagesAPI.CompletionItem[]> => {
   const importPaths = getCurrentSectionImportPaths(position, model);
   let suggestions: ClassSuggestion[] = [];
   try {
     suggestions = (
-      await editorStore.client.getSuggestionsForClass(importPaths)
+      await ideStore.client.getSuggestionsForClass(importPaths)
     ).map((child) => deserialize(ClassSuggestion, child));
   } catch {
     // do nothing: provide no suggestions when error ocurred
@@ -605,13 +603,13 @@ const castingClassSuggestionToCompletionItem = (
 export const getCastingClassSuggestions = async (
   position: IPosition,
   model: monacoEditorAPI.ITextModel,
-  editorStore: EditorStore,
+  ideStore: PureIDEStore,
 ): Promise<monacoLanguagesAPI.CompletionItem[]> => {
   const importPaths = getCurrentSectionImportPaths(position, model);
   let suggestions: ClassSuggestion[] = [];
   try {
     suggestions = (
-      await editorStore.client.getSuggestionsForClass(importPaths)
+      await ideStore.client.getSuggestionsForClass(importPaths)
     ).map((child) => deserialize(ClassSuggestion, child));
   } catch {
     // do nothing: provide no suggestions when error ocurred
@@ -644,14 +642,14 @@ export const getVariableSuggestions = async (
   position: IPosition,
   model: monacoEditorAPI.ITextModel,
   filePath: string,
-  editorStore: EditorStore,
+  ideStore: PureIDEStore,
 ): Promise<monacoLanguagesAPI.CompletionItem[]> => {
   let suggestions: VariableSuggestion[] = [];
 
   // get suggestions from compiled source
   try {
     suggestions = (
-      await editorStore.client.getSuggestionsForVariable(
+      await ideStore.client.getSuggestionsForVariable(
         filePath,
         position.lineNumber,
         position.column,
@@ -686,7 +684,7 @@ export const getVariableSuggestions = async (
     const lineTokens = guaranteeNonNullable(
       monacoEditorAPI.tokenize(
         model.getLineContent(i + 1),
-        EDITOR_LANGUAGE.PURE,
+        CODE_EDITOR_LANGUAGE.PURE,
       )[0],
     );
     lineTokens.forEach((token, lineIndex) => {

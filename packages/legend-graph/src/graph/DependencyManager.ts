@@ -15,34 +15,50 @@
  */
 
 import { type Clazz, guaranteeNonNullable } from '@finos/legend-shared';
-import type { PackageableElement } from '../graph/metamodel/pure/packageableElements/PackageableElement.js';
-import type { Enumeration } from '../graph/metamodel/pure/packageableElements/domain/Enumeration.js';
-import type { Type } from '../graph/metamodel/pure/packageableElements/domain/Type.js';
-import type { Class } from '../graph/metamodel/pure/packageableElements/domain/Class.js';
-import type { Mapping } from '../graph/metamodel/pure/packageableElements/mapping/Mapping.js';
-import type { Profile } from '../graph/metamodel/pure/packageableElements/domain/Profile.js';
-import { Package } from '../graph/metamodel/pure/packageableElements/domain/Package.js';
-import type { ConcreteFunctionDefinition } from '../graph/metamodel/pure/packageableElements/domain/ConcreteFunctionDefinition.js';
-import type { Store } from '../graph/metamodel/pure/packageableElements/store/Store.js';
-import type { Association } from '../graph/metamodel/pure/packageableElements/domain/Association.js';
-import type { Service } from '../graph/metamodel/pure/packageableElements/service/Service.js';
-import { BasicModel } from '../graph/BasicModel.js';
-import type { PackageableRuntime } from '../graph/metamodel/pure/packageableElements/runtime/PackageableRuntime.js';
-import type { PackageableConnection } from '../graph/metamodel/pure/packageableElements/connection/PackageableConnection.js';
-import type { FileGenerationSpecification } from '../graph/metamodel/pure/packageableElements/fileGeneration/FileGenerationSpecification.js';
-import type { GenerationSpecification } from '../graph/metamodel/pure/packageableElements/generationSpecification/GenerationSpecification.js';
-import type { Measure } from '../graph/metamodel/pure/packageableElements/domain/Measure.js';
-import type { SectionIndex } from '../graph/metamodel/pure/packageableElements/section/SectionIndex.js';
-import type { Entity } from '@finos/legend-storage';
-import type { Database } from '../graph/metamodel/pure/packageableElements/store/relational/model/Database.js';
-import type { DataElement } from '../graph/metamodel/pure/packageableElements/data/DataElement.js';
+import type { PackageableElement } from './metamodel/pure/packageableElements/PackageableElement.js';
+import type { Enumeration } from './metamodel/pure/packageableElements/domain/Enumeration.js';
+import type { Type } from './metamodel/pure/packageableElements/domain/Type.js';
+import type { Class } from './metamodel/pure/packageableElements/domain/Class.js';
+import type { Mapping } from './metamodel/pure/packageableElements/mapping/Mapping.js';
+import type { Profile } from './metamodel/pure/packageableElements/domain/Profile.js';
+import { Package } from './metamodel/pure/packageableElements/domain/Package.js';
+import type { ConcreteFunctionDefinition } from './metamodel/pure/packageableElements/domain/ConcreteFunctionDefinition.js';
+import type { Store } from './metamodel/pure/packageableElements/store/Store.js';
+import type { Association } from './metamodel/pure/packageableElements/domain/Association.js';
+import type { Service } from './metamodel/pure/packageableElements/service/Service.js';
+import { BasicModel } from './BasicModel.js';
+import type { PackageableRuntime } from './metamodel/pure/packageableElements/runtime/PackageableRuntime.js';
+import type { PackageableConnection } from './metamodel/pure/packageableElements/connection/PackageableConnection.js';
+import type { FileGenerationSpecification } from './metamodel/pure/packageableElements/fileGeneration/FileGenerationSpecification.js';
+import type { GenerationSpecification } from './metamodel/pure/packageableElements/generationSpecification/GenerationSpecification.js';
+import type { Measure } from './metamodel/pure/packageableElements/domain/Measure.js';
+import type { SectionIndex } from './metamodel/pure/packageableElements/section/SectionIndex.js';
+import { type EntitiesWithOrigin } from '@finos/legend-storage';
+import type { Database } from './metamodel/pure/packageableElements/store/relational/model/Database.js';
+import type { DataElement } from './metamodel/pure/packageableElements/data/DataElement.js';
+import type { ExecutionEnvironmentInstance } from './metamodel/pure/packageableElements/service/ExecutionEnvironmentInstance.js';
+import { LegendSDLC, type GraphDataOrigin } from './GraphDataOrigin.js';
+
+const DEPENDENCY_ROOT_PACKAGE_PREFIX = '@dependency__';
+const generateDependencyRootPackageName = (dependencyKey: string): string =>
+  `${DEPENDENCY_ROOT_PACKAGE_PREFIX}${dependencyKey}`;
+export const extractDependencyGACoordinateFromRootPackageName = (
+  packageName: string,
+): string | undefined => {
+  const idx = packageName.indexOf(DEPENDENCY_ROOT_PACKAGE_PREFIX);
+  if (idx !== 0) {
+    return undefined;
+  }
+  return packageName.substring(DEPENDENCY_ROOT_PACKAGE_PREFIX.length);
+};
 
 class DependencyModel extends BasicModel {
   constructor(
     extensionElementClasses: Clazz<PackageableElement>[],
     root: Package,
+    origin: GraphDataOrigin,
   ) {
-    super(root.name, extensionElementClasses);
+    super(root.name, extensionElementClasses, origin);
     this.root = root;
   }
 }
@@ -75,16 +91,32 @@ export class DependencyManager {
   /**
    * Here we create and index a graph for each dependency
    */
-  initialize(dependencyEntitiesIndex: Map<string, Entity[]>): void {
-    Array.from(dependencyEntitiesIndex.keys()).forEach((dependencyKey) => {
-      const pkg = new Package(dependencyKey);
-      this.roots.push(pkg);
-      // NOTE: all dependency models will share the dependency manager root package.
-      this.projectDependencyModelsIndex.set(
-        dependencyKey,
-        new DependencyModel(this.extensionElementClasses, pkg),
-      );
-    });
+  initialize(dependencyEntitiesIndex: Map<string, EntitiesWithOrigin>): void {
+    Array.from(dependencyEntitiesIndex.entries()).forEach(
+      ([dependencyKey, entitiesWithOrigin]) => {
+        const pkg = new Package(
+          generateDependencyRootPackageName(dependencyKey),
+        );
+        this.roots.push(pkg);
+        // NOTE: all dependency models will share the dependency manager root package.
+        this.projectDependencyModelsIndex.set(
+          dependencyKey,
+          new DependencyModel(
+            this.extensionElementClasses,
+            pkg,
+            new LegendSDLC(
+              entitiesWithOrigin.groupId,
+              entitiesWithOrigin.artifactId,
+              entitiesWithOrigin.versionId,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  get numberOfDependencies(): number {
+    return this.projectDependencyModelsIndex.size;
   }
 
   get hasDependencies(): boolean {
@@ -164,6 +196,11 @@ export class DependencyManager {
     this,
     (dep: BasicModel, path: string) => dep.getOwnNullableDataElement(path),
   );
+  getOwnExecutionEnvironment = buildDependencyElementGetter(
+    this,
+    (dep: BasicModel, path: string) =>
+      dep.getOwnNullableExecutionEnviornment(path),
+  );
   getOwnNullableExtensionElement<T extends PackageableElement>(
     path: string,
     extensionElementClass: Clazz<T>,
@@ -231,6 +268,10 @@ export class DependencyManager {
   }
   get fileGenerations(): FileGenerationSpecification[] {
     return this.dependencyGraphs.flatMap((dep) => dep.ownFileGenerations);
+  }
+
+  get executionEnvironments(): ExecutionEnvironmentInstance[] {
+    return this.dependencyGraphs.flatMap((dep) => dep.ownExecutionEnvironments);
   }
 
   getExtensionElements<T extends PackageableElement>(

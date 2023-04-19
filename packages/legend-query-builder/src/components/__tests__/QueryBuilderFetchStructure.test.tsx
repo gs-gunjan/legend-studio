@@ -22,6 +22,8 @@ import {
   getByTitle,
   getByText,
   act,
+  getByDisplayValue,
+  getAllByTitle,
 } from '@testing-library/react';
 import {
   TEST_DATA__simpleProjection,
@@ -33,6 +35,9 @@ import {
   TEST_DATA__complexGraphFetch,
   TEST_DATA__simpleGraphFetch,
   TEST_DATA__simpleProjectionWithSubtypeFromSubtypeModel,
+  TEST_DATA__getAllWithOneIntegerConditionFilter,
+  TEST_DATA_getAllWithOneFloatConditionFilter,
+  TEST_DATA_projectionWithWindowFunction,
 } from '../../stores/__tests__/TEST_DATA__QueryBuilder_Generic.js';
 import {
   TEST_DATA__ModelCoverageAnalysisResult_ComplexRelational,
@@ -42,17 +47,19 @@ import TEST_DATA__ComplexRelationalModel from '../../stores/__tests__/TEST_DATA_
 import TEST_DATA__ComplexM2MModel from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_ComplexM2M.json';
 import TEST_DATA_SimpleSubtypeModel from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_SimpleSubtype.json';
 import {
-  integrationTest,
   guaranteeNonNullable,
   guaranteeType,
+  getNullableFirstElement,
 } from '@finos/legend-shared';
+import { integrationTest } from '@finos/legend-shared/test';
 import {
   AbstractPropertyExpression,
+  PrimitiveInstanceValue,
   create_RawLambda,
   getClassProperty,
   stub_RawLambda,
 } from '@finos/legend-graph';
-import { QUERY_BUILDER_TEST_ID } from '../QueryBuilder_TestID.js';
+import { QUERY_BUILDER_TEST_ID } from '../../__lib__/QueryBuilderTesting.js';
 import {
   QueryBuilderExplorerTreeRootNodeData,
   QueryBuilderExplorerTreeSubTypeNodeData,
@@ -61,7 +68,8 @@ import { QueryBuilderSimpleProjectionColumnState } from '../../stores/fetch-stru
 import { COLUMN_SORT_TYPE } from '../../stores/fetch-structure/tds/QueryResultSetModifierState.js';
 import { QueryBuilderTDSState } from '../../stores/fetch-structure/tds/QueryBuilderTDSState.js';
 import { QueryBuilderGraphFetchTreeState } from '../../stores/fetch-structure/graph-fetch/QueryBuilderGraphFetchTreeState.js';
-import { TEST__setUpQueryBuilder } from '../QueryBuilderComponentTestUtils.js';
+import { TEST__setUpQueryBuilder } from '../__test-utils__/QueryBuilderComponentTestUtils.js';
+import { QueryBuilderFilterTreeConditionNodeData } from '../../stores/filter/QueryBuilderFilterState.js';
 
 test(
   integrationTest(
@@ -266,6 +274,19 @@ test(
       getByTitle(queryBuilder, 'Configure result set modifiers...'),
     );
     const modal = await waitFor(() => renderResult.getByRole('dialog'));
+
+    await waitFor(() => fireEvent.click(getByText(modal, 'Add Value')));
+
+    const sortTypesAsc = await waitFor(() =>
+      getAllByText(modal, COLUMN_SORT_TYPE.ASC.toLowerCase()),
+    );
+    expect(sortTypesAsc).toHaveLength(2);
+
+    const sortTypesDesc = await waitFor(() =>
+      getAllByText(modal, COLUMN_SORT_TYPE.DESC.toLowerCase()),
+    );
+    expect(sortTypesDesc).toHaveLength(1);
+
     await waitFor(() => getByText(modal, 'Sort and Order'));
     await waitFor(() => getByText(modal, 'Eliminate Duplicate Rows'));
     await waitFor(() => getByText(modal, 'Limit Results'));
@@ -300,8 +321,7 @@ test(
 
     await waitFor(() => getByText(filterPanel, 'First Name'));
     await waitFor(() => getByText(filterPanel, 'is'));
-    const filterState = queryBuilderState.filterState;
-    expect(filterState.nodes.size).toBe(1);
+    expect(queryBuilderState.filterState.nodes.size).toBe(1);
     expect(tdsState.projectionColumns.length).toBe(0);
 
     // filter with group condition
@@ -446,6 +466,16 @@ test(
     expect(tdsStateOne.projectionColumns.length).toBe(3);
     expect(tdsStateOne.projectionColumns[2]?.columnName).toBe('Name');
 
+    //check that you do not add properties that already exist
+    fireEvent.click(getByText(explorerPanel, 'LegalEntity'));
+    await waitFor(() => getByText(explorerPanel, 'LegalEntity'));
+    const rootNodeElementTwo = getByText(explorerPanel, 'LegalEntity');
+    fireEvent.contextMenu(rootNodeElementTwo);
+    fireEvent.click(
+      renderResult.getByText('Add Properties to Fetch Structure'),
+    );
+    expect(tdsStateOne.projectionColumns.length).toBe(3);
+
     // simpleProjection with subType
     await act(async () => {
       queryBuilderState.initializeWithQuery(
@@ -523,5 +553,221 @@ test(
     );
     const firmGraphFetchTreeNode = firmGraphFetchTree.tree;
     expect(firmGraphFetchTreeNode.class.value).toBe(_firmClass);
+  },
+);
+
+test(
+  integrationTest(
+    'Query builder filter supports special numeric values (integer)',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_DATA__ComplexRelationalModel,
+      stub_RawLambda(),
+      'model::relational::tests::simpleRelationalMapping',
+      'model::MyRuntime',
+      TEST_DATA__ModelCoverageAnalysisResult_ComplexRelational,
+    );
+
+    await waitFor(() => renderResult.getByText('Add a filter condition'));
+    await act(async () => {
+      queryBuilderState.initializeWithQuery(
+        create_RawLambda(
+          TEST_DATA__getAllWithOneIntegerConditionFilter.parameters,
+          TEST_DATA__getAllWithOneIntegerConditionFilter.body,
+        ),
+      );
+    });
+
+    const filterConditionValue = guaranteeType(
+      guaranteeType(
+        getNullableFirstElement(
+          Array.from(queryBuilderState.filterState.nodes.values()),
+        ),
+        QueryBuilderFilterTreeConditionNodeData,
+      ).condition.value,
+      PrimitiveInstanceValue,
+    );
+
+    const filterPanel = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_FILTER),
+    );
+    await waitFor(() => getByText(filterPanel, 'Age'));
+    await waitFor(() => getByText(filterPanel, 'is'));
+
+    const inputEl = getByDisplayValue(filterPanel, '0');
+
+    // valid input should be recorded and saved to state
+    // await act(() => fireEvent.change(inputEl, { target: { value: '1000' } }));
+    fireEvent.change(inputEl, { target: { value: '1000' } });
+    expect(filterConditionValue.values[0]).toEqual(1000);
+    await waitFor(() => getByDisplayValue(filterPanel, '1000'));
+
+    // bad input should be reset to initial value on blur
+    fireEvent.change(inputEl, { target: { value: '1asd' } });
+    fireEvent.blur(inputEl);
+    expect(filterConditionValue.values[0]).toEqual(1000);
+    await waitFor(() => getByDisplayValue(filterPanel, '1000'));
+  },
+);
+
+test(
+  integrationTest(
+    'Query builder filter supports special numeric values (float)',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_DATA__ComplexRelationalModel,
+      stub_RawLambda(),
+      'model::relational::tests::simpleRelationalMapping',
+      'model::MyRuntime',
+      TEST_DATA__ModelCoverageAnalysisResult_ComplexRelational,
+    );
+
+    await waitFor(() => renderResult.getByText('Add a filter condition'));
+    await act(async () => {
+      queryBuilderState.initializeWithQuery(
+        create_RawLambda(
+          TEST_DATA_getAllWithOneFloatConditionFilter.parameters,
+          TEST_DATA_getAllWithOneFloatConditionFilter.body,
+        ),
+      );
+    });
+
+    const filterConditionValue = guaranteeType(
+      guaranteeType(
+        getNullableFirstElement(
+          Array.from(queryBuilderState.filterState.nodes.values()),
+        ),
+        QueryBuilderFilterTreeConditionNodeData,
+      ).condition.value,
+      PrimitiveInstanceValue,
+    );
+
+    const filterPanel = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_FILTER),
+    );
+    await waitFor(() => getByText(filterPanel, 'Firm/Average Employees Age'));
+    await waitFor(() => getByText(filterPanel, 'is'));
+
+    const inputEl = getByDisplayValue(filterPanel, '0');
+
+    // valid input should be recorded and saved to state
+    fireEvent.change(inputEl, { target: { value: '-.1' } });
+    expect(filterConditionValue.values[0]).toEqual(-0.1);
+    await waitFor(() => getByDisplayValue(filterPanel, '-.1'));
+  },
+);
+
+test(
+  integrationTest(
+    'Query builder window function shows validation error if existing duplicate column name',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_DATA__ComplexRelationalModel,
+      stub_RawLambda(),
+      'model::relational::tests::simpleRelationalMapping',
+      'model::MyRuntime',
+      TEST_DATA__ModelCoverageAnalysisResult_ComplexRelational,
+    );
+
+    await act(async () => {
+      queryBuilderState.initializeWithQuery(
+        create_RawLambda(undefined, TEST_DATA__simpleProjection.body),
+      );
+      // NOTE: Render result will not currently find the
+      // 'show window-funcs' panel so we will directly force
+      // the panel to show for now
+      const tdsState = guaranteeType(
+        queryBuilderState.fetchStructureState.implementation,
+        QueryBuilderTDSState,
+      );
+      tdsState.setShowWindowFuncPanel(true);
+    });
+
+    await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_WINDOW_GROUPBY,
+      ),
+    );
+    const windowPanel = renderResult.getByTestId(
+      QUERY_BUILDER_TEST_ID.QUERY_BUILDER_WINDOW_GROUPBY,
+    );
+    fireEvent.click(getByTitle(windowPanel, 'Create Window Function Column'));
+
+    await waitFor(() => renderResult.getByText('Create'));
+
+    fireEvent.click(renderResult.getByText('Create'));
+
+    fireEvent.click(getByTitle(windowPanel, 'Create Window Function Column'));
+
+    await waitFor(() => renderResult.getByText('Create'));
+
+    fireEvent.click(renderResult.getByText('Create'));
+
+    await waitFor(() => renderResult.getByText('Run Query'));
+
+    expect(getAllByTitle(windowPanel, 'Duplicated column')).not.toBeNull();
+
+    expect(
+      (
+        queryBuilderState.fetchStructureState
+          .implementation as QueryBuilderTDSState
+      ).windowState.windowValidationIssues.length,
+    ).toBe(1);
+  },
+);
+
+test(
+  integrationTest(
+    'Query builder window function shows validation error if invalid column order',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_DATA__ComplexRelationalModel,
+      stub_RawLambda(),
+      'model::relational::tests::simpleRelationalMapping',
+      'model::MyRuntime',
+      TEST_DATA__ModelCoverageAnalysisResult_ComplexRelational,
+    );
+    await act(async () => {
+      queryBuilderState.initializeWithQuery(
+        create_RawLambda(
+          TEST_DATA_projectionWithWindowFunction.parameters,
+          TEST_DATA_projectionWithWindowFunction.body,
+        ),
+      );
+    });
+
+    const tdsState = guaranteeType(
+      queryBuilderState.fetchStructureState.implementation,
+      QueryBuilderTDSState,
+    );
+    tdsState.setShowWindowFuncPanel(true);
+
+    await act(async () => {
+      tdsState.windowState.moveColumn(1, 0);
+    });
+
+    const windowPanel = renderResult.getByTestId(
+      QUERY_BUILDER_TEST_ID.QUERY_BUILDER_WINDOW_GROUPBY,
+    );
+
+    expect(getAllByText(windowPanel, '1 issue')).not.toBeNull();
+
+    expect(
+      (
+        queryBuilderState.fetchStructureState
+          .implementation as QueryBuilderTDSState
+      ).windowState.windowValidationIssues.length,
+    ).toBe(1);
+
+    expect(
+      (
+        queryBuilderState.fetchStructureState
+          .implementation as QueryBuilderTDSState
+      ).windowState.invalidWindowColumnNames[0]?.invalidColumnName,
+    ).toBe('sum sum Age');
   },
 );

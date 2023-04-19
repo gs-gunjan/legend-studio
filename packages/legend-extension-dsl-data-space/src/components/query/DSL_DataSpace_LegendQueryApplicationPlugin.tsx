@@ -21,8 +21,8 @@ import {
   type ExistingQueryEditorStore,
   LegendQueryApplicationPlugin,
   generateExistingQueryEditorRoute,
-  LegendQueryEventService,
   LEGEND_QUERY_APP_EVENT,
+  LegendQueryEventHelper,
   createViewProjectHandler,
   createViewSDLCProjectHandler,
 } from '@finos/legend-application-query';
@@ -35,17 +35,17 @@ import {
 import {
   DATA_SPACE_QUERY_ROUTE_PATTERN,
   generateDataSpaceQuerySetupRoute,
-} from '../../stores/query/DSL_DataSpace_LegendQueryRouter.js';
+} from '../../__lib__/query/DSL_DataSpace_LegendQueryNavigation.js';
 import { DataSpaceQueryCreator } from './DataSpaceQueryCreator.js';
 import { createQueryDataSpaceTaggedValue } from '../../stores/query/DataSpaceQueryCreatorStore.js';
 import { Query, isValidFullPath } from '@finos/legend-graph';
 import {
   QUERY_PROFILE_PATH,
   QUERY_PROFILE_TAG_DATA_SPACE,
-} from '../../DSL_DataSpace_Const.js';
+} from '../../graph/DSL_DataSpace_MetaModelConst.js';
 import { DataSpaceQueryBuilderState } from '../../stores/query/DataSpaceQueryBuilderState.js';
 import type { DataSpaceInfo } from '../../stores/query/DataSpaceInfo.js';
-import { getOwnDataSpace } from '../../graphManager/DSL_DataSpace_GraphManagerHelper.js';
+import { getOwnDataSpace } from '../../graph-manager/DSL_DataSpace_GraphManagerHelper.js';
 import { assertErrorThrown, LogEvent, uuid } from '@finos/legend-shared';
 import type { QueryBuilderState } from '@finos/legend-query-builder';
 import { DataSpaceQuerySetup } from './DataSpaceQuerySetup.js';
@@ -60,13 +60,13 @@ export class DSL_DataSpace_LegendQueryApplicationPlugin extends LegendQueryAppli
       // data space query editor setup
       {
         key: 'data-space-query-setup-application-page',
-        urlPatterns: [DATA_SPACE_QUERY_ROUTE_PATTERN.SETUP],
+        addressPatterns: [DATA_SPACE_QUERY_ROUTE_PATTERN.SETUP],
         renderer: DataSpaceQuerySetup,
       },
       // data space query editor
       {
         key: 'data-space-query-editor-application-page',
-        urlPatterns: [DATA_SPACE_QUERY_ROUTE_PATTERN.CREATE],
+        addressPatterns: [DATA_SPACE_QUERY_ROUTE_PATTERN.CREATE],
         renderer: DataSpaceQueryCreator,
       },
     ];
@@ -79,7 +79,7 @@ export class DSL_DataSpace_LegendQueryApplicationPlugin extends LegendQueryAppli
         isAdvanced: false,
         isCreateAction: true,
         action: async (setupStore) => {
-          setupStore.applicationStore.navigator.goToLocation(
+          setupStore.applicationStore.navigationService.navigator.goToLocation(
             generateDataSpaceQuerySetupRoute(),
           );
         },
@@ -165,13 +165,14 @@ export class DSL_DataSpace_LegendQueryApplicationPlugin extends LegendQueryAppli
                           _query,
                           editorStore.graphManagerState.graph,
                         );
-                      editorStore.applicationStore.notifySuccess(
+                      editorStore.applicationStore.notificationService.notifySuccess(
                         `Successfully created query!`,
                       );
-                      LegendQueryEventService.create(
+                      LegendQueryEventHelper.notify_QueryCreateSucceeded(
                         editorStore.applicationStore.eventService,
-                      ).notify_QueryCreated({ queryId: newQuery.id });
-                      editorStore.applicationStore.navigator.goToLocation(
+                        { queryId: newQuery.id },
+                      );
+                      editorStore.applicationStore.navigationService.navigator.goToLocation(
                         generateExistingQueryEditorRoute(newQuery.id),
                       );
                     } else {
@@ -179,22 +180,24 @@ export class DSL_DataSpace_LegendQueryApplicationPlugin extends LegendQueryAppli
                         _query,
                         editorStore.graphManagerState.graph,
                       );
-                      editorStore.applicationStore.notifySuccess(
+                      editorStore.applicationStore.notificationService.notifySuccess(
                         `Successfully updated query!`,
                       );
-                      editorStore.applicationStore.navigator.reload();
+                      editorStore.applicationStore.navigationService.navigator.reload();
                     }
                   } catch (error) {
                     assertErrorThrown(error);
-                    editorStore.applicationStore.log.error(
+                    editorStore.applicationStore.logService.error(
                       LogEvent.create(LEGEND_QUERY_APP_EVENT.GENERIC_FAILURE),
                       error,
                     );
-                    editorStore.applicationStore.notifyError(error);
+                    editorStore.applicationStore.notificationService.notifyError(
+                      error,
+                    );
                   }
                 };
 
-                editorStore.applicationStore.setActionAlertInfo({
+                editorStore.applicationStore.alertService.setActionAlertInfo({
                   message: `To change the data space associated with this query, you need to ${
                     query.isCurrentUserQuery
                       ? 'update the query'
@@ -221,7 +224,7 @@ export class DSL_DataSpace_LegendQueryApplicationPlugin extends LegendQueryAppli
                   ],
                 });
               } else {
-                editorStore.applicationStore.notifyWarning(
+                editorStore.applicationStore.notificationService.notifyWarning(
                   `Can't switch data space: default execution context not specified`,
                 );
               }

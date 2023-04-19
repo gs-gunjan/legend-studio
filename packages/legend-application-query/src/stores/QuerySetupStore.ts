@@ -25,11 +25,11 @@ import {
 } from '@finos/legend-shared';
 import { BasicGraphManagerState } from '@finos/legend-graph';
 import type { DepotServerClient } from '@finos/legend-server-depot';
-import { LEGEND_QUERY_APP_EVENT } from './LegendQueryAppEvent.js';
-import { TAB_SIZE } from '@finos/legend-application';
+import { LEGEND_QUERY_APP_EVENT } from '../__lib__/LegendQueryEvent.js';
+import { DEFAULT_TAB_SIZE } from '@finos/legend-application';
 import type { LegendQueryPluginManager } from '../application/LegendQueryPluginManager.js';
 import type { LegendQueryApplicationStore } from './LegendQueryBaseStore.js';
-import { generateQuerySetupRoute } from './LegendQueryRouter.js';
+import { generateQuerySetupRoute } from '../__lib__/LegendQueryNavigation.js';
 import type { QuerySetupActionConfiguration } from './LegendQueryApplicationPlugin.js';
 
 export abstract class BaseQuerySetupStore {
@@ -51,7 +51,7 @@ export abstract class BaseQuerySetupStore {
     this.applicationStore = applicationStore;
     this.graphManagerState = new BasicGraphManagerState(
       applicationStore.pluginManager,
-      applicationStore.log,
+      applicationStore.logService,
     );
     this.depotServerClient = depotServerClient;
     this.pluginManager = applicationStore.pluginManager;
@@ -67,7 +67,7 @@ export abstract class BaseQuerySetupStore {
       yield this.graphManagerState.graphManager.initialize(
         {
           env: this.applicationStore.config.env,
-          tabSize: TAB_SIZE,
+          tabSize: DEFAULT_TAB_SIZE,
           clientConfig: {
             baseUrl: this.applicationStore.config.engineServerUrl,
             queryBaseUrl: this.applicationStore.config.engineQueryServerUrl,
@@ -82,11 +82,11 @@ export abstract class BaseQuerySetupStore {
       this.initState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.log.error(
+      this.applicationStore.logService.error(
         LogEvent.create(LEGEND_QUERY_APP_EVENT.GENERIC_FAILURE),
         error,
       );
-      this.applicationStore.setBlockingAlert({
+      this.applicationStore.alertService.setBlockingAlert({
         message: `Can't initialize query setup store`,
       });
       this.initState.fail();
@@ -163,7 +163,7 @@ export class QuerySetupLandingPageStore {
   }
 
   private updateCurentLocation(): void {
-    this.applicationStore.navigator.updateCurrentLocation(
+    this.applicationStore.navigationService.navigator.updateCurrentLocation(
       generateQuerySetupRoute(
         this.showAllGroups,
         this.showAdvancedActions,

@@ -20,8 +20,9 @@ import {
   type AbstractPreset,
   WebConsole,
 } from '@finos/legend-shared';
-import { DSL_Diagram_GraphManagerPreset } from '@finos/legend-extension-dsl-diagram';
-import { DSL_DataSpace_GraphManagerPreset } from '@finos/legend-extension-dsl-data-space';
+import { DSL_Diagram_GraphManagerPreset } from '@finos/legend-extension-dsl-diagram/graph';
+import { DSL_DataSpace_GraphManagerPreset } from '@finos/legend-extension-dsl-data-space/graph';
+import { DSL_DataSpace_LegendApplicationPlugin } from '@finos/legend-extension-dsl-data-space/application';
 
 export class LegendTaxonomyWebApplication {
   static getPresetCollection(): AbstractPreset[] {
@@ -36,12 +37,14 @@ export class LegendTaxonomyWebApplication {
     return [
       // loggers
       new WebConsole(),
+      // generic dataspace plugin
+      new DSL_DataSpace_LegendApplicationPlugin(),
     ];
   }
 
   static run(baseUrl: string): void {
     LegendTaxonomy.create()
-      .setup({ baseUrl })
+      .setup({ baseAddress: baseUrl })
       .withPresets(LegendTaxonomyWebApplication.getPresetCollection())
       .withPlugins(LegendTaxonomyWebApplication.getPluginCollection())
       .start()

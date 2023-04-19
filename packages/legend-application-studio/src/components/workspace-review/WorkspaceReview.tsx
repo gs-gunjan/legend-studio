@@ -22,7 +22,7 @@ import {
 } from './WorkspaceReviewStoreProvider.js';
 import { WorkspaceReviewSideBar } from './WorkspaceReviewSideBar.js';
 import { WorkspaceReviewPanel } from './WorkspaceReviewPanel.js';
-import { ACTIVITY_MODE } from '../../stores/EditorConfig.js';
+import { ACTIVITY_MODE } from '../../stores/editor/EditorConfig.js';
 import {
   type ResizablePanelHandlerProps,
   getCollapsiblePanelGroupProps,
@@ -38,15 +38,16 @@ import {
   AssistantIcon,
 } from '@finos/legend-art';
 import {
-  type ReviewPathParams,
+  type WorkspaceReviewPathParams,
   generateSetupRoute,
-} from '../../stores/LegendStudioRouter.js';
+} from '../../__lib__/LegendStudioNavigation.js';
 import { flowResult } from 'mobx';
 import {
   useEditorStore,
   withEditorStore,
 } from '../editor/EditorStoreProvider.js';
-import { useApplicationStore, useParams } from '@finos/legend-application';
+import { useApplicationStore } from '@finos/legend-application';
+import { useParams } from '@finos/legend-application/browser';
 
 const WorkspaceReviewStatusBar = observer(() => {
   const reviewStore = useWorkspaceReviewStore();
@@ -84,8 +85,8 @@ const WorkspaceReviewStatusBar = observer(() => {
             title="Go back to workspace setup using the specified project"
             tabIndex={-1}
             onClick={(): void =>
-              applicationStore.navigator.visitAddress(
-                applicationStore.navigator.generateAddress(
+              applicationStore.navigationService.navigator.visitAddress(
+                applicationStore.navigationService.navigator.generateAddress(
                   generateSetupRoute(reviewStore.projectId),
                 ),
               )
@@ -99,8 +100,8 @@ const WorkspaceReviewStatusBar = observer(() => {
             title="Go back to workspace setup using the specified workspace"
             tabIndex={-1}
             onClick={(): void =>
-              applicationStore.navigator.visitAddress(
-                applicationStore.navigator.generateAddress(
+              applicationStore.navigationService.navigator.visitAddress(
+                applicationStore.navigationService.navigator.generateAddress(
                   generateSetupRoute(
                     reviewStore.projectId,
                     review.workspaceId,
@@ -194,7 +195,7 @@ const WorkspaceReviewExplorer = observer(() => {
 export const WorkspaceReview = withEditorStore(
   withWorkspaceReviewStore(
     observer(() => {
-      const params = useParams<ReviewPathParams>();
+      const params = useParams<WorkspaceReviewPathParams>();
       const projectId = params.projectId;
       const reviewId = params.reviewId;
       const reviewStore = useWorkspaceReviewStore();

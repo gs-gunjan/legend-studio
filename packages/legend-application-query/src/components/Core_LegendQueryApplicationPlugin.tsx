@@ -22,7 +22,7 @@ import {
 import packageJson from '../../package.json';
 import type { QuerySetupLandingPageStore } from '../stores/QuerySetupStore.js';
 import {
-  ArrowCirceUpIcon,
+  ArrowCircleUpIcon,
   BrainIcon,
   DroidIcon,
   ManageSearchIcon,
@@ -37,12 +37,19 @@ import {
   generateQueryProductionizerSetupRoute,
   generateUpdateExistingServiceQuerySetup,
   LEGEND_QUERY_ROUTE_PATTERN,
-} from '../stores/LegendQueryRouter.js';
-import type { ApplicationPageEntry } from '@finos/legend-application';
+} from '../__lib__/LegendQueryNavigation.js';
+import {
+  type ApplicationPageEntry,
+  type LegendApplicationSetup,
+} from '@finos/legend-application';
 import { CloneQueryServiceSetup } from './CloneQueryServiceSetup.js';
 import { QueryProductionizerSetup } from './QueryProductionizerSetup.js';
 import { UpdateExistingServiceQuerySetup } from './UpdateExistingServiceQuerySetup.js';
 import { LoadProjectServiceQuerySetup } from './LoadProjectServiceQuerySetup.js';
+import {
+  configureCodeEditorComponent,
+  setupPureLanguageService,
+} from '@finos/legend-lego/code-editor';
 
 export class Core_LegendQueryApplicationPlugin extends LegendQueryApplicationPlugin {
   static NAME = packageJson.extensions.applicationQueryPlugin;
@@ -51,28 +58,39 @@ export class Core_LegendQueryApplicationPlugin extends LegendQueryApplicationPlu
     super(Core_LegendQueryApplicationPlugin.NAME, packageJson.version);
   }
 
+  override getExtraApplicationSetups(): LegendApplicationSetup[] {
+    return [
+      async (applicationStore) => {
+        await configureCodeEditorComponent(applicationStore);
+        setupPureLanguageService({});
+      },
+    ];
+  }
+
   override getExtraApplicationPageEntries(): ApplicationPageEntry[] {
     return [
       {
         key: 'clone-service-query-setup-application-page',
-        urlPatterns: [LEGEND_QUERY_ROUTE_PATTERN.CLONE_SERVICE_QUERY_SETUP],
+        addressPatterns: [LEGEND_QUERY_ROUTE_PATTERN.CLONE_SERVICE_QUERY_SETUP],
         renderer: CloneQueryServiceSetup,
       },
       {
         key: 'query-productionizer-setup-application-page',
-        urlPatterns: [LEGEND_QUERY_ROUTE_PATTERN.QUERY_PRODUCTIONIZER_SETUP],
+        addressPatterns: [
+          LEGEND_QUERY_ROUTE_PATTERN.QUERY_PRODUCTIONIZER_SETUP,
+        ],
         renderer: QueryProductionizerSetup,
       },
       {
         key: 'update-existing-service-query-setup-application-page',
-        urlPatterns: [
+        addressPatterns: [
           LEGEND_QUERY_ROUTE_PATTERN.UPDATE_EXISTING_SERVICE_QUERY_SETUP,
         ],
         renderer: UpdateExistingServiceQuerySetup,
       },
       {
         key: 'load-project-service-query-setup-application-page',
-        urlPatterns: [
+        addressPatterns: [
           LEGEND_QUERY_ROUTE_PATTERN.LOAD_PROJECT_SERVICE_QUERY_SETUP,
         ],
         renderer: LoadProjectServiceQuerySetup,
@@ -87,7 +105,7 @@ export class Core_LegendQueryApplicationPlugin extends LegendQueryApplicationPlu
         isAdvanced: false,
         isCreateAction: false,
         action: async (setupStore: QuerySetupLandingPageStore) => {
-          setupStore.applicationStore.navigator.goToLocation(
+          setupStore.applicationStore.navigationService.navigator.goToLocation(
             generateEditExistingQuerySetupRoute(),
           );
         },
@@ -102,8 +120,8 @@ export class Core_LegendQueryApplicationPlugin extends LegendQueryApplicationPlu
         isAdvanced: false,
         isCreateAction: true,
         action: async (setupStore: QuerySetupLandingPageStore) => {
-          setupStore.applicationStore.navigator.goToAddress(
-            setupStore.applicationStore.config.taxonomyUrl,
+          setupStore.applicationStore.navigationService.navigator.goToAddress(
+            setupStore.applicationStore.config.taxonomyApplicationUrl,
           );
         },
         label: 'Create query from taxonomy',
@@ -115,7 +133,7 @@ export class Core_LegendQueryApplicationPlugin extends LegendQueryApplicationPlu
         isAdvanced: true,
         isCreateAction: true,
         action: async (setupStore: QuerySetupLandingPageStore) => {
-          setupStore.applicationStore.navigator.goToLocation(
+          setupStore.applicationStore.navigationService.navigator.goToLocation(
             generateCreateMappingQuerySetupRoute(),
           );
         },
@@ -128,7 +146,7 @@ export class Core_LegendQueryApplicationPlugin extends LegendQueryApplicationPlu
         isAdvanced: true,
         isCreateAction: true,
         action: async (setupStore: QuerySetupLandingPageStore) => {
-          setupStore.applicationStore.navigator.goToLocation(
+          setupStore.applicationStore.navigationService.navigator.goToLocation(
             generateCloneServiceQuerySetupRoute(),
           );
         },
@@ -143,7 +161,7 @@ export class Core_LegendQueryApplicationPlugin extends LegendQueryApplicationPlu
         isCreateAction: false,
         tag: QuerySetupActionTag.PRODUCTIONIZATION,
         action: async (setupStore: QuerySetupLandingPageStore) => {
-          setupStore.applicationStore.navigator.goToLocation(
+          setupStore.applicationStore.navigationService.navigator.goToLocation(
             generateUpdateExistingServiceQuerySetup(),
           );
         },
@@ -157,7 +175,7 @@ export class Core_LegendQueryApplicationPlugin extends LegendQueryApplicationPlu
         isCreateAction: false,
         tag: QuerySetupActionTag.PRODUCTIONIZATION,
         action: async (setupStore: QuerySetupLandingPageStore) => {
-          setupStore.applicationStore.navigator.goToLocation(
+          setupStore.applicationStore.navigationService.navigator.goToLocation(
             generateLoadProjectServiceQuerySetup(),
           );
         },
@@ -171,13 +189,13 @@ export class Core_LegendQueryApplicationPlugin extends LegendQueryApplicationPlu
         isCreateAction: true,
         tag: QuerySetupActionTag.PRODUCTIONIZATION,
         action: async (setupStore: QuerySetupLandingPageStore) => {
-          setupStore.applicationStore.navigator.goToLocation(
+          setupStore.applicationStore.navigationService.navigator.goToLocation(
             generateQueryProductionizerSetupRoute(),
           );
         },
         label: 'Productionize an existing query',
         className: 'query-setup__landing-page__action--productionize-query',
-        icon: <ArrowCirceUpIcon />,
+        icon: <ArrowCircleUpIcon />,
       },
     ];
   }

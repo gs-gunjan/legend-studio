@@ -19,20 +19,19 @@ import {
   type LegendApplicationConfig,
   type LegendApplicationConfigurationInput,
   LegendApplication,
-  setupLegendApplicationUILibrary,
-  WebApplicationNavigatorProvider,
-  BrowserRouter,
   ApplicationStoreProvider,
+  Core_LegendApplicationPlugin,
+  getApplicationRootElement,
 } from '@finos/legend-application';
-import { getRootElement } from '@finos/legend-art';
 import {
   LegendPureIDEApplicationConfig,
   type LegendPureIDEApplicationConfigData,
 } from './LegendPureIDEApplicationConfig.js';
 import { LegendPureIDEPluginManager } from './LegendPureIDEPluginManager.js';
-import { DSL_Diagram_GraphManagerPreset } from '@finos/legend-extension-dsl-diagram';
-import { LegendPureIDEApplication } from '../components/LegendPureIDEApplication.js';
+import { DSL_Diagram_GraphManagerPreset } from '@finos/legend-extension-dsl-diagram/graph';
+import { LegendPureIDEWebApplication } from '../components/LegendPureIDEApplication.js';
 import { Core_LegendPureIDEApplicationPlugin } from '../components/Core_LegendPureIDEApplicationPlugin.js';
+import type { LegendPureIDEApplicationStore } from '../stores/LegendPureIDEBaseStore.js';
 
 export class LegendPureIDE extends LegendApplication {
   declare config: LegendPureIDEApplicationConfig;
@@ -40,7 +39,10 @@ export class LegendPureIDE extends LegendApplication {
 
   static create(): LegendPureIDE {
     const application = new LegendPureIDE(LegendPureIDEPluginManager.create());
-    application.withBasePlugins([new Core_LegendPureIDEApplicationPlugin()]);
+    application.withBasePlugins([
+      new Core_LegendApplicationPlugin(),
+      new Core_LegendPureIDEApplicationPlugin(),
+    ]);
     application.withBasePresets([new DSL_Diagram_GraphManagerPreset()]);
     return application;
   }
@@ -51,23 +53,13 @@ export class LegendPureIDE extends LegendApplication {
     return new LegendPureIDEApplicationConfig(input);
   }
 
-  async loadApplication(): Promise<void> {
-    // Setup React application libraries
-    await setupLegendApplicationUILibrary(this.pluginManager, this.logger);
-
-    // Render React application
-    const rootElement = createRoot(getRootElement());
-    rootElement.render(
-      <BrowserRouter basename={this.baseUrl}>
-        <WebApplicationNavigatorProvider>
-          <ApplicationStoreProvider
-            config={this.config}
-            pluginManager={this.pluginManager}
-          >
-            <LegendPureIDEApplication />
-          </ApplicationStoreProvider>
-        </WebApplicationNavigatorProvider>
-      </BrowserRouter>,
+  async loadApplication(
+    applicationStore: LegendPureIDEApplicationStore,
+  ): Promise<void> {
+    createRoot(getApplicationRootElement()).render(
+      <ApplicationStoreProvider store={applicationStore}>
+        <LegendPureIDEWebApplication baseUrl={this.baseAddress} />
+      </ApplicationStoreProvider>,
     );
   }
 }

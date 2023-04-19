@@ -1,5 +1,97 @@
 # @finos/legend-extension-dsl-persistence
 
+## 5.0.2
+
+## 5.0.1
+
+## 5.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Partition exports into separate paths, `/graph` for graph and graph manager extensions, `/application` for generic application extensions, `/application-studio` for `Legend Studio` specific application extensions, and `/application-query` for `Legend Query` specific application extensions.
+
+## 4.0.69
+
+## 4.0.68
+
+## 4.0.67
+
+## 4.0.66
+
+## 4.0.65
+
+## 4.0.64
+
+## 4.0.63
+
+## 4.0.62
+
+## 4.0.61
+
+## 4.0.60
+
+## 4.0.59
+
+## 4.0.58
+
+## 4.0.57
+
+## 4.0.56
+
+## 4.0.55
+
+## 4.0.54
+
+## 4.0.53
+
+### Patch Changes
+
+- [#2019](https://github.com/finos/legend-studio/pull/2019) [`e31cc1bcb`](https://github.com/finos/legend-studio/commit/e31cc1bcbb61306b4b127788854775a8325bfa57) ([@akphi](https://github.com/akphi)) - Temporarliy merged DSL Persistenc Cloud into DSL Persistence core.
+
+## 4.0.52
+
+## 4.0.51
+
+## 4.0.50
+
+## 4.0.49
+
+## 4.0.48
+
+## 4.0.47
+
+## 4.0.46
+
+## 4.0.45
+
+## 4.0.44
+
+## 4.0.43
+
+## 4.0.42
+
+## 4.0.41
+
+## 4.0.40
+
+## 4.0.39
+
+### Patch Changes
+
+- [#1845](https://github.com/finos/legend-studio/pull/1845) [`f901cd37c`](https://github.com/finos/legend-studio/commit/f901cd37c87c680971c32e3d8721f2cabb6627d9) ([@gayathrir11](https://github.com/gayathrir11)) - Merged `TestBatch` to `PersistenceTestBatch`.
+
+## 4.0.38
+
+## 4.0.37
+
+## 4.0.36
+
+## 4.0.35
+
+## 4.0.34
+
+## 4.0.33
+
 ## 4.0.32
 
 ## 4.0.31

@@ -15,7 +15,7 @@
  */
 
 import { observable, action, flowResult, makeObservable, flow } from 'mobx';
-import { LEGEND_STUDIO_APP_EVENT } from '../LegendStudioAppEvent.js';
+import { LEGEND_STUDIO_APP_EVENT } from '../../__lib__/LegendStudioEvent.js';
 import {
   type GeneratorFn,
   type PlainObject,
@@ -24,7 +24,7 @@ import {
   ActionState,
   IllegalStateError,
 } from '@finos/legend-shared';
-import { generateSetupRoute } from '../LegendStudioRouter.js';
+import { generateSetupRoute } from '../../__lib__/LegendStudioNavigation.js';
 import {
   type SDLCServerClient,
   WorkspaceType,
@@ -50,9 +50,10 @@ interface ImportProjectSuccessReport {
 }
 
 export class WorkspaceSetupStore {
-  applicationStore: LegendStudioApplicationStore;
-  sdlcServerClient: SDLCServerClient;
-  initState = ActionState.create();
+  readonly applicationStore: LegendStudioApplicationStore;
+
+  readonly sdlcServerClient: SDLCServerClient;
+  readonly initState = ActionState.create();
 
   projects: Project[] = [];
   currentProject?: Project | undefined;
@@ -117,7 +118,7 @@ export class WorkspaceSetupStore {
     this.currentProject = undefined;
     this.workspaces = [];
     this.currentWorkspace = undefined;
-    this.applicationStore.navigator.updateCurrentLocation(
+    this.applicationStore.navigationService.navigator.updateCurrentLocation(
       generateSetupRoute(undefined, undefined, undefined),
     );
     this.currentProjectConfigurationStatus = undefined;
@@ -126,7 +127,7 @@ export class WorkspaceSetupStore {
   resetWorkspace(): void {
     this.currentWorkspace = undefined;
     if (this.currentProject) {
-      this.applicationStore.navigator.updateCurrentLocation(
+      this.applicationStore.navigationService.navigator.updateCurrentLocation(
         generateSetupRoute(this.currentProject.projectId, undefined, undefined),
       );
     }
@@ -142,6 +143,9 @@ export class WorkspaceSetupStore {
     }
     this.initState.inProgress();
 
+    // TODO: when we genericize the way to initialize an application page
+    this.applicationStore.assistantService.setIsHidden(false);
+
     try {
       if (projectId) {
         let project: Project;
@@ -152,7 +156,7 @@ export class WorkspaceSetupStore {
             )) as PlainObject<Project>,
           );
         } catch {
-          this.applicationStore.navigator.updateCurrentLocation(
+          this.applicationStore.navigationService.navigator.updateCurrentLocation(
             generateSetupRoute(undefined),
           );
           this.initState.pass();
@@ -176,11 +180,11 @@ export class WorkspaceSetupStore {
       this.initState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.log.error(
+      this.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.DEPOT_MANAGER_FAILURE),
         error,
       );
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
       this.initState.fail();
     }
   }
@@ -201,7 +205,7 @@ export class WorkspaceSetupStore {
       this.loadProjectsState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
       this.loadProjectsState.fail();
     }
   }
@@ -255,13 +259,13 @@ export class WorkspaceSetupStore {
         if (matchingWorkspace) {
           this.changeWorkspace(matchingWorkspace);
         } else {
-          this.applicationStore.navigator.updateCurrentLocation(
+          this.applicationStore.navigationService.navigator.updateCurrentLocation(
             generateSetupRoute(project.projectId),
           );
         }
       } else {
         this.currentWorkspace = undefined;
-        this.applicationStore.navigator.updateCurrentLocation(
+        this.applicationStore.navigationService.navigator.updateCurrentLocation(
           generateSetupRoute(project.projectId),
         );
       }
@@ -269,11 +273,11 @@ export class WorkspaceSetupStore {
       this.loadWorkspacesState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.log.error(
+      this.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.DEPOT_MANAGER_FAILURE),
         error,
       );
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
       this.loadWorkspacesState.fail();
     }
   }
@@ -285,7 +289,7 @@ export class WorkspaceSetupStore {
       );
     }
     this.currentWorkspace = workspace;
-    this.applicationStore.navigator.updateCurrentLocation(
+    this.applicationStore.navigationService.navigator.updateCurrentLocation(
       generateSetupRoute(
         this.currentProject.projectId,
         workspace.workspaceId,
@@ -312,7 +316,7 @@ export class WorkspaceSetupStore {
           tags,
         })) as PlainObject<Project>,
       );
-      this.applicationStore.notifySuccess(
+      this.applicationStore.notificationService.notifySuccess(
         `Project '${name}' is succesfully created`,
       );
 
@@ -321,7 +325,7 @@ export class WorkspaceSetupStore {
       this.setShowCreateProjectModal(false);
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
     } finally {
       this.createOrImportProjectState.reset();
     }
@@ -356,7 +360,7 @@ export class WorkspaceSetupStore {
       yield flowResult(this.changeProject(report.project));
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
     } finally {
       this.createOrImportProjectState.reset();
     }
@@ -377,7 +381,7 @@ export class WorkspaceSetupStore {
         )) as PlainObject<Workspace>,
       );
 
-      this.applicationStore.notifySuccess(
+      this.applicationStore.notificationService.notifySuccess(
         `Workspace '${newWorkspace.workspaceId}' is succesfully created`,
       );
 
@@ -397,11 +401,11 @@ export class WorkspaceSetupStore {
       }
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.log.error(
+      this.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.WORKSPACE_SETUP_FAILURE),
         error,
       );
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
     } finally {
       this.createWorkspaceState.reset();
     }

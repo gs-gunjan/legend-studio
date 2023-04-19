@@ -22,7 +22,7 @@ import {
   MoreHorizontalIcon,
   DropdownMenu,
   PencilIcon,
-  ChevronDownThinIcon,
+  ThinChevronDownIcon,
   CircleIcon,
   MenuContent,
   MenuContentItem,
@@ -32,25 +32,17 @@ import {
   MenuContentDivider,
   AssistantIcon,
 } from '@finos/legend-art';
-import {
-  getQueryParameters,
-  getQueryParameterValue,
-  guaranteeNonNullable,
-  sanitizeURL,
-} from '@finos/legend-shared';
+import { guaranteeNonNullable } from '@finos/legend-shared';
 import { observer, useLocalObservable } from 'mobx-react-lite';
 import React, { createContext, useContext, useEffect } from 'react';
-import {
-  LEGEND_QUERY_SETUP_QUERY_PARAM_TOKEN,
-  type QuerySetupQueryParams,
-} from '../stores/LegendQueryRouter.js';
+import { LEGEND_QUERY_SETUP_QUERY_PARAM_TOKEN } from '../__lib__/LegendQueryNavigation.js';
 import {
   QuerySetupLandingPageStore,
   type BaseQuerySetupStore,
 } from '../stores/QuerySetupStore.js';
 import type { ProjectData } from '@finos/legend-server-depot';
 import { useApplicationStore } from '@finos/legend-application';
-import { useLegendQueryApplicationStore } from './LegendQueryBaseStoreProvider.js';
+import { useLegendQueryApplicationStore } from './LegendQueryFrameworkProvider.js';
 import type { QuerySetupActionConfiguration } from '../stores/LegendQueryApplicationPlugin.js';
 
 export type ProjectOption = { label: string; value: ProjectData };
@@ -138,6 +130,10 @@ const QuerySetupActionGroupConfigMenu = observer(() => {
   const toggleShowAllGroups = (): void =>
     setupStore.setShowAllGroups(!setupStore.showAllGroups);
   const reset = (): void => setupStore.resetConfig();
+  const showAll = (): void => {
+    setupStore.setShowAdvancedActions(true);
+    setupStore.setShowAllGroups(true);
+  };
 
   return (
     <MenuContent className="query-setup__landing-page__config-menu">
@@ -173,6 +169,7 @@ const QuerySetupActionGroupConfigMenu = observer(() => {
         </MenuContentItem>
       ))}
       <MenuContentDivider />
+      <MenuContentItem onClick={showAll}>Show All</MenuContentItem>
       <MenuContentItem onClick={reset} disabled={!setupStore.isCustomized}>
         Reset
       </MenuContentItem>
@@ -256,25 +253,21 @@ export const QuerySetupLandingPage = withQuerySetupLandingPageStore(
   observer(() => {
     const setupStore = useQuerySetupLandingPageStore();
     const applicationStore = useLegendQueryApplicationStore();
-    const params = getQueryParameters<QuerySetupQueryParams>(
-      sanitizeURL(applicationStore.navigator.getCurrentAddress()),
-      true,
-    );
-    const showAdvancedActions = getQueryParameterValue(
-      params,
-      LEGEND_QUERY_SETUP_QUERY_PARAM_TOKEN.SHOW_ADVANCED_ACTIONS,
-    );
-    const showAllGroups = getQueryParameterValue(
-      params,
-      LEGEND_QUERY_SETUP_QUERY_PARAM_TOKEN.SHOW_ALL_GROUPS,
-    );
-    const tagToFocus = getQueryParameterValue(
-      params,
-      LEGEND_QUERY_SETUP_QUERY_PARAM_TOKEN.TAG,
-    );
+    const showAdvancedActions =
+      applicationStore.navigationService.navigator.getCurrentLocationParameterValue(
+        LEGEND_QUERY_SETUP_QUERY_PARAM_TOKEN.SHOW_ADVANCED_ACTIONS,
+      );
+    const showAllGroups =
+      applicationStore.navigationService.navigator.getCurrentLocationParameterValue(
+        LEGEND_QUERY_SETUP_QUERY_PARAM_TOKEN.SHOW_ALL_GROUPS,
+      );
+    const tagToFocus =
+      applicationStore.navigationService.navigator.getCurrentLocationParameterValue(
+        LEGEND_QUERY_SETUP_QUERY_PARAM_TOKEN.TAG,
+      );
     const goToStudio = (): void =>
-      applicationStore.navigator.visitAddress(
-        applicationStore.config.studioUrl,
+      applicationStore.navigationService.navigator.visitAddress(
+        applicationStore.config.studioApplicationUrl,
       );
     const showAllActionGroup = (): void => setupStore.setShowAllGroups(true);
     const toggleAssistant = (): void =>
@@ -339,7 +332,7 @@ export const QuerySetupLandingPage = withQuerySetupLandingPageStore(
                             tabIndex={-1}
                             title="Show all action groups"
                           >
-                            <ChevronDownThinIcon />
+                            <ThinChevronDownIcon />
                           </button>
                         </div>
                       )}

@@ -65,6 +65,8 @@ import {
 } from '../graph/helpers/DomainHelper.js';
 import { DataElement } from '../graph/metamodel/pure/packageableElements/data/DataElement.js';
 import type { Testable } from '../graph/metamodel/pure/test/Testable.js';
+import { ExecutionEnvironmentInstance } from './metamodel/pure/packageableElements/service/ExecutionEnvironmentInstance.js';
+import type { GraphDataOrigin } from './GraphDataOrigin.js';
 
 const FORBIDDEN_EXTENSION_ELEMENT_CLASS = new Set([
   PackageableElement,
@@ -78,15 +80,21 @@ const FORBIDDEN_EXTENSION_ELEMENT_CLASS = new Set([
   Profile,
   Measure,
   Unit,
-  SectionIndex,
+
+  DataElement,
+
   Store,
   Mapping,
   PackageableConnection,
   PackageableRuntime,
-  Service,
+
   GenerationSpecification,
   FileGenerationSpecification,
-  DataElement,
+
+  Service, // to be modularized
+  ExecutionEnvironmentInstance,
+
+  SectionIndex,
 ]);
 
 /**
@@ -99,6 +107,9 @@ const FORBIDDEN_EXTENSION_ELEMENT_CLASS = new Set([
  */
 export abstract class BasicModel {
   root: Package;
+
+  private _origin: GraphDataOrigin | undefined;
+
   readonly extensions: PureGraphExtension<PackageableElement>[] = [];
 
   private elementSectionIndex = new Map<string, Section>();
@@ -125,13 +136,19 @@ export abstract class BasicModel {
     FileGenerationSpecification
   >();
   private readonly dataElementsIndex = new Map<string, DataElement>();
+  private readonly executionEnvironmentIndex = new Map<
+    string,
+    ExecutionEnvironmentInstance
+  >();
 
   constructor(
     rootPackageName: string,
     extensionElementClasses: Clazz<PackageableElement>[],
+    origin?: GraphDataOrigin | undefined,
   ) {
     this.root = new Package(rootPackageName);
     this.extensions = this.createGraphExtensions(extensionElementClasses);
+    this._origin = origin;
   }
 
   private createGraphExtensions(
@@ -200,12 +217,29 @@ export abstract class BasicModel {
   get ownDataElements(): DataElement[] {
     return Array.from(this.dataElementsIndex.values());
   }
+  get ownExecutionEnvironments(): ExecutionEnvironmentInstance[] {
+    return Array.from(this.executionEnvironmentIndex.values());
+  }
   get ownGenerationSpecifications(): GenerationSpecification[] {
     return Array.from(this.generationSpecificationsIndex.values());
   }
 
   get ownTestables(): Testable[] {
     return [...this.ownServices, ...this.ownMappings];
+  }
+
+  get origin(): GraphDataOrigin | undefined {
+    return this._origin;
+  }
+
+  setOrigin(val: GraphDataOrigin): void {
+    if (this._origin) {
+      throw new IllegalStateError(
+        `SDLC pointer has already been set for model.`,
+      );
+    } else {
+      this._origin = val;
+    }
   }
 
   getExtensionElements<T extends PackageableElement>(
@@ -279,6 +313,10 @@ export abstract class BasicModel {
     this.fileGenerationsIndex.get(path);
   getOwnNullableDataElement = (path: string): DataElement | undefined =>
     this.dataElementsIndex.get(path);
+  getOwnNullableExecutionEnviornment = (
+    path: string,
+  ): ExecutionEnvironmentInstance | undefined =>
+    this.executionEnvironmentIndex.get(path);
   getOwnSectionIndex = (path: string): SectionIndex =>
     guaranteeNonNullable(
       this.getOwnNullableSectionIndex(path),
@@ -371,6 +409,11 @@ export abstract class BasicModel {
       this.getOwnNullableDataElement(path),
       `Can't find data element '${path}'`,
     );
+  getOwnExecutionEnvironment = (path: string): ExecutionEnvironmentInstance =>
+    guaranteeNonNullable(
+      this.getOwnNullableExecutionEnviornment(path),
+      `Can't find execution environment element '${path}'`,
+    );
 
   getOwnNullableExtensionElement<T extends PackageableElement>(
     path: string,
@@ -426,6 +469,12 @@ export abstract class BasicModel {
   setOwnDataElement(path: string, val: DataElement): void {
     this.dataElementsIndex.set(path, val);
   }
+  setOwnExecutionEnvironment(
+    path: string,
+    val: ExecutionEnvironmentInstance,
+  ): void {
+    this.executionEnvironmentIndex.set(path, val);
+  }
 
   setOwnElementInExtension<T extends PackageableElement>(
     path: string,
@@ -452,6 +501,7 @@ export abstract class BasicModel {
       ...this.ownGenerationSpecifications,
       ...this.ownFileGenerations,
       ...this.ownDataElements,
+      ...this.ownExecutionEnvironments,
       ...this.extensions.flatMap((extension) => extension.elements),
     ];
   }
@@ -497,6 +547,7 @@ export abstract class BasicModel {
       this.connectionsIndex.get(path) ??
       this.fileGenerationsIndex.get(path) ??
       this.dataElementsIndex.get(path) ??
+      this.executionEnvironmentIndex.get(path) ??
       this.generationSpecificationsIndex.get(path);
     if (!element) {
       for (const extension of this.extensions) {
@@ -547,6 +598,8 @@ export abstract class BasicModel {
       this.setOwnGenerationSpecification(element.path, element);
     } else if (element instanceof DataElement) {
       this.setOwnDataElement(element.path, element);
+    } else if (element instanceof ExecutionEnvironmentInstance) {
+      this.setOwnExecutionEnvironment(element.path, element);
     } else if (element instanceof Package) {
       // do nothing
     } else {
@@ -593,6 +646,8 @@ export abstract class BasicModel {
       this.generationSpecificationsIndex.delete(element.path);
     } else if (element instanceof DataElement) {
       this.dataElementsIndex.delete(element.path);
+    } else if (element instanceof ExecutionEnvironmentInstance) {
+      this.executionEnvironmentIndex.delete(element.path);
     } else if (element instanceof Package) {
       element.children.forEach((child) => this.deleteOwnElement(child));
     } else {
@@ -712,6 +767,9 @@ export abstract class BasicModel {
     } else if (element instanceof DataElement) {
       this.dataElementsIndex.delete(oldPath);
       this.dataElementsIndex.set(newPath, element);
+    } else if (element instanceof ExecutionEnvironmentInstance) {
+      this.executionEnvironmentIndex.delete(oldPath);
+      this.executionEnvironmentIndex.set(newPath, element);
     } else if (element instanceof GenerationSpecification) {
       this.generationSpecificationsIndex.delete(oldPath);
       this.generationSpecificationsIndex.set(newPath, element);

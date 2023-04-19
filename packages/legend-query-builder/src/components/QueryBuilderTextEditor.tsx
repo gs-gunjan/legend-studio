@@ -22,17 +22,21 @@ import {
   Modal,
   ModalBody,
   ModalFooter,
+  ModalFooterButton,
+  ModalFooterStatus,
   ModalHeader,
+  PanelLoadingIndicator,
+  RefreshIcon,
 } from '@finos/legend-art';
 import type { QueryBuilderState } from '../stores/QueryBuilderState.js';
 import { QueryBuilderTextEditorMode } from '../stores/QueryBuilderTextEditorState.js';
 import { flowResult } from 'mobx';
-import {
-  EDITOR_LANGUAGE,
-  TextInputEditor,
-  useApplicationStore,
-} from '@finos/legend-application';
+import { useApplicationStore } from '@finos/legend-application';
 import { LambdaEditor } from './shared/LambdaEditor.js';
+import {
+  CODE_EDITOR_LANGUAGE,
+  CodeEditor,
+} from '@finos/legend-lego/code-editor';
 
 export const QueryBuilderTextEditor = observer(
   (props: { queryBuilderState: QueryBuilderState }) => {
@@ -45,7 +49,7 @@ export const QueryBuilderTextEditor = observer(
     const discardChanges = (): void => {
       queryBuilderState.textEditorState.setMode(undefined);
       // force close the backdrop just in case changes are discarded when there are grammar issues
-      applicationStore.setShowBackdrop(false);
+      applicationStore.layoutService.setShowBackdrop(false);
     };
     const mode = queryTextEditorState.mode;
     useEffect(() => {
@@ -80,6 +84,11 @@ export const QueryBuilderTextEditor = observer(
               </div>
             )}
           </ModalHeader>
+          <PanelLoadingIndicator
+            isLoading={
+              queryBuilderState.textEditorState.closingQueryState.isInProgress
+            }
+          />
           <ModalBody>
             <div
               className={clsx('query-builder-text-mode__modal__content', {
@@ -99,8 +108,8 @@ export const QueryBuilderTextEditor = observer(
                 />
               )}
               {mode === QueryBuilderTextEditorMode.JSON && (
-                <TextInputEditor
-                  language={EDITOR_LANGUAGE.JSON}
+                <CodeEditor
+                  language={CODE_EDITOR_LANGUAGE.JSON}
                   inputValue={queryTextEditorState.readOnlylambdaJson}
                   isReadOnly={true}
                 />
@@ -108,20 +117,44 @@ export const QueryBuilderTextEditor = observer(
             </div>
           </ModalBody>
           <ModalFooter>
+            {queryBuilderState.textEditorState.closingQueryState
+              .isInProgress && (
+              <ModalFooterStatus>Closing Query...</ModalFooterStatus>
+            )}
+            {queryBuilderState.queryCompileState.isInProgress && (
+              <ModalFooterStatus>
+                <div className="loading-icon__container--spinning">
+                  <RefreshIcon />
+                </div>
+                Compiling Query...
+              </ModalFooterStatus>
+            )}
             {mode === QueryBuilderTextEditorMode.TEXT && (
-              <button
-                className="btn btn--dark btn--caution"
+              <ModalFooterButton
+                className="btn--caution"
                 onClick={discardChanges}
-              >
-                Discard changes
-              </button>
+                text="Discard Changes"
+              />
             )}
             <button
               className="btn btn--dark"
               onClick={close}
-              disabled={Boolean(queryTextEditorState.parserError)}
+              disabled={
+                Boolean(queryTextEditorState.parserError) ||
+                queryBuilderState.textEditorState.closingQueryState.isInProgress
+              }
             >
-              Close
+              {queryBuilderState.textEditorState.closingQueryState
+                .isInProgress ? (
+                <>
+                  <div className="loading-icon__container--spinning">
+                    <RefreshIcon />
+                    Closing
+                  </div>
+                </>
+              ) : (
+                <> Close </>
+              )}
             </button>
           </ModalFooter>
         </Modal>

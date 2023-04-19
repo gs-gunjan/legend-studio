@@ -1,5 +1,83 @@
 # @finos/legend-art
 
+## 7.0.2
+
+## 7.0.1
+
+## 7.0.0
+
+## 6.0.0
+
+### Major Changes
+
+- [#2094](https://github.com/finos/legend-studio/pull/2094) [`7d8035415`](https://github.com/finos/legend-studio/commit/7d803541596f7dab018fae833eba01fdc7bbfcdb) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Changed how we expose test mocks in exports: `@finos/legend-art/lib/markdown/test/MockedReactMarkdown.js` -> `@finos/legend-art/markdown/test/MockedReactMarkdown.js` and `@finos/legend-art/lib/markdown/test/MockedRemarkGFM.js` -> `@finos/legend-art/markdown/test/MockedRemarkGFM.js`.
+
+  Moved all text editor logics to `@finos/legend-lego/code-editor` and renamed them to `CodeEditor` instead of `TextEditor`, e.g. `disposeEditor()` -> `disposeCodeEditor()`, `getBaseTextEditorOptions()` -> `getBaseCodeEditorOptions()`. In terms of testing, `monaco-editor` mock utils are now exposed under `@finos/legend-lego/code-editor/test` and the test mock has been exported via `@finos/legend-lego/code-editor/test/MockedMonacoEditor.js`.
+
+## 5.0.42
+
+## 5.0.41
+
+## 5.0.40
+
+## 5.0.39
+
+## 5.0.38
+
+## 5.0.37
+
+## 5.0.36
+
+## 5.0.35
+
+## 5.0.34
+
+## 5.0.33
+
+## 5.0.32
+
+## 5.0.31
+
+## 5.0.30
+
+## 5.0.29
+
+## 5.0.28
+
+## 5.0.27
+
+## 5.0.26
+
+### Patch Changes
+
+- [#1909](https://github.com/finos/legend-studio/pull/1909) [`130d068d0`](https://github.com/finos/legend-studio/commit/130d068d0932dde5786ecf8de6dacf2bffcc6143) ([@xannem](https://github.com/xannem)) - Replace brush icon with trash icon
+
+## 5.0.25
+
+## 5.0.24
+
+### Patch Changes
+
+- [#1882](https://github.com/finos/legend-studio/pull/1882) [`87c71c559`](https://github.com/finos/legend-studio/commit/87c71c5592e4d1cbcc04ef9d915d7ac2f072ad1f) ([@xannem](https://github.com/xannem)) - Minor modal and panel styling edits.
+
+## 5.0.23
+
+## 5.0.22
+
+## 5.0.21
+
+### Patch Changes
+
+- [#1859](https://github.com/finos/legend-studio/pull/1859) [`d8b85ff06`](https://github.com/finos/legend-studio/commit/d8b85ff066d8743d96c9f9edbf2875a062847e00) ([@xannem](https://github.com/xannem)) - Add loading icon.
+
+## 5.0.20
+
+## 5.0.19
+
+### Patch Changes
+
+- [#1669](https://github.com/finos/legend-studio/pull/1669) [`04bec8146`](https://github.com/finos/legend-studio/commit/04bec8146730311355d9debe77f28db79d4b800c) ([@xannem](https://github.com/xannem)) - Light mode styling fixes in query builder and allow new line delimiter for query filter value spec.
+
 ## 5.0.18
 
 ## 5.0.17
@@ -249,7 +327,7 @@
 
 ### Minor Changes
 
-- [#620](https://github.com/finos/legend-studio/pull/620) [`efe01d92`](https://github.com/finos/legend-studio/commit/efe01d9218034dc358420b65f20da9715eb55589) ([@akphi](https://github.com/akphi)) - Make the text value we get from all `monaco-editor` instances more consistent by exposing the method `getEditorValue()` that returns the text value with line-ending option `LF` and `normalizeLineEnding()` to remove `CR` characters `\r` in the input value, see example usage of `TextInputEditor.tsx` for example ([#608](https://github.com/finos/legend-studio/issues/608)).
+- [#620](https://github.com/finos/legend-studio/pull/620) [`efe01d92`](https://github.com/finos/legend-studio/commit/efe01d9218034dc358420b65f20da9715eb55589) ([@akphi](https://github.com/akphi)) - Make the text value we get from all `monaco-editor` instances more consistent by exposing the method `getCodeEditorValue()` that returns the text value with line-ending option `LF` and `normalizeLineEnding()` to remove `CR` characters `\r` in the input value, see example usage of `CodeEditor.tsx` for example ([#608](https://github.com/finos/legend-studio/issues/608)).
 
 ### Patch Changes
 

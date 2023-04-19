@@ -17,18 +17,14 @@
 import {
   type SelectComponent,
   Dialog,
-  ExternalLinkSquareIcon,
   PanelLoadingIndicator,
   SaveIcon,
   BlankPanelContent,
   clsx,
-  EmptyLightBulbIcon,
-  LightBulbIcon,
   SearchIcon,
   TimesIcon,
   CheckSquareIcon,
   SquareIcon,
-  ManageSearchIcon,
   DropdownMenu,
   MenuContent,
   MenuContentItem,
@@ -43,25 +39,23 @@ import {
   ModalBody,
   ModalFooter,
   ModalTitle,
+  ModalFooterButton,
+  ManageSearchIcon,
+  LightBulbIcon,
+  EmptyLightBulbIcon,
 } from '@finos/legend-art';
-import {
-  debounce,
-  getQueryParameters,
-  getQueryParameterValue,
-  sanitizeURL,
-} from '@finos/legend-shared';
+import { debounce } from '@finos/legend-shared';
 import { observer } from 'mobx-react-lite';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type MappingQueryCreatorPathParams,
   type ExistingQueryEditorPathParams,
   type ServiceQueryCreatorPathParams,
-  type ServiceQueryCreatorQueryParams,
   LEGEND_QUERY_QUERY_PARAM_TOKEN,
-  LEGEND_QUERY_PATH_PARAM_TOKEN,
+  LEGEND_QUERY_ROUTE_PATTERN_TOKEN,
   generateExistingQueryEditorRoute,
   generateQuerySetupRoute,
-} from '../stores/LegendQueryRouter.js';
+} from '../__lib__/LegendQueryNavigation.js';
 import {
   type QueryEditorStore,
   ExistingQueryEditorStore,
@@ -69,7 +63,11 @@ import {
   createViewProjectHandler,
   createViewSDLCProjectHandler,
 } from '../stores/QueryEditorStore.js';
-import { useApplicationStore, useParams } from '@finos/legend-application';
+import {
+  LEGEND_APPLICATION_COLOR_THEME,
+  useApplicationStore,
+} from '@finos/legend-application';
+import { useParams } from '@finos/legend-application/browser';
 import {
   MappingQueryCreatorStoreProvider,
   ExistingQueryEditorStoreProvider,
@@ -78,7 +76,7 @@ import {
 } from './QueryEditorStoreProvider.js';
 import type { RawLambda } from '@finos/legend-graph';
 import { flowResult } from 'mobx';
-import { useLegendQueryApplicationStore } from './LegendQueryBaseStoreProvider.js';
+import { useLegendQueryApplicationStore } from './LegendQueryFrameworkProvider.js';
 import {
   QueryBuilder,
   QueryBuilderNavigationBlocker,
@@ -122,14 +120,7 @@ const QueryExportDialogContent = observer(
           />
         </ModalBody>
         <ModalFooter>
-          {allowSave && (
-            <button
-              className="btn modal__footer__close-btn btn--dark"
-              onClick={save}
-            >
-              Save
-            </button>
-          )}
+          {allowSave && <ModalFooterButton text="Save" onClick={save} />}
           <button
             className="btn modal__footer__close-btn btn--dark"
             // TODO?: we should probably annotate here why,
@@ -225,7 +216,7 @@ const QueryLoader = observer(
       if (selectedQueryID) {
         queryBuilderState.changeDetectionState.alertUnsavedChanges(() => {
           editorStore.queryLoaderState.setIsQueryLoaderOpen(false);
-          applicationStore.navigator.goToLocation(
+          applicationStore.navigationService.navigator.goToLocation(
             generateExistingQueryEditorRoute(selectedQueryID),
             { ignoreBlocking: true },
           );
@@ -409,10 +400,14 @@ const QueryEditorHeaderContent = observer(
         applicationStore.alertUnhandledError,
       );
     };
-    const toggleLightDarkMode = (): void =>
-      applicationStore.TEMPORARY__setIsLightThemeEnabled(
-        !applicationStore.TEMPORARY__isLightThemeEnabled,
+    const TEMPORARY__toggleLightDarkMode = (): void => {
+      applicationStore.layoutService.setColorTheme(
+        applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          ? LEGEND_APPLICATION_COLOR_THEME.DEFAULT_DARK
+          : LEGEND_APPLICATION_COLOR_THEME.LEGACY_LIGHT,
+        { persist: true },
       );
+    };
     const saveQuery = (): void => {
       queryBuilderState
         .saveQuery(async (lambda: RawLambda) => {
@@ -451,55 +446,12 @@ const QueryEditorHeaderContent = observer(
             onClick={openQueryLoader}
             title="Load query..."
           >
-            <ManageSearchIcon className="query-editor__header__action__icon--loader" />
+            <ManageSearchIcon className="query-editor__header__action__icon--load" />
+            <div className="query-editor__header__action__label">
+              Load Query
+            </div>
           </button>
-          {editorStore.queryLoaderState.isQueryLoaderOpen && (
-            <QueryLoader
-              editorStore={editorStore}
-              queryBuilderState={queryBuilderState}
-            />
-          )}
-          <div className="query-editor__header__action query-editor__header__action__view-project">
-            <button
-              className="query-editor__header__action__view-project__btn btn--dark"
-              disabled={editorStore.isViewProjectActionDisabled}
-              tabIndex={-1}
-              title="View project"
-              onClick={viewProject}
-            >
-              <ExternalLinkSquareIcon />
-            </button>
-            <DropdownMenu
-              className="query-editor__header__action__view-project__dropdown-trigger btn--dark"
-              disabled={editorStore.isViewProjectActionDisabled}
-              content={
-                <MenuContent>
-                  <MenuContentItem
-                    disabled={editorStore.isViewProjectActionDisabled}
-                    onClick={viewSDLCProject}
-                  >
-                    View SDLC project
-                  </MenuContentItem>
-                </MenuContent>
-              }
-            >
-              <CaretDownIcon />
-            </DropdownMenu>
-          </div>
-          {applicationStore.config.options.TEMPORARY__enableThemeSwitcher && (
-            <button
-              className="query-editor__header__action btn--dark"
-              tabIndex={-1}
-              title="Toggle light/dark mode"
-              onClick={toggleLightDarkMode}
-            >
-              {applicationStore.TEMPORARY__isLightThemeEnabled ? (
-                <EmptyLightBulbIcon />
-              ) : (
-                <LightBulbIcon />
-              )}
-            </button>
-          )}
+
           <button
             className="query-editor__header__action btn--dark"
             tabIndex={-1}
@@ -508,7 +460,66 @@ const QueryEditorHeaderContent = observer(
             title="Save query"
           >
             <SaveIcon />
+
+            <div className="query-editor__header__action__label">
+              Save Query
+            </div>
           </button>
+
+          {editorStore.queryLoaderState.isQueryLoaderOpen && (
+            <QueryLoader
+              editorStore={editorStore}
+              queryBuilderState={queryBuilderState}
+            />
+          )}
+          <button
+            title="Toggle light/dark mode"
+            onClick={TEMPORARY__toggleLightDarkMode}
+            className="query-editor__header__action"
+          >
+            {applicationStore.layoutService
+              .TEMPORARY__isLightColorThemeEnabled ? (
+              <>
+                <LightBulbIcon className="query-editor__header__action__icon--bulb--light" />
+              </>
+            ) : (
+              <>
+                <EmptyLightBulbIcon className="query-editor__header__action__icon--bulb--dark" />
+              </>
+            )}
+          </button>
+
+          <DropdownMenu
+            className="query-editor__header__action btn--medium"
+            disabled={editorStore.isViewProjectActionDisabled}
+            content={
+              <MenuContent>
+                <MenuContentItem
+                  className="query-editor__header__action__options"
+                  disabled={editorStore.isViewProjectActionDisabled}
+                  onClick={viewProject}
+                >
+                  Project
+                </MenuContentItem>
+                <MenuContentItem
+                  className="query-editor__header__action__options"
+                  disabled={editorStore.isViewProjectActionDisabled}
+                  onClick={viewSDLCProject}
+                >
+                  SDLC project
+                </MenuContentItem>
+              </MenuContent>
+            }
+          >
+            <div
+              className="query-editor__header__action__label"
+              title="See more options"
+            >
+              Go to...
+            </div>
+            <CaretDownIcon />
+          </DropdownMenu>
+
           {editorStore.exportState && <QueryExport />}
         </div>
       </div>
@@ -525,13 +536,15 @@ export const QueryEditor = observer(() => {
   const appDocUrl = applicationStore.documentationService.url;
   const goToDocumentation = (): void => {
     if (appDocUrl) {
-      applicationStore.navigator.visitAddress(appDocUrl);
+      applicationStore.navigationService.navigator.visitAddress(appDocUrl);
     }
   };
   // go to setup page
   const goToQuerySetup = (): void =>
-    applicationStore.navigator.visitAddress(
-      applicationStore.navigator.generateAddress(generateQuerySetupRoute()),
+    applicationStore.navigationService.navigator.visitAddress(
+      applicationStore.navigationService.navigator.generateAddress(
+        generateQuerySetupRoute(),
+      ),
     );
   // settings
   // NOTE: this is temporary until we find a better home for these settings in query builder
@@ -548,23 +561,8 @@ export const QueryEditor = observer(() => {
     );
   }, [editorStore, applicationStore]);
 
-  useEffect(() => {
-    document.body.classList.toggle(
-      'light-theme',
-      applicationStore.TEMPORARY__isLightThemeEnabled,
-    );
-  }, [applicationStore.TEMPORARY__isLightThemeEnabled]);
-
   return (
-    <div
-      className={clsx([
-        'query-editor ',
-        {
-          'query-editor--light':
-            applicationStore.TEMPORARY__isLightThemeEnabled,
-        },
-      ])}
-    >
+    <div className="query-editor">
       <div className="query-editor__header">
         <div className="query-editor__header__menu">
           <DropdownMenu
@@ -576,7 +574,6 @@ export const QueryEditor = observer(() => {
             }}
             content={
               <MenuContent>
-                {/* <MenuContentItem onClick={openHelp}>Help...</MenuContentItem> */}
                 <MenuContentItem
                   disabled={!appDocUrl}
                   onClick={goToDocumentation}
@@ -638,7 +635,7 @@ export const QueryEditor = observer(() => {
 
 export const ExistingQueryEditor = observer(() => {
   const params = useParams<ExistingQueryEditorPathParams>();
-  const queryId = params[LEGEND_QUERY_PATH_PARAM_TOKEN.QUERY_ID];
+  const queryId = params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.QUERY_ID];
 
   return (
     <ExistingQueryEditorStoreProvider queryId={queryId}>
@@ -649,16 +646,13 @@ export const ExistingQueryEditor = observer(() => {
 
 export const ServiceQueryCreator = observer(() => {
   const applicationStore = useApplicationStore();
-  const params = useParams<ServiceQueryCreatorPathParams>();
-  const gav = params[LEGEND_QUERY_PATH_PARAM_TOKEN.GAV];
-  const servicePath = params[LEGEND_QUERY_PATH_PARAM_TOKEN.SERVICE_PATH];
-  const executionKey = getQueryParameterValue(
-    getQueryParameters<ServiceQueryCreatorQueryParams>(
-      sanitizeURL(applicationStore.navigator.getCurrentAddress()),
-      true,
-    ),
-    LEGEND_QUERY_QUERY_PARAM_TOKEN.SERVICE_EXECUTION_KEY,
-  );
+  const parameters = useParams<ServiceQueryCreatorPathParams>();
+  const gav = parameters[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.GAV];
+  const servicePath = parameters[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.SERVICE_PATH];
+  const executionKey =
+    applicationStore.navigationService.navigator.getCurrentLocationParameterValue(
+      LEGEND_QUERY_QUERY_PARAM_TOKEN.SERVICE_EXECUTION_KEY,
+    );
 
   return (
     <ServiceQueryCreatorStoreProvider
@@ -673,9 +667,9 @@ export const ServiceQueryCreator = observer(() => {
 
 export const MappingQueryCreator = observer(() => {
   const params = useParams<MappingQueryCreatorPathParams>();
-  const gav = params[LEGEND_QUERY_PATH_PARAM_TOKEN.GAV];
-  const mappingPath = params[LEGEND_QUERY_PATH_PARAM_TOKEN.MAPPING_PATH];
-  const runtimePath = params[LEGEND_QUERY_PATH_PARAM_TOKEN.RUNTIME_PATH];
+  const gav = params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.GAV];
+  const mappingPath = params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.MAPPING_PATH];
+  const runtimePath = params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.RUNTIME_PATH];
 
   return (
     <MappingQueryCreatorStoreProvider

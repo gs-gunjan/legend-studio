@@ -1,5 +1,101 @@
 # @finos/legend-extension-dsl-service
 
+## 1.0.2
+
+## 1.0.1
+
+## 1.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Partition exports into separate paths, `/graph` for graph and graph manager extensions, `/application` for generic application extensions, `/application-studio` for `Legend Studio` specific application extensions, and `/application-query` for `Legend Query` specific application extensions.
+
+## 0.1.52
+
+## 0.1.51
+
+## 0.1.50
+
+## 0.1.49
+
+## 0.1.48
+
+## 0.1.47
+
+## 0.1.46
+
+## 0.1.45
+
+## 0.1.44
+
+## 0.1.43
+
+## 0.1.42
+
+## 0.1.41
+
+## 0.1.40
+
+## 0.1.39
+
+## 0.1.38
+
+## 0.1.37
+
+## 0.1.36
+
+## 0.1.35
+
+## 0.1.34
+
+## 0.1.33
+
+## 0.1.32
+
+## 0.1.31
+
+## 0.1.30
+
+### Patch Changes
+
+- [#1939](https://github.com/finos/legend-studio/pull/1939) [`a6cb0d1c7`](https://github.com/finos/legend-studio/commit/a6cb0d1c7b35ac0b71fd29473d3e84d0bf2161e6) ([@xannem](https://github.com/xannem)) - Increase readability of query builder icon option buttons
+
+## 0.1.29
+
+## 0.1.28
+
+## 0.1.27
+
+## 0.1.26
+
+## 0.1.25
+
+## 0.1.24
+
+## 0.1.23
+
+## 0.1.22
+
+## 0.1.21
+
+## 0.1.20
+
+## 0.1.19
+
+## 0.1.18
+
+### Patch Changes
+
+- [#1834](https://github.com/finos/legend-studio/pull/1834) [`eb28388b2`](https://github.com/finos/legend-studio/commit/eb28388b213ce8e75baeca64888f7433d5af8b27) ([@gayathrir11](https://github.com/gayathrir11)) - Support semi-interactive registration of services from Standalone query
+
+## 0.1.17
+
+## 0.1.16
+
+### Patch Changes
+
+- [#1685](https://github.com/finos/legend-studio/pull/1685) [`50120dbef`](https://github.com/finos/legend-studio/commit/50120dbef670a71010726f44dfb03b8a65b9b5ff) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support a searchable dropdown for adding service owners ([#1683](https://github.com/finos/legend-studio/issues/1683)).
+
 ## 0.1.15
 
 ## 0.1.14

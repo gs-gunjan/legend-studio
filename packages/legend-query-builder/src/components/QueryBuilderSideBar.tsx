@@ -26,7 +26,7 @@ import {
 } from '@finos/legend-art';
 import { observer } from 'mobx-react-lite';
 import type { QueryBuilderState } from '../stores/QueryBuilderState.js';
-import { QUERY_BUILDER_TEST_ID } from './QueryBuilder_TestID.js';
+import { QUERY_BUILDER_TEST_ID } from '../__lib__/QueryBuilderTesting.js';
 import {
   type Class,
   type Mapping,
@@ -41,14 +41,13 @@ import {
   VARIABLE_REFERENCE_TOKEN,
   isElementDeprecated,
   PrimitiveType,
-  type PureModel,
 } from '@finos/legend-graph';
+import { useApplicationStore } from '@finos/legend-application';
 import {
-  type PackageableElementOption,
-  getPackageableElementOptionFormatter,
   buildElementOption,
-  useApplicationStore,
-} from '@finos/legend-application';
+  getPackageableElementOptionFormatter,
+  type PackageableElementOption,
+} from '@finos/legend-lego/graph-editor';
 import { MilestoningParametersEditor } from './explorer/QueryBuilderMilestoningEditor.js';
 
 export const getParameterValue = (
@@ -179,11 +178,15 @@ export const QueryBuilderClassSelector = observer(
               options={classOptions}
               onChange={changeClass}
               value={selectedClassOption}
-              darkMode={!applicationStore.TEMPORARY__isLightThemeEnabled}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
               filterOption={elementFilterOption}
               formatOptionLabel={getPackageableElementOptionFormatter({
-                darkMode: !applicationStore.TEMPORARY__isLightThemeEnabled,
-                pureModel: queryBuilderState.graphManagerState.graph,
+                darkMode:
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled,
               })}
             />
             {queryBuilderState.isQuerySupported && (
@@ -221,7 +224,6 @@ export const buildRuntimeValueOption = (
 
 export const getRuntimeOptionFormatter = (props: {
   darkMode?: boolean;
-  pureModel: PureModel;
 }): ((option: { value: Runtime }) => React.ReactNode) =>
   function RuntimeOptionLabel(option: { value: Runtime }): React.ReactNode {
     if (option.value instanceof RuntimePointer) {
@@ -337,11 +339,15 @@ const BasicQueryBuilderSetup = observer(
                 options={mappingOptions}
                 onChange={changeMapping}
                 value={selectedMappingOption}
-                darkMode={!applicationStore.TEMPORARY__isLightThemeEnabled}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 filterOption={mappingFilterOption}
                 formatOptionLabel={getPackageableElementOptionFormatter({
-                  darkMode: !applicationStore.TEMPORARY__isLightThemeEnabled,
-                  pureModel: queryBuilderState.graphManagerState.graph,
+                  darkMode:
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled,
                 })}
               />
             </div>
@@ -367,11 +373,15 @@ const BasicQueryBuilderSetup = observer(
                 options={runtimeOptions}
                 onChange={changeRuntime}
                 value={selectedRuntimeOption}
-                darkMode={!applicationStore.TEMPORARY__isLightThemeEnabled}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 filterOption={runtimeFilterOption}
                 formatOptionLabel={getRuntimeOptionFormatter({
-                  darkMode: !applicationStore.TEMPORARY__isLightThemeEnabled,
-                  pureModel: queryBuilderState.graphManagerState.graph,
+                  darkMode:
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled,
                 })}
               />
             </div>

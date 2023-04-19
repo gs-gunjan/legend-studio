@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { CHANGE_DETECTION_EVENT } from '../ChangeDetectionEvent.js';
 import {
   type GeneratorFn,
   type PlainObject,
@@ -30,12 +29,12 @@ import {
   flow,
   computed,
 } from 'mobx';
-import type { EditorStore } from '../EditorStore.js';
-import { ACTIVITY_MODE } from '../EditorConfig.js';
+import type { EditorStore } from '../editor/EditorStore.js';
+import { ACTIVITY_MODE } from '../editor/EditorConfig.js';
 import type { Entity } from '@finos/legend-storage';
 import { Project, Review } from '@finos/legend-server-sdlc';
-import { LEGEND_STUDIO_APP_EVENT } from '../LegendStudioAppEvent.js';
-import { TAB_SIZE } from '@finos/legend-application';
+import { LEGEND_STUDIO_APP_EVENT } from '../../__lib__/LegendStudioEvent.js';
+import { DEFAULT_TAB_SIZE } from '@finos/legend-application';
 
 export class WorkspaceReviewStore {
   readonly editorStore: EditorStore;
@@ -104,7 +103,7 @@ export class WorkspaceReviewStore {
       yield this.editorStore.graphManagerState.graphManager.initialize(
         {
           env: this.editorStore.applicationStore.config.env,
-          tabSize: TAB_SIZE,
+          tabSize: DEFAULT_TAB_SIZE,
           clientConfig: {
             baseUrl: this.editorStore.applicationStore.config.engineServerUrl,
             queryBaseUrl:
@@ -118,11 +117,11 @@ export class WorkspaceReviewStore {
       );
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     }
   }
 
@@ -149,13 +148,13 @@ export class WorkspaceReviewStore {
         this.editorStore.changeDetectionState.workspaceBaseRevisionState.buildEntityHashesIndex(
           fromEntities,
           LogEvent.create(
-            CHANGE_DETECTION_EVENT.CHANGE_DETECTION_WORKSPACE_HASHES_INDEX_BUILT,
+            LEGEND_STUDIO_APP_EVENT.CHANGE_DETECTION_BUILD_WORKSPACE_HASHES_INDEX__SUCCESS,
           ),
         ),
         this.editorStore.changeDetectionState.workspaceLocalLatestRevisionState.buildEntityHashesIndex(
           toEntities,
           LogEvent.create(
-            CHANGE_DETECTION_EVENT.CHANGE_DETECTION_LOCAL_HASHES_INDEX_BUILT,
+            LEGEND_STUDIO_APP_EVENT.CHANGE_DETECTION_BUILD_LOCAL_HASHES_INDEX__SUCCESS,
           ),
         ),
       ]);
@@ -164,11 +163,11 @@ export class WorkspaceReviewStore {
       );
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
       this.isFetchingComparison = false;
     }
@@ -183,11 +182,11 @@ export class WorkspaceReviewStore {
       );
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     }
   }
 
@@ -202,11 +201,11 @@ export class WorkspaceReviewStore {
       );
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
       this.isFetchingCurrentReview = false;
     }
@@ -223,11 +222,11 @@ export class WorkspaceReviewStore {
       );
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
       this.isApprovingReview = false;
     }
@@ -245,11 +244,11 @@ export class WorkspaceReviewStore {
       );
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
       this.isCommittingReview = false;
     }
@@ -266,11 +265,11 @@ export class WorkspaceReviewStore {
       );
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
       this.isReopeningReview = false;
     }
@@ -287,11 +286,11 @@ export class WorkspaceReviewStore {
       );
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
       this.isClosingReview = false;
     }

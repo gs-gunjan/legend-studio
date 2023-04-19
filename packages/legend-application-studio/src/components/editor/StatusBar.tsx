@@ -23,23 +23,27 @@ import {
   CodeBranchIcon,
   TerminalIcon,
   HackerIcon,
-  BrushIcon,
+  TrashIcon,
   CloudUploadIcon,
   AssistantIcon,
   ErrorIcon,
   WarningIcon,
 } from '@finos/legend-art';
-import { LEGEND_STUDIO_TEST_ID } from '../LegendStudioTestID.js';
-import { ACTIVITY_MODE, AUX_PANEL_MODE } from '../../stores/EditorConfig.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../__lib__/LegendStudioTesting.js';
+import {
+  ACTIVITY_MODE,
+  PANEL_MODE,
+  GRAPH_EDITOR_MODE,
+} from '../../stores/editor/EditorConfig.js';
 import {
   generateSetupRoute,
   type WorkspaceEditorPathParams,
-} from '../../stores/LegendStudioRouter.js';
+} from '../../__lib__/LegendStudioNavigation.js';
 import { flowResult } from 'mobx';
 import { useEditorStore } from './EditorStoreProvider.js';
 import { WorkspaceType } from '@finos/legend-server-sdlc';
-import { useLegendStudioApplicationStore } from '../LegendStudioBaseStoreProvider.js';
-import { useParams } from '@finos/legend-application';
+import { useLegendStudioApplicationStore } from '../LegendStudioFrameworkProvider.js';
+import { useParams } from '@finos/legend-application/browser';
 import { guaranteeNonNullable } from '@finos/legend-shared';
 
 export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
@@ -126,22 +130,18 @@ export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
       : 'all conflicts resolved';
 
   // Other actions
-  const toggleAuxPanel = (): void => editorStore.auxPanelDisplayState.toggle();
+  const togglePanel = (): void => editorStore.panelGroupDisplayState.toggle();
 
   const showCompilationWarnings = (): void => {
-    editorStore.auxPanelDisplayState.open();
-    editorStore.setActiveAuxPanelMode(AUX_PANEL_MODE.PROBLEMS);
+    editorStore.panelGroupDisplayState.open();
+    editorStore.setActivePanelMode(PANEL_MODE.PROBLEMS);
   };
 
   const handleTextModeClick = applicationStore.guardUnhandledError(() =>
     flowResult(editorStore.toggleTextMode()),
   );
-  const compile = applicationStore.guardUnhandledError(
-    editorStore.isInGrammarTextMode
-      ? () => flowResult(editorStore.graphState.globalCompileInTextMode())
-      : async () => {
-          await flowResult(editorStore.graphState.globalCompileInFormMode());
-        },
+  const compile = applicationStore.guardUnhandledError(() =>
+    flowResult(editorStore.graphEditorMode.globalCompile()),
   );
   const generate = applicationStore.guardUnhandledError(() =>
     flowResult(editorStore.graphState.graphGenerationState.globalGenerate()),
@@ -169,8 +169,8 @@ export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
             title="Go back to workspace setup using the specified project"
             tabIndex={-1}
             onClick={(): void =>
-              applicationStore.navigator.visitAddress(
-                applicationStore.navigator.generateAddress(
+              applicationStore.navigationService.navigator.visitAddress(
+                applicationStore.navigationService.navigator.generateAddress(
                   generateSetupRoute(projectId),
                 ),
               )
@@ -184,8 +184,8 @@ export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
             title="Go back to workspace setup using the specified workspace"
             tabIndex={-1}
             onClick={(): void =>
-              applicationStore.navigator.visitAddress(
-                applicationStore.navigator.generateAddress(
+              applicationStore.navigationService.navigator.visitAddress(
+                applicationStore.navigationService.navigator.generateAddress(
                   generateSetupRoute(projectId, workspaceId, workspaceType),
                 ),
               )
@@ -341,7 +341,7 @@ export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
           tabIndex={-1}
           title="Clear generation entities"
         >
-          <BrushIcon />
+          <TrashIcon />
         </button>
         <button
           className={clsx(
@@ -366,12 +366,12 @@ export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
             'editor__status-bar__action editor__status-bar__action__toggler',
             {
               'editor__status-bar__action__toggler--active':
-                editorStore.auxPanelDisplayState.isOpen,
+                editorStore.panelGroupDisplayState.isOpen,
             },
           )}
-          onClick={toggleAuxPanel}
+          onClick={togglePanel}
           tabIndex={-1}
-          title="Toggle auxiliary panel (Ctrl + `)"
+          title="Toggle panel (Ctrl + `)"
         >
           <TerminalIcon />
         </button>
@@ -380,7 +380,8 @@ export const StatusBar = observer((props: { actionsDisabled: boolean }) => {
             'editor__status-bar__action editor__status-bar__action__toggler',
             {
               'editor__status-bar__action editor__status-bar__action__toggler--active':
-                editorStore.isInGrammarTextMode,
+                editorStore.graphEditorMode.mode ===
+                GRAPH_EDITOR_MODE.GRAMMAR_TEXT,
             },
           )}
           disabled={actionsDisabled}

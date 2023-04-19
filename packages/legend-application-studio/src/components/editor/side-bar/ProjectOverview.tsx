@@ -16,7 +16,7 @@
 
 import { forwardRef, useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { LEGEND_STUDIO_TEST_ID } from '../../LegendStudioTestID.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../../__lib__/LegendStudioTesting.js';
 import {
   clsx,
   CustomSelectorInput,
@@ -38,13 +38,13 @@ import {
   MenuContentItem,
   MenuContent,
 } from '@finos/legend-art';
-import { PROJECT_OVERVIEW_ACTIVITY_MODE } from '../../../stores/sidebar-state/ProjectOverviewState.js';
+import { PROJECT_OVERVIEW_ACTIVITY_MODE } from '../../../stores/editor/sidebar-state/ProjectOverviewState.js';
 import {
   generateEditorRoute,
   generateViewProjectRoute,
   generateViewVersionRoute,
   generateReviewRoute,
-} from '../../../stores/LegendStudioRouter.js';
+} from '../../../__lib__/LegendStudioNavigation.js';
 import { flowResult } from 'mobx';
 import {
   type Workspace,
@@ -55,7 +55,8 @@ import {
 } from '@finos/legend-server-sdlc';
 import { useEditorStore } from '../EditorStoreProvider.js';
 import { useApplicationStore } from '@finos/legend-application';
-import { useLegendStudioApplicationStore } from '../../LegendStudioBaseStoreProvider.js';
+import { useLegendStudioApplicationStore } from '../../LegendStudioFrameworkProvider.js';
+import { ProjectDependantsEditor } from './ProjectDependantsEditor.js';
 
 const ShareProjectModal = observer(
   (props: { open: boolean; closeModal: () => void }) => {
@@ -70,17 +71,17 @@ const ShareProjectModal = observer(
     >();
     const projectId = editorStore.sdlcState.activeProject.projectId;
     const projectLink = selectedVersion
-      ? applicationStore.navigator.generateAddress(
+      ? applicationStore.navigationService.navigator.generateAddress(
           generateViewVersionRoute(projectId, selectedVersion.id.id),
         )
-      : applicationStore.navigator.generateAddress(
+      : applicationStore.navigationService.navigator.generateAddress(
           generateViewProjectRoute(projectId),
         );
     const copyProjectElementLink = (): void => {
-      applicationStore
+      applicationStore.clipboardService
         .copyTextToClipboard(projectLink)
         .then(() =>
-          applicationStore.notifySuccess(
+          applicationStore.notificationService.notifySuccess(
             'Copied project element link to clipboard',
           ),
         )
@@ -206,8 +207,8 @@ const WorkspaceViewer = observer((props: { workspace: Workspace }) => {
         )}
         tabIndex={-1}
         onClick={(): void =>
-          applicationStore.navigator.visitAddress(
-            applicationStore.navigator.generateAddress(
+          applicationStore.navigationService.navigator.visitAddress(
+            applicationStore.navigationService.navigator.generateAddress(
               generateEditorRoute(
                 workspace.projectId,
                 workspace.workspaceId,
@@ -396,8 +397,8 @@ const ReleaseEditor = observer(() => {
                       className="project-overview__release__info__current-version__link"
                       tabIndex={-1}
                       onClick={(): void =>
-                        applicationStore.navigator.visitAddress(
-                          applicationStore.navigator.generateAddress(
+                        applicationStore.navigationService.navigator.visitAddress(
+                          applicationStore.navigationService.navigator.generateAddress(
                             generateViewVersionRoute(
                               latestProjectVersion.projectId,
                               latestProjectVersion.id.id,
@@ -456,8 +457,8 @@ const ReleaseEditor = observer(() => {
                     className="side-bar__panel__item workspace-updater__review__link"
                     tabIndex={-1}
                     onClick={(): void =>
-                      applicationStore.navigator.visitAddress(
-                        applicationStore.navigator.generateAddress(
+                      applicationStore.navigationService.navigator.visitAddress(
+                        applicationStore.navigationService.navigator.generateAddress(
                           generateReviewRoute(review.projectId, review.id),
                         ),
                       )
@@ -522,8 +523,8 @@ const VersionsViewer = observer(() => {
               className="side-bar__panel__item project-overview__item__link"
               tabIndex={-1}
               onClick={(): void =>
-                applicationStore.navigator.visitAddress(
-                  applicationStore.navigator.generateAddress(
+                applicationStore.navigationService.navigator.visitAddress(
+                  applicationStore.navigationService.navigator.generateAddress(
                     generateViewVersionRoute(version.projectId, version.id.id),
                   ),
                 )
@@ -811,6 +812,7 @@ export const ProjectOverviewActivityBar = observer(() => {
       mode: PROJECT_OVERVIEW_ACTIVITY_MODE.RELEASE,
       title: 'Release',
     },
+    { mode: PROJECT_OVERVIEW_ACTIVITY_MODE.DEPENDANTS, title: 'Dependants' },
     { mode: PROJECT_OVERVIEW_ACTIVITY_MODE.VERSIONS, title: 'Versions' },
     { mode: PROJECT_OVERVIEW_ACTIVITY_MODE.WORKSPACES, title: 'Workspaces' },
   ].filter((activity): activity is ProjectOverviewActivityDisplay =>
@@ -852,7 +854,7 @@ export const ProjectOverview = observer(() => {
   const hideShareModal = (): void => setOpenShareModal(false);
   const projectOverviewState = editorStore.projectOverviewState;
   const openProjectWebUrl = (): void =>
-    applicationStore.navigator.visitAddress(
+    applicationStore.navigationService.navigator.visitAddress(
       editorStore.sdlcState.activeProject.webUrl,
     );
   const renderOverview = (): React.ReactNode => {
@@ -861,6 +863,9 @@ export const ProjectOverview = observer(() => {
         return <OverviewViewer />;
       case PROJECT_OVERVIEW_ACTIVITY_MODE.RELEASE:
         return <ReleaseEditor />;
+      // TODO: @xannem move this into dependency dashboard extension
+      case PROJECT_OVERVIEW_ACTIVITY_MODE.DEPENDANTS:
+        return <ProjectDependantsEditor />;
       case PROJECT_OVERVIEW_ACTIVITY_MODE.VERSIONS:
         return <VersionsViewer />;
       case PROJECT_OVERVIEW_ACTIVITY_MODE.WORKSPACES:

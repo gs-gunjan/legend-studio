@@ -32,28 +32,34 @@ import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   generateExistingQueryEditorRoute,
   generateQuerySetupRoute,
-} from '../stores/LegendQueryRouter.js';
-import { useDepotServerClient } from '@finos/legend-server-depot';
-import {
-  useApplicationStore,
-  EDITOR_LANGUAGE,
-  TextInputEditor,
-} from '@finos/legend-application';
+} from '../__lib__/LegendQueryNavigation.js';
+import { useApplicationStore } from '@finos/legend-application';
 import {
   type QueryOption,
   buildQueryOption,
 } from '@finos/legend-query-builder';
-import { useLegendQueryApplicationStore } from './LegendQueryBaseStoreProvider.js';
+import {
+  useLegendQueryApplicationStore,
+  useLegendQueryBaseStore,
+} from './LegendQueryFrameworkProvider.js';
 import { EditExistingQuerySetupStore } from '../stores/EditExistingQuerySetupStore.js';
 import { BaseQuerySetup, BaseQuerySetupStoreContext } from './QuerySetup.js';
+import {
+  CODE_EDITOR_LANGUAGE,
+  CodeEditor,
+} from '@finos/legend-lego/code-editor';
 
 const EditExistingQuerySetupStoreProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const applicationStore = useLegendQueryApplicationStore();
-  const depotServerClient = useDepotServerClient();
+  const baseStore = useLegendQueryBaseStore();
   const store = useLocalObservable(
-    () => new EditExistingQuerySetupStore(applicationStore, depotServerClient),
+    () =>
+      new EditExistingQuerySetupStore(
+        applicationStore,
+        baseStore.depotServerClient,
+      ),
   );
   return (
     <BaseQuerySetupStoreContext.Provider value={store}>
@@ -77,11 +83,13 @@ const EditExistingQuerySetupContent = observer(() => {
 
   // actions
   const back = (): void => {
-    applicationStore.navigator.goToLocation(generateQuerySetupRoute());
+    applicationStore.navigationService.navigator.goToLocation(
+      generateQuerySetupRoute(),
+    );
   };
   const next = (): void => {
     if (setupStore.currentQuery) {
-      applicationStore.navigator.goToLocation(
+      applicationStore.navigationService.navigator.goToLocation(
         generateExistingQueryEditorRoute(setupStore.currentQuery.id),
       );
     }
@@ -256,10 +264,10 @@ const EditExistingQuerySetupContent = observer(() => {
                 <BlankPanelContent>{`Can't preview query`}</BlankPanelContent>
               )}
               {setupStore.currentQueryInfo && (
-                <TextInputEditor
+                <CodeEditor
                   inputValue={setupStore.currentQueryInfo.content}
                   isReadOnly={true}
-                  language={EDITOR_LANGUAGE.PURE}
+                  language={CODE_EDITOR_LANGUAGE.PURE}
                   showMiniMap={false}
                   hideGutter={true}
                 />

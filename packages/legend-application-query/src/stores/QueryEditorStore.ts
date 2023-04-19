@@ -44,13 +44,13 @@ import {
   PackageableElementExplicitReference,
   RuntimePointer,
   GRAPH_MANAGER_EVENT,
-  type GraphBuilderReport,
-  GraphManagerTelemetry,
   extractElementNameFromPath,
   QuerySearchSpecification,
   Mapping,
   type Runtime,
   type Service,
+  createGraphBuilderReport,
+  LegendSDLC,
 } from '@finos/legend-graph';
 import {
   EXTERNAL_APPLICATION_NAVIGATION__generateStudioProjectViewUrl,
@@ -58,24 +58,26 @@ import {
   generateExistingQueryEditorRoute,
   generateMappingQueryCreatorRoute,
   generateServiceQueryCreatorRoute,
-} from './LegendQueryRouter.js';
-import { LEGEND_QUERY_APP_EVENT } from './LegendQueryAppEvent.js';
+} from '../__lib__/LegendQueryNavigation.js';
+import { LEGEND_QUERY_APP_EVENT } from '../__lib__/LegendQueryEvent.js';
 import {
   type Entity,
   type ProjectGAVCoordinates,
+  type EntitiesWithOrigin,
   parseProjectIdentifier,
 } from '@finos/legend-storage';
 import {
   type DepotServerClient,
   ProjectData,
+  resolveVersion,
 } from '@finos/legend-server-depot';
 import {
-  TAB_SIZE,
+  DEFAULT_TAB_SIZE,
   DEFAULT_TYPEAHEAD_SEARCH_MINIMUM_SEARCH_LENGTH,
   DEFAULT_TYPEAHEAD_SEARCH_LIMIT,
 } from '@finos/legend-application';
 import type { LegendQueryPluginManager } from '../application/LegendQueryPluginManager.js';
-import { LegendQueryEventService } from './LegendQueryEventService.js';
+import { LegendQueryEventHelper } from '../__lib__/LegendQueryEventHelper.js';
 import type { LegendQueryApplicationStore } from './LegendQueryBaseStore.js';
 import {
   type QueryBuilderState,
@@ -84,7 +86,7 @@ import {
   MappingQueryBuilderState,
   ServiceQueryBuilderState,
 } from '@finos/legend-query-builder';
-import { LegendQueryTelemetry } from './LegendQueryTelemetry.js';
+import { LegendQueryTelemetryHelper } from '../__lib__/LegendQueryTelemetryHelper.js';
 
 export const createViewProjectHandler =
   (applicationStore: LegendQueryApplicationStore) =>
@@ -94,9 +96,9 @@ export const createViewProjectHandler =
     versionId: string,
     entityPath: string | undefined,
   ): void =>
-    applicationStore.navigator.visitAddress(
+    applicationStore.navigationService.navigator.visitAddress(
       EXTERNAL_APPLICATION_NAVIGATION__generateStudioProjectViewUrl(
-        applicationStore.config.studioUrl,
+        applicationStore.config.studioApplicationUrl,
         groupId,
         artifactId,
         versionId,
@@ -124,7 +126,7 @@ export const createViewSDLCProjectHandler =
       (entry) => entry.sdlcProjectIDPrefix === projectIDPrefix,
     );
     if (matchingSDLCEntry) {
-      applicationStore.navigator.visitAddress(
+      applicationStore.navigationService.navigator.visitAddress(
         EXTERNAL_APPLICATION_NAVIGATION__generateStudioSDLCProjectViewUrl(
           matchingSDLCEntry.url,
           project.projectId,
@@ -132,7 +134,7 @@ export const createViewSDLCProjectHandler =
         ),
       );
     } else {
-      applicationStore.notifyWarning(
+      applicationStore.notificationService.notifyWarning(
         `Can't find the corresponding SDLC instance to view the SDLC project`,
       );
     }
@@ -211,11 +213,11 @@ export class QueryExportState {
         );
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_QUERY_APP_EVENT.GENERIC_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
       this.persistQueryState.reset();
       return;
     }
@@ -228,13 +230,32 @@ export class QueryExportState {
             query,
             this.editorStore.graphManagerState.graph,
           );
-        this.editorStore.applicationStore.notifySuccess(
+        this.editorStore.applicationStore.notificationService.notifySuccess(
           `Successfully created query!`,
         );
-        LegendQueryEventService.create(
+
+        LegendQueryEventHelper.notify_QueryCreateSucceeded(
           this.editorStore.applicationStore.eventService,
-        ).notify_QueryCreated({ queryId: newQuery.id });
-        this.editorStore.applicationStore.navigator.goToLocation(
+          { queryId: newQuery.id },
+        );
+
+        LegendQueryTelemetryHelper.logEvent_CreateQuerySucceeded(
+          this.editorStore.applicationStore.telemetryService,
+          {
+            query: {
+              id: query.id,
+              name: query.name,
+              groupId: query.groupId,
+              artifactId: query.artifactId,
+              versionId: query.versionId,
+            },
+          },
+        );
+
+        this.queryBuilderState.changeDetectionState.initialize(this.lambda);
+        // turn off change detection at this point
+        // TODO: to make performance better, refrain from refreshing like this
+        this.editorStore.applicationStore.navigationService.navigator.goToLocation(
           generateExistingQueryEditorRoute(newQuery.id),
         );
       } else {
@@ -243,18 +264,32 @@ export class QueryExportState {
             query,
             this.editorStore.graphManagerState.graph,
           );
-        this.editorStore.applicationStore.notifySuccess(
+        this.editorStore.applicationStore.notificationService.notifySuccess(
           `Successfully updated query!`,
         );
+
+        LegendQueryTelemetryHelper.logEvent_UpdateQuerySucceeded(
+          this.editorStore.applicationStore.telemetryService,
+          {
+            query: {
+              id: query.id,
+              name: query.name,
+              groupId: query.groupId,
+              artifactId: query.artifactId,
+              versionId: query.versionId,
+            },
+          },
+        );
+
         this.onQueryUpdate?.(updatedQuery);
       }
     } catch (error) {
       assertErrorThrown(error);
-      this.editorStore.applicationStore.log.error(
+      this.editorStore.applicationStore.logService.error(
         LogEvent.create(LEGEND_QUERY_APP_EVENT.GENERIC_FAILURE),
         error,
       );
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
       this.persistQueryState.reset();
       this.editorStore.setExportState(undefined);
@@ -264,7 +299,8 @@ export class QueryExportState {
 
 export class QueryLoaderState {
   readonly editorStore: QueryEditorStore;
-  loadQueriesState = ActionState.create();
+
+  readonly loadQueriesState = ActionState.create();
   queries: LightQuery[] = [];
   isQueryLoaderOpen = false;
   showCurrentUserQueriesOnly = false;
@@ -314,7 +350,7 @@ export class QueryLoaderState {
     } catch (error) {
       this.loadQueriesState.fail();
       assertErrorThrown(error);
-      this.editorStore.applicationStore.notifyError(error);
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     }
   }
 
@@ -351,7 +387,7 @@ export abstract class QueryEditorStore {
     this.pluginManager = applicationStore.pluginManager;
     this.graphManagerState = new GraphManagerState(
       applicationStore.pluginManager,
-      applicationStore.log,
+      applicationStore.logService,
     );
     this.queryLoaderState = new QueryLoaderState(this);
   }
@@ -393,11 +429,14 @@ export abstract class QueryEditorStore {
     try {
       this.initState.inProgress();
 
+      // TODO: when we genericize the way to initialize an application page
+      this.applicationStore.assistantService.setIsHidden(false);
+
       // initialize the graph manager
       yield this.graphManagerState.graphManager.initialize(
         {
           env: this.applicationStore.config.env,
-          tabSize: TAB_SIZE,
+          tabSize: DEFAULT_TAB_SIZE,
           clientConfig: {
             baseUrl: this.applicationStore.config.engineServerUrl,
             queryBaseUrl: this.applicationStore.config.engineQueryServerUrl,
@@ -417,11 +456,11 @@ export abstract class QueryEditorStore {
       this.initState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.log.error(
+      this.applicationStore.logService.error(
         LogEvent.create(LEGEND_QUERY_APP_EVENT.GENERIC_FAILURE),
         error,
       );
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
       this.initState.fail();
     }
   }
@@ -442,7 +481,7 @@ export abstract class QueryEditorStore {
     // initialize system
     stopWatch.record();
     yield this.graphManagerState.initializeSystem();
-    stopWatch.record(GRAPH_MANAGER_EVENT.GRAPH_SYSTEM_INITIALIZED);
+    stopWatch.record(GRAPH_MANAGER_EVENT.INITIALIZE_GRAPH_SYSTEM__SUCCESS);
 
     // fetch entities
     stopWatch.record();
@@ -452,63 +491,69 @@ export abstract class QueryEditorStore {
       versionId,
     )) as Entity[];
     this.initState.setMessage(undefined);
-    stopWatch.record(GRAPH_MANAGER_EVENT.GRAPH_ENTITIES_FETCHED);
+    stopWatch.record(GRAPH_MANAGER_EVENT.FETCH_GRAPH_ENTITIES__SUCCESS);
 
     // fetch and build dependencies
     stopWatch.record();
     const dependencyManager =
-      this.graphManagerState.createEmptyDependencyManager();
+      this.graphManagerState.graphManager.createDependencyManager();
     this.graphManagerState.graph.dependencyManager = dependencyManager;
     this.graphManagerState.dependenciesBuildState.setMessage(
       `Fetching dependencies...`,
     );
     const dependencyEntitiesIndex = (yield flowResult(
       this.depotServerClient.getIndexedDependencyEntities(project, versionId),
-    )) as Map<string, Entity[]>;
-    stopWatch.record(GRAPH_MANAGER_EVENT.GRAPH_DEPENDENCIES_FETCHED);
+    )) as Map<string, EntitiesWithOrigin>;
+    stopWatch.record(GRAPH_MANAGER_EVENT.FETCH_GRAPH_DEPENDENCIES__SUCCESS);
 
-    const dependency_buildReport =
-      (yield this.graphManagerState.graphManager.buildDependencies(
-        this.graphManagerState.coreModel,
-        this.graphManagerState.systemModel,
-        dependencyManager,
-        dependencyEntitiesIndex,
-        this.graphManagerState.dependenciesBuildState,
-      )) as GraphBuilderReport;
+    const dependency_buildReport = createGraphBuilderReport();
+    yield this.graphManagerState.graphManager.buildDependencies(
+      this.graphManagerState.coreModel,
+      this.graphManagerState.systemModel,
+      dependencyManager,
+      dependencyEntitiesIndex,
+      this.graphManagerState.dependenciesBuildState,
+      {},
+      dependency_buildReport,
+    );
     dependency_buildReport.timings[
-      GRAPH_MANAGER_EVENT.GRAPH_DEPENDENCIES_FETCHED
-    ] = stopWatch.getRecord(GRAPH_MANAGER_EVENT.GRAPH_DEPENDENCIES_FETCHED);
+      GRAPH_MANAGER_EVENT.FETCH_GRAPH_DEPENDENCIES__SUCCESS
+    ] = stopWatch.getRecord(
+      GRAPH_MANAGER_EVENT.FETCH_GRAPH_DEPENDENCIES__SUCCESS,
+    );
 
     // build graph
-    const graph_buildReport =
-      (yield this.graphManagerState.graphManager.buildGraph(
-        this.graphManagerState.graph,
-        entities,
-        this.graphManagerState.graphBuildState,
-      )) as GraphBuilderReport;
-    graph_buildReport.timings[GRAPH_MANAGER_EVENT.GRAPH_ENTITIES_FETCHED] =
-      stopWatch.getRecord(GRAPH_MANAGER_EVENT.GRAPH_ENTITIES_FETCHED);
+    const graph_buildReport = createGraphBuilderReport();
+    yield this.graphManagerState.graphManager.buildGraph(
+      this.graphManagerState.graph,
+      entities,
+      this.graphManagerState.graphBuildState,
+      {
+        origin: new LegendSDLC(groupId, artifactId, resolveVersion(versionId)),
+      },
+      graph_buildReport,
+    );
+    graph_buildReport.timings[
+      GRAPH_MANAGER_EVENT.FETCH_GRAPH_ENTITIES__SUCCESS
+    ] = stopWatch.getRecord(GRAPH_MANAGER_EVENT.FETCH_GRAPH_ENTITIES__SUCCESS);
 
     // report
-    stopWatch.record(GRAPH_MANAGER_EVENT.GRAPH_INITIALIZED);
+    stopWatch.record(GRAPH_MANAGER_EVENT.INITIALIZE_GRAPH__SUCCESS);
     const graphBuilderReportData = {
-      timings: {
-        [GRAPH_MANAGER_EVENT.GRAPH_SYSTEM_INITIALIZED]: stopWatch.getRecord(
-          GRAPH_MANAGER_EVENT.GRAPH_SYSTEM_INITIALIZED,
-        ),
-        [GRAPH_MANAGER_EVENT.GRAPH_INITIALIZED]: stopWatch.getRecord(
-          GRAPH_MANAGER_EVENT.GRAPH_INITIALIZED,
-        ),
-      },
+      timings:
+        this.applicationStore.timeService.finalizeTimingsRecord(stopWatch),
       dependencies: dependency_buildReport,
+      dependenciesCount:
+        this.graphManagerState.graph.dependencyManager.numberOfDependencies,
       graph: graph_buildReport,
     };
-    this.applicationStore.log.info(
-      LogEvent.create(GRAPH_MANAGER_EVENT.GRAPH_INITIALIZED),
+    LegendQueryTelemetryHelper.logEvent_GraphInitializationSucceeded(
+      this.applicationStore.telemetryService,
       graphBuilderReportData,
     );
-    GraphManagerTelemetry.logEvent_GraphInitialized(
-      this.applicationStore.telemetryService,
+
+    this.applicationStore.logService.info(
+      LogEvent.create(GRAPH_MANAGER_EVENT.INITIALIZE_GRAPH__SUCCESS),
       graphBuilderReportData,
     );
   }
@@ -552,7 +597,7 @@ export class MappingQueryCreatorStore extends QueryEditorStore {
       this.applicationStore,
       this.graphManagerState,
       (val: Mapping) => {
-        this.applicationStore.navigator.updateCurrentLocation(
+        this.applicationStore.navigationService.navigator.updateCurrentLocation(
           generateMappingQueryCreatorRoute(
             this.groupId,
             this.artifactId,
@@ -564,7 +609,7 @@ export class MappingQueryCreatorStore extends QueryEditorStore {
         );
       },
       (val: Runtime) => {
-        this.applicationStore.navigator.updateCurrentLocation(
+        this.applicationStore.navigationService.navigator.updateCurrentLocation(
           generateMappingQueryCreatorRoute(
             this.groupId,
             this.artifactId,
@@ -649,7 +694,7 @@ export class ServiceQueryCreatorStore extends QueryEditorStore {
       this.graphManagerState.usableServices,
       this.executionKey,
       (val: Service): void => {
-        this.applicationStore.navigator.goToLocation(
+        this.applicationStore.navigationService.navigator.goToLocation(
           generateServiceQueryCreatorRoute(
             this.groupId,
             this.artifactId,
@@ -659,7 +704,7 @@ export class ServiceQueryCreatorStore extends QueryEditorStore {
         );
       },
       (val: ServiceExecutionContext): void => {
-        this.applicationStore.navigator.updateCurrentLocation(
+        this.applicationStore.navigationService.navigator.updateCurrentLocation(
           generateServiceQueryCreatorRoute(
             this.groupId,
             this.artifactId,
@@ -770,7 +815,7 @@ export class ExistingQueryEditorStore extends QueryEditorStore {
     );
 
     // send analytics
-    LegendQueryTelemetry.logEvent_ViewQuery(
+    LegendQueryTelemetryHelper.logEvent_ViewQuerySucceeded(
       this.applicationStore.telemetryService,
       {
         query: {
@@ -783,6 +828,7 @@ export class ExistingQueryEditorStore extends QueryEditorStore {
       },
     );
 
+    queryBuilderState.setTitleOfQuery(this.query.name);
     return queryBuilderState;
   }
 

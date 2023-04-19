@@ -23,7 +23,7 @@ import {
   DIAGRAM_INTERACTION_MODE,
   DIAGRAM_RELATIONSHIP_EDIT_MODE,
   DIAGRAM_ZOOM_LEVELS,
-} from '../../DiagramRenderer.js';
+} from '../DiagramRenderer.js';
 import {
   type DiagramEditorInlineClassCreatorState,
   type DiagramEditorInlineClassRenamerState,
@@ -93,10 +93,8 @@ import {
 import { guaranteeNonNullable, prettyCONSTName } from '@finos/legend-shared';
 import { flowResult } from 'mobx';
 import {
-  type PackageableElementOption,
   useApplicationStore,
   useApplicationNavigationContext,
-  buildElementOption,
   useCommands,
 } from '@finos/legend-application';
 import {
@@ -116,7 +114,12 @@ import {
   classView_setHideStereotypes,
   classView_setHideTaggedValues,
 } from '../../stores/studio/DSL_Diagram_GraphModifierHelper.js';
-import { DSL_DIAGRAM_LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../stores/studio/DSL_Diagram_LegendStudioApplicationNavigationContext.js';
+import { DSL_DIAGRAM_LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../__lib__/studio/DSL_Diagram_LegendStudioApplicationNavigationContext.js';
+import { DSL_DIAGRAM_TEST_ID } from '../../__lib__/studio/DSL_Diagram_LegendStudioTesting.js';
+import {
+  buildElementOption,
+  type PackageableElementOption,
+} from '@finos/legend-lego/graph-editor';
 
 const DiagramEditorContextMenu = observer(
   forwardRef<
@@ -744,9 +747,9 @@ const DiagramEditorInlineClassRenamerContent = observer(
       event.preventDefault();
       if (canRenameClass) {
         diagramEditorState.setInlineClassRenamerState(undefined);
-        flowResult(editorStore.renameElement(_class, newClassPath)).catch(
-          applicationStore.alertUnhandledError,
-        );
+        flowResult(
+          editorStore.graphEditorMode.renameElement(_class, newClassPath),
+        ).catch(applicationStore.alertUnhandledError);
       }
     };
     const pathInputRef = useRef<HTMLInputElement>(null);
@@ -869,7 +872,9 @@ const DiagramEditorInlineClassCreatorContent = observer(
         diagramEditorState.setInlineClassCreatorState(undefined);
         const [packagePath, name] = resolvePackagePathAndElementName(path);
         const _class = new Class(name);
-        await flowResult(editorStore.addElement(_class, packagePath, false));
+        await flowResult(
+          editorStore.graphEditorMode.addElement(_class, packagePath, false),
+        );
         diagramEditorState.renderer.addClassView(
           _class,
           inlineClassCreatorState.point,
@@ -1176,8 +1181,7 @@ const DiagramEditorDiagramCanvas = observer(
     }
   >(function DiagramEditorDiagramCanvas(props, ref) {
     const { diagramEditorState } = props;
-    const diagramCanvasRef =
-      ref as React.MutableRefObject<HTMLDivElement | null>;
+    const diagramCanvasRef = ref as React.MutableRefObject<HTMLDivElement>;
     const isReadOnly = diagramEditorState.isReadOnly;
 
     const { width, height } = useResizeDetector<HTMLDivElement>({
@@ -1187,17 +1191,23 @@ const DiagramEditorDiagramCanvas = observer(
     });
 
     useEffect(() => {
-      if (diagramCanvasRef.current) {
-        const renderer = new DiagramRenderer(
-          diagramCanvasRef.current,
-          diagramEditorState.diagram,
-        );
-        diagramEditorState.setRenderer(renderer);
-        diagramEditorState.setupRenderer();
-        renderer.render();
-        renderer.autoRecenter();
-      }
+      const renderer = new DiagramRenderer(
+        diagramCanvasRef.current,
+        diagramEditorState.diagram,
+      );
+      diagramEditorState.setRenderer(renderer);
+      diagramEditorState.setupRenderer();
+      renderer.render({ initial: true });
     }, [diagramCanvasRef, diagramEditorState]);
+
+    useEffect(() => {
+      // since after the diagram render is initialized, we start
+      // showing the toolbar and the header, which causes the auto-zoom fit
+      // to be off, we need to call this method again
+      if (diagramEditorState.isDiagramRendererInitialized) {
+        diagramEditorState.renderer.render({ initial: true });
+      }
+    }, [diagramEditorState, diagramEditorState.isDiagramRendererInitialized]);
 
     useEffect(() => {
       if (diagramEditorState.isDiagramRendererInitialized) {
@@ -1244,6 +1254,7 @@ const DiagramEditorDiagramCanvas = observer(
           'diagram-canvas diagram-editor__canvas',
           diagramEditorState.diagramCursorClass,
         )}
+        data-testid={DSL_DIAGRAM_TEST_ID.DIAGRAM_EDITOR}
         tabIndex={0}
       />
     );

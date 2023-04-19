@@ -1,5 +1,211 @@
 # @finos/legend-application-studio
 
+## 24.0.2
+
+## 24.0.1
+
+## 24.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Moved `CodeDiffView`, `JSONDiffView`, and `getClassPropertyIcon()` to `@finos/legend-lego/graph-editor`.
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE**: Adapted to use new `LegendApplication` platform injection mechanism; testing utilities have been adjusted accordingly.
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Moved all test utils to a separate export path `@finos/legend-application-studio/test`;
+
+## 23.1.12
+
+## 23.1.11
+
+### Patch Changes
+
+- [#2111](https://github.com/finos/legend-studio/pull/2111) [`3743dcdf3`](https://github.com/finos/legend-studio/commit/3743dcdf3ddabdffb38a2b6056cbbad9f74ffdb0) ([@sprisha](https://github.com/sprisha)) - Revert "adding Optional Service Lineage Feature to Registration (#2100)"
+
+## 23.1.10
+
+## 23.1.9
+
+## 23.1.8
+
+## 23.1.7
+
+### Patch Changes
+
+- [#2059](https://github.com/finos/legend-studio/pull/2059) [`c92fcefee`](https://github.com/finos/legend-studio/commit/c92fcefee837e33c0dabbf185e1f790a422e479f) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Default service panel to execution tab.
+
+## 23.1.6
+
+## 23.1.5
+
+### Patch Changes
+
+- [#1993](https://github.com/finos/legend-studio/pull/1993) [`65dffc460`](https://github.com/finos/legend-studio/commit/65dffc460e64fe89045ea766755bfde3bfff5b91) ([@xannem](https://github.com/xannem)) - Enable drag-and-drop only when the handler is grabbed
+
+## 23.1.4
+
+## 23.1.3
+
+### Patch Changes
+
+- [#2063](https://github.com/finos/legend-studio/pull/2063) [`7bd0dc79d`](https://github.com/finos/legend-studio/commit/7bd0dc79d5e803c0eb677b884f2f1ac48fb32b77) ([@akphi](https://github.com/akphi)) - Support relative URLs in application configuration.
+
+## 23.1.2
+
+## 23.1.1
+
+## 23.1.0
+
+### Minor Changes
+
+- [#2032](https://github.com/finos/legend-studio/pull/2032) [`08afbd705`](https://github.com/finos/legend-studio/commit/08afbd705fee75b20ba52bdc62a7e1a32fdb85d2) ([@janeenyamak1](https://github.com/janeenyamak1)) - Enhance servie bulk registration modal
+
+## 23.0.3
+
+### Patch Changes
+
+- [#1992](https://github.com/finos/legend-studio/pull/1992) [`247dd6c1f`](https://github.com/finos/legend-studio/commit/247dd6c1f8c778fe5d5e30e795b1801762979469) ([@jinanisha](https://github.com/jinanisha)) - Add support for Trino connector
+
+## 23.0.2
+
+## 23.0.1
+
+## 23.0.0
+
+### Major Changes
+
+- [#2019](https://github.com/finos/legend-studio/pull/2019) [`e31cc1bcb`](https://github.com/finos/legend-studio/commit/e31cc1bcbb61306b4b127788854775a8325bfa57) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed `*Telemetry` and `*EventService` wrappers around `TelemetryService` and `EventService` respectively to `*TelemetryHelper` and `*EventHelper` respectively.
+
+### Patch Changes
+
+- [#2019](https://github.com/finos/legend-studio/pull/2019) [`e31cc1bcb`](https://github.com/finos/legend-studio/commit/e31cc1bcbb61306b4b127788854775a8325bfa57) ([@akphi](https://github.com/akphi)) - Fix a bug where selecting a relational database store when trying to create a new connection crashes the app ([#2015](https://github.com/finos/legend-studio/issues/2015)).
+
+## 22.6.0
+
+### Minor Changes
+
+- [#2010](https://github.com/finos/legend-studio/pull/2010) [`cf33b0229`](https://github.com/finos/legend-studio/commit/cf33b0229922932be2502ad8ea5b9b27b7bc6fe7) ([@janeenyamak1](https://github.com/janeenyamak1)) - Enable Global Bulk Service Registration
+
+## 22.5.0
+
+### Minor Changes
+
+- [#1987](https://github.com/finos/legend-studio/pull/1987) [`28ca8adae`](https://github.com/finos/legend-studio/commit/28ca8adaec6eb5e2cd850d247685489b21a5bfbb) ([@akphi](https://github.com/akphi)) - Add support for generating sample data (i.e. mock data) for classes (can be triggered via explorer context menu).
+
+### Patch Changes
+
+- [#1941](https://github.com/finos/legend-studio/pull/1941) [`cda3e0bcb`](https://github.com/finos/legend-studio/commit/cda3e0bcb94464d52ac88d59ce6c725c9a8b1e27) ([@xannem](https://github.com/xannem)) - Add warning for users changing project's group ID or artifact ID
+
+- [#1874](https://github.com/finos/legend-studio/pull/1874) [`04a31ba2f`](https://github.com/finos/legend-studio/commit/04a31ba2f2790937cc2289b29fc89f4e59e351d2) ([@gayathrir11](https://github.com/gayathrir11)) - Persist user preferences for `wrapText` and `enableStrictMode`.
+
+## 22.4.8
+
+### Patch Changes
+
+- [#1950](https://github.com/finos/legend-studio/pull/1950) [`0958b5eda`](https://github.com/finos/legend-studio/commit/0958b5edaafdbc043365e0391348760ecd4a32dd) ([@xannem](https://github.com/xannem)) - Add tab plugin extension for test runner tab.
+
+## 22.4.7
+
+## 22.4.6
+
+### Patch Changes
+
+- [#1946](https://github.com/finos/legend-studio/pull/1946) [`90230b9d9`](https://github.com/finos/legend-studio/commit/90230b9d9446c94badfc6825d38c0a00bd7c6028) ([@xannem](https://github.com/xannem)) - Add option to edit text of H2 database table in expanded modal.
+
+## 22.4.5
+
+### Patch Changes
+
+- [#1939](https://github.com/finos/legend-studio/pull/1939) [`a6cb0d1c7`](https://github.com/finos/legend-studio/commit/a6cb0d1c7b35ac0b71fd29473d3e84d0bf2161e6) ([@xannem](https://github.com/xannem)) - Increase readability of query builder icon option buttons
+
+## 22.4.4
+
+### Patch Changes
+
+- [#1935](https://github.com/finos/legend-studio/pull/1935) [`03b78099b`](https://github.com/finos/legend-studio/commit/03b78099bfa4abacc4140145735125f81132f7a6) ([@hardikmaheshwari](https://github.com/hardikmaheshwari)) - Use strategic test suite for service code snippets.
+
+## 22.4.3
+
+## 22.4.2
+
+### Patch Changes
+
+- [#1909](https://github.com/finos/legend-studio/pull/1909) [`130d068d0`](https://github.com/finos/legend-studio/commit/130d068d0932dde5786ecf8de6dacf2bffcc6143) ([@xannem](https://github.com/xannem)) - Replace brush icon with trash icon
+
+## 22.4.1
+
+### Patch Changes
+
+- [#1849](https://github.com/finos/legend-studio/pull/1849) [`725d21e90`](https://github.com/finos/legend-studio/commit/725d21e9031dc41935a2a623e93f4b32dc6d913a) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix a bug where fail to navigate to function element in text mode after clicking on the explorer tree ([#1848](https://github.com/finos/legend-studio/issues/1848)).
+
+- [#1899](https://github.com/finos/legend-studio/pull/1899) [`23f0b763c`](https://github.com/finos/legend-studio/commit/23f0b763c2c1fb3603ac74a4fb40dc66f8c68243) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - fix: toogle text mode shortcut in view/archive mode
+
+## 22.4.0
+
+### Minor Changes
+
+- [#1876](https://github.com/finos/legend-studio/pull/1876) [`27aec4ed0`](https://github.com/finos/legend-studio/commit/27aec4ed06e99701c5b4e080312417af4d2b8899) ([@xannem](https://github.com/xannem)) - Add project dependants tab for project config
+
+### Patch Changes
+
+- [#1882](https://github.com/finos/legend-studio/pull/1882) [`87c71c559`](https://github.com/finos/legend-studio/commit/87c71c5592e4d1cbcc04ef9d915d7ac2f072ad1f) ([@xannem](https://github.com/xannem)) - Minor modal and panel styling edits.
+
+- [#1847](https://github.com/finos/legend-studio/pull/1847) [`6d34797a0`](https://github.com/finos/legend-studio/commit/6d34797a02e86da3c3022e48ca3adb61da1463bd) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix a bug where packageableElement in the explorer tree can't be renamed ([#1846](https://github.com/finos/legend-studio/issues/1846)).
+
+## 22.3.8
+
+## 22.3.7
+
+### Patch Changes
+
+- [#1833](https://github.com/finos/legend-studio/pull/1833) [`ef7e8fa6d`](https://github.com/finos/legend-studio/commit/ef7e8fa6d693848ac71a5a2f54db421f9d45fde3) ([@gayathrir11](https://github.com/gayathrir11)) - Add warnings when associations reference system elements. ([#282](https://github.com/finos/legend-studio/issues/282))
+
+## 22.3.6
+
+### Patch Changes
+
+- [#1865](https://github.com/finos/legend-studio/pull/1865) [`1ceda36e8`](https://github.com/finos/legend-studio/commit/1ceda36e80d74c381a7124bf0af99a1c3c04e869) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Fix rendering of service editor on archive mode.
+
+## 22.3.5
+
+## 22.3.4
+
+## 22.3.3
+
+### Patch Changes
+
+- [#1819](https://github.com/finos/legend-studio/pull/1819) [`675d88bb1`](https://github.com/finos/legend-studio/commit/675d88bb120e8c6015afcfd08f3847b6dfe8c2df) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Group actions in the service execution tab and support opening current service query in `Legend Query`.
+
+## 22.3.2
+
+### Patch Changes
+
+- [#1823](https://github.com/finos/legend-studio/pull/1823) [`798ab319e`](https://github.com/finos/legend-studio/commit/798ab319ea6c1b8819f7f361891bb52475183451) ([@gayathrir11](https://github.com/gayathrir11)) - Modify the label and fix the copy link functionality for dependependency tree elements
+
+## 22.3.1
+
+### Patch Changes
+
+- [#1825](https://github.com/finos/legend-studio/pull/1825) [`1b128c0c7`](https://github.com/finos/legend-studio/commit/1b128c0c768637665b1043cb3e6b797292650e71) ([@gayathrir11](https://github.com/gayathrir11)) - Fix creating default custom runtime for services with nested M2M mapping. ([#1824](https://github.com/finos/legend-studio/issues/1824)).
+
+## 22.3.0
+
+### Minor Changes
+
+- [#1803](https://github.com/finos/legend-studio/pull/1803) [`713a04ce0`](https://github.com/finos/legend-studio/commit/713a04ce07e1d7adb6de4da08f3f8d5d0059445e) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Enable testing and execution via service editor for inline queries.
+
+### Patch Changes
+
+- [#1801](https://github.com/finos/legend-studio/pull/1801) [`6921fd220`](https://github.com/finos/legend-studio/commit/6921fd220c69aee176d6eb8bef524b1864074eba) ([@gayathrir11](https://github.com/gayathrir11)) - Fix global test runner not showing status of test run for services with multi execution.
+
+- [#1809](https://github.com/finos/legend-studio/pull/1809) [`06c85020b`](https://github.com/finos/legend-studio/commit/06c85020bb18d390607540bfd5fa556f34c67d8e) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add external format schema generation to element generation dropdowns.
+
+- [#1685](https://github.com/finos/legend-studio/pull/1685) [`50120dbef`](https://github.com/finos/legend-studio/commit/50120dbef670a71010726f44dfb03b8a65b9b5ff) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support a searchable dropdown for adding service owners ([#1683](https://github.com/finos/legend-studio/issues/1683)).
+
+- [#1785](https://github.com/finos/legend-studio/pull/1785) [`4b50e4cb0`](https://github.com/finos/legend-studio/commit/4b50e4cb0f9e39efc8ed17ac966f279c67d65a19) ([@gayathrir11](https://github.com/gayathrir11)) - Show dependency project information in explorer panel.
+
+- [#1808](https://github.com/finos/legend-studio/pull/1808) [`7552ac698`](https://github.com/finos/legend-studio/commit/7552ac698a91c2ab1fca753d19b26ce889f91aff) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support opening query builder by double-clicking the read-only query in the service execution tab.
+
 ## 22.2.1
 
 ## 22.2.0
@@ -169,7 +375,7 @@
 
 ### Major Changes
 
-- [#1552](https://github.com/finos/legend-studio/pull/1552) [`683800ab`](https://github.com/finos/legend-studio/commit/683800ab3ca1752c4382f22bcf8dede42518449d) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Removed `StudioLambdaEditor` and `StudioTextInputEditor` since there is no longer need to have these components as we have generalized our keyboard handling in the parent components. Migrate to `LambaEditor` and `TextInputEditor` instead.
+- [#1552](https://github.com/finos/legend-studio/pull/1552) [`683800ab`](https://github.com/finos/legend-studio/commit/683800ab3ca1752c4382f22bcf8dede42518449d) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Removed `StudioLambdaEditor` and `StudioCodeEditor` since there is no longer need to have these components as we have generalized our keyboard handling in the parent components. Migrate to `LambaEditor` and `CodeEditor` instead.
 
 ### Patch Changes
 

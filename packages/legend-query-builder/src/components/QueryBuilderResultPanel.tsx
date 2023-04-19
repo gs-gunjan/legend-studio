@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { AgGridColumn, AgGridReact } from '@ag-grid-community/react';
-import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model';
 import {
   BlankPanelContent,
   PanelLoadingIndicator,
@@ -41,17 +39,13 @@ import {
   extractExecutionResultValues,
   TDSExecutionResult,
   RawExecutionResult,
-  EXECUTION_SERIALIZATION_FORMAT,
   EnumValueInstanceValue,
   EnumValueExplicitReference,
 } from '@finos/legend-graph';
 import {
   ActionAlertActionType,
   ActionAlertType,
-  EDITOR_LANGUAGE,
-  ExecutionPlanViewer,
-  TAB_SIZE,
-  TextInputEditor,
+  DEFAULT_TAB_SIZE,
   useApplicationStore,
 } from '@finos/legend-application';
 import {
@@ -59,9 +53,10 @@ import {
   guaranteeNonNullable,
   isBoolean,
   type PlainObject,
+  prettyDuration,
+  prettyCONSTName,
 } from '@finos/legend-shared';
-import { forwardRef, useState } from 'react';
-import type { CellMouseOverEvent } from '@ag-grid-community/core';
+import { type MutableRefObject, forwardRef, useRef } from 'react';
 import {
   QueryBuilderDerivationProjectionColumnState,
   QueryBuilderProjectionColumnState,
@@ -86,13 +81,22 @@ import {
   instanceValue_setValues,
 } from '../stores/shared/ValueSpecificationModifierHelper.js';
 import { PARAMETER_SUBMIT_ACTION } from '../stores/shared/LambdaParameterState.js';
-import { QUERY_BUILDER_TEST_ID } from './QueryBuilder_TestID.js';
+import { QUERY_BUILDER_TEST_ID } from '../__lib__/QueryBuilderTesting.js';
+import {
+  DataGrid,
+  type DataGridCellMouseOverEvent,
+} from '@finos/legend-lego/data-grid';
+import {
+  CODE_EDITOR_LANGUAGE,
+  CodeEditor,
+} from '@finos/legend-lego/code-editor';
+import { ExecutionPlanViewer } from './execution-plan/ExecutionPlanViewer.js';
 
 const QueryBuilderGridResultContextMenu = observer(
   forwardRef<
     HTMLDivElement,
     {
-      event: CellMouseOverEvent | null;
+      event: MutableRefObject<DataGridCellMouseOverEvent | null>;
       tdsState: QueryBuilderTDSState;
     }
   >(function QueryBuilderResultContextMenu(props, ref) {
@@ -106,10 +110,10 @@ const QueryBuilderGridResultContextMenu = observer(
     const postFilterState = tdsState.postFilterState;
     const projectionColumnState = guaranteeNonNullable(
       tdsState.projectionColumns
-        .filter((c) => c.columnName === event?.column.getColId())
+        .filter((c) => c.columnName === event.current?.column.getColId())
         .concat(
           tdsState.aggregationState.columns
-            .filter((c) => c.columnName === event?.column.getColId())
+            .filter((c) => c.columnName === event.current?.column.getColId())
             .map((ag) => ag.projectionColumnState),
         )[0],
     );
@@ -140,7 +144,7 @@ const QueryBuilderGridResultContextMenu = observer(
     const updateFilterConditionValue = (
       conditionValue: InstanceValue,
     ): void => {
-      if (event?.value !== null) {
+      if (event.current?.value !== null) {
         instanceValue_setValue(
           conditionValue,
           conditionValue instanceof EnumValueInstanceValue
@@ -149,11 +153,12 @@ const QueryBuilderGridResultContextMenu = observer(
                   (
                     conditionValue.genericType?.ownerReference
                       .value as Enumeration
-                  ).values.filter((v) => v.name === event?.value)[0],
+                  ).values.filter((v) => v.name === event.current?.value)[0],
                 ),
               )
-            : event?.value,
+            : event.current?.value,
           0,
+          tdsState.queryBuilderState.observerContext,
         );
       }
     };
@@ -187,7 +192,7 @@ const QueryBuilderGridResultContextMenu = observer(
         );
       } catch (error) {
         assertErrorThrown(error);
-        applicationStore.notifyWarning(error.message);
+        applicationStore.notificationService.notifyWarning(error.message);
         return;
       }
       postFilterState.addNodeFromNode(
@@ -218,7 +223,7 @@ const QueryBuilderGridResultContextMenu = observer(
           (conditionState.value instanceof EnumValueInstanceValue
             ? conditionState.value.values.map((ef) => ef.value.name)
             : conditionState.value.values
-          ).includes(event?.value);
+          ).includes(event.current?.value);
         if (!doesValueAlreadyExist) {
           const currentValueSpecificaton = conditionState.value;
           const newValueSpecification =
@@ -229,10 +234,11 @@ const QueryBuilderGridResultContextMenu = observer(
           conditionState.changeOperator(
             isFilterBy ? postFilterInOperator : postFilterNotInOperator,
           );
-          instanceValue_setValues(conditionState.value as InstanceValue, [
-            currentValueSpecificaton,
-            newValueSpecification,
-          ]);
+          instanceValue_setValues(
+            conditionState.value as InstanceValue,
+            [currentValueSpecificaton, newValueSpecification],
+            tdsState.queryBuilderState.observerContext,
+          );
         }
       } else {
         const doesValueAlreadyExist =
@@ -245,16 +251,20 @@ const QueryBuilderGridResultContextMenu = observer(
                 : (v as InstanceValue).values,
             )
             .flat()
-            .includes(event?.value);
+            .includes(event.current?.value);
         if (!doesValueAlreadyExist) {
           const newValueSpecification = (
             isFilterBy ? postFilterEqualOperator : postFilterNotEqualOperator
           ).getDefaultFilterConditionValue(conditionState);
           updateFilterConditionValue(newValueSpecification as InstanceValue);
-          instanceValue_setValues(conditionState.value as InstanceValue, [
-            ...(conditionState.value as InstanceValue).values,
-            newValueSpecification,
-          ]);
+          instanceValue_setValues(
+            conditionState.value as InstanceValue,
+            [
+              ...(conditionState.value as InstanceValue).values,
+              newValueSpecification,
+            ],
+            tdsState.queryBuilderState.observerContext,
+          );
         }
       }
     };
@@ -277,12 +287,14 @@ const QueryBuilderGridResultContextMenu = observer(
     };
 
     const handleCopyCellValue = applicationStore.guardUnhandledError(() =>
-      applicationStore.copyTextToClipboard(event?.value),
+      applicationStore.clipboardService.copyTextToClipboard(
+        event.current?.value,
+      ),
     );
 
     const handleCopyRowValue = applicationStore.guardUnhandledError(() =>
-      applicationStore.copyTextToClipboard(
-        Object.values(event?.data).toString(),
+      applicationStore.clipboardService.copyTextToClipboard(
+        Object.values(event.current?.data).toString(),
       ),
     );
 
@@ -322,18 +334,20 @@ const QueryBuilderGridResult = observer(
     const { executionResult, queryBuilderState } = props;
     const fetchStructureImplementation =
       queryBuilderState.fetchStructureState.implementation;
-    const [cellDoubleClickedEvent, setCellDoubleClickedEvent] =
-      useState<CellMouseOverEvent | null>(null);
+    const cellDoubleClickedEvent = useRef<DataGridCellMouseOverEvent | null>(
+      null,
+    );
     const columns = executionResult.result.columns;
-    const rowData = executionResult.result.rows.map((_row) => {
+    const rowData = executionResult.result.rows.map((_row, rowIdx) => {
       const row: PlainObject = {};
       const cols = executionResult.result.columns;
-      _row.values.forEach((value, idx) => {
+      _row.values.forEach((value, colIdx) => {
         // `ag-grid` shows `false` value as empty string so we have
         // call `.toString()` to avoid this behavior.
         // See https://github.com/finos/legend-studio/issues/1008
-        row[cols[idx] as string] = isBoolean(value) ? String(value) : value;
+        row[cols[colIdx] as string] = isBoolean(value) ? String(value) : value;
       });
+      row.rowNumber = rowIdx;
       return row;
     });
 
@@ -350,30 +364,39 @@ const QueryBuilderGridResult = observer(
         }
         disabled={
           !(fetchStructureImplementation instanceof QueryBuilderTDSState) ||
-          !queryBuilderState.isQuerySupported
+          !queryBuilderState.isQuerySupported ||
+          !cellDoubleClickedEvent
         }
         menuProps={{ elevation: 7 }}
         key={executionResult._UUID}
         className={clsx('ag-theme-balham-dark query-builder__result__tds-grid')}
       >
-        <AgGridReact
+        <DataGrid
           rowData={rowData}
-          modules={[ClientSideRowModelModule]}
-          onCellMouseOver={(event): void => {
-            setCellDoubleClickedEvent(event);
+          gridOptions={{
+            suppressScrollOnNewData: true,
+            getRowId: function (data) {
+              return data.data.rowNumber as string;
+            },
           }}
-        >
-          {columns.map((colName) => (
-            <AgGridColumn
-              minWidth={50}
-              sortable={true}
-              resizable={true}
-              field={colName}
-              key={colName}
-              flex={1}
-            />
-          ))}
-        </AgGridReact>
+          // NOTE: we use onCellMouseOver as a bit of a workaround
+          // since we use the context menu so we want the user to be
+          // able to right click any cell and have the context menu
+          // options use the data belonging to the row that they are
+          // in. hence why we set the cell every time we mouse over
+          // rather than making user click multiple times.
+          onCellMouseOver={(event): void => {
+            cellDoubleClickedEvent.current = event;
+          }}
+          suppressFieldDotNotation={true}
+          columnDefs={columns.map((colName) => ({
+            minWidth: 50,
+            sortable: true,
+            resizable: true,
+            field: colName,
+            flex: 1,
+          }))}
+        />
       </ContextMenu>
     );
   },
@@ -394,20 +417,20 @@ const QueryBuilderResultValues = observer(
       );
     } else if (executionResult instanceof RawExecutionResult) {
       return (
-        <TextInputEditor
-          language={EDITOR_LANGUAGE.TEXT}
+        <CodeEditor
+          language={CODE_EDITOR_LANGUAGE.TEXT}
           inputValue={executionResult.value}
           isReadOnly={true}
         />
       );
     }
     return (
-      <TextInputEditor
-        language={EDITOR_LANGUAGE.JSON}
+      <CodeEditor
+        language={CODE_EDITOR_LANGUAGE.JSON}
         inputValue={JSON.stringify(
           extractExecutionResultValues(executionResult),
           null,
-          TAB_SIZE,
+          DEFAULT_TAB_SIZE,
         )}
         isReadOnly={true}
       />
@@ -422,11 +445,11 @@ export const QueryBuilderResultPanel = observer(
     const resultState = queryBuilderState.resultState;
     const queryParametersState = queryBuilderState.parametersState;
     const executionResult = resultState.executionResult;
+    const fetchStructureImplementation =
+      queryBuilderState.fetchStructureState.implementation;
     const USER_ATTESTATION_MESSAGE =
       'I attest that I am aware of the sensitive data leakage risk when exporting queried data. The data I export will only be used by me.';
-    const exportQueryResults = async (
-      format: EXECUTION_SERIALIZATION_FORMAT,
-    ): Promise<void> => {
+    const exportQueryResults = async (format: string): Promise<void> => {
       if (queryBuilderState.parametersState.parameterStates.length) {
         queryParametersState.parameterValuesEditorState.open(
           (): Promise<void> =>
@@ -442,8 +465,8 @@ export const QueryBuilderResultPanel = observer(
       }
     };
 
-    const confirmExport = (format: EXECUTION_SERIALIZATION_FORMAT): void => {
-      applicationStore.setActionAlertInfo({
+    const confirmExport = (format: string): void => {
+      applicationStore.alertService.setActionAlertInfo({
         message: USER_ATTESTATION_MESSAGE,
         type: ActionAlertType.CAUTION,
         actions: [
@@ -462,18 +485,25 @@ export const QueryBuilderResultPanel = observer(
         ],
       });
     };
-    const queryValidationIssues = queryBuilderState.validationIssues;
+
+    const allValidationIssues = queryBuilderState.allValidationIssues;
+
+    const isSupportedQueryValid = allValidationIssues.length === 0;
+
     const isQueryValid =
-      !queryBuilderState.isQuerySupported || !queryValidationIssues;
+      !queryBuilderState.isQuerySupported || isSupportedQueryValid;
+
     const runQuery = (): void => {
+      resultState.pressedRunQuery.inProgress();
       if (queryParametersState.parameterStates.length) {
         queryParametersState.parameterValuesEditorState.open(
           (): Promise<void> =>
             flowResult(resultState.runQuery()).catch(
               applicationStore.alertUnhandledError,
             ),
-          PARAMETER_SUBMIT_ACTION.EXECUTE,
+          PARAMETER_SUBMIT_ACTION.RUN,
         );
+        resultState.pressedRunQuery.complete();
       } else {
         flowResult(resultState.runQuery()).catch(
           applicationStore.alertUnhandledError,
@@ -498,15 +528,34 @@ export const QueryBuilderResultPanel = observer(
       );
     };
     const allowSettingPreviewLimit = queryBuilderState.isQuerySupported;
-    const resultSetSize = (result: ExecutionResult | undefined): string =>
-      result
-        ? result instanceof TDSExecutionResult
-          ? `${
-              result.result.rows.length
-            } row(s) in ${resultState.executionDuration?.toString()} ms`
-          : `run in ${resultState.executionDuration?.toString()} ms`
-        : '';
 
+    const isRunQueryDisabled =
+      !isQueryValid ||
+      resultState.isGeneratingPlan ||
+      resultState.pressedRunQuery.isInProgress;
+
+    const getResultSetDescription = (
+      _executionResult: ExecutionResult,
+    ): string | undefined => {
+      const queryDuration = resultState.executionDuration
+        ? prettyDuration(resultState.executionDuration, {
+            ms: true,
+          })
+        : undefined;
+      if (_executionResult instanceof TDSExecutionResult) {
+        const rowLength = _executionResult.result.rows.length;
+        return `${rowLength} row(s)${
+          queryDuration ? ` in ${queryDuration}` : ''
+        }`;
+      }
+      if (!queryDuration) {
+        return undefined;
+      }
+      return `query ran in ${queryDuration}`;
+    };
+    const resultDescription = executionResult
+      ? getResultSetDescription(executionResult)
+      : undefined;
     return (
       <div
         data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_RESULT_PANEL}
@@ -515,8 +564,13 @@ export const QueryBuilderResultPanel = observer(
         <div className="panel__header">
           <div className="panel__header__title">
             <div className="panel__header__title__label">result</div>
+            {resultState.pressedRunQuery.isInProgress && (
+              <div className="panel__header__title__label__status">
+                Running Query...
+              </div>
+            )}
             <div className="query-builder__result__analytics">
-              {resultSetSize(executionResult)}
+              {resultDescription ?? ''}
             </div>
             {executionResult && resultState.checkForStaleResults && (
               <div className="query-builder__result__stale-status">
@@ -566,13 +620,13 @@ export const QueryBuilderResultPanel = observer(
                   onClick={runQuery}
                   tabIndex={-1}
                   title={
-                    queryValidationIssues
-                      ? `Query is not valid:\n${queryValidationIssues
+                    allValidationIssues.length
+                      ? `Query is not valid:\n${allValidationIssues
                           .map((issue) => `\u2022 ${issue}`)
                           .join('\n')}`
                       : undefined
                   }
-                  disabled={!isQueryValid}
+                  disabled={isRunQueryDisabled}
                 >
                   <PlayIcon className="query-builder__result__execute-btn__label__icon" />
                   <div className="query-builder__result__execute-btn__label__title">
@@ -581,18 +635,20 @@ export const QueryBuilderResultPanel = observer(
                 </button>
                 <DropdownMenu
                   className="query-builder__result__execute-btn__dropdown-btn"
-                  disabled={resultState.isGeneratingPlan || !isQueryValid}
+                  disabled={isRunQueryDisabled}
                   content={
                     <MenuContent>
                       <MenuContentItem
                         className="query-builder__result__execute-btn__option"
                         onClick={generatePlan}
+                        disabled={isRunQueryDisabled}
                       >
                         Generate Plan
                       </MenuContentItem>
                       <MenuContentItem
                         className="query-builder__result__execute-btn__option"
                         onClick={debugPlanGeneration}
+                        disabled={isRunQueryDisabled}
                       >
                         Debug
                       </MenuContentItem>
@@ -613,17 +669,17 @@ export const QueryBuilderResultPanel = observer(
               disabled={!isQueryValid}
               content={
                 <MenuContent>
-                  {Object.values(EXECUTION_SERIALIZATION_FORMAT).map(
-                    (format) => (
-                      <MenuContentItem
-                        key={format}
-                        className="query-builder__result__export__dropdown__menu__item"
-                        onClick={(): void => confirmExport(format)}
-                      >
-                        {format}
-                      </MenuContentItem>
-                    ),
-                  )}
+                  {Object.values(
+                    fetchStructureImplementation.exportDataFormatOptions,
+                  ).map((format) => (
+                    <MenuContentItem
+                      key={format}
+                      className="query-builder__result__export__dropdown__menu__item"
+                      onClick={(): void => confirmExport(format)}
+                    >
+                      {prettyCONSTName(format)}
+                    </MenuContentItem>
+                  ))}
                 </MenuContent>
               }
               menuProps={{

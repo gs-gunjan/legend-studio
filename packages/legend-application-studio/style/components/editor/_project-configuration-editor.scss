@@ -21,6 +21,10 @@
   width: 100%;
   background: var(--color-dark-grey-50);
 
+  &__input {
+    @include flexCenter;
+  }
+
   .panel {
     height: 100%;
 
@@ -128,6 +132,14 @@
     &[disabled]:hover,
     &[disabled] {
       background: var(--color-dark-grey-200);
+    }
+  }
+
+  &__documentation-btn {
+    margin-left: 0.5rem;
+
+    svg {
+      color: var(--color-light-grey-50);
     }
   }
 
@@ -244,12 +256,14 @@
 
     &__dropdown-trigger {
       height: 2.8rem;
-      width: 1.6rem;
+      padding: 0 0.5rem;
+      margin-left: 0.5rem;
       border-radius: 0 0.2rem 0.2rem 0;
       border-left: 0.1rem solid var(--color-dark-shade-200);
       cursor: pointer;
 
       svg {
+        margin-left: 0.5rem;
         font-size: 1.2rem;
       }
     }

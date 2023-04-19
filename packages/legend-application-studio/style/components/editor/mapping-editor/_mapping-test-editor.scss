@@ -129,6 +129,7 @@
   &__query-panel__query {
     position: relative;
     height: 100%;
+    cursor: pointer;
   }
 
   &__input-data-panel__content {
@@ -212,7 +213,7 @@
     }
   }
 
-  &__execute-btn {
+  &__action-btn {
     @include flexVCenter;
 
     height: 100%;
@@ -263,6 +264,7 @@
 
     &__option {
       width: 12rem;
+      text-align: left;
     }
 
     &__label[disabled],
@@ -333,13 +335,13 @@
     height: calc(100% - 15rem);
     width: 100%;
 
-    .text-editor__container {
+    .code-editor__container {
       height: 100%;
       width: 100%;
       position: relative;
     }
 
-    .text-editor__body {
+    .code-editor__body {
       height: 100%;
       width: 100%;
       position: absolute;

@@ -19,7 +19,7 @@ import { observer } from 'mobx-react-lite';
 import { useApplicationStore } from '@finos/legend-application';
 import { type Class, isElementReadOnly } from '@finos/legend-graph';
 import { InheritanceDiagramRenderer } from './InheritanceDiagramRenderer.js';
-import { DSL_DIAGRAM_TEST_ID } from './DSL_Diagram_TestID.js';
+import { DSL_DIAGRAM_TEST_ID } from '../../__lib__/studio/DSL_Diagram_LegendStudioTesting.js';
 import { useResizeDetector } from '@finos/legend-art';
 
 export const ClassDiagramPreview = observer((props: { _class: Class }) => {
@@ -27,7 +27,7 @@ export const ClassDiagramPreview = observer((props: { _class: Class }) => {
   const applicationStore = useApplicationStore();
   const classHash = isElementReadOnly(_class)
     ? undefined
-    : applicationStore.notifyAndReturnAlternativeOnError(
+    : applicationStore.notificationService.notifyAndReturnAlternativeOnError(
         () => _class.hashCode,
         undefined,
       ); // attempting to read the hashCode of immutable element will throw an error
@@ -60,16 +60,14 @@ export const ClassDiagramPreview = observer((props: { _class: Class }) => {
         setDiagramRenderer(newRender);
         currentRenderer = newRender;
       }
-      currentRenderer.render();
-      currentRenderer.autoRecenter();
+      currentRenderer.render({ initial: true });
     }
   }, [diagramRenderer, _class]);
 
   useEffect(() => {
     if (diagramRenderer) {
       diagramRenderer.loadClass(_class);
-      diagramRenderer.render();
-      diagramRenderer.autoRecenter();
+      diagramRenderer.render({ initial: true });
     }
   }, [_class, classHash, diagramRenderer]);
 

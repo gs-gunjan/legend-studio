@@ -10,6 +10,7 @@
     { "path": "packages/legend-graph/tsconfig.build.json" },
     { "path": "packages/legend-query-builder/tsconfig.build.json" },
     { "path": "packages/legend-art/tsconfig.build.json" },
+    { "path": "packages/legend-lego/tsconfig.build.json" },
     { "path": "packages/legend-application/tsconfig.build.json" },
     // studio
     { "path": "packages/legend-application-studio/tsconfig.build.json" },
@@ -46,9 +47,6 @@
       "path": "packages/legend-extension-dsl-persistence/tsconfig.build.json"
     },
     {
-      "path": "packages/legend-extension-dsl-persistence-cloud/tsconfig.build.json"
-    },
-    {
       "path": "packages/legend-extension-dsl-mastery/tsconfig.build.json"
     },
     {
@@ -64,7 +62,7 @@
       "path": "packages/legend-extension-format-json-schema/tsconfig.build.json"
     },
     {
-      "path": "packages/legend-extension-format-morphir/tsconfig.build.json"
+      "path": "packages/legend-extension-format-graphql/tsconfig.build.json"
     },
     // fixtures
     {

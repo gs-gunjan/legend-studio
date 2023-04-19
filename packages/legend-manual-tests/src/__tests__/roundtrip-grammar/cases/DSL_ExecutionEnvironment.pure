@@ -1,0 +1,48 @@
+###Service
+ExecutionEnvironment test::executionEnvironment
+{
+  executions:
+  [
+    QA:
+    {
+      mapping: test::mapping;
+      runtime: test::runtime;
+    },
+    PROD:
+    {
+      mapping: test::mapping;
+      runtime: test::runtime;
+    }
+  ];
+}
+
+
+###Pure
+Class test::class
+{
+  prop1: Integer[0..1];
+}
+
+
+###Mapping
+Mapping test::mapping
+(
+)
+
+
+###Connection
+JsonModelConnection test::connection
+{
+  class: test::class;
+  url: 'asd';
+}
+
+
+###Runtime
+Runtime test::runtime
+{
+  mappings:
+  [
+    test::mapping
+  ];
+}

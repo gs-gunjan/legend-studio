@@ -16,12 +16,12 @@
 
 import { createContext, useContext } from 'react';
 import { useLocalObservable } from 'mobx-react-lite';
-import { EditorStore } from '../../stores/EditorStore.js';
+import { EditorStore } from '../../stores/editor/EditorStore.js';
 import { guaranteeNonNullable } from '@finos/legend-shared';
-import { useSDLCServerClient } from '@finos/legend-server-sdlc';
-import { useDepotServerClient } from '@finos/legend-server-depot';
-import { useLegendStudioApplicationStore } from '../LegendStudioBaseStoreProvider.js';
-import { useGraphManagerState } from '@finos/legend-graph';
+import {
+  useLegendStudioApplicationStore,
+  useLegendStudioBaseStore,
+} from '../LegendStudioFrameworkProvider.js';
 
 const EditorStoreContext = createContext<EditorStore | undefined>(undefined);
 
@@ -29,16 +29,13 @@ export const EditorStoreProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const applicationStore = useLegendStudioApplicationStore();
-  const sdlcServerClient = useSDLCServerClient();
-  const depotServerClient = useDepotServerClient();
-  const graphManagerState = useGraphManagerState();
+  const baseStore = useLegendStudioBaseStore();
   const store = useLocalObservable(
     () =>
       new EditorStore(
         applicationStore,
-        sdlcServerClient,
-        depotServerClient,
-        graphManagerState,
+        baseStore.sdlcServerClient,
+        baseStore.depotServerClient,
       ),
   );
   return (

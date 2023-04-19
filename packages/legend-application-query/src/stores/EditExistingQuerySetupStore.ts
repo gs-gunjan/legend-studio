@@ -71,13 +71,18 @@ export class EditExistingQuerySetupStore extends BaseQuerySetupStore {
           (yield this.graphManagerState.graphManager.getLightQuery(
             queryId,
           )) as LightQuery;
-        this.currentQueryInfo =
+        const queryInfo =
           (yield this.graphManagerState.graphManager.getQueryInfo(
             queryId,
           )) as QueryInfo;
+        queryInfo.content =
+          (yield this.graphManagerState.graphManager.prettyLambdaContent(
+            queryInfo.content,
+          )) as string;
+        this.currentQueryInfo = queryInfo;
       } catch (error) {
         assertErrorThrown(error);
-        this.applicationStore.notifyError(error);
+        this.applicationStore.notificationService.notifyError(error);
       } finally {
         this.loadQueryState.reset();
       }
@@ -104,7 +109,7 @@ export class EditExistingQuerySetupStore extends BaseQuerySetupStore {
       this.loadQueriesState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
       this.loadQueriesState.fail();
     }
   }

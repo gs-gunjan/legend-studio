@@ -28,29 +28,34 @@ import { debounce, guaranteeType } from '@finos/legend-shared';
 import { flowResult } from 'mobx';
 import { observer, useLocalObservable } from 'mobx-react-lite';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useDepotServerClient } from '@finos/legend-server-depot';
+import { useApplicationStore } from '@finos/legend-application';
 import {
-  EDITOR_LANGUAGE,
-  TextInputEditor,
-  useApplicationStore,
-} from '@finos/legend-application';
-import { useLegendQueryApplicationStore } from './LegendQueryBaseStoreProvider.js';
+  useLegendQueryApplicationStore,
+  useLegendQueryBaseStore,
+} from './LegendQueryFrameworkProvider.js';
 import { QueryProductionizerSetupStore } from '../stores/QueryProductionizerSetupStore.js';
 import { BaseQuerySetup, BaseQuerySetupStoreContext } from './QuerySetup.js';
 import {
   buildQueryOption,
   type QueryOption,
 } from '@finos/legend-query-builder';
-import { generateQuerySetupRoute } from '../stores/LegendQueryRouter.js';
+import { generateQuerySetupRoute } from '../__lib__/LegendQueryNavigation.js';
+import {
+  CODE_EDITOR_LANGUAGE,
+  CodeEditor,
+} from '@finos/legend-lego/code-editor';
 
 const QueryProductionizerSetupStoreProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const applicationStore = useLegendQueryApplicationStore();
-  const depotServerClient = useDepotServerClient();
+  const baseStore = useLegendQueryBaseStore();
   const store = useLocalObservable(
     () =>
-      new QueryProductionizerSetupStore(applicationStore, depotServerClient),
+      new QueryProductionizerSetupStore(
+        applicationStore,
+        baseStore.depotServerClient,
+      ),
   );
   return (
     <BaseQuerySetupStoreContext.Provider value={store}>
@@ -74,7 +79,9 @@ const QueryProductionizerSetupContent = observer(() => {
 
   // actions
   const back = (): void => {
-    applicationStore.navigator.goToLocation(generateQuerySetupRoute());
+    applicationStore.navigationService.navigator.goToLocation(
+      generateQuerySetupRoute(),
+    );
   };
   const next = (): void => {
     if (setupStore.currentQuery) {
@@ -178,10 +185,10 @@ const QueryProductionizerSetupContent = observer(() => {
                 <BlankPanelContent>{`Can't preview query`}</BlankPanelContent>
               )}
               {setupStore.currentQueryInfo && (
-                <TextInputEditor
+                <CodeEditor
                   inputValue={setupStore.currentQueryInfo.content}
                   isReadOnly={true}
-                  language={EDITOR_LANGUAGE.PURE}
+                  language={CODE_EDITOR_LANGUAGE.PURE}
                   showMiniMap={false}
                   hideGutter={true}
                 />

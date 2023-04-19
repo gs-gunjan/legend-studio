@@ -1,5 +1,37 @@
 # @finos/stylelint-config-legend-studio
 
+## 3.0.6
+
+## 3.0.5
+
+## 3.0.4
+
+## 3.0.3
+
+## 3.0.2
+
+## 3.0.1
+
+## 3.0.0
+
+### Major Changes
+
+- [#2004](https://github.com/finos/legend-studio/pull/2004) [`645c33111`](https://github.com/finos/legend-studio/commit/645c33111445aa914699e66a8a09d5a0499f1f9f) ([@akphi](https://github.com/akphi)) - Removed usage of `stylelint-config-prettier` as stylelint@v15 has [deprecated most of the stylistic rules](https://stylelint.io/migration-guide/to-15/) so this preset is [no longer needed](https://github.com/prettier/stylelint-config-prettier/issues/140).
+
+## 2.0.32
+
+## 2.0.31
+
+## 2.0.30
+
+## 2.0.29
+
+## 2.0.28
+
+## 2.0.27
+
+## 2.0.26
+
 ## 2.0.25
 
 ## 2.0.24

@@ -44,6 +44,8 @@ import {
   GenericTypeExplicitReference,
   GenericType,
   INTERNAL__PropagatedValue,
+  isSubType,
+  type ObserverContext,
 } from '@finos/legend-graph';
 import {
   addUniqueEntry,
@@ -54,11 +56,12 @@ import {
   isString,
   UnsupportedOperationError,
 } from '@finos/legend-shared';
-import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../graphManager/QueryBuilderSupportedFunctions.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../graph/QueryBuilderMetaModelConst.js';
 import {
   getDerivedPropertyMilestoningSteoreotype,
   validateMilestoningPropertyExpressionChain,
 } from './milestoning/QueryBuilderMilestoningHelper.js';
+import { instanceValue_setValues } from './shared/ValueSpecificationModifierHelper.js';
 
 export const getNonCollectionValueSpecificationType = (
   valueSpecification: ValueSpecification,
@@ -354,4 +357,37 @@ export const isValueExpressionReferencedInValue = (
     return isValueExpressionReferencedInValue(variable, value.getValue());
   }
   return false;
+};
+
+/**
+ * Some expression which represents a value and can be simplified to make
+ * editing experience easier
+ *
+ * e.g. -5 is often represented as minus(5), which is a function expression
+ * but we want to simplify it to a primitive instance value with value -5
+ */
+export const simplifyValueExpression = (
+  value: ValueSpecification,
+  observerContext: ObserverContext,
+): ValueSpecification => {
+  if (
+    value instanceof SimpleFunctionExpression &&
+    matchFunctionName(
+      value.functionName,
+      QUERY_BUILDER_SUPPORTED_FUNCTIONS.MINUS,
+    ) &&
+    value.parametersValues.length === 1 &&
+    value.parametersValues[0] instanceof PrimitiveInstanceValue
+  ) {
+    const val = value.parametersValues[0];
+    if (isSubType(val.genericType.value.rawType, PrimitiveType.NUMBER)) {
+      instanceValue_setValues(
+        val,
+        [(val.values[0] as number) * -1],
+        observerContext,
+      );
+    }
+    return val;
+  }
+  return value;
 };

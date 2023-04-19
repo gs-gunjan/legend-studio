@@ -19,15 +19,13 @@ import {
   type LegendApplicationConfig,
   ApplicationStoreProvider,
   LegendApplication,
-  setupLegendApplicationUILibrary,
-  WebApplicationNavigatorProvider,
   type LegendApplicationConfigurationInput,
-  BrowserRouter,
+  Core_LegendApplicationPlugin,
+  getApplicationRootElement,
 } from '@finos/legend-application';
-import { LegendQueryApplication } from '../components/LegendQueryApplication.js';
+import { LegendQueryWebApplication } from '../components/LegendQueryWebApplication.js';
 import { LegendQueryPluginManager } from './LegendQueryPluginManager.js';
-import { getRootElement } from '@finos/legend-art';
-import { Core_PureGraphManagerPlugin } from '@finos/legend-graph';
+import { Core_GraphManagerPreset } from '@finos/legend-graph';
 import {
   type LegendQueryApplicationConfigurationData,
   LegendQueryApplicationConfig,
@@ -35,13 +33,9 @@ import {
 import {
   QueryBuilder_GraphManagerPreset,
   QueryBuilder_LegendApplicationPlugin,
-  setupQueryBuilderUILibrary,
 } from '@finos/legend-query-builder';
 import { Core_LegendQueryApplicationPlugin } from '../components/Core_LegendQueryApplicationPlugin.js';
-
-export const setupLegendQueryUILibrary = async (): Promise<void> => {
-  await setupQueryBuilderUILibrary();
-};
+import type { LegendQueryApplicationStore } from '../stores/LegendQueryBaseStore.js';
 
 export class LegendQuery extends LegendApplication {
   declare config: LegendQueryApplicationConfig;
@@ -49,9 +43,12 @@ export class LegendQuery extends LegendApplication {
 
   static create(): LegendQuery {
     const application = new LegendQuery(LegendQueryPluginManager.create());
-    application.withBasePresets([new QueryBuilder_GraphManagerPreset()]);
+    application.withBasePresets([
+      new Core_GraphManagerPreset(),
+      new QueryBuilder_GraphManagerPreset(),
+    ]);
     application.withBasePlugins([
-      new Core_PureGraphManagerPlugin(),
+      new Core_LegendApplicationPlugin(),
       new Core_LegendQueryApplicationPlugin(),
       new QueryBuilder_LegendApplicationPlugin(),
     ]);
@@ -64,24 +61,13 @@ export class LegendQuery extends LegendApplication {
     return new LegendQueryApplicationConfig(input);
   }
 
-  async loadApplication(): Promise<void> {
-    // Setup React application libraries
-    await setupLegendApplicationUILibrary(this.pluginManager, this.logger);
-    await setupLegendQueryUILibrary();
-
-    // Render React application
-    const rootElement = createRoot(getRootElement());
-    rootElement.render(
-      <BrowserRouter basename={this.baseUrl}>
-        <WebApplicationNavigatorProvider>
-          <ApplicationStoreProvider
-            config={this.config}
-            pluginManager={this.pluginManager}
-          >
-            <LegendQueryApplication config={this.config} />
-          </ApplicationStoreProvider>
-        </WebApplicationNavigatorProvider>
-      </BrowserRouter>,
+  async loadApplication(
+    applicationStore: LegendQueryApplicationStore,
+  ): Promise<void> {
+    createRoot(getApplicationRootElement()).render(
+      <ApplicationStoreProvider store={applicationStore}>
+        <LegendQueryWebApplication baseUrl={this.baseAddress} />
+      </ApplicationStoreProvider>,
     );
   }
 }

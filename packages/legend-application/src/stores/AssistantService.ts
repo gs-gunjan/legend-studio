@@ -17,15 +17,15 @@
 import { action, makeObservable, observable, computed } from 'mobx';
 import type { DocumentationEntry } from './DocumentationService.js';
 import type { GenericLegendApplicationStore } from './ApplicationStore.js';
-import { Fuse } from '@finos/legend-art';
 import {
   type MarkdownText,
   guaranteeNonEmptyString,
   uuid,
   isNonNullable,
   ActionState,
+  FuzzySearchEngine,
+  FuzzySearchAdvancedConfigState,
 } from '@finos/legend-shared';
-import { TextSearchAdvancedConfigState } from './shared/TextSearchAdvancedConfigState.js';
 
 export enum VIRTUAL_ASSISTANT_TAB {
   SEARCH = 'SEARCH',
@@ -48,7 +48,7 @@ export class VirtualAssistantDocumentationEntry {
       setIsOpen: action,
     });
 
-    this.documentationKey = docEntry._documentationKey;
+    this.documentationKey = docEntry.key;
     this.title = guaranteeNonEmptyString(docEntry.title);
     this.content = docEntry.markdownText ?? docEntry.text;
     this.url = docEntry.url;
@@ -106,15 +106,15 @@ export class AssistantService {
    * This key is used to allow programmatic re-rendering of the assistant panel
    */
   panelRenderingKey = uuid();
-  isHidden = false;
+  isHidden = true; // hide by default unless specified by the application to show
   isOpen = false;
   selectedTab = VIRTUAL_ASSISTANT_TAB.SEARCH;
   currentDocumentationEntry: VirtualAssistantDocumentationEntry | undefined;
 
   // search text
-  private readonly searchEngine: Fuse<DocumentationEntry>;
-  searchConfigurationState: TextSearchAdvancedConfigState;
-  searchState = ActionState.create();
+  private readonly searchEngine: FuzzySearchEngine<DocumentationEntry>;
+  searchConfigurationState: FuzzySearchAdvancedConfigState;
+  readonly searchState = ActionState.create();
   searchText = '';
   searchResults: VirtualAssistantDocumentationEntry[] = [];
   showSearchConfigurationMenu = false;
@@ -144,7 +144,7 @@ export class AssistantService {
     });
 
     this.applicationStore = applicationStore;
-    this.searchEngine = new Fuse(
+    this.searchEngine = new FuzzySearchEngine(
       this.applicationStore.documentationService
         .getAllDocEntries()
         .filter(isValidVirtualAssistantDocumentationEntry),
@@ -178,7 +178,7 @@ export class AssistantService {
         useExtendedSearch: true,
       },
     );
-    this.searchConfigurationState = new TextSearchAdvancedConfigState(() => {
+    this.searchConfigurationState = new FuzzySearchAdvancedConfigState(() => {
       this.search();
     });
   }
@@ -211,19 +211,30 @@ export class AssistantService {
       : undefined;
   }
 
-  openDocumentationEntry(docKey: string): void {
-    const matchingDocEntry = this.applicationStore.documentationService
-      .getAllDocEntries()
-      .find((entry) => entry._documentationKey === docKey);
+  openDocumentationEntry(key: string): void {
+    const entry = this.applicationStore.documentationService.getDocEntry(key);
 
-    if (matchingDocEntry) {
+    if (entry) {
       this.setIsOpen(true);
       this.setIsHidden(false);
       this.currentDocumentationEntry = new VirtualAssistantDocumentationEntry(
-        matchingDocEntry,
+        entry,
       );
       this.currentDocumentationEntry.setIsOpen(true);
       this.resetSearch();
+    }
+  }
+
+  openDocumentationEntryLink(key: string): void {
+    const entry = this.applicationStore.documentationService.getDocEntry(key);
+    if (entry) {
+      if (shouldDisplayVirtualAssistantDocumentationEntry(entry)) {
+        this.openDocumentationEntry(entry.key);
+      } else if (entry.url) {
+        this.applicationStore.navigationService.navigator.visitAddress(
+          entry.url,
+        );
+      }
     }
   }
 

@@ -26,37 +26,37 @@ import {
   CustomSelectorInput,
   RepoIcon,
 } from '@finos/legend-art';
-import { LEGEND_STUDIO_TEST_ID } from '../LegendStudioTestID.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../__lib__/LegendStudioTesting.js';
 import {
-  type SetupPathParams,
+  type WorkspaceSetupPathParams,
   generateEditorRoute,
-  LEGEND_STUDIO_PATH_PARAM_TOKEN,
-} from '../../stores/LegendStudioRouter.js';
+  LEGEND_STUDIO_ROUTE_PATTERN_TOKEN,
+} from '../../__lib__/LegendStudioNavigation.js';
 import { flowResult } from 'mobx';
-import {
-  DocumentationLink,
-  useApplicationNavigationContext,
-  useParams,
-} from '@finos/legend-application';
-import { LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../stores/LegendStudioDocumentation.js';
+import { useApplicationNavigationContext } from '@finos/legend-application';
+import { useParams } from '@finos/legend-application/browser';
+import { LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../__lib__/LegendStudioDocumentation.js';
 import { CreateProjectModal } from './CreateProjectModal.js';
 import { ActivityBarMenu } from '../editor/ActivityBar.js';
-import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../stores/LegendStudioApplicationNavigationContext.js';
+import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../__lib__/LegendStudioApplicationNavigationContext.js';
 import { CreateWorkspaceModal } from './CreateWorkspaceModal.js';
-import { useLegendStudioApplicationStore } from '../LegendStudioBaseStoreProvider.js';
+import {
+  useLegendStudioApplicationStore,
+  useLegendStudioBaseStore,
+} from '../LegendStudioFrameworkProvider.js';
 import {
   type ProjectOption,
   buildProjectOption,
   getProjectOptionLabelFormatter,
-} from '../shared/ProjectSelectorUtils.js';
+} from './ProjectSelectorUtils.js';
 import {
   type WorkspaceOption,
   buildWorkspaceOption,
   formatWorkspaceOptionLabel,
-} from '../shared/WorkspaceSelectorUtils.js';
+} from './WorkspaceSelectorUtils.js';
 import { debounce, guaranteeNonNullable } from '@finos/legend-shared';
 import { WorkspaceSetupStore } from '../../stores/workspace-setup/WorkspaceSetupStore.js';
-import { useSDLCServerClient } from '@finos/legend-server-sdlc';
+import { DocumentationLink } from '@finos/legend-lego/application';
 
 const WorkspaceSetupStoreContext = createContext<
   WorkspaceSetupStore | undefined
@@ -66,9 +66,9 @@ const WorkspaceSetupStoreProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const applicationStore = useLegendStudioApplicationStore();
-  const sdlcServerClient = useSDLCServerClient();
+  const baseStore = useLegendStudioBaseStore();
   const store = useLocalObservable(
-    () => new WorkspaceSetupStore(applicationStore, sdlcServerClient),
+    () => new WorkspaceSetupStore(applicationStore, baseStore.sdlcServerClient),
   );
   return (
     <WorkspaceSetupStoreContext.Provider value={store}>
@@ -94,11 +94,11 @@ const withWorkspaceSetupStore = (WrappedComponent: React.FC): React.FC =>
 
 export const WorkspaceSetup = withWorkspaceSetupStore(
   observer(() => {
-    const params = useParams<SetupPathParams>();
-    const projectId = params[LEGEND_STUDIO_PATH_PARAM_TOKEN.PROJECT_ID];
-    const workspaceId = params[LEGEND_STUDIO_PATH_PARAM_TOKEN.WORKSPACE_ID];
+    const params = useParams<WorkspaceSetupPathParams>();
+    const projectId = params[LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID];
+    const workspaceId = params[LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID];
     const groupWorkspaceId =
-      params[LEGEND_STUDIO_PATH_PARAM_TOKEN.GROUP_WORKSPACE_ID];
+      params[LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID];
     const setupStore = useWorkspaceSetupStore();
     const applicationStore = useLegendStudioApplicationStore();
     const [projectSearchText, setProjectSearchText] = useState('');
@@ -159,7 +159,7 @@ export const WorkspaceSetup = withWorkspaceSetupStore(
       if (val) {
         setupStore.changeWorkspace(val.value);
         if (!setupStore.currentProjectConfigurationStatus?.isConfigured) {
-          applicationStore.notifyIllegalState(
+          applicationStore.notificationService.notifyIllegalState(
             `Can't edit current workspace as the current project is not configured`,
           );
         }
@@ -172,7 +172,7 @@ export const WorkspaceSetup = withWorkspaceSetupStore(
 
     const handleProceed = (): void => {
       if (setupStore.currentProject && setupStore.currentWorkspace) {
-        applicationStore.navigator.goToLocation(
+        applicationStore.navigationService.navigator.goToLocation(
           generateEditorRoute(
             setupStore.currentProject.projectId,
             setupStore.currentWorkspace.workspaceId,

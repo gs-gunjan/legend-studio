@@ -15,28 +15,23 @@
  */
 
 import { AbstractPlugin } from '@finos/legend-shared';
-import type { LegendApplicationPluginManager } from '../application/LegendApplicationPluginManager.js';
-import type { KeyedCommandConfigEntry } from './CommandCenter.js';
+import type { KeyedCommandConfigEntry } from './CommandService.js';
 import type {
   ContextualDocumentationEntry,
   DocumentationRegistryEntry,
   KeyedDocumentationEntry,
 } from './DocumentationService.js';
+import type { ColorTheme } from './LayoutService.js';
+import type { SettingConfigurationEntry } from './SettingService.js';
+import type { GenericLegendApplicationStore } from './ApplicationStore.js';
 
-export type LegendApplicationSetup = <T extends LegendApplicationPlugin>(
-  pluginManager: LegendApplicationPluginManager<T>,
+export type LegendApplicationSetup = (
+  applicationStore: GenericLegendApplicationStore,
 ) => Promise<void>;
-
-/**
- * Prefix URL patterns coming from extensions with `/extensions/`
- * to avoid potential conflicts with main routes.
- */
-export const generateExtensionUrlPattern = (pattern: string): string =>
-  `/extensions/${pattern}`.replace(/^\/extensions\/\//, '/extensions/');
 
 export type ApplicationPageEntry = {
   key: string;
-  urlPatterns: string[];
+  addressPatterns: string[];
   renderer: React.FC | React.ReactElement;
 };
 
@@ -45,6 +40,8 @@ export abstract class LegendApplicationPlugin extends AbstractPlugin {
    * Get the list of setup procedures to be run when booting up the application.
    *
    * NOTE: The application will call the setup procedures from all extensions concurrently.
+   * These procedures should be idempotent and should not depend on each other.
+   * They will be called just before the application is rendered.
    */
   getExtraApplicationSetups?(): LegendApplicationSetup[];
 
@@ -54,7 +51,7 @@ export abstract class LegendApplicationPlugin extends AbstractPlugin {
   getExtraApplicationPageEntries?(): ApplicationPageEntry[];
 
   /**
-   * Get the list of keyed command config entries to be registered with command center.
+   * Get the list of keyed command config entries to be registered.
    */
   getExtraKeyedCommandConfigEntries?(): KeyedCommandConfigEntry[];
 
@@ -86,4 +83,14 @@ export abstract class LegendApplicationPlugin extends AbstractPlugin {
    * when their corresponding contexts are accessed
    */
   getExtraAccessEventLoggingApplicationContextKeys?(): string[];
+
+  /**
+   * Get the list of color themes
+   */
+  getExtraColorThemes?(): ColorTheme[];
+
+  /**
+   * Get the list of setting configuration entries
+   */
+  getExtraSettingConfigurationEntries?(): SettingConfigurationEntry[];
 }

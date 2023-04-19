@@ -14,10 +14,22 @@
  * limitations under the License.
  */
 
-import type { DepotServerClient } from '@finos/legend-server-depot';
-import type { ApplicationStore } from '@finos/legend-application';
+import { DepotServerClient } from '@finos/legend-server-depot';
+import {
+  type ApplicationStore,
+  LegendApplicationTelemetryHelper,
+  APPLICATION_EVENT,
+} from '@finos/legend-application';
 import type { LegendQueryPluginManager } from '../application/LegendQueryPluginManager.js';
 import type { LegendQueryApplicationConfig } from '../application/LegendQueryApplicationConfig.js';
+import {
+  ActionState,
+  assertErrorThrown,
+  LogEvent,
+  NetworkClient,
+  type GeneratorFn,
+} from '@finos/legend-shared';
+import { flow, makeObservable } from 'mobx';
 
 export type LegendQueryApplicationStore = ApplicationStore<
   LegendQueryApplicationConfig,
@@ -25,21 +37,61 @@ export type LegendQueryApplicationStore = ApplicationStore<
 >;
 
 export class LegendQueryBaseStore {
-  applicationStore: LegendQueryApplicationStore;
-  depotServerClient: DepotServerClient;
-  pluginManager: LegendQueryPluginManager;
+  readonly applicationStore: LegendQueryApplicationStore;
+  readonly depotServerClient: DepotServerClient;
+  readonly pluginManager: LegendQueryPluginManager;
 
-  constructor(
-    applicationStore: LegendQueryApplicationStore,
-    depotServerClient: DepotServerClient,
-  ) {
+  readonly initState = ActionState.create();
+
+  constructor(applicationStore: LegendQueryApplicationStore) {
+    makeObservable(this, {
+      initialize: flow,
+    });
+
     this.applicationStore = applicationStore;
-    this.depotServerClient = depotServerClient;
     this.pluginManager = applicationStore.pluginManager;
 
-    // Register plugins
+    // setup servers
+    this.depotServerClient = new DepotServerClient({
+      serverUrl: this.applicationStore.config.depotServerUrl,
+    });
     this.depotServerClient.setTracerService(
       this.applicationStore.tracerService,
     );
+  }
+
+  *initialize(): GeneratorFn<void> {
+    if (!this.initState.isInInitialState) {
+      this.applicationStore.notificationService.notifyIllegalState(
+        'Base store is re-initialized',
+      );
+      return;
+    }
+    this.initState.inProgress();
+
+    try {
+      this.applicationStore.identityService.setCurrentUser(
+        (yield new NetworkClient().get(
+          `${this.applicationStore.config.engineServerUrl}/server/v1/currentUser`,
+        )) as string,
+      );
+    } catch (error) {
+      assertErrorThrown(error);
+      this.applicationStore.logService.error(
+        LogEvent.create(APPLICATION_EVENT.IDENTITY_AUTO_FETCH__FAILURE),
+        error,
+      );
+      this.applicationStore.notificationService.notifyWarning(error.message);
+    }
+
+    // setup telemetry service
+    this.applicationStore.telemetryService.setup();
+
+    LegendApplicationTelemetryHelper.logEvent_ApplicationInitializationSucceeded(
+      this.applicationStore.telemetryService,
+      this.applicationStore,
+    );
+
+    this.initState.complete();
   }
 }

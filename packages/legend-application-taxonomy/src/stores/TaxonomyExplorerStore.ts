@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-import { type CommandRegistrar, TAB_SIZE } from '@finos/legend-application';
+import {
+  type CommandRegistrar,
+  DEFAULT_TAB_SIZE,
+} from '@finos/legend-application';
 import {
   type TreeData,
   type TreeNodeData,
@@ -24,7 +27,7 @@ import {
 import {
   DATA_SPACE_ELEMENT_CLASSIFIER_PATH,
   extractDataSpaceTaxonomyNodes,
-} from '@finos/legend-extension-dsl-data-space';
+} from '@finos/legend-extension-dsl-data-space/graph';
 import { BasicGraphManagerState } from '@finos/legend-graph';
 import type {
   DepotServerClient,
@@ -44,13 +47,13 @@ import {
 import { generateGAVCoordinates } from '@finos/legend-storage';
 import { makeObservable, flow, observable, action, flowResult } from 'mobx';
 import type { LegendTaxonomyPluginManager } from '../application/LegendTaxonomyPluginManager.js';
-import { LEGEND_TAXONOMY_APP_EVENT } from './LegendTaxonomyAppEvent.js';
+import { LEGEND_TAXONOMY_APP_EVENT } from '../__lib__/LegendTaxonomyEvent.js';
 import type { LegendTaxonomyApplicationStore } from './LegendTaxonomyBaseStore.js';
-import { LEGEND_TAXONOMY_COMMAND_KEY } from './LegendTaxonomyCommand.js';
+import { LEGEND_TAXONOMY_COMMAND_KEY } from '../__lib__/LegendTaxonomyCommand.js';
 import {
   generateExploreTaxonomyTreeRoute,
   type LegendTaxonomyPathParams,
-} from './LegendTaxonomyRouter.js';
+} from '../__lib__/LegendTaxonomyNavigation.js';
 import { TaxonomyNodeViewerState } from './TaxonomyNodeViewerState.js';
 import {
   type TaxonomyServerClient,
@@ -91,10 +94,11 @@ export class DataSpaceTaxonomyContext {
 }
 
 export class TaxonomyTreeNodeData implements TreeNodeData {
-  isSelected?: boolean | undefined;
-  isOpen?: boolean | undefined;
   readonly label: string;
   readonly id: string;
+
+  isSelected?: boolean | undefined;
+  isOpen?: boolean | undefined;
   taxonomyData?: TaxonomyNodeData | undefined;
   childrenIds: string[] = [];
   dataSpaceTaxonomyContexts: DataSpaceTaxonomyContext[] = [];
@@ -110,22 +114,22 @@ export class TaxonomyTreeNodeData implements TreeNodeData {
 }
 
 export class TaxonomyExplorerStore implements CommandRegistrar {
-  applicationStore: LegendTaxonomyApplicationStore;
-  depotServerClient: DepotServerClient;
-  taxonomyServerClient: TaxonomyServerClient;
-  graphManagerState: BasicGraphManagerState;
-  pluginManager: LegendTaxonomyPluginManager;
+  readonly applicationStore: LegendTaxonomyApplicationStore;
+  readonly depotServerClient: DepotServerClient;
+  readonly taxonomyServerClient: TaxonomyServerClient;
+  readonly graphManagerState: BasicGraphManagerState;
+  readonly pluginManager: LegendTaxonomyPluginManager;
 
-  sideBarDisplayState = new PanelDisplayState({
+  readonly sideBarDisplayState = new PanelDisplayState({
     initial: 300,
     default: 300,
     snap: 150,
   });
-  searchTaxonomyNodeCommandState = new NonBlockingDialogState();
+  readonly searchTaxonomyNodeCommandState = new NonBlockingDialogState();
 
-  initState = ActionState.create();
+  readonly initState = ActionState.create();
+  readonly dataSpaceIndex = new Map<string, DataSpaceTaxonomyContext>();
 
-  dataSpaceIndex = new Map<string, DataSpaceTaxonomyContext>();
   treeData?: TreeData<TaxonomyTreeNodeData> | undefined;
 
   initialTaxonomyPath?: string | undefined;
@@ -145,12 +149,13 @@ export class TaxonomyExplorerStore implements CommandRegistrar {
       internalizeDataSpacePath: action,
       initialize: flow,
     });
+
     this.applicationStore = applicationStore;
     this.taxonomyServerClient = taxonomyServerClient;
     this.depotServerClient = depotServerClient;
     this.graphManagerState = new BasicGraphManagerState(
       applicationStore.pluginManager,
-      applicationStore.log,
+      applicationStore.logService,
     );
     this.pluginManager = applicationStore.pluginManager;
 
@@ -174,7 +179,7 @@ export class TaxonomyExplorerStore implements CommandRegistrar {
   }
 
   registerCommands(): void {
-    this.applicationStore.commandCenter.registerCommand({
+    this.applicationStore.commandService.registerCommand({
       key: LEGEND_TAXONOMY_COMMAND_KEY.SEARCH_TAXONOMY,
       action: () => this.searchTaxonomyNodeCommandState.open(),
     });
@@ -182,7 +187,7 @@ export class TaxonomyExplorerStore implements CommandRegistrar {
 
   deregisterCommands(): void {
     [LEGEND_TAXONOMY_COMMAND_KEY.SEARCH_TAXONOMY].forEach((key) =>
-      this.applicationStore.commandCenter.deregisterCommand(key),
+      this.applicationStore.commandService.deregisterCommand(key),
     );
   }
 
@@ -193,7 +198,7 @@ export class TaxonomyExplorerStore implements CommandRegistrar {
       if (gav && dataSpacePath) {
         this.initialDataSpaceId = `${gav}${DATA_SPACE_ID_DELIMITER}${dataSpacePath}`;
       }
-      this.applicationStore.navigator.updateCurrentLocation(
+      this.applicationStore.navigationService.navigator.updateCurrentLocation(
         generateExploreTaxonomyTreeRoute(
           this.applicationStore.config.currentTaxonomyTreeOption.key,
         ),
@@ -252,9 +257,9 @@ export class TaxonomyExplorerStore implements CommandRegistrar {
     for (const taxonomyNodeData of taxonomyData) {
       if (uniqueNodeIds.has(taxonomyNodeData.guid)) {
         isTaxonomyTreeDataValid = false;
-        this.applicationStore.log.warn(
+        this.applicationStore.logService.warn(
           LogEvent.create(
-            LEGEND_TAXONOMY_APP_EVENT.TAXONOMY_DATA_CHECK_FAILURE,
+            LEGEND_TAXONOMY_APP_EVENT.TAXONOMY_DATA_CHECK__FAILURE,
           ),
           `Found duplicated taxonomy node with ID '${taxonomyNodeData.guid}'`,
         );
@@ -262,9 +267,9 @@ export class TaxonomyExplorerStore implements CommandRegistrar {
       uniqueNodeIds.add(taxonomyNodeData.guid);
       if (uniquePackages.has(taxonomyNodeData.package)) {
         isTaxonomyTreeDataValid = false;
-        this.applicationStore.log.warn(
+        this.applicationStore.logService.warn(
           LogEvent.create(
-            LEGEND_TAXONOMY_APP_EVENT.TAXONOMY_DATA_CHECK_FAILURE,
+            LEGEND_TAXONOMY_APP_EVENT.TAXONOMY_DATA_CHECK__FAILURE,
           ),
           `Found duplicated taxonomy node with package '${taxonomyNodeData.package}'`,
         );
@@ -272,7 +277,7 @@ export class TaxonomyExplorerStore implements CommandRegistrar {
       uniquePackages.add(taxonomyNodeData.package);
     }
     if (!isTaxonomyTreeDataValid) {
-      this.applicationStore.notifyWarning(
+      this.applicationStore.notificationService.notifyWarning(
         `Found duplication in taxonomy data: taxonomy accuracy might be affected`,
       );
     }
@@ -393,7 +398,7 @@ export class TaxonomyExplorerStore implements CommandRegistrar {
       yield this.graphManagerState.graphManager.initialize(
         {
           env: this.applicationStore.config.env,
-          tabSize: TAB_SIZE,
+          tabSize: DEFAULT_TAB_SIZE,
           clientConfig: {
             baseUrl: this.applicationStore.config.engineServerUrl,
             queryBaseUrl: this.applicationStore.config.engineQueryServerUrl,
@@ -449,7 +454,7 @@ export class TaxonomyExplorerStore implements CommandRegistrar {
     } catch (error) {
       assertErrorThrown(error);
       this.initState.fail();
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
     }
   }
 }

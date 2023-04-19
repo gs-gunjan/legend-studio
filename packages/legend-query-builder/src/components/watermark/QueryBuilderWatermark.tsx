@@ -25,6 +25,7 @@ import {
   ModalFooter,
   ModalHeader,
   PanelFormSection,
+  ModalFooterButton,
 } from '@finos/legend-art';
 import {
   areMultiplicitiesEqual,
@@ -105,9 +106,7 @@ const WatermarkValueEditor = observer(
                 watermarkState.setValue(val);
               }}
               graph={graph}
-              obseverContext={
-                watermarkState.queryBuilderState.observableContext
-              }
+              obseverContext={watermarkState.queryBuilderState.observerContext}
               typeCheckOption={{
                 expectedType: PrimitiveType.STRING,
               }}
@@ -169,12 +168,7 @@ export const QueryBuilderWatermarkEditor = observer(
             </PanelForm>
           </ModalBody>
           <ModalFooter>
-            <button
-              className="btn modal__footer__close-btn"
-              onClick={handleClose}
-            >
-              Done
-            </button>
+            <ModalFooterButton text="Done" onClick={handleClose} />
           </ModalFooter>
         </Modal>
       </Dialog>

@@ -19,9 +19,14 @@ import {
   LegendApplicationPlugin,
   type KeyedCommandConfigEntry,
   type LegendApplicationPluginManager,
+  type LegendApplicationSetup,
 } from '@finos/legend-application';
 import packageJson from '../../package.json';
-import { LEGEND_TAXONOMY_COMMAND_CONFIG } from '../stores/LegendTaxonomyCommand.js';
+import { LEGEND_TAXONOMY_COMMAND_CONFIG } from '../__lib__/LegendTaxonomyCommand.js';
+import {
+  configureCodeEditorComponent,
+  setupPureLanguageService,
+} from '@finos/legend-lego/code-editor';
 
 export class Core_LegendTaxonomyApplicationPlugin extends LegendApplicationPlugin {
   static NAME = packageJson.extensions.applicationTaxonomyPlugin;
@@ -34,6 +39,15 @@ export class Core_LegendTaxonomyApplicationPlugin extends LegendApplicationPlugi
     pluginManager: LegendApplicationPluginManager<LegendApplicationPlugin>,
   ): void {
     pluginManager.registerApplicationPlugin(this);
+  }
+
+  override getExtraApplicationSetups(): LegendApplicationSetup[] {
+    return [
+      async (applicationStore) => {
+        await configureCodeEditorComponent(applicationStore);
+        setupPureLanguageService({});
+      },
+    ];
   }
 
   override getExtraKeyedCommandConfigEntries(): KeyedCommandConfigEntry[] {

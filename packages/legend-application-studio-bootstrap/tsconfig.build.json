@@ -8,6 +8,7 @@
   "references": [
     { "path": "../legend-application/tsconfig.build.json" },
     { "path": "../legend-art/tsconfig.build.json" },
+    { "path": "../legend-lego/tsconfig.build.json" },
     { "path": "../legend-graph/tsconfig.build.json" },
     { "path": "../legend-application-studio/tsconfig.build.json" },
     { "path": "../legend-shared/tsconfig.build.json" },
@@ -16,16 +17,15 @@
     { "path": "../legend-extension-dsl-diagram/tsconfig.build.json" },
     { "path": "../legend-extension-dsl-persistence/tsconfig.build.json" },
     { "path": "../legend-extension-dsl-mastery/tsconfig.build.json" },
-    { "path": "../legend-extension-dsl-persistence-cloud/tsconfig.build.json" },
     { "path": "../legend-extension-dsl-text/tsconfig.build.json" },
+    {
+      "path": "../legend-extension-store-service-store/tsconfig.build.json"
+    },
     {
       "path": "../legend-extension-format-json-schema/tsconfig.build.json"
     },
     {
-      "path": "../legend-extension-format-morphir/tsconfig.build.json"
-    },
-    {
-      "path": "../legend-extension-store-service-store/tsconfig.build.json"
+      "path": "../legend-extension-format-graphql/tsconfig.build.json"
     }
   ]
 }

@@ -15,26 +15,20 @@
  */
 
 import { observer, useLocalObservable } from 'mobx-react-lite';
+import { useApplicationStore } from '@finos/legend-application';
+import { useParams } from '@finos/legend-application/browser';
 import {
-  getQueryParameters,
-  getQueryParameterValue,
-  sanitizeURL,
-} from '@finos/legend-shared';
-import { useApplicationStore, useParams } from '@finos/legend-application';
-import { useDepotServerClient } from '@finos/legend-server-depot';
-import {
-  LEGEND_QUERY_PATH_PARAM_TOKEN,
   QueryEditor,
   QueryEditorStoreContext,
   useLegendQueryApplicationStore,
+  useLegendQueryBaseStore,
 } from '@finos/legend-application-query';
 import { DataSpaceQueryCreatorStore } from '../../stores/query/DataSpaceQueryCreatorStore.js';
 import {
   type DataSpaceQueryCreatorPathParams,
-  type DataSpaceQueryEditorQueryParams,
-  DATA_SPACE_QUERY_CREATOR_PATH_PARAM_TOKEN,
+  DATA_SPACE_QUERY_CREATOR_ROUTE_PATTERN_TOKEN,
   DATA_SPACE_QUERY_CREATOR_QUERY_PARAM_TOKEN,
-} from '../../stores/query/DSL_DataSpace_LegendQueryRouter.js';
+} from '../../__lib__/query/DSL_DataSpace_LegendQueryNavigation.js';
 import { parseGAVCoordinates } from '@finos/legend-storage';
 
 const DataSpaceQueryCreatorStoreProvider: React.FC<{
@@ -54,12 +48,12 @@ const DataSpaceQueryCreatorStoreProvider: React.FC<{
 }) => {
   const { groupId, artifactId, versionId } = parseGAVCoordinates(gav);
   const applicationStore = useLegendQueryApplicationStore();
-  const depotServerClient = useDepotServerClient();
+  const baseStore = useLegendQueryBaseStore();
   const store = useLocalObservable(
     () =>
       new DataSpaceQueryCreatorStore(
         applicationStore,
-        depotServerClient,
+        baseStore.depotServerClient,
         groupId,
         artifactId,
         versionId,
@@ -78,20 +72,18 @@ const DataSpaceQueryCreatorStoreProvider: React.FC<{
 
 export const DataSpaceQueryCreator = observer(() => {
   const applicationStore = useApplicationStore();
-  const params = useParams<DataSpaceQueryCreatorPathParams>();
-  const gav = params[LEGEND_QUERY_PATH_PARAM_TOKEN.GAV];
+  const parameters = useParams<DataSpaceQueryCreatorPathParams>();
+  const gav = parameters[DATA_SPACE_QUERY_CREATOR_ROUTE_PATTERN_TOKEN.GAV];
   const dataSpacePath =
-    params[DATA_SPACE_QUERY_CREATOR_PATH_PARAM_TOKEN.DATA_SPACE_PATH];
+    parameters[DATA_SPACE_QUERY_CREATOR_ROUTE_PATTERN_TOKEN.DATA_SPACE_PATH];
   const executionContext =
-    params[DATA_SPACE_QUERY_CREATOR_PATH_PARAM_TOKEN.EXECUTION_CONTEXT];
-  const runtimePath = params[LEGEND_QUERY_PATH_PARAM_TOKEN.RUNTIME_PATH];
-  const classPath = getQueryParameterValue(
-    getQueryParameters<DataSpaceQueryEditorQueryParams>(
-      sanitizeURL(applicationStore.navigator.getCurrentAddress()),
-      true,
-    ),
-    DATA_SPACE_QUERY_CREATOR_QUERY_PARAM_TOKEN.CLASS_PATH,
-  );
+    parameters[DATA_SPACE_QUERY_CREATOR_ROUTE_PATTERN_TOKEN.EXECUTION_CONTEXT];
+  const runtimePath =
+    parameters[DATA_SPACE_QUERY_CREATOR_ROUTE_PATTERN_TOKEN.RUNTIME_PATH];
+  const classPath =
+    applicationStore.navigationService.navigator.getCurrentLocationParameterValue(
+      DATA_SPACE_QUERY_CREATOR_QUERY_PARAM_TOKEN.CLASS_PATH,
+    );
 
   return (
     <DataSpaceQueryCreatorStoreProvider

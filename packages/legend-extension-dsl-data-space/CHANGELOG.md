@@ -1,5 +1,129 @@
 # @finos/legend-extension-dsl-data-space
 
+## 10.0.2
+
+## 10.0.1
+
+## 10.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Partition exports into separate paths, `/graph` for graph and graph manager extensions, `/application` for generic application extensions, `/application-studio` for `Legend Studio` specific application extensions, and `/application-query` for `Legend Query` specific application extensions.
+
+### Patch Changes
+
+- [#2123](https://github.com/finos/legend-studio/pull/2123) [`dbade2d38`](https://github.com/finos/legend-studio/commit/dbade2d3890e42e8a20c9f95a1bdb2032b9d4a38) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Utilize the latest engine store entitlement APIs
+
+## 9.2.9
+
+## 9.2.8
+
+## 9.2.7
+
+## 9.2.6
+
+## 9.2.5
+
+## 9.2.4
+
+## 9.2.3
+
+## 9.2.2
+
+## 9.2.1
+
+## 9.2.0
+
+### Minor Changes
+
+- [#2063](https://github.com/finos/legend-studio/pull/2063) [`7bd0dc79d`](https://github.com/finos/legend-studio/commit/7bd0dc79d5e803c0eb677b884f2f1ac48fb32b77) ([@akphi](https://github.com/akphi)) - Prefer `diagrams` over `featuredDiagrams` syntax, the latter (if present) will automatically be converted to the former. Support element includes/excludes.
+
+## 9.1.7
+
+## 9.1.6
+
+## 9.1.5
+
+## 9.1.4
+
+## 9.1.3
+
+## 9.1.2
+
+### Patch Changes
+
+- [#2033](https://github.com/finos/legend-studio/pull/2033) [`cb747750e`](https://github.com/finos/legend-studio/commit/cb747750edc0bb30a343adac9dd537c1af997d33) ([@xannem](https://github.com/xannem)) - Fix bug for creating new query from dataspace
+
+## 9.1.1
+
+## 9.1.0
+
+### Minor Changes
+
+- [#2004](https://github.com/finos/legend-studio/pull/2004) [`645c33111`](https://github.com/finos/legend-studio/commit/645c33111445aa914699e66a8a09d5a0499f1f9f) ([@akphi](https://github.com/akphi)) - Add model support for `elements`.
+
+- [#2004](https://github.com/finos/legend-studio/pull/2004) [`645c33111`](https://github.com/finos/legend-studio/commit/645c33111445aa914699e66a8a09d5a0499f1f9f) ([@akphi](https://github.com/akphi)) - Add support for previewing data-space in `Legend Studio`.
+
+### Patch Changes
+
+- [#2018](https://github.com/finos/legend-studio/pull/2018) [`4f622a809`](https://github.com/finos/legend-studio/commit/4f622a809c4d7913394d673b914b3e747a83bc44) ([@gayathrir11](https://github.com/gayathrir11)) - Modify `Query` to have `classPath` as tagged value when we save it via dataspace workflow
+
+## 9.0.48
+
+## 9.0.47
+
+## 9.0.46
+
+### Patch Changes
+
+- [#1971](https://github.com/finos/legend-studio/pull/1971) [`c5dadd9f0`](https://github.com/finos/legend-studio/commit/c5dadd9f0c1bb638f6a47d7d3f5dd418ea73118a) ([@xannem](https://github.com/xannem)) - Revert dataspace button
+
+## 9.0.45
+
+### Patch Changes
+
+- [#1927](https://github.com/finos/legend-studio/pull/1927) [`e351947ff`](https://github.com/finos/legend-studio/commit/e351947fffc792113128678a83721b89f51b2361) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Create a generic application plugin of dataspace.
+
+## 9.0.44
+
+### Patch Changes
+
+- [#1955](https://github.com/finos/legend-studio/pull/1955) [`e4e9f6450`](https://github.com/finos/legend-studio/commit/e4e9f64505822bbbc6d764242e333b5700d52ded) ([@xannem](https://github.com/xannem)) - Styling button fix.
+
+## 9.0.43
+
+### Patch Changes
+
+- [#1939](https://github.com/finos/legend-studio/pull/1939) [`a6cb0d1c7`](https://github.com/finos/legend-studio/commit/a6cb0d1c7b35ac0b71fd29473d3e84d0bf2161e6) ([@xannem](https://github.com/xannem)) - Increase readability of query builder icon option buttons
+
+## 9.0.42
+
+## 9.0.41
+
+## 9.0.40
+
+## 9.0.39
+
+## 9.0.38
+
+## 9.0.37
+
+## 9.0.36
+
+## 9.0.35
+
+## 9.0.34
+
+## 9.0.33
+
+## 9.0.32
+
+## 9.0.31
+
+## 9.0.30
+
+## 9.0.29
+
 ## 9.0.28
 
 ## 9.0.27

@@ -26,23 +26,42 @@ import {
   type LegendApplicationConfigurationInput,
   type LegendApplicationConfigurationData,
 } from '@finos/legend-application';
-import { createModelSchema, optional, primitive } from 'serializr';
+import { createModelSchema, primitive, list, object } from 'serializr';
+
+export class ServiceRegistrationEnvironmentConfig {
+  env!: string;
+  executionUrl!: string;
+  modes: string[] = [];
+  managementUrl!: string;
+
+  static readonly serialization = new SerializationFactory(
+    createModelSchema(ServiceRegistrationEnvironmentConfig, {
+      env: primitive(),
+      executionUrl: primitive(),
+      managementUrl: primitive(),
+      modes: list(primitive()),
+    }),
+  );
+}
 
 class LegendQueryApplicationCoreOptions {
   /**
-   * Indicates if we should enable theme switcher.
+   * Provides service registration environment configs.
    *
-   * NOTE: support for theme switcher is fairly basic at the moment, so we really should
-   * just keep this feature as a beta.
+   * TODO: when we modularize service, we can move this config to DSL Service preset. Then, we can remove
+   * the TEMPORARY__ prefix.
    *
-   * This flag will be kept until we have full support for themeing
-   * See https://github.com/finos/legend-studio/issues/264
+   * @modularize
+   * See https://github.com/finos/legend-studio/issues/65
    */
-  TEMPORARY__enableThemeSwitcher = false;
+  TEMPORARY__serviceRegistrationConfig: ServiceRegistrationEnvironmentConfig[] =
+    [];
 
   private static readonly serialization = new SerializationFactory(
     createModelSchema(LegendQueryApplicationCoreOptions, {
-      TEMPORARY__enableThemeSwitcher: optional(primitive()),
+      TEMPORARY__serviceRegistrationConfig: list(
+        object(ServiceRegistrationEnvironmentConfig),
+      ),
     }),
   );
 
@@ -79,10 +98,10 @@ export class LegendQueryApplicationConfig extends LegendApplicationConfig {
   readonly engineServerUrl: string;
   readonly engineQueryServerUrl?: string | undefined;
   readonly depotServerUrl: string;
-  readonly studioUrl: string;
+  readonly studioApplicationUrl: string;
   readonly studioInstances: LegendStudioApplicationInstanceConfigurationData[] =
     [];
-  readonly taxonomyUrl: string;
+  readonly taxonomyApplicationUrl: string;
 
   constructor(
     input: LegendApplicationConfigurationInput<LegendQueryApplicationConfigurationData>,
@@ -94,20 +113,28 @@ export class LegendQueryApplicationConfig extends LegendApplicationConfig {
       input.configData.engine,
       `Can't configure application: 'engine' field is missing`,
     );
-    this.engineServerUrl = guaranteeNonEmptyString(
-      input.configData.engine.url,
-      `Can't configure application: 'engine.url' field is missing or empty`,
+    this.engineServerUrl = LegendApplicationConfig.resolveAbsoluteUrl(
+      guaranteeNonEmptyString(
+        input.configData.engine.url,
+        `Can't configure application: 'engine.url' field is missing or empty`,
+      ),
     );
-    this.engineQueryServerUrl = input.configData.engine.queryUrl;
+    this.engineQueryServerUrl = input.configData.engine.queryUrl
+      ? LegendApplicationConfig.resolveAbsoluteUrl(
+          input.configData.engine.queryUrl,
+        )
+      : undefined;
 
     // depot
     assertNonNullable(
       input.configData.depot,
       `Can't configure application: 'depot' field is missing`,
     );
-    this.depotServerUrl = guaranteeNonEmptyString(
-      input.configData.depot.url,
-      `Can't configure application: 'depot.url' field is missing or empty`,
+    this.depotServerUrl = LegendApplicationConfig.resolveAbsoluteUrl(
+      guaranteeNonEmptyString(
+        input.configData.depot.url,
+        `Can't configure application: 'depot.url' field is missing or empty`,
+      ),
     );
 
     // studio
@@ -115,9 +142,11 @@ export class LegendQueryApplicationConfig extends LegendApplicationConfig {
       input.configData.studio,
       `Can't configure application: 'studio' field is missing`,
     );
-    this.studioUrl = guaranteeNonEmptyString(
-      input.configData.studio.url,
-      `Can't configure application: 'studio.url' field is missing or empty`,
+    this.studioApplicationUrl = LegendApplicationConfig.resolveAbsoluteUrl(
+      guaranteeNonEmptyString(
+        input.configData.studio.url,
+        `Can't configure application: 'studio.url' field is missing or empty`,
+      ),
     );
     this.studioInstances = guaranteeNonNullable(
       input.configData.studio.instances,
@@ -129,9 +158,11 @@ export class LegendQueryApplicationConfig extends LegendApplicationConfig {
       input.configData.taxonomy,
       `Can't configure application: 'taxonomy' field is missing`,
     );
-    this.taxonomyUrl = guaranteeNonEmptyString(
-      input.configData.taxonomy.url,
-      `Can't configure application: 'taxonomy.url' field is missing or empty`,
+    this.taxonomyApplicationUrl = LegendApplicationConfig.resolveAbsoluteUrl(
+      guaranteeNonEmptyString(
+        input.configData.taxonomy.url,
+        `Can't configure application: 'taxonomy.url' field is missing or empty`,
+      ),
     );
 
     // options
@@ -139,5 +170,9 @@ export class LegendQueryApplicationConfig extends LegendApplicationConfig {
       (input.configData.extensions?.core ??
         {}) as PlainObject<LegendQueryApplicationCoreOptions>,
     );
+  }
+
+  override getDefaultApplicationStorageKey(): string {
+    return 'legend-query';
   }
 }

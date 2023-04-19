@@ -16,12 +16,22 @@
 
 import {
   collectKeyedCommandConfigEntriesFromConfig,
+  collectSettingConfigurationEntriesFromConfig,
   LegendApplicationPlugin,
+  type SettingConfigurationEntry,
   type KeyedCommandConfigEntry,
   type LegendApplicationPluginManager,
+  type LegendApplicationSetup,
 } from '@finos/legend-application';
 import packageJson from '../../package.json';
+import { QUERY_BUILDER_SETTING_CONFIG } from '../__lib__/QueryBuilderSetting.js';
 import { QUERY_BUILDER_COMMAND_CONFIG } from '../stores/QueryBuilderCommand.js';
+import type { QueryBuilderState } from '../stores/QueryBuilderState.js';
+import { configureDataGridComponent } from '@finos/legend-lego/data-grid';
+
+export type CheckEntitlementEditorRender = (
+  queryBuilderState: QueryBuilderState,
+) => React.ReactNode | undefined;
 
 export class QueryBuilder_LegendApplicationPlugin extends LegendApplicationPlugin {
   static NAME = packageJson.extensions.applicationPlugin;
@@ -36,9 +46,28 @@ export class QueryBuilder_LegendApplicationPlugin extends LegendApplicationPlugi
     pluginManager.registerApplicationPlugin(this);
   }
 
+  override getExtraApplicationSetups(): LegendApplicationSetup[] {
+    return [
+      async (applicationStore) => {
+        configureDataGridComponent();
+      },
+    ];
+  }
+
   override getExtraKeyedCommandConfigEntries(): KeyedCommandConfigEntry[] {
     return collectKeyedCommandConfigEntriesFromConfig(
       QUERY_BUILDER_COMMAND_CONFIG,
     );
+  }
+
+  override getExtraSettingConfigurationEntries(): SettingConfigurationEntry[] {
+    return collectSettingConfigurationEntriesFromConfig(
+      QUERY_BUILDER_SETTING_CONFIG,
+    );
+  }
+
+  // TODO: rework and move this to query builder plugin (to be created) or `QueryBuilder_LegendApplicationPlugin_Extension`
+  getCheckEntitlementsEditorRender(): CheckEntitlementEditorRender | undefined {
+    return undefined;
   }
 }

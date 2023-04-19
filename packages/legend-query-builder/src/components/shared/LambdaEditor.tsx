@@ -19,23 +19,27 @@ import { editor as monacoEditorAPI, type IDisposable } from 'monaco-editor';
 import { observer } from 'mobx-react-lite';
 import {
   clsx,
-  disposeEditor,
-  getBaseTextEditorOptions,
-  getEditorValue,
-  normalizeLineEnding,
   FilledWindowMaximizeIcon,
   LongArrowAltDownIcon,
   LongArrowAltUpIcon,
   Dialog,
   useResizeDetector,
-  clearMarkers,
-  setErrorMarkers,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
   ModalTitle,
 } from '@finos/legend-art';
+import {
+  disposeCodeEditor,
+  getBaseCodeEditorOptions,
+  getCodeEditorValue,
+  normalizeLineEnding,
+  clearMarkers,
+  setErrorMarkers,
+  CODE_EDITOR_LANGUAGE,
+  CODE_EDITOR_THEME,
+} from '@finos/legend-lego/code-editor';
 import type { LambdaEditorState } from '../../stores/shared/LambdaEditorState.js';
 import {
   debounce,
@@ -46,12 +50,10 @@ import {
 import { flowResult } from 'mobx';
 import { ParserError, type EngineError, type Type } from '@finos/legend-graph';
 import {
-  EDITOR_LANGUAGE,
-  EDITOR_THEME,
-  TAB_SIZE,
+  DEFAULT_TAB_SIZE,
   useApplicationStore,
 } from '@finos/legend-application';
-import { QUERY_BUILDER_TEST_ID } from '../QueryBuilder_TestID.js';
+import { QUERY_BUILDER_TEST_ID } from '../../__lib__/QueryBuilderTesting.js';
 
 const LambdaErrorFeedback: React.FC<{
   error?: EngineError | undefined;
@@ -97,7 +99,6 @@ const LambdaEditorInline = observer(
     disableExpansion?: boolean | undefined;
     forceExpansion?: boolean | undefined;
     disablePopUp?: boolean | undefined;
-    backdropSetter?: ((val: boolean) => void) | undefined;
     openInPopUp: () => void;
     onEditorFocus?: (() => void) | undefined;
   }) => {
@@ -110,7 +111,6 @@ const LambdaEditorInline = observer(
       onExpectedTypeLabelSelect,
       matchedExpectedType,
       forceBackdrop,
-      backdropSetter,
       disableExpansion,
       forceExpansion,
       disablePopUp,
@@ -183,11 +183,12 @@ const LambdaEditorInline = observer(
                 scrollbar: { vertical: 'hidden' },
               };
         const _editor = monacoEditorAPI.create(element, {
-          ...getBaseTextEditorOptions(),
-          language: EDITOR_LANGUAGE.PURE,
-          theme: applicationStore.TEMPORARY__isLightThemeEnabled
-            ? EDITOR_THEME.TEMPORARY__VSCODE_LIGHT
-            : EDITOR_THEME.LEGEND,
+          ...getBaseCodeEditorOptions(),
+          language: CODE_EDITOR_LANGUAGE.PURE,
+          theme: applicationStore.layoutService
+            .TEMPORARY__isLightColorThemeEnabled
+            ? CODE_EDITOR_THEME.TEMPORARY__VSCODE_LIGHT
+            : CODE_EDITOR_THEME.LEGEND,
           ...lambdaEditorOptions,
         });
         setEditor(_editor);
@@ -212,7 +213,7 @@ const LambdaEditorInline = observer(
                 },
           );
           // set the value here so we don't lose the error when toggling between expand/collape modes
-          const currentValue = getEditorValue(editor);
+          const currentValue = getCodeEditorValue(editor);
           editor.setValue(currentValue);
         }
       }
@@ -220,17 +221,15 @@ const LambdaEditorInline = observer(
 
     // set backdrop to force user to fix parser error when it happens
     useEffect(() => {
-      if (backdropSetter) {
-        if (parserError) {
-          backdropSetter(true);
-        } else if (!forceBackdrop) {
-          // make sure the backdrop is no longer `needed` for blocking by another parser error before hiding it
-          // NOTE: this has a serious drawback, see the documentation for `forceBackdrop` prop of `LambdaEditor`
-          // for better context
-          backdropSetter(false);
-        }
+      if (parserError) {
+        applicationStore.layoutService.setShowBackdrop(true);
+      } else if (!forceBackdrop) {
+        // make sure the backdrop is no longer `needed` for blocking by another parser error before hiding it
+        // NOTE: this has a serious drawback, see the documentation for `forceBackdrop` prop of `LambdaEditor`
+        // for better context
+        applicationStore.layoutService.setShowBackdrop(false);
       }
-    }, [parserError, forceBackdrop, backdropSetter]);
+    }, [applicationStore, parserError, forceBackdrop]);
 
     if (editor) {
       /**
@@ -247,7 +246,7 @@ const LambdaEditorInline = observer(
       onDidChangeModelContentEventDisposer.current?.dispose();
       onDidChangeModelContentEventDisposer.current =
         editor.onDidChangeModelContent(() => {
-          const currentVal = getEditorValue(editor);
+          const currentVal = getCodeEditorValue(editor);
           /**
            * Avoid unecessary setting of lambda string. Also, this prevents clearing the non-parser error on first render.
            * Since this method is guaranteed to be called one time during the first rendering when we first set the
@@ -290,7 +289,7 @@ const LambdaEditorInline = observer(
       );
 
       // Set the text value
-      const currentValue = getEditorValue(editor);
+      const currentValue = getCodeEditorValue(editor);
       const editorModel = editor.getModel();
       const currentConfig = editor.getRawOptions();
       if (currentValue !== value) {
@@ -304,7 +303,7 @@ const LambdaEditorInline = observer(
 
       // Set the errors
       if (editorModel) {
-        editorModel.updateOptions({ tabSize: TAB_SIZE });
+        editorModel.updateOptions({ tabSize: DEFAULT_TAB_SIZE });
         const error = parserError ?? compilationError;
         if (error?.sourceInformation) {
           setErrorMarkers(editorModel, [
@@ -322,16 +321,17 @@ const LambdaEditorInline = observer(
       }
     }
 
+    // dispose editor
     useEffect(
       () => (): void => {
         if (editor) {
-          disposeEditor(editor);
+          disposeCodeEditor(editor);
         }
         onDidChangeModelContentEventDisposer.current?.dispose();
         onDidFocusEditorWidgetDisposer.current?.dispose();
       },
       [editor],
-    ); // dispose editor
+    );
 
     return (
       <>
@@ -345,7 +345,7 @@ const LambdaEditorInline = observer(
             data-testid={QUERY_BUILDER_TEST_ID.LAMBDA_EDITOR__EDITOR_INPUT}
             className="lambda-editor__editor__input"
           >
-            <div className="text-editor__body" ref={textInputRef} />
+            <div className="code-editor__body" ref={textInputRef} />
           </div>
           {Boolean(expectedType) && (
             <div className="lambda-editor__editor__info">
@@ -462,9 +462,12 @@ const LambdaEditorPopUp = observer(
       if (!editor && textInputRef.current) {
         const element = textInputRef.current;
         const _editor = monacoEditorAPI.create(element, {
-          ...getBaseTextEditorOptions(),
-          language: EDITOR_LANGUAGE.PURE,
-          theme: EDITOR_THEME.LEGEND,
+          ...getBaseCodeEditorOptions(),
+          language: CODE_EDITOR_LANGUAGE.PURE,
+          theme: applicationStore.layoutService
+            .TEMPORARY__isLightColorThemeEnabled
+            ? CODE_EDITOR_THEME.TEMPORARY__VSCODE_LIGHT
+            : CODE_EDITOR_THEME.LEGEND,
         });
         setEditor(_editor);
       }
@@ -485,7 +488,7 @@ const LambdaEditorPopUp = observer(
       onDidChangeModelContentEventDisposer.current?.dispose();
       onDidChangeModelContentEventDisposer.current =
         editor.onDidChangeModelContent(() => {
-          const currentVal = getEditorValue(editor);
+          const currentVal = getCodeEditorValue(editor);
           /**
            * Avoid unecessary setting of lambda string. Also, this prevents clearing the non-parser error on first render.
            * Since this method is guaranteed to be called one time during the first rendering when we first set the
@@ -521,7 +524,7 @@ const LambdaEditorPopUp = observer(
         });
 
       // Set the text value
-      const currentValue = getEditorValue(editor);
+      const currentValue = getCodeEditorValue(editor);
       const editorModel = editor.getModel();
       const currentConfig = editor.getRawOptions();
       if (currentValue !== value) {
@@ -535,7 +538,7 @@ const LambdaEditorPopUp = observer(
 
       // Set the errors
       if (editorModel) {
-        editorModel.updateOptions({ tabSize: TAB_SIZE });
+        editorModel.updateOptions({ tabSize: DEFAULT_TAB_SIZE });
         const error = parserError ?? compilationError;
         if (error?.sourceInformation) {
           setErrorMarkers(editorModel, [
@@ -559,15 +562,16 @@ const LambdaEditorPopUp = observer(
       ).catch(applicationStore.alertUnhandledError);
     }, [applicationStore, lambdaEditorState]);
 
+    // dispose editor
     useEffect(
       () => (): void => {
         if (editor) {
-          disposeEditor(editor);
+          disposeCodeEditor(editor);
         }
         onDidChangeModelContentEventDisposer.current?.dispose();
       },
       [editor],
-    ); // dispose editor
+    );
 
     return (
       <Dialog
@@ -584,11 +588,19 @@ const LambdaEditorPopUp = observer(
       >
         <Modal
           darkMode={true}
-          className={clsx('editor-modal lambda-editor__popup__modal', {
-            'lambda-editor__popup__modal--has-error': Boolean(
-              lambdaEditorState.parserError,
-            ),
-          })}
+          className={clsx(
+            'editor-modal lambda-editor__popup__modal',
+            {
+              'lambda-editor__popup__modal--has-error': Boolean(
+                lambdaEditorState.parserError,
+              ),
+            },
+            {
+              'lambda-editor--light':
+                applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled,
+            },
+          )}
         >
           <ModalHeader>
             <ModalTitle title="Edit Lambda" />
@@ -605,7 +617,7 @@ const LambdaEditorPopUp = observer(
                 data-testid={QUERY_BUILDER_TEST_ID.LAMBDA_EDITOR__EDITOR_INPUT}
                 className="lambda-editor__editor__input"
               >
-                <div className="text-editor__body" ref={textInputRef} />
+                <div className="code-editor__body" ref={textInputRef} />
               </div>
             </div>
           </ModalBody>
@@ -663,11 +675,6 @@ export const LambdaEditor = observer(
      */
     forceBackdrop: boolean;
     /**
-     * (de)activator for backdrop that is usually used to block any background interactions
-     * while there is a parser error in the editor
-     */
-    backdropSetter?: ((val: boolean) => void) | undefined;
-    /**
      * To whether or not disable expasipn toggler
      */
     disableExpansion?: boolean | undefined;
@@ -697,7 +704,6 @@ export const LambdaEditor = observer(
       lambdaEditorState,
       disabled,
       forceBackdrop,
-      backdropSetter,
       expectedType,
       onExpectedTypeLabelSelect,
       matchedExpectedType,
@@ -771,7 +777,6 @@ export const LambdaEditor = observer(
         matchedExpectedType={matchedExpectedType}
         onExpectedTypeLabelSelect={onExpectedTypeLabelSelect}
         forceBackdrop={forceBackdrop}
-        backdropSetter={backdropSetter}
         disableExpansion={disableExpansion}
         forceExpansion={
           disableExpansion !== undefined

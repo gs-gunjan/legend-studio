@@ -30,18 +30,18 @@ import {
   getMappingCompatibleRuntimes,
   getClassCompatibleMappings,
 } from '@finos/legend-graph';
-import {
-  type PackageableElementOption,
-  getPackageableElementOptionFormatter,
-  buildElementOption,
-  useApplicationStore,
-} from '@finos/legend-application';
+import { useApplicationStore } from '@finos/legend-application';
 import {
   buildRuntimeValueOption,
   getRuntimeOptionFormatter,
   QueryBuilderClassSelector,
 } from '../QueryBuilderSideBar.js';
 import type { ClassQueryBuilderState } from '../../stores/workflows/ClassQueryBuilderState.js';
+import {
+  buildElementOption,
+  getPackageableElementOptionFormatter,
+  type PackageableElementOption,
+} from '@finos/legend-lego/graph-editor';
 
 /**
  * This setup panel supports cascading in order: Class -> Mapping -> Runtime
@@ -153,11 +153,15 @@ const ClassQueryBuilderSetupPanelContent = observer(
                 options={mappingOptions}
                 onChange={changeMapping}
                 value={selectedMappingOption}
-                darkMode={!applicationStore.TEMPORARY__isLightThemeEnabled}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 filterOption={mappingFilterOption}
                 formatOptionLabel={getPackageableElementOptionFormatter({
-                  darkMode: !applicationStore.TEMPORARY__isLightThemeEnabled,
-                  pureModel: queryBuilderState.graphManagerState.graph,
+                  darkMode:
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled,
                 })}
               />
             </div>
@@ -178,11 +182,15 @@ const ClassQueryBuilderSetupPanelContent = observer(
                 options={runtimeOptions}
                 onChange={changeRuntime}
                 value={selectedRuntimeOption}
-                darkMode={!applicationStore.TEMPORARY__isLightThemeEnabled}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 filterOption={runtimeFilterOption}
                 formatOptionLabel={getRuntimeOptionFormatter({
-                  darkMode: !applicationStore.TEMPORARY__isLightThemeEnabled,
-                  pureModel: queryBuilderState.graphManagerState.graph,
+                  darkMode:
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled,
                 })}
               />
             </div>

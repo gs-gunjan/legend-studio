@@ -42,36 +42,42 @@ import {
   SearchIcon,
   FileImportIcon,
   SettingsEthernetIcon,
+  MenuContentDivider,
+  createFilter,
+  CustomSelectorInput,
+  type SelectComponent,
+  LevelDownIcon,
+  CaretDownIcon,
+  PURE_ClassIcon,
+  CodeIcon,
 } from '@finos/legend-art';
-import {
-  getElementIcon,
-  getElementTypeIcon,
-} from '../../shared/ElementIconUtils.js';
+import { getElementIcon, getElementTypeIcon } from '../../ElementIconUtils.js';
 import {
   getElementTypeLabel,
   CreateNewElementModal,
 } from './CreateNewElementModal.js';
 import { useDrag } from 'react-dnd';
-import { ElementDragSource } from '../../../stores/shared/DnDUtils.js';
-import { LEGEND_STUDIO_TEST_ID } from '../../LegendStudioTestID.js';
-import { ACTIVITY_MODE } from '../../../stores/EditorConfig.js';
+import { ElementDragSource } from '../../../stores/editor/utils/DnDUtils.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../../__lib__/LegendStudioTesting.js';
 import {
-  generatePackageableElementTreeNodeDataLabel,
-  getTreeChildNodes,
-} from '../../../stores/shared/PackageTreeUtils.js';
-import type { PackageTreeNodeData } from '../../../stores/shared/TreeUtils.js';
+  ACTIVITY_MODE,
+  GRAPH_EDITOR_MODE,
+} from '../../../stores/editor/EditorConfig.js';
+import { getTreeChildNodes } from '../../../stores/editor/utils/PackageTreeUtils.js';
+import type { PackageTreeNodeData } from '../../../stores/editor/utils/TreeUtils.js';
 import {
   type FileSystemTreeNodeData,
   getFileSystemChildNodes,
-} from '../../../stores/shared/FileSystemTreeUtils.js';
-import { FileSystemTree } from '../edit-panel/element-generation-editor/FileSystemViewer.js';
+} from '../../../stores/editor/utils/FileSystemTreeUtils.js';
+import { FileSystemTree } from '../editor-group/element-generation-editor/FileSystemViewer.js';
 import {
   generateViewEntityRoute,
   generateViewProjectByGAVRoute,
-} from '../../../stores/LegendStudioRouter.js';
+} from '../../../__lib__/LegendStudioNavigation.js';
 import {
   guaranteeNonEmptyString,
   guaranteeNonNullable,
+  isNonNullable,
   toTitleCase,
 } from '@finos/legend-shared';
 import { flowResult } from 'mobx';
@@ -91,16 +97,29 @@ import {
   isMainGraphElement,
   getFunctionSignature,
   getFunctionNameWithPath,
+  getElementRootPackage,
 } from '@finos/legend-graph';
 import { useApplicationStore } from '@finos/legend-application';
-import { PACKAGEABLE_ELEMENT_TYPE } from '../../../stores/shared/ModelClassifierUtils.js';
-import { useLegendStudioApplicationStore } from '../../LegendStudioBaseStoreProvider.js';
-import { queryClass } from '../edit-panel/uml-editor/ClassQueryBuilder.js';
-import { createViewSDLCProjectHandler } from '../../../stores/DependencyProjectViewerHelper.js';
+import {
+  getPackageableElementOptionFormatter,
+  type PackageableElementOption,
+} from '@finos/legend-lego/graph-editor';
+import { PACKAGEABLE_ELEMENT_TYPE } from '../../../stores/editor/utils/ModelClassifierUtils.js';
+import { useLegendStudioApplicationStore } from '../../LegendStudioFrameworkProvider.js';
+import { queryClass } from '../editor-group/uml-editor/ClassQueryBuilder.js';
+import { createViewSDLCProjectHandler } from '../../../stores/editor/DependencyProjectViewerHelper.js';
 import {
   MASTER_SNAPSHOT_ALIAS,
   SNAPSHOT_VERSION_ALIAS,
 } from '@finos/legend-server-depot';
+import {
+  CLASS_MOCK_DATA_GENERATION_FORMAT,
+  createMockDataForClassWithFormat,
+} from '../../../stores/editor/utils/MockDataUtils.js';
+import {
+  CODE_EDITOR_LANGUAGE,
+  CodeEditor,
+} from '@finos/legend-lego/code-editor';
 
 const ElementRenamer = observer(() => {
   const editorStore = useEditorStore();
@@ -112,58 +131,78 @@ const ElementRenamer = observer(() => {
       ? getFunctionNameWithPath(element)
       : element?.path) ?? '',
   );
+  const [canRenameElement, setCanRenameElement] = useState(false);
+  const [
+    elementRenameValidationErrorMessage,
+    setElementRenameValidationErrorMessage,
+  ] = useState('');
   const pathInputRef = useRef<HTMLInputElement>(null);
   const changePath: React.ChangeEventHandler<HTMLInputElement> = (
     event,
-  ): void => setPath(event.target.value);
+  ): void => {
+    const currentValue = event.target.value;
+    setPath(currentValue);
+    const isElementPathNonEmpty = currentValue !== '';
+    const isNotTopLevelElement =
+      element instanceof Package ||
+      currentValue.includes(ELEMENT_PATH_DELIMITER);
+    const isValidElementPath =
+      (element instanceof Package && isValidPath(currentValue)) ||
+      isValidFullPath(currentValue);
+    let existingElement =
+      editorStore.graphManagerState.graph.getNullableElement(
+        currentValue,
+        true,
+      );
+    existingElement =
+      existingElement instanceof Package
+        ? isMainGraphElement(existingElement)
+          ? existingElement
+          : undefined
+        : existingElement;
+    const isElementUnique = !existingElement || existingElement === element;
+    const errorMessage = !isElementPathNonEmpty
+      ? `Element path cannot be empty`
+      : !isNotTopLevelElement
+      ? `Creating top level element is not allowed`
+      : !isValidElementPath
+      ? `Element path is not valid`
+      : !isElementUnique
+      ? `Element of the same path already existed`
+      : '';
+    setElementRenameValidationErrorMessage(errorMessage);
+    setCanRenameElement(
+      isElementPathNonEmpty &&
+        isNotTopLevelElement &&
+        isValidElementPath &&
+        isElementUnique,
+    );
+  };
 
-  const isElementPathNonEmpty = path !== '';
-  const isNotTopLevelElement =
-    element instanceof Package || path.includes(ELEMENT_PATH_DELIMITER);
-  const isValidElementPath =
-    (element instanceof Package && isValidPath(path)) || isValidFullPath(path);
-  let existingElement = editorStore.graphManagerState.graph.getNullableElement(
-    path,
-    true,
-  );
-  existingElement =
-    existingElement instanceof Package
-      ? isMainGraphElement(existingElement)
-        ? existingElement
-        : undefined
-      : existingElement;
-  const isElementUnique = !existingElement || existingElement === element;
-  const elementRenameValidationErrorMessage = !isElementPathNonEmpty
-    ? `Element path cannot be empty`
-    : !isNotTopLevelElement
-    ? `Creating top level element is not allowed`
-    : !isValidElementPath
-    ? `Element path is not valid`
-    : !isElementUnique
-    ? `Element of the same path already existed`
-    : undefined;
-  const canRenameElement =
-    isElementPathNonEmpty &&
-    isNotTopLevelElement &&
-    isValidElementPath &&
-    isElementUnique;
-
-  const close = (event: React.MouseEvent<HTMLButtonElement>): void => {
+  const rename = (event: React.MouseEvent<HTMLButtonElement>): void => {
     event.preventDefault();
     if (element && canRenameElement) {
       explorerTreeState.setElementToRename(undefined);
       flowResult(
-        editorStore.renameElement(
+        editorStore.graphEditorMode.renameElement(
           element,
           element instanceof ConcreteFunctionDefinition
             ? path + getFunctionSignature(element)
             : path,
         ),
-      ).catch(applicationStore.alertUnhandledError);
+      )
+        .then(() => {
+          setCanRenameElement(false);
+          setElementRenameValidationErrorMessage('');
+        })
+        .catch(applicationStore.alertUnhandledError);
     }
   };
-
-  const abort = (): void => explorerTreeState.setElementToRename(undefined);
+  const abort = (): void => {
+    setCanRenameElement(false);
+    setElementRenameValidationErrorMessage('');
+    explorerTreeState.setElementToRename(undefined);
+  };
   const onEnter = (): void => pathInputRef.current?.focus();
 
   useEffect(() => {
@@ -187,6 +226,7 @@ const ElementRenamer = observer(() => {
       PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
     >
       <form className="modal modal--dark search-modal explorer__element-renamer">
+        <div className="modal__title">Rename Element</div>
         <div className="input-group">
           <input
             className="input-group__input input--dark explorer__element-renamer__input"
@@ -201,12 +241,192 @@ const ElementRenamer = observer(() => {
             </div>
           )}
         </div>
-        <button
-          type="submit"
-          className="explorer__element-renamer__close-btn"
-          onClick={close}
-        />
+        <div className="search-modal__actions">
+          <button type="button" className="btn btn--dark" onClick={abort}>
+            Cancel
+          </button>
+          <button
+            className="btn btn--dark"
+            disabled={!canRenameElement}
+            onClick={rename}
+          >
+            Rename
+          </button>
+        </div>
       </form>
+    </Dialog>
+  );
+});
+
+const GENERATION_DEFAULT_DEPTH = 100;
+const GENERATION_DEFAULT_FORMAT = CLASS_MOCK_DATA_GENERATION_FORMAT.JSON;
+const getMockDataEditorLanguage = (
+  format: CLASS_MOCK_DATA_GENERATION_FORMAT,
+): CODE_EDITOR_LANGUAGE => {
+  switch (format) {
+    case CLASS_MOCK_DATA_GENERATION_FORMAT.JSON:
+      return CODE_EDITOR_LANGUAGE.JSON;
+    case CLASS_MOCK_DATA_GENERATION_FORMAT.XML:
+      return CODE_EDITOR_LANGUAGE.XML;
+    case CLASS_MOCK_DATA_GENERATION_FORMAT.YAML:
+      return CODE_EDITOR_LANGUAGE.YAML;
+    default:
+      return CODE_EDITOR_LANGUAGE.TEXT;
+  }
+};
+
+const SampleDataGenerator = observer(() => {
+  const editorStore = useEditorStore();
+  const explorerTreeState = editorStore.explorerTreeState;
+  const selectedClass = explorerTreeState.classToGenerateSampleData;
+  const [format, setFormat] = useState(GENERATION_DEFAULT_FORMAT);
+  const [depth, setDepth] = useState(GENERATION_DEFAULT_DEPTH);
+  const [resultText, setResultText] = useState('');
+
+  const changeDepth: React.ChangeEventHandler<HTMLInputElement> = (event) => {
+    setDepth(parseInt(event.target.value, 10));
+  };
+
+  // class
+  const classSelectorRef = useRef<SelectComponent>(null);
+  const elementFilterOption = createFilter({
+    ignoreCase: true,
+    ignoreAccents: false,
+    stringify: (option: PackageableElementOption<Class>): string =>
+      option.value.path,
+  });
+  const classOptions = editorStore.graphManagerState.usableClasses.map(
+    (_class) => ({
+      value: _class,
+      label: _class.name,
+    }),
+  );
+  const selectedClassOption = selectedClass
+    ? {
+        value: selectedClass,
+        label: selectedClass.name,
+      }
+    : null;
+  const changeClass = (val: PackageableElementOption<Class>): void => {
+    if (val.value === selectedClass) {
+      return;
+    }
+    explorerTreeState.setClassToGenerateSampleData(val.value);
+  };
+
+  useEffect(() => {
+    if (selectedClass) {
+      setResultText(
+        createMockDataForClassWithFormat(selectedClass, format, depth),
+      );
+    }
+  }, [selectedClass, format, depth]);
+
+  const abort = (): void => {
+    setFormat(GENERATION_DEFAULT_FORMAT);
+    setDepth(GENERATION_DEFAULT_DEPTH);
+    explorerTreeState.setClassToGenerateSampleData(undefined);
+  };
+  const regenerate = (): void => {
+    if (selectedClass) {
+      setResultText(
+        createMockDataForClassWithFormat(selectedClass, format, depth),
+      );
+    }
+  };
+  const onEnter = (): void => classSelectorRef.current?.focus();
+
+  return (
+    <Dialog
+      open={Boolean(selectedClass)}
+      onClose={abort}
+      TransitionProps={{
+        onEnter: onEnter,
+      }}
+      classes={{ container: 'search-modal__container' }}
+      PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
+    >
+      <div className="modal modal--dark search-modal explorer__element-renamer">
+        <div className="modal__title">Generate Sample Data</div>
+        <div className="sample-data-generator__controller">
+          <div
+            className="sample-data-generator__controller__icon"
+            title="class"
+          >
+            <PURE_ClassIcon />
+          </div>
+          <CustomSelectorInput
+            ref={classSelectorRef}
+            className="sample-data-generator__controller__class-selector"
+            options={classOptions}
+            onChange={changeClass}
+            value={selectedClassOption}
+            darkMode={true}
+            filterOption={elementFilterOption}
+            formatOptionLabel={getPackageableElementOptionFormatter({
+              darkMode: true,
+            })}
+          />
+          <div
+            className="sample-data-generator__controller__icon"
+            title="format"
+          >
+            <CodeIcon />
+          </div>
+          <DropdownMenu
+            className="sample-data-generator__controller__format-selector"
+            title="Choose Element Type..."
+            content={
+              <MenuContent className="sample-data-generator__controller__format-selector__options">
+                {Object.values(CLASS_MOCK_DATA_GENERATION_FORMAT).map((val) => (
+                  <MenuContentItem
+                    key={val}
+                    className="sample-data-generator__controller__format-selector__option"
+                    onClick={() => setFormat(val)}
+                  >
+                    {val}
+                  </MenuContentItem>
+                ))}
+              </MenuContent>
+            }
+          >
+            <div className="sample-data-generator__controller__format-selector__label">
+              {format}
+            </div>
+            <div className="sample-data-generator__controller__format-selector__dropdown-indicator">
+              <CaretDownIcon />
+            </div>
+          </DropdownMenu>
+          <div
+            className="sample-data-generator__controller__icon"
+            title="depth"
+          >
+            <LevelDownIcon />
+          </div>
+          <input
+            className="input input--dark sample-data-generator__controller__depth"
+            value={depth}
+            type="number"
+            onChange={changeDepth}
+          />
+        </div>
+        <div className="sample-data-generator__result">
+          <CodeEditor
+            inputValue={resultText}
+            isReadOnly={true}
+            hideGutter={true}
+            language={getMockDataEditorLanguage(format)}
+          />
+        </div>
+        <div className="search-modal__actions">
+          <button type="button" className="btn btn--dark" onClick={abort}>
+            Cancel
+          </button>
+          <button className="btn btn--dark" onClick={regenerate}>
+            Regenerate
+          </button>
+        </div>
+      </div>
     </Dialog>
   );
 });
@@ -229,13 +449,18 @@ const ExplorerContextMenu = observer(
           plugin.getExtraExplorerContextMenuItemRendererConfigurations?.() ??
           [],
       )
-      .map((config) => (
-        <Fragment key={config.key}>
-          {config.renderer(editorStore, node?.packageableElement)}
-        </Fragment>
-      ));
+      .map((config) => {
+        const action = config.renderer(editorStore, node?.packageableElement);
+        if (!action) {
+          return null;
+        }
+        return <Fragment key={config.key}>{action}</Fragment>;
+      })
+      .filter(isNonNullable);
     const projectId = editorStore.sdlcState.currentProject?.projectId;
     const isReadOnly = editorStore.isInViewerMode || Boolean(nodeIsImmutable);
+    const isDependencyProjectElement =
+      node && isDependencyElement(node.packageableElement);
     const _package = node
       ? node.packageableElement instanceof Package
         ? node.packageableElement
@@ -258,11 +483,20 @@ const ExplorerContextMenu = observer(
         }
       },
     );
+    const generateSampleData = editorStore.applicationStore.guardUnhandledError(
+      async () => {
+        if (node?.packageableElement instanceof Class) {
+          editorStore.explorerTreeState.setClassToGenerateSampleData(
+            node.packageableElement,
+          );
+        }
+      },
+    );
     const removeElement = (): void => {
       if (node) {
-        flowResult(editorStore.deleteElement(node.packageableElement)).catch(
-          applicationStore.alertUnhandledError,
-        );
+        flowResult(
+          editorStore.graphEditorMode.deleteElement(node.packageableElement),
+        ).catch(applicationStore.alertUnhandledError);
       }
     };
     const renameElement = (): void => {
@@ -274,29 +508,95 @@ const ExplorerContextMenu = observer(
     };
     const openElementInViewerMode = (): void => {
       if (node && projectId) {
-        applicationStore.navigator.visitAddress(
-          applicationStore.navigator.generateAddress(
+        applicationStore.navigationService.navigator.visitAddress(
+          applicationStore.navigationService.navigator.generateAddress(
             generateViewEntityRoute(projectId, node.packageableElement.path),
           ),
         );
       }
     };
-    const copyWorkspaceElementLink = (): void => {
+    const copyPath = (): void => {
       if (node) {
-        applicationStore
-          .copyTextToClipboard(
-            applicationStore.navigator.generateAddress(
-              editorStore.editorMode.generateElementLink(
-                node.packageableElement.path,
-              ),
-            ),
-          )
+        applicationStore.clipboardService
+          .copyTextToClipboard(node.packageableElement.path)
           .then(() =>
-            applicationStore.notifySuccess(
-              'Copied workspace element link to clipboard',
+            applicationStore.notificationService.notifySuccess(
+              'Copied element path to clipboard',
             ),
           )
           .catch(applicationStore.alertUnhandledError);
+      }
+    };
+    const copyWorkspaceElementLink = (): void => {
+      if (node) {
+        const dependency =
+          editorStore.projectConfigurationEditorState.projectConfiguration?.projectDependencies.find(
+            (dep) =>
+              dep.projectId ===
+              getElementRootPackage(node.packageableElement).name,
+          );
+        if (dependency) {
+          applicationStore.clipboardService
+            .copyTextToClipboard(
+              applicationStore.navigationService.navigator.generateAddress(
+                editorStore.editorMode.generateDependencyElementLink(
+                  node.packageableElement.path,
+                  dependency,
+                ),
+              ),
+            )
+            .then(() =>
+              applicationStore.notificationService.notifySuccess(
+                'Copied workspace element link to clipboard',
+              ),
+            )
+            .catch(applicationStore.alertUnhandledError);
+        } else {
+          applicationStore.clipboardService
+            .copyTextToClipboard(
+              applicationStore.navigationService.navigator.generateAddress(
+                editorStore.editorMode.generateElementLink(
+                  node.packageableElement.path,
+                ),
+              ),
+            )
+            .then(() =>
+              applicationStore.notificationService.notifySuccess(
+                'Copied workspace element link to clipboard',
+              ),
+            )
+            .catch(applicationStore.alertUnhandledError);
+        }
+      }
+    };
+    const copySDLCProjectLink = (): void => {
+      if (node) {
+        const dependency =
+          editorStore.projectConfigurationEditorState.projectConfiguration?.projectDependencies.find(
+            (dep) =>
+              dep.projectId ===
+              getElementRootPackage(node.packageableElement).name,
+          );
+        if (dependency) {
+          applicationStore.clipboardService
+            .copyTextToClipboard(
+              applicationStore.navigationService.navigator.generateAddress(
+                generateViewProjectByGAVRoute(
+                  guaranteeNonNullable(dependency.groupId),
+                  guaranteeNonNullable(dependency.artifactId),
+                  dependency.versionId === MASTER_SNAPSHOT_ALIAS
+                    ? SNAPSHOT_VERSION_ALIAS
+                    : dependency.versionId,
+                ),
+              ),
+            )
+            .then(() =>
+              applicationStore.notificationService.notifySuccess(
+                'Copied SDLC project link to clipboard',
+              ),
+            )
+            .catch(applicationStore.alertUnhandledError);
+        }
       }
     };
     const createNewElement =
@@ -311,11 +611,11 @@ const ExplorerContextMenu = observer(
     const viewProject = (): void => {
       const projectDependency =
         editorStore.projectConfigurationEditorState.projectConfiguration?.projectDependencies.find(
-          (dep) => dep.projectId === node?.label,
+          (dep) => dep.projectId === node?.packageableElement.name,
         );
       if (projectDependency && !projectDependency.isLegacyDependency) {
-        applicationStore.navigator.visitAddress(
-          applicationStore.navigator.generateAddress(
+        applicationStore.navigationService.navigator.visitAddress(
+          applicationStore.navigationService.navigator.generateAddress(
             generateViewProjectByGAVRoute(
               guaranteeNonNullable(projectDependency.groupId),
               guaranteeNonNullable(projectDependency.artifactId),
@@ -330,7 +630,7 @@ const ExplorerContextMenu = observer(
     const viewSDLCProject = (): void => {
       const dependency =
         editorStore.projectConfigurationEditorState.projectConfiguration?.projectDependencies.find(
-          (dep) => dep.projectId === node?.label,
+          (dep) => dep.projectId === node?.packageableElement.name,
         );
       if (dependency) {
         createViewSDLCProjectHandler(
@@ -371,41 +671,60 @@ const ExplorerContextMenu = observer(
               </MenuContentItemLabel>
             </MenuContentItem>
           ))}
-          <MenuContentItem onClick={renameElement}>
-            <MenuContentItemBlankIcon />
-            <MenuContentItemLabel>Rename</MenuContentItemLabel>
-          </MenuContentItem>
           {node && (
-            <MenuContentItem onClick={removeElement}>
-              <MenuContentItemBlankIcon />
-              <MenuContentItemLabel>Remove</MenuContentItemLabel>
-            </MenuContentItem>
+            <>
+              <MenuContentItem onClick={renameElement}>
+                <MenuContentItemBlankIcon />
+                <MenuContentItemLabel>Rename</MenuContentItemLabel>
+              </MenuContentItem>
+              <MenuContentItem onClick={removeElement}>
+                <MenuContentItemBlankIcon />
+                <MenuContentItemLabel>Remove</MenuContentItemLabel>
+              </MenuContentItem>
+            </>
           )}
         </MenuContent>
       );
     }
 
+    if (!node) {
+      return null;
+    }
     return (
       <MenuContent data-testid={LEGEND_STUDIO_TEST_ID.EXPLORER_CONTEXT_MENU}>
-        <MenuContentItem onClick={buildQuery}>Query...</MenuContentItem>
+        {node.packageableElement instanceof Class && (
+          <>
+            <MenuContentItem onClick={buildQuery}>Query...</MenuContentItem>
+            <MenuContentItem onClick={generateSampleData}>
+              Generate Sample Data...
+            </MenuContentItem>
+            <MenuContentDivider />
+          </>
+        )}
         {extraExplorerContextMenuItems}
-        {!isReadOnly && node && (
+        {Boolean(extraExplorerContextMenuItems.length) && (
+          <MenuContentDivider />
+        )}
+        {!isReadOnly && (
           <>
             <MenuContentItem onClick={renameElement}>Rename</MenuContentItem>
             <MenuContentItem onClick={removeElement}>Remove</MenuContentItem>
           </>
         )}
-        {node && (
-          <>
-            {!editorStore.isInViewerMode && (
-              <MenuContentItem onClick={openElementInViewerMode}>
-                View in Project
-              </MenuContentItem>
-            )}
-            <MenuContentItem onClick={copyWorkspaceElementLink}>
-              Copy Link
-            </MenuContentItem>
-          </>
+        <MenuContentDivider />
+        {!editorStore.isInViewerMode && !isDependencyProjectElement && (
+          <MenuContentItem onClick={openElementInViewerMode}>
+            View in Project
+          </MenuContentItem>
+        )}
+        <MenuContentItem onClick={copyPath}>Copy Path</MenuContentItem>
+        <MenuContentItem onClick={copyWorkspaceElementLink}>
+          Copy Link
+        </MenuContentItem>
+        {isDependencyProjectElement && (
+          <MenuContentItem onClick={copySDLCProjectLink}>
+            Copy SDLC Project Link
+          </MenuContentItem>
         )}
       </MenuContent>
     );
@@ -480,10 +799,7 @@ const PackageTreeNodeContainer = observer(
       ? 'color--generated'
       : isSystemElement(node.packageableElement)
       ? 'color--system'
-      : isDependencyElement(
-          node.packageableElement,
-          editorStore.graphManagerState.graph,
-        )
+      : isDependencyElement(node.packageableElement)
       ? 'color--dependency'
       : '';
 
@@ -549,10 +865,7 @@ const PackageTreeNodeContainer = observer(
             tabIndex={-1}
             title={node.packageableElement.path}
           >
-            {generatePackageableElementTreeNodeDataLabel(
-              node.packageableElement,
-              node,
-            )}
+            {node.label}
           </button>
         </div>
       </ContextMenu>
@@ -595,7 +908,9 @@ const ExplorerDropdownMenu = observer(() => {
 
 const ExplorerTrees = observer(() => {
   const editorStore = useEditorStore();
-  const { isInGrammarTextMode, isInViewerMode } = editorStore;
+  const { isInViewerMode } = editorStore;
+  const isInGrammarTextMode =
+    editorStore.graphEditorMode.mode === GRAPH_EDITOR_MODE.GRAMMAR_TEXT;
   const openModelImport = (): void =>
     editorStore.tabManagerState.openTab(editorStore.modelImporterState);
   const graph = editorStore.graphManagerState.graph;
@@ -697,6 +1012,7 @@ const ExplorerTrees = observer(() => {
                 }}
               />
               <ElementRenamer />
+              <SampleDataGenerator />
               {editorStore.projectConfigurationEditorState
                 .projectConfiguration && <ProjectConfig />}
               {/* SYSTEM TREE */}
@@ -789,7 +1105,8 @@ const ExplorerTrees = observer(() => {
 const ProjectExplorerActionPanel = observer((props: { disabled: boolean }) => {
   const { disabled } = props;
   const editorStore = useEditorStore();
-  const isInGrammarMode = editorStore.isInGrammarTextMode;
+  const isInGrammarMode =
+    editorStore.graphEditorMode.mode === GRAPH_EDITOR_MODE.GRAMMAR_TEXT;
   const showSearchModal = (): void =>
     editorStore.searchElementCommandState.open();
   // Explorer tree
@@ -876,7 +1193,7 @@ export const Explorer = observer(() => {
   const sdlcState = editorStore.sdlcState;
   const isLoading =
     ((!editorStore.explorerTreeState.buildState.hasCompleted &&
-      !editorStore.isInGrammarTextMode) ||
+      editorStore.graphEditorMode.mode !== GRAPH_EDITOR_MODE.GRAMMAR_TEXT) ||
       editorStore.graphState.isUpdatingGraph) &&
     !editorStore.graphManagerState.graphBuildState.hasFailed;
   const showExplorerTrees =
@@ -888,7 +1205,7 @@ export const Explorer = observer(() => {
     // don't edit elements that fast in form mode, but this could throw off
     // test runner
     (editorStore.isInViewerMode ||
-      editorStore.isInGrammarTextMode ||
+      editorStore.graphEditorMode.mode === GRAPH_EDITOR_MODE.GRAMMAR_TEXT ||
       editorStore.changeDetectionState.graphObserveState.hasSucceeded);
   // conflict resolution
   const showConflictResolutionContent =
@@ -967,9 +1284,7 @@ export const Explorer = observer(() => {
                 ) && (
                   <div className="explorer__content--empty">
                     <div className="explorer__content--empty__text">
-                      Can&apos;t build graph as workspace contains merge
-                      conflicts, please resolve them before trying to build the
-                      graph again
+                      {`Can't build graph as workspace contains merge conflicts, please resolve them before trying to build the graph again`}
                     </div>
                     <button
                       className="btn--dark btn--conflict btn--important explorer__content--empty__btn"

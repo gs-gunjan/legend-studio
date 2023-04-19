@@ -1,5 +1,89 @@
 # @finos/legend-extension-dsl-diagram
 
+## 8.0.2
+
+## 8.0.1
+
+## 8.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Partition exports into separate paths, `/graph` for graph and graph manager extensions, `/application` for generic application extensions, `/application-studio` for `Legend Studio` specific application extensions, and `/application-query` for `Legend Query` specific application extensions.
+
+## 7.1.56
+
+## 7.1.55
+
+## 7.1.54
+
+## 7.1.53
+
+## 7.1.52
+
+## 7.1.51
+
+## 7.1.50
+
+## 7.1.49
+
+## 7.1.48
+
+## 7.1.47
+
+## 7.1.46
+
+## 7.1.45
+
+## 7.1.44
+
+## 7.1.43
+
+## 7.1.42
+
+## 7.1.41
+
+## 7.1.40
+
+## 7.1.39
+
+## 7.1.38
+
+## 7.1.37
+
+## 7.1.36
+
+## 7.1.35
+
+## 7.1.34
+
+## 7.1.33
+
+## 7.1.32
+
+## 7.1.31
+
+## 7.1.30
+
+## 7.1.29
+
+## 7.1.28
+
+## 7.1.27
+
+## 7.1.26
+
+## 7.1.25
+
+## 7.1.24
+
+## 7.1.23
+
+## 7.1.22
+
+## 7.1.21
+
+## 7.1.20
+
 ## 7.1.19
 
 ## 7.1.18

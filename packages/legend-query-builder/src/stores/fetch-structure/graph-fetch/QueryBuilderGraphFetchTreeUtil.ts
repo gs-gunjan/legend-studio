@@ -39,7 +39,7 @@ import {
   QueryBuilderExplorerTreeSubTypeNodeData,
 } from '../../explorer/QueryBuilderExplorerState.js';
 import type { QueryBuilderState } from '../../QueryBuilderState.js';
-import { QUERY_BUILDER_HASH_STRUCTURE } from '../../../graphManager/QueryBuilderHashUtils.js';
+import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../../QueryBuilderStateHashUtils.js';
 import { computed, makeObservable } from 'mobx';
 import {
   graphFetchTree_addSubTree,
@@ -81,7 +81,7 @@ export class QueryBuilderGraphFetchTreeNodeData
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.GRAPH_FETCH_TREE_NODE_DATA,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.GRAPH_FETCH_TREE_NODE_DATA,
       this.id,
       this.label,
       this.tree,
@@ -253,7 +253,7 @@ export const addQueryBuilderPropertyNode = (
         parentExplorerTreeNode.parentId,
       );
     } else {
-      queryBuilderState.applicationStore.notifyError(
+      queryBuilderState.applicationStore.notificationService.notifyError(
         `Can't cast the root class of graph fetch structure to its subtype`,
       );
       return;
@@ -298,10 +298,18 @@ export const addQueryBuilderPropertyNode = (
     treeData.nodes.set(childNode.id, childNode);
     if (parentNode) {
       addUniqueEntry(parentNode.childrenIds, childNode.id);
-      graphFetchTree_addSubTree(parentNode.tree, childNode.tree);
+      graphFetchTree_addSubTree(
+        parentNode.tree,
+        childNode.tree,
+        queryBuilderState.observerContext,
+      );
     } else {
       addUniqueEntry(treeData.rootIds, childNode.id);
-      graphFetchTree_addSubTree(treeData.tree, childNode.tree);
+      graphFetchTree_addSubTree(
+        treeData.tree,
+        childNode.tree,
+        queryBuilderState.observerContext,
+      );
     }
   }
 };

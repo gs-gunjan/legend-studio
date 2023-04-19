@@ -19,24 +19,19 @@ import {
   type LegendApplicationConfig,
   LegendApplication,
   ApplicationStoreProvider,
-  setupLegendApplicationUILibrary,
-  WebApplicationNavigatorProvider,
   type LegendApplicationConfigurationInput,
-  BrowserRouter,
+  Core_LegendApplicationPlugin,
+  getApplicationRootElement,
 } from '@finos/legend-application';
-import { LegendTaxonomyApplication } from '../components/LegendTaxonomyApplication.js';
 import { LegendTaxonomyPluginManager } from './LegendTaxonomyPluginManager.js';
-import { getRootElement } from '@finos/legend-art';
-import { Core_PureGraphManagerPlugin } from '@finos/legend-graph';
+import { Core_GraphManagerPreset } from '@finos/legend-graph';
 import {
   type LegendTaxonomyApplicationConfigurationData,
   LegendTaxonomyApplicationConfig,
 } from './LegendTaxonomyApplicationConfig.js';
 import { Core_LegendTaxonomyApplicationPlugin } from '../components/Core_LegendTaxonomyApplicationPlugin.js';
-
-const setupLegendTaxonomyUILibrary = async (): Promise<void> => {
-  // do nothing
-};
+import type { LegendTaxonomyApplicationStore } from '../stores/LegendTaxonomyBaseStore.js';
+import { LegendTaxonomyWebApplication } from '../components/LegendTaxonomyWebApplication.js';
 
 export class LegendTaxonomy extends LegendApplication {
   declare config: LegendTaxonomyApplicationConfig;
@@ -46,8 +41,9 @@ export class LegendTaxonomy extends LegendApplication {
     const application = new LegendTaxonomy(
       LegendTaxonomyPluginManager.create(),
     );
+    application.withBasePresets([new Core_GraphManagerPreset()]);
     application.withBasePlugins([
-      new Core_PureGraphManagerPlugin(),
+      new Core_LegendApplicationPlugin(),
       new Core_LegendTaxonomyApplicationPlugin(),
     ]);
     return application;
@@ -59,24 +55,13 @@ export class LegendTaxonomy extends LegendApplication {
     return new LegendTaxonomyApplicationConfig(input);
   }
 
-  async loadApplication(): Promise<void> {
-    // Setup React application libraries
-    await setupLegendApplicationUILibrary(this.pluginManager, this.logger);
-    await setupLegendTaxonomyUILibrary();
-
-    // Render React application
-    const rootElement = createRoot(getRootElement());
-    rootElement.render(
-      <BrowserRouter basename={this.baseUrl}>
-        <WebApplicationNavigatorProvider>
-          <ApplicationStoreProvider
-            config={this.config}
-            pluginManager={this.pluginManager}
-          >
-            <LegendTaxonomyApplication config={this.config} />
-          </ApplicationStoreProvider>
-        </WebApplicationNavigatorProvider>
-      </BrowserRouter>,
+  async loadApplication(
+    applicationStore: LegendTaxonomyApplicationStore,
+  ): Promise<void> {
+    createRoot(getApplicationRootElement()).render(
+      <ApplicationStoreProvider store={applicationStore}>
+        <LegendTaxonomyWebApplication baseUrl={this.baseAddress} />
+      </ApplicationStoreProvider>,
     );
   }
 }

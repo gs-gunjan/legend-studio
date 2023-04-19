@@ -32,6 +32,7 @@ import {
   type InstanceValue,
   type INTERNAL__UnknownValueSpecification,
   type LambdaFunction,
+  type KeyExpressionInstanceValue,
   matchFunctionName,
   Class,
   type CollectionInstanceValue,
@@ -53,6 +54,7 @@ import {
 } from './fetch-structure/tds/aggregation/QueryBuilderAggregationStateBuilder.js';
 import {
   processGraphFetchExpression,
+  processGraphFetchExternalizeExpression,
   processGraphFetchSerializeExpression,
 } from './fetch-structure/graph-fetch/QueryBuilderGraphFetchTreeStateBuilder.js';
 import {
@@ -64,11 +66,12 @@ import {
   processTDSSortExpression,
   processTDSTakeExpression,
 } from './fetch-structure/tds/projection/QueryBuilderProjectionStateBuilder.js';
-import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../graphManager/QueryBuilderSupportedFunctions.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../graph/QueryBuilderMetaModelConst.js';
 import { LambdaParameterState } from './shared/LambdaParameterState.js';
-import { processTDS_OLAPGroupByExpression } from './fetch-structure/tds/olapGroupBy/QueryBuilderOLAPGroupByStateBuilder.js';
+import { processTDS_OLAPGroupByExpression } from './fetch-structure/tds/window/QueryBuilderWindowStateBuilder.js';
 import { processWatermarkExpression } from './watermark/QueryBuilderWatermarkStateBuilder.js';
 import { QueryBuilderConstantExpressionState } from './QueryBuilderConstantsState.js';
+import { checkIfEquivalent } from './milestoning/QueryBuilderMilestoningHelper.js';
 
 const processGetAllExpression = (
   expression: SimpleFunctionExpression,
@@ -503,6 +506,18 @@ export class QueryBuilderValueSpecificationProcessor
       );
       return;
     } else if (
+      matchFunctionName(
+        functionName,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.EXTERNALIZE,
+      )
+    ) {
+      processGraphFetchExternalizeExpression(
+        valueSpecification,
+        this.queryBuilderState,
+        this.parentLambda,
+      );
+      return;
+    } else if (
       matchFunctionName(functionName, [
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.GRAPH_FETCH_CHECKED,
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.GRAPH_FETCH,
@@ -562,6 +577,12 @@ export class QueryBuilderValueSpecificationProcessor
     throw new UnsupportedOperationError();
   }
 
+  visit_KeyExpressionInstanceValue(
+    valueSpecification: KeyExpressionInstanceValue,
+  ): void {
+    throw new UnsupportedOperationError();
+  }
+
   visit_CollectionInstanceValue(
     valueSpecification: CollectionInstanceValue,
   ): void {
@@ -606,27 +627,43 @@ export class QueryBuilderValueSpecificationProcessor
 export const processParameters = (
   parameters: VariableExpression[],
   queryBuilderState: QueryBuilderState,
+  parameterValues?: Map<VariableExpression, ValueSpecification | undefined>,
 ): void => {
   const queryParameterState = queryBuilderState.parametersState;
   parameters.forEach((parameter) => {
+    let matchingParameterValue: ValueSpecification | undefined;
+    if (parameterValues) {
+      Array.from(parameterValues.entries()).forEach(([key, value]) => {
+        if (checkIfEquivalent(key, parameter)) {
+          matchingParameterValue = value;
+        }
+      });
+    }
     const parameterState = new LambdaParameterState(
       parameter,
-      queryBuilderState.observableContext,
+      queryBuilderState.observerContext,
       queryBuilderState.graphManagerState.graph,
     );
-    parameterState.mockParameterValue();
+    if (matchingParameterValue) {
+      parameterState.setValue(matchingParameterValue);
+    } else {
+      parameterState.mockParameterValue();
+    }
     queryParameterState.addParameter(parameterState);
   });
+  queryBuilderState.parametersState = queryParameterState;
 };
 
 export const processQueryLambdaFunction = (
   lambdaFunction: LambdaFunction,
   queryBuilderState: QueryBuilderState,
+  parameterValues?: Map<VariableExpression, ValueSpecification | undefined>,
 ): void => {
   if (lambdaFunction.functionType.parameters.length) {
     processParameters(
       lambdaFunction.functionType.parameters,
       queryBuilderState,
+      parameterValues,
     );
   }
   lambdaFunction.expressionSequence.map((expression) =>

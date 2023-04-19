@@ -19,11 +19,12 @@ import {
   type ExistingQueryEditorActionRendererConfiguration,
   LegendQueryApplicationPlugin,
 } from '@finos/legend-application-query';
-import { ArrowCirceUpIcon } from '@finos/legend-art';
-import { generateQueryProductionizerRoute } from '../../stores/studio/DSL_Service_LegendStudioRouter.js';
+import { ArrowCircleUpIcon } from '@finos/legend-art';
+import { generateQueryProductionizerRoute } from '../../__lib__/studio/DSL_Service_LegendStudioNavigation.js';
 import { ProjectData } from '@finos/legend-server-depot';
 import { parseProjectIdentifier } from '@finos/legend-storage';
 import { buildUrl } from '@finos/legend-shared';
+import { ServiceRegisterAction } from './ServiceRegisterModal.js';
 
 export class DSL_Service_LegendQueryApplicationPlugin extends LegendQueryApplicationPlugin {
   constructor() {
@@ -53,15 +54,15 @@ export class DSL_Service_LegendQueryApplicationPlugin extends LegendQueryApplica
                 (entry) => entry.sdlcProjectIDPrefix === projectIDPrefix,
               );
             if (matchingSDLCEntry) {
-              editorStore.applicationStore.navigator.goToAddress(
+              editorStore.applicationStore.navigationService.navigator.goToAddress(
                 buildUrl([
-                  editorStore.applicationStore.config.studioUrl,
+                  editorStore.applicationStore.config.studioApplicationUrl,
                   generateQueryProductionizerRoute(editorStore.query.id),
                 ]),
                 { ignoreBlocking: true },
               );
             } else {
-              editorStore.applicationStore.notifyWarning(
+              editorStore.applicationStore.notificationService.notifyWarning(
                 `Can't find the corresponding SDLC instance to productionize the query`,
               );
             }
@@ -82,10 +83,22 @@ export class DSL_Service_LegendQueryApplicationPlugin extends LegendQueryApplica
               onClick={proceed}
               title="Productionize query..."
             >
-              <ArrowCirceUpIcon />
+              <ArrowCircleUpIcon className="query-editor__header__action__icon--productionize" />
+              <div className="query-editor__header__action__label">
+                Productionize
+              </div>
             </button>
           );
         },
+      },
+      {
+        key: 'register-service',
+        renderer: (editorStore, queryBuilderState) => (
+          <ServiceRegisterAction
+            editorStore={editorStore}
+            queryBuilderState={queryBuilderState}
+          />
+        ),
       },
     ];
   }

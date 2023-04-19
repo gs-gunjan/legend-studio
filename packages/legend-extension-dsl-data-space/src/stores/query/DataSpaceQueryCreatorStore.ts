@@ -38,12 +38,13 @@ import {
 } from '@finos/legend-shared';
 import {
   QUERY_PROFILE_PATH,
+  QUERY_PROFILE_TAG_CLASS,
   QUERY_PROFILE_TAG_DATA_SPACE,
-} from '../../DSL_DataSpace_Const.js';
-import { getDataSpace } from '../../graphManager/DSL_DataSpace_GraphManagerHelper.js';
+} from '../../graph/DSL_DataSpace_MetaModelConst.js';
+import { getDataSpace } from '../../graph-manager/DSL_DataSpace_GraphManagerHelper.js';
 import { DataSpaceQueryBuilderState } from './DataSpaceQueryBuilderState.js';
 import type { DataSpaceInfo } from './DataSpaceInfo.js';
-import { generateDataSpaceQueryCreatorRoute } from './DSL_DataSpace_LegendQueryRouter.js';
+import { generateDataSpaceQueryCreatorRoute } from '../../__lib__/query/DSL_DataSpace_LegendQueryNavigation.js';
 import type { DataSpaceExecutionContext } from '../../graph/metamodel/pure/model/packageableElements/dataSpace/DSL_DataSpace_DataSpace.js';
 import type { QueryBuilderState } from '@finos/legend-query-builder';
 import type { ProjectGAVCoordinates } from '@finos/legend-storage';
@@ -55,6 +56,16 @@ export const createQueryDataSpaceTaggedValue = (
   taggedValue.profile = QUERY_PROFILE_PATH;
   taggedValue.tag = QUERY_PROFILE_TAG_DATA_SPACE;
   taggedValue.value = dataSpacePath;
+  return taggedValue;
+};
+
+export const createQueryClassTaggedValue = (
+  classPath: string,
+): QueryTaggedValue => {
+  const taggedValue = new QueryTaggedValue();
+  taggedValue.profile = QUERY_PROFILE_PATH;
+  taggedValue.tag = QUERY_PROFILE_TAG_CLASS;
+  taggedValue.value = classPath;
   return taggedValue;
 };
 
@@ -124,7 +135,7 @@ export class DataSpaceQueryCreatorStore extends QueryEditorStore {
       ),
       (dataSpaceInfo: DataSpaceInfo) => {
         if (dataSpaceInfo.defaultExecutionContext) {
-          this.applicationStore.navigator.goToLocation(
+          this.applicationStore.navigationService.navigator.goToLocation(
             generateDataSpaceQueryCreatorRoute(
               dataSpaceInfo.groupId,
               dataSpaceInfo.artifactId,
@@ -136,7 +147,7 @@ export class DataSpaceQueryCreatorStore extends QueryEditorStore {
             ),
           );
         } else {
-          this.applicationStore.notifyWarning(
+          this.applicationStore.notificationService.notifyWarning(
             `Can't switch data space: default execution context not specified`,
           );
         }
@@ -147,7 +158,7 @@ export class DataSpaceQueryCreatorStore extends QueryEditorStore {
           queryBuilderState.runtimeValue,
           RuntimePointer,
         );
-        this.applicationStore.navigator.updateCurrentLocation(
+        this.applicationStore.navigationService.navigator.updateCurrentLocation(
           generateDataSpaceQueryCreatorRoute(
             this.groupId,
             this.artifactId,
@@ -164,7 +175,7 @@ export class DataSpaceQueryCreatorStore extends QueryEditorStore {
       },
       (runtimeValue: Runtime) => {
         const runtimePointer = guaranteeType(runtimeValue, RuntimePointer);
-        queryBuilderState.applicationStore.navigator.updateCurrentLocation(
+        queryBuilderState.applicationStore.navigationService.navigator.updateCurrentLocation(
           generateDataSpaceQueryCreatorRoute(
             queryBuilderState.groupId,
             queryBuilderState.artifactId,
@@ -185,7 +196,7 @@ export class DataSpaceQueryCreatorStore extends QueryEditorStore {
           queryBuilderState.runtimeValue,
           RuntimePointer,
         );
-        queryBuilderState.applicationStore.navigator.updateCurrentLocation(
+        queryBuilderState.applicationStore.navigationService.navigator.updateCurrentLocation(
           generateDataSpaceQueryCreatorRoute(
             queryBuilderState.groupId,
             queryBuilderState.artifactId,
@@ -237,6 +248,9 @@ export class DataSpaceQueryCreatorStore extends QueryEditorStore {
         query.versionId = this.versionId;
         query.taggedValues = [
           createQueryDataSpaceTaggedValue(this.dataSpacePath),
+          createQueryClassTaggedValue(
+            guaranteeNonNullable(this.queryBuilderState?.class?.path),
+          ),
         ];
       },
     };

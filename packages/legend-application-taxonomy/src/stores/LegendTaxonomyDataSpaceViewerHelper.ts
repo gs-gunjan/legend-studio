@@ -23,7 +23,7 @@ import type { LegendTaxonomyApplicationStore } from './LegendTaxonomyBaseStore.j
 import {
   EXTERNAL_APPLICATION_NAVIGATION__generateStudioProjectViewUrl,
   EXTERNAL_APPLICATION_NAVIGATION__generateStudioSDLCProjectViewUrl,
-} from './LegendTaxonomyRouter.js';
+} from '../__lib__/LegendTaxonomyNavigation.js';
 
 export const createViewProjectHandler =
   (applicationStore: LegendTaxonomyApplicationStore) =>
@@ -33,9 +33,9 @@ export const createViewProjectHandler =
     versionId: string,
     entityPath: string | undefined,
   ): void =>
-    applicationStore.navigator.visitAddress(
+    applicationStore.navigationService.navigator.visitAddress(
       EXTERNAL_APPLICATION_NAVIGATION__generateStudioProjectViewUrl(
-        applicationStore.config.studioUrl,
+        applicationStore.config.studioApplicationUrl,
         groupId,
         artifactId,
         versionId,
@@ -63,7 +63,7 @@ export const createViewSDLCProjectHandler =
       (entry) => entry.sdlcProjectIDPrefix === projectIDPrefix,
     );
     if (matchingSDLCEntry) {
-      applicationStore.navigator.visitAddress(
+      applicationStore.navigationService.navigator.visitAddress(
         EXTERNAL_APPLICATION_NAVIGATION__generateStudioSDLCProjectViewUrl(
           matchingSDLCEntry.url,
           project.projectId,
@@ -71,7 +71,7 @@ export const createViewSDLCProjectHandler =
         ),
       );
     } else {
-      applicationStore.notifyWarning(
+      applicationStore.notificationService.notifyWarning(
         `Can't find the corresponding SDLC instance to view the SDLC project`,
       );
     }

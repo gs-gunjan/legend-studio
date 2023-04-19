@@ -34,7 +34,7 @@ import {
   ExpandIcon,
   CompressIcon,
   CircleIcon,
-  BrushIcon,
+  TrashIcon,
   NewFolderIcon,
   PlusCircleIcon,
   InfoCircleIcon,
@@ -79,7 +79,7 @@ import {
   QueryBuilderDerivationProjectionColumnState,
 } from '../../stores/fetch-structure/tds/projection/QueryBuilderProjectionColumnState.js';
 import type { QueryBuilderState } from '../../stores/QueryBuilderState.js';
-import { QUERY_BUILDER_TEST_ID } from '../QueryBuilder_TestID.js';
+import { QUERY_BUILDER_TEST_ID } from '../../__lib__/QueryBuilderTesting.js';
 import { isTypeCompatibleForAssignment } from '../../stores/QueryBuilderValueSpecificationHelper.js';
 import { QUERY_BUILDER_GROUP_OPERATION } from '../../stores/QueryBuilderGroupOperationHelper.js';
 import { QueryBuilderTDSState } from '../../stores/fetch-structure/tds/QueryBuilderTDSState.js';
@@ -93,9 +93,9 @@ import {
   renderPropertyTypeIcon,
 } from './QueryBuilderTDSComponentHelper.js';
 import {
-  type QueryBuilderOLAPColumnDragSource,
-  QUERY_BUILDER_OLAP_COLUMN_DND_TYPE,
-} from '../../stores/fetch-structure/tds/olapGroupBy/QueryBuilderOLAPGroupByState.js';
+  type QueryBuilderWindowColumnDragSource,
+  QUERY_BUILDER_WINDOW_COLUMN_DND_TYPE,
+} from '../../stores/fetch-structure/tds/window/QueryBuilderWindowState.js';
 import type { QueryBuilderTDSColumnState } from '../../stores/fetch-structure/tds/QueryBuilderTDSColumnState.js';
 
 const QueryBuilderPostFilterConditionContextMenu = observer(
@@ -218,7 +218,7 @@ export const QueryBuilderColumnBadge = observer(
       () => ({
         accept: [
           QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE,
-          QUERY_BUILDER_OLAP_COLUMN_DND_TYPE,
+          QUERY_BUILDER_WINDOW_COLUMN_DND_TYPE,
         ],
         drop: (item, monitor): void => {
           if (!monitor.didDrop()) {
@@ -308,7 +308,7 @@ const QueryBuilderPostFilterConditionEditor = observer(
         ) {
           node.condition.setValue(item.variable);
         } else {
-          applicationStore.notifyWarning(
+          applicationStore.notificationService.notifyWarning(
             `Incompatible parameter type ${parameterType?.name}. ${parameterType?.name} is not compatible with type ${conditionValueType?.name}.`,
           );
         }
@@ -416,7 +416,7 @@ const QueryBuilderPostFilterConditionEditor = observer(
                     valueSpecification={node.condition.value}
                     setValueSpecification={changeValueSpecification}
                     graph={graph}
-                    obseverContext={queryBuilderState.observableContext}
+                    obseverContext={queryBuilderState.observerContext}
                     typeCheckOption={{
                       expectedType: guaranteeNonNullable(
                         node.condition.columnState.getColumnType(),
@@ -486,12 +486,12 @@ const QueryBuilderPostFilterTreeNodeContainer = observer(
       (item: QueryBuilderPostFilterDropTarget, type: string): void => {
         if (
           type === QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE ||
-          type === QUERY_BUILDER_OLAP_COLUMN_DND_TYPE
+          type === QUERY_BUILDER_WINDOW_COLUMN_DND_TYPE
         ) {
           const columnState = (
             item as
               | QueryBuilderProjectionColumnDragSource
-              | QueryBuilderOLAPColumnDragSource
+              | QueryBuilderWindowColumnDragSource
           ).columnState as QueryBuilderTDSColumnState;
           let conditionState: PostFilterConditionState;
           try {
@@ -508,7 +508,7 @@ const QueryBuilderPostFilterTreeNodeContainer = observer(
             );
           } catch (error) {
             assertErrorThrown(error);
-            applicationStore.notifyWarning(error.message);
+            applicationStore.notificationService.notifyWarning(error.message);
             return;
           }
           if (node instanceof QueryBuilderPostFilterTreeGroupNodeData) {
@@ -553,7 +553,7 @@ const QueryBuilderPostFilterTreeNodeContainer = observer(
         accept: [
           ...Object.values(QUERY_BUILDER_POST_FILTER_DND_TYPE),
           QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE,
-          QUERY_BUILDER_OLAP_COLUMN_DND_TYPE,
+          QUERY_BUILDER_WINDOW_COLUMN_DND_TYPE,
         ],
         drop: (item, monitor): void => {
           if (!monitor.didDrop()) {
@@ -842,7 +842,7 @@ const QueryBuilderPostFilterPanelContent = observer(
           );
         } catch (error) {
           assertErrorThrown(error);
-          applicationStore.notifyError(error.message);
+          applicationStore.notificationService.notifyError(error.message);
           return;
         }
         // NOTE: unfocus the current node when DnD a new node to the tree
@@ -865,7 +865,7 @@ const QueryBuilderPostFilterPanelContent = observer(
       () => ({
         accept: [
           QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE,
-          QUERY_BUILDER_OLAP_COLUMN_DND_TYPE,
+          QUERY_BUILDER_WINDOW_COLUMN_DND_TYPE,
         ],
         drop: (item, monitor): void => {
           if (!monitor.didDrop()) {
@@ -926,7 +926,7 @@ const QueryBuilderPostFilterPanelContent = observer(
               tabIndex={-1}
               title="Cleanup Tree"
             >
-              <BrushIcon />
+              <TrashIcon />
             </button>
             <button
               className="panel__header__action"

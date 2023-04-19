@@ -64,23 +64,29 @@ export * from './graph/metamodel/pure/packageableElements/store/relational/conne
 export * from './graph/metamodel/pure/packageableElements/store/relational/connection/DatasourceSpecification.js';
 
 // protocols
-export * from './graphManager/protocol/pure/STO_Relational_PureProtocolProcessorPlugin_Extension.js';
-export * from './graphManager/protocol/pure/v1/model/packageableElements/store/relational/model/V1_TablePtr.js';
-export { V1_transformTableToTablePointer } from './graphManager/protocol/pure/v1/transformation/pureGraph/from/V1_DatabaseTransformer.js';
+export * from './graph-manager/protocol/pure/extensions/STO_Relational_PureProtocolProcessorPlugin_Extension.js';
+export * from './graph-manager/protocol/pure/v1/model/packageableElements/store/relational/model/V1_TablePtr.js';
+export { V1_transformTableToTablePointer } from './graph-manager/protocol/pure/v1/transformation/pureGraph/from/V1_DatabaseTransformer.js';
 export {
   V1_transformMapper,
   V1_transformRelation,
-} from './graphManager/protocol/pure/v1/transformation/pureGraph/from/V1_PostProcessorTransformer.js';
-export { V1_getRelation } from './graphManager/protocol/pure/v1/transformation/pureGraph/to/helpers/V1_DatabaseBuilderHelper.js';
-export { V1_tablePtrModelSchema } from './graphManager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_DatabaseSerializationHelper.js';
-export { type V1_Mapper } from './graphManager/protocol/pure/v1/model/packageableElements/store/relational/connection/postprocessor/V1_Mapper.js';
-export { V1_PostProcessor } from './graphManager/protocol/pure/v1/model/packageableElements/store/relational/connection/postprocessor/V1_PostProcessor.js';
-export { V1_DatasourceSpecification } from './graphManager/protocol/pure/v1/model/packageableElements/store/relational/connection/V1_DatasourceSpecification.js';
-export { V1_AuthenticationStrategy } from './graphManager/protocol/pure/v1/model/packageableElements/store/relational/connection/V1_AuthenticationStrategy.js';
-export { V1_Milestoning } from './graphManager/protocol/pure/v1/model/packageableElements/store/relational/model/milestoning/V1_Milestoning.js';
-export { V1_buildMapper } from './graphManager/protocol/pure/v1/transformation/pureGraph/to/helpers/V1_PostProcessorBuilderHelper.js';
+} from './graph-manager/protocol/pure/v1/transformation/pureGraph/from/V1_PostProcessorTransformer.js';
+export { V1_getRelation } from './graph-manager/protocol/pure/v1/transformation/pureGraph/to/helpers/V1_DatabaseBuilderHelper.js';
+export { V1_tablePtrModelSchema } from './graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_DatabaseSerializationHelper.js';
+export { type V1_Mapper } from './graph-manager/protocol/pure/v1/model/packageableElements/store/relational/connection/postprocessor/V1_Mapper.js';
+export { V1_PostProcessor } from './graph-manager/protocol/pure/v1/model/packageableElements/store/relational/connection/postprocessor/V1_PostProcessor.js';
+export { V1_DatasourceSpecification } from './graph-manager/protocol/pure/v1/model/packageableElements/store/relational/connection/V1_DatasourceSpecification.js';
+export { V1_AuthenticationStrategy } from './graph-manager/protocol/pure/v1/model/packageableElements/store/relational/connection/V1_AuthenticationStrategy.js';
+export { V1_Milestoning } from './graph-manager/protocol/pure/v1/model/packageableElements/store/relational/model/milestoning/V1_Milestoning.js';
+export { V1_buildMapper } from './graph-manager/protocol/pure/v1/transformation/pureGraph/to/helpers/V1_PostProcessorBuilderHelper.js';
 export {
   V1_serializeMapper,
   V1_deserializeMapper,
-} from './graphManager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_PostProcessorSerializationHelper.js';
-export * from './graphManager/STO_Relational_PureGraphManagerPlugin_Extension.js';
+} from './graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_PostProcessorSerializationHelper.js';
+export * from './graph-manager/extensions/STO_Relational_PureGraphManagerPlugin_Extension.js';
+
+export * from './graph/metamodel/pure/data/RelationalCSVData.js';
+export { SQLExecutionNode } from './graph/metamodel/pure/executionPlan/nodes/SQLExecutionNode.js';
+export { SQLResultColumn } from './graph/metamodel/pure/executionPlan/nodes/SQLResultColumn.js';
+export { RelationalTDSInstantiationExecutionNode } from './graph/metamodel/pure/executionPlan/nodes/RelationalInstantiationExecutionNode.js';
+export { createExplicitRelationReference } from './graph/metamodel/pure/packageableElements/store/relational/model/RelationReference.js';

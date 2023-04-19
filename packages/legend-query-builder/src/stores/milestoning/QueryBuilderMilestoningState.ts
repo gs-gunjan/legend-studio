@@ -31,7 +31,7 @@ import {
   guaranteeNonNullable,
 } from '@finos/legend-shared';
 import { action, computed, makeObservable, observable } from 'mobx';
-import { QUERY_BUILDER_HASH_STRUCTURE } from '../../graphManager/QueryBuilderHashUtils.js';
+import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../QueryBuilderStateHashUtils.js';
 import type { QueryBuilderState } from '../QueryBuilderState.js';
 import { isValueExpressionReferencedInValue } from '../QueryBuilderValueSpecificationHelper.js';
 import { LambdaParameterState } from '../shared/LambdaParameterState.js';
@@ -114,19 +114,13 @@ export class QueryBuilderMilestoningState implements Hashable {
 
   setProcessingDate(val: ValueSpecification | undefined): void {
     this.processingDate = val
-      ? observe_ValueSpecification(
-          val,
-          this.queryBuilderState.observableContext,
-        )
+      ? observe_ValueSpecification(val, this.queryBuilderState.observerContext)
       : val;
   }
 
   setBusinessDate(val: ValueSpecification | undefined): void {
     this.businessDate = val
-      ? observe_ValueSpecification(
-          val,
-          this.queryBuilderState.observableContext,
-        )
+      ? observe_ValueSpecification(val, this.queryBuilderState.observerContext)
       : val;
   }
 
@@ -165,7 +159,7 @@ export class QueryBuilderMilestoningState implements Hashable {
     ) {
       const variableState = new LambdaParameterState(
         milestoningParameter,
-        this.queryBuilderState.observableContext,
+        this.queryBuilderState.observerContext,
         this.queryBuilderState.graphManagerState.graph,
       );
       variableState.mockParameterValue();
@@ -186,7 +180,7 @@ export class QueryBuilderMilestoningState implements Hashable {
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.MILESTONING_STATE,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.MILESTONING_STATE,
       this.businessDate ?? '',
       this.processingDate ?? '',
     ]);

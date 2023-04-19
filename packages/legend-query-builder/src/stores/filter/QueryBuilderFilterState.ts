@@ -52,7 +52,7 @@ import {
 } from '../QueryBuilderTypeaheadHelper.js';
 import type { QueryBuilderFilterOperator } from './QueryBuilderFilterOperator.js';
 import { QUERY_BUILDER_GROUP_OPERATION } from '../QueryBuilderGroupOperationHelper.js';
-import { QUERY_BUILDER_HASH_STRUCTURE } from '../../graphManager/QueryBuilderHashUtils.js';
+import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../QueryBuilderStateHashUtils.js';
 import { isValueExpressionReferencedInValue } from '../QueryBuilderValueSpecificationHelper.js';
 
 export enum QUERY_BUILDER_FILTER_DND_TYPE {
@@ -158,14 +158,16 @@ export class FilterConditionState implements Hashable {
       new FilterConditionState(this.filterState, propertyExpression);
     } catch (error) {
       assertErrorThrown(error);
-      this.filterState.queryBuilderState.applicationStore.notifyError(error);
+      this.filterState.queryBuilderState.applicationStore.notificationService.notifyError(
+        error,
+      );
       return;
     }
 
     // observe the property expression
     observe_ValueSpecification(
       propertyExpression,
-      this.filterState.queryBuilderState.observableContext,
+      this.filterState.queryBuilderState.observerContext,
     );
 
     this.propertyExpressionState = new QueryBuilderPropertyExpressionState(
@@ -202,7 +204,7 @@ export class FilterConditionState implements Hashable {
     this.value = val
       ? observe_ValueSpecification(
           val,
-          this.filterState.queryBuilderState.observableContext,
+          this.filterState.queryBuilderState.observerContext,
         )
       : undefined;
   }
@@ -213,7 +215,7 @@ export class FilterConditionState implements Hashable {
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.FILTER_CONDITION_STATE,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.FILTER_CONDITION_STATE,
       this.propertyExpressionState,
       this.value ?? '',
       this.operator,
@@ -243,9 +245,11 @@ export abstract class QueryBuilderFilterTreeNodeData
   }
 
   abstract get dragPreviewLabel(): string;
+
   setIsOpen(val: boolean): void {
     this.isOpen = val;
   }
+
   setParentId(val: string | undefined): void {
     this.parentId = val;
   }
@@ -304,7 +308,7 @@ export class QueryBuilderFilterTreeGroupNodeData
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.FILTER_TREE_GROUP_NODE_DATA,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.FILTER_TREE_GROUP_NODE_DATA,
       this.parentId ?? '',
       hashArray(this.childrenIds),
       this.groupOperation,
@@ -335,7 +339,7 @@ export class QueryBuilderFilterTreeConditionNodeData
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.FILTER_TREE_CONDIITION_NODE_DATA,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.FILTER_TREE_CONDIITION_NODE_DATA,
       this.parentId ?? '',
       this.condition,
     ]);
@@ -360,7 +364,7 @@ export class QueryBuilderFilterTreeBlankConditionNodeData
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.FILTER_TREE_BLANK_CONDITION_NODE_DATA,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.FILTER_TREE_BLANK_CONDITION_NODE_DATA,
       this.parentId ?? '',
     ]);
   }
@@ -806,7 +810,7 @@ export class QueryBuilderFilterState
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.FILTER_STATE,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.FILTER_STATE,
       hashArray(this.rootIds),
       hashArray(Array.from(this.nodes.values())),
     ]);

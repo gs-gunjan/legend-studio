@@ -1,5 +1,165 @@
 # @finos/legend-graph
 
+## 28.0.2
+
+## 28.0.1
+
+### Patch Changes
+
+- [#2125](https://github.com/finos/legend-studio/pull/2125) [`c487352a8`](https://github.com/finos/legend-studio/commit/c487352a874198ae6a1352b2def151bfeb837bd6) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - fix a bug in generating `V1_StoreEntitlementAnalysisInput`
+
+## 28.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Move `getExtraPureGrammarParserNames()`, `getExtraPureGrammarKeywords()` and `getExtraPureGrammarElementLabelers()` out of `@finos/legend-graph` and into `@finos/legend-application-studio`'s `DSL_LegendStudioApplicationPlugin_Extension`.
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Moved all test utils to a separate export path `@finos/legend-graph/test`.
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** `GraphManagerState` has now been simplified, utilities methods have been moved to `AbstractPureGraphManager`.
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Duration, time, TDS, serialization config Pure paths and supported functions have now been moved to `@finos/legend-query-builder`.
+
+## 27.0.3
+
+## 27.0.2
+
+## 27.0.1
+
+### Patch Changes
+
+- [#2087](https://github.com/finos/legend-studio/pull/2087) [`d28bf7638`](https://github.com/finos/legend-studio/commit/d28bf763848f90a2154bde36aa14256b755ab783) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add graph origin to `DependencyManager` to remove unnecessary graph transformation per engine call.
+
+## 27.0.0
+
+## 26.0.5
+
+### Patch Changes
+
+- [#2053](https://github.com/finos/legend-studio/pull/2053) [`411b3c3d1`](https://github.com/finos/legend-studio/commit/411b3c3d1eaf8f2c0eee7121cec97638948e9390) ([@hardikmaheshwari](https://github.com/hardikmaheshwari)) - Remove non-null check for target set in case of complex property mapping.
+
+## 26.0.4
+
+## 26.0.3
+
+## 26.0.2
+
+## 26.0.1
+
+## 26.0.0
+
+### Major Changes
+
+- [#2063](https://github.com/finos/legend-studio/pull/2063) [`7bd0dc79d`](https://github.com/finos/legend-studio/commit/7bd0dc79d5e803c0eb677b884f2f1ac48fb32b77) ([@akphi](https://github.com/akphi)) - Renamed `V1_packageableElementPointerDeserializerSchema` to `V1_packageableElementPointerModelSchema` and `V1_multiplicitySchema` to `V1_multiplicityModelSchema`.
+
+### Minor Changes
+
+- [#2062](https://github.com/finos/legend-studio/pull/2062) [`9543da9e5`](https://github.com/finos/legend-studio/commit/9543da9e5bb86e48f99d277243e6423173494ac7) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add graph support for ValueSpecification of type `KeyExpression`.
+
+## 25.0.1
+
+## 25.0.0
+
+### Major Changes
+
+- [#2043](https://github.com/finos/legend-studio/pull/2043) [`5d5b8c55d`](https://github.com/finos/legend-studio/commit/5d5b8c55dbda79585df893ce6b0adcebf23ffdb7) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** `V1_getExtraFunctionExpressionBuilders()` now returns just a `SimpleFunctionExpression`.
+
+## 24.1.0
+
+### Minor Changes
+
+- [#1996](https://github.com/finos/legend-studio/pull/1996) [`8e16d6f0b`](https://github.com/finos/legend-studio/commit/8e16d6f0b13a5ec8763a821a54eb903d8894a89e) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add text support for `ExecutionEnvironment`.
+
+### Patch Changes
+
+- [#1992](https://github.com/finos/legend-studio/pull/1992) [`247dd6c1f`](https://github.com/finos/legend-studio/commit/247dd6c1f8c778fe5d5e30e795b1801762979469) ([@jinanisha](https://github.com/jinanisha)) - Add support for Trino connector
+
+## 24.0.1
+
+## 24.0.0
+
+### Major Changes
+
+- [#2019](https://github.com/finos/legend-studio/pull/2019) [`e31cc1bcb`](https://github.com/finos/legend-studio/commit/e31cc1bcbb61306b4b127788854775a8325bfa57) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Hide `DSL_ExternalFormat_GraphManagerPreset`, it is now exposed as part of `Core_GraphManagerPreset`
+
+## 23.1.1
+
+## 23.1.0
+
+### Minor Changes
+
+- [#1985](https://github.com/finos/legend-studio/pull/1985) [`9068bebc4`](https://github.com/finos/legend-studio/commit/9068bebc4203f3407e04ef9961a2e4929763a0ed) ([@gs-gunjan](https://github.com/gs-gunjan)) - Renaming mapping test data as per engine
+
+- [#1313](https://github.com/finos/legend-studio/pull/1313) [`53604b117`](https://github.com/finos/legend-studio/commit/53604b1173d4b8b5de430cfcdef82287c9045593) ([@roasher](https://github.com/roasher)) - Added support for Google Cloud Platform Spanner Database
+
+## 23.0.3
+
+### Patch Changes
+
+- [#1963](https://github.com/finos/legend-studio/pull/1963) [`1fbccf052`](https://github.com/finos/legend-studio/commit/1fbccf052b7e2048f54e089ffb3f7848e434a9fe) ([@gayathrir11](https://github.com/gayathrir11)) - Fix calling `compile` api twice for compilation.
+
+## 23.0.2
+
+## 23.0.1
+
+### Patch Changes
+
+- [#1953](https://github.com/finos/legend-studio/pull/1953) [`1a96a29fd`](https://github.com/finos/legend-studio/commit/1a96a29fdf60db8757e85b23f4554b2729e1606b) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix a bug in which the generation of assertion data produces a misleading error message.
+
+## 23.0.0
+
+### Major Changes
+
+- [#1937](https://github.com/finos/legend-studio/pull/1937) [`176371264`](https://github.com/finos/legend-studio/commit/176371264c6b3af8a14cbe4ce6d2d75a50691173) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Change the structure of graph initialization report to include `dependenciesCount` and `generationsCount` on top level.
+
+## 22.3.0
+
+### Minor Changes
+
+- [#1940](https://github.com/finos/legend-studio/pull/1940) [`5febc1969`](https://github.com/finos/legend-studio/commit/5febc19692f6a766cc0b85615b8f98b440ff3d1c) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add `sdlc` to BasicModel, to provide a `versioned` sdlc pointer for a metamodel graph.
+  Leverage sdlc pointer when applicable to send over `V1_PureModelContextPointer` to engine to lessen payload and improve performance by removing unneccesary transformation and serialization of all elemetns.
+
+### Patch Changes
+
+- [#1924](https://github.com/finos/legend-studio/pull/1924) [`106c5f78e`](https://github.com/finos/legend-studio/commit/106c5f78e2ac80f56b9b2eeacf621f97082b425b) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Expose TDS types in type selectors.
+
+## 22.2.8
+
+## 22.2.7
+
+## 22.2.6
+
+## 22.2.5
+
+## 22.2.4
+
+### Patch Changes
+
+- [#1833](https://github.com/finos/legend-studio/pull/1833) [`ef7e8fa6d`](https://github.com/finos/legend-studio/commit/ef7e8fa6d693848ac71a5a2f54db421f9d45fde3) ([@gayathrir11](https://github.com/gayathrir11)) - Add warnings when associations reference system elements. ([#282](https://github.com/finos/legend-studio/issues/282))
+
+## 22.2.3
+
+### Patch Changes
+
+- [#1845](https://github.com/finos/legend-studio/pull/1845) [`f901cd37c`](https://github.com/finos/legend-studio/commit/f901cd37c87c680971c32e3d8721f2cabb6627d9) ([@gayathrir11](https://github.com/gayathrir11)) - Modified `AtomicTestId` to `UniqueTestId`. Removed `TestBatch` model from core.
+  Replaced `TestPassed` and `TestFailed` models with `TestExecuted` model.
+
+## 22.2.2
+
+## 22.2.1
+
+## 22.2.0
+
+### Minor Changes
+
+- [#1817](https://github.com/finos/legend-studio/pull/1817) [`cad4352bf`](https://github.com/finos/legend-studio/commit/cad4352bff6e61bcef42503d934632fac98894d0) ([@gs-gunjan](https://github.com/gs-gunjan)) - Renaming test data in mapping test suites
+
+### Patch Changes
+
+- [#1815](https://github.com/finos/legend-studio/pull/1815) [`3a88c08e4`](https://github.com/finos/legend-studio/commit/3a88c08e4dac9267e92ce665f41dd45ab64e7d32) ([@xannem](https://github.com/xannem)) - fix: groupBy attribute for mappings when toggling form mode from text mode
+
+- [#1730](https://github.com/finos/legend-studio/pull/1730) [`0026b7986`](https://github.com/finos/legend-studio/commit/0026b79867b8783fc507618e8a0131c7021b018e) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Improve query execution test flow.
+
 ## 22.1.1
 
 ## 22.1.0

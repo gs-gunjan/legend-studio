@@ -15,8 +15,8 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { EntityDiffViewState } from '../../../stores/editor-state/entity-diff-editor-state/EntityDiffViewState.js';
-import { EntityDiffSideBarItem } from '../edit-panel/diff-editor/EntityDiffView.js';
+import { EntityDiffViewState } from '../../../stores/editor/editor-state/entity-diff-editor-state/EntityDiffViewState.js';
+import { EntityDiffSideBarItem } from '../editor-group/diff-editor/EntityDiffView.js';
 import {
   PanelLoadingIndicator,
   CloudDownloadIcon,
@@ -26,15 +26,15 @@ import {
   BanIcon,
   PanelContent,
 } from '@finos/legend-art';
-import { EntityChangeConflictSideBarItem } from '../edit-panel/diff-editor/EntityChangeConflictEditor.js';
-import { EntityChangeConflictEditorState } from '../../../stores/editor-state/entity-diff-editor-state/EntityChangeConflictEditorState.js';
-import { LEGEND_STUDIO_TEST_ID } from '../../LegendStudioTestID.js';
+import { EntityChangeConflictSideBarItem } from '../editor-group/diff-editor/EntityChangeConflictEditor.js';
+import { EntityChangeConflictEditorState } from '../../../stores/editor/editor-state/entity-diff-editor-state/EntityChangeConflictEditorState.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../../__lib__/LegendStudioTesting.js';
 import { flowResult } from 'mobx';
 import type {
   EntityChangeConflict,
   EntityDiff,
 } from '@finos/legend-server-sdlc';
-import { entityDiffSorter } from '../../../stores/EditorSDLCState.js';
+import { entityDiffSorter } from '../../../stores/editor/EditorSDLCState.js';
 import { useEditorStore } from '../EditorStoreProvider.js';
 import { useApplicationStore } from '@finos/legend-application';
 

@@ -41,8 +41,8 @@ import {
   type GeneratorFn,
 } from '@finos/legend-shared';
 import { type DataSpaceInfo, extractDataSpaceInfo } from './DataSpaceInfo.js';
-import { DATA_SPACE_ELEMENT_CLASSIFIER_PATH } from '../../graphManager/protocol/pure/DSL_DataSpace_PureProtocolProcessorPlugin.js';
-import { generateDataSpaceQueryCreatorRoute } from './DSL_DataSpace_LegendQueryRouter.js';
+import { DATA_SPACE_ELEMENT_CLASSIFIER_PATH } from '../../graph-manager/protocol/pure/DSL_DataSpace_PureProtocolProcessorPlugin.js';
+import { generateDataSpaceQueryCreatorRoute } from '../../__lib__/query/DSL_DataSpace_LegendQueryNavigation.js';
 import { renderDataSpaceQuerySetupSetupPanelContent } from '../../components/query/DataSpaceQuerySetup.js';
 import { DataSpaceAdvancedSearchState } from './DataSpaceAdvancedSearchState.js';
 
@@ -145,7 +145,7 @@ export class DataSpaceQuerySetupState extends QueryBuilderState {
     } catch (error) {
       assertErrorThrown(error);
       this.loadDataSpacesState.fail();
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
     }
   }
 }
@@ -174,7 +174,7 @@ export class DataSpaceQuerySetupStore extends QueryEditorStore {
       this.depotServerClient,
       (dataSpaceInfo: DataSpaceInfo) => {
         if (dataSpaceInfo.defaultExecutionContext) {
-          this.applicationStore.navigator.goToLocation(
+          this.applicationStore.navigationService.navigator.goToLocation(
             generateDataSpaceQueryCreatorRoute(
               dataSpaceInfo.groupId,
               dataSpaceInfo.artifactId,
@@ -186,7 +186,7 @@ export class DataSpaceQuerySetupStore extends QueryEditorStore {
             ),
           );
         } else {
-          this.applicationStore.notifyWarning(
+          this.applicationStore.notificationService.notifyWarning(
             `Can't switch data space: default execution context not specified`,
           );
         }

@@ -26,15 +26,17 @@ import {
   MoreHorizontalIcon,
   CaretDownIcon,
   Modal,
+  MenuContent,
+  MenuContentItem,
 } from '@finos/legend-art';
-import { getElementTypeIcon } from '../../shared/ElementIconUtils.js';
+import { getElementTypeIcon } from '../../ElementIconUtils.js';
 import type { PackageableElement } from '@finos/legend-graph';
 import { useEditorStore } from '../EditorStoreProvider.js';
 import {
   buildElementOption,
   getPackageableElementOptionFormatter,
   type PackageableElementOption,
-} from '@finos/legend-application';
+} from '@finos/legend-lego/graph-editor';
 
 export const ProjectSearchCommand = observer(() => {
   const editorStore = useEditorStore();
@@ -74,10 +76,7 @@ export const ProjectSearchCommand = observer(() => {
       closeModal();
       // NOTE: since it takes time to close the modal, this will prevent any auto-focus effort when we open a new element
       // to fail as the focus is still trapped in this modal, we need to use `setTimeout` here
-      setTimeout(
-        () => editorStore.tabManagerState.openElementEditor(val.value),
-        0,
-      );
+      setTimeout(() => editorStore.graphEditorMode.openElement(val.value), 0);
     }
   };
   const handleEnter = (): void => {
@@ -105,23 +104,23 @@ export const ProjectSearchCommand = observer(() => {
             className="project-search-command__type"
             title="Choose Element Type..."
             content={
-              <div className="project-search-command__options">
-                <div
+              <MenuContent className="project-search-command__options">
+                <MenuContentItem
                   className="project-search-command__option"
                   onClick={changeType(undefined)}
                 >
                   <MoreHorizontalIcon />
-                </div>
+                </MenuContentItem>
                 {types.map((type) => (
-                  <div
+                  <MenuContentItem
                     key={type}
                     className="project-search-command__option"
                     onClick={changeType(type)}
                   >
                     {getElementTypeIcon(editorStore, type)}
-                  </div>
+                  </MenuContentItem>
                 ))}
-              </div>
+              </MenuContent>
             }
           >
             <div className="project-search-command__type__label">
@@ -148,7 +147,6 @@ export const ProjectSearchCommand = observer(() => {
             darkMode={true}
             formatOptionLabel={getPackageableElementOptionFormatter({
               darkMode: true,
-              pureModel: editorStore.graphManagerState.graph,
             })}
           />
         </div>

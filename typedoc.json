@@ -1,47 +1,30 @@
 {
   "$schema": "https://typedoc.org/schema.json",
   "name": "Legend Studio API Documentation",
-  "hideGenerator": true,
   "gitRemote": "origin",
   "gitRevision": "master",
+  "hideGenerator": true,
   "includeVersion": true,
   "out": "build/docs",
-  "entryPoints": ["packages/*"],
+  "entryPoints": ["."],
   "entryPointStrategy": "packages",
   "exclude": [
     // NOTE: this uses `minimatch` pattern
-    "**/__tests__/**",
-    "**/__mocks__/**",
-    "**/node_modules/**",
+    "**/fixtures/**",
+    "**/scripts/**",
     "**/packages/babel-preset",
     "**/packages/eslint-plugin",
     "**/packages/stylelint-config",
     "**/packages/legend-dev-utils",
     "**/packages/legend-manual-tests", // to be removed post https://github.com/finos/legend-studio/issues/820
     "**/packages/legend-art",
+    "**/packages/legend-lego",
     "**/packages/legend-application-*",
     "**/packages/legend-extension-*"
   ],
-  "plugin": ["./scripts/typedoc-theme/lib/index.js"],
-  "intentionallyNotExported": [],
-  "excludeExternals": false,
-  "excludeInternal": true,
-  "excludePrivate": true,
-  "excludeNotDocumented": true,
-  "validation": {
-    "notExported": false,
-    "invalidLink": true,
-    "notDocumented": false
-  },
   // NOTE: to be updated when we structure the doc better
   "readme": "./website/api.md",
-  "visibilityFilters": {
-    "protected": false,
-    "private": false,
-    "inherited": true,
-    "external": false
-    // "@internal": false,
-  },
+  "plugin": ["./website/custom-typedoc-theme.js"],
   "theme": "legend",
   "customCss": "./website/legend-typedoc-theme.css",
   "logLevel": "Verbose",

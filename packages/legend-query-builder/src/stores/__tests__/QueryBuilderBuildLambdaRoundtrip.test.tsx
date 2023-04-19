@@ -39,6 +39,8 @@ import TEST_DATA__M2MWithInheritance from './TEST_DATA__QueryBuilder_Model_M2MWi
 import TEST_DATA__COVIDDataSimpleModel from './TEST_DATA__QueryBuilder_Model_COVID.json';
 import TEST_DATA__SimpleM2MModel from './TEST_DATA__QueryBuilder_Model_SimpleM2M.json';
 import TEST_DATA__PostFilterModel from './TEST_DATA__QueryBuilder_Model_PostFilter.json';
+import TEST_DATA__BindingM2MModel from './TEST_DATA__QueryBuilder_Model_BindingM2M.json';
+import TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M from './TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M.json';
 import {
   TEST_DATA__lambda_simpleSingleConditionFilterWithParameter,
   TEST_DATA__lambda_enumerationOperatorFilter,
@@ -64,18 +66,14 @@ import {
   TEST_DATA__lambda_output_projectionWithFullPathFunctions,
 } from './TEST_DATA__QueryBuilder_TestQueriesWithFullPathFunctions.js';
 import type { Entity } from '@finos/legend-storage';
+import { Core_GraphManagerPreset, RawLambda } from '@finos/legend-graph';
 import {
-  RawLambda,
   TEST__buildGraphWithEntities,
   TEST__getTestGraphManagerState,
-} from '@finos/legend-graph';
-import {
-  TEST__getGenericApplicationConfig,
-  TEST__getTestApplicationStore,
-  TEST__LegendApplicationPluginManager,
-} from '@finos/legend-application';
-import { integrationTest } from '@finos/legend-shared';
-import { QueryBuilder_GraphManagerPreset } from '../../graphManager/QueryBuilder_GraphManagerPreset.js';
+} from '@finos/legend-graph/test';
+import { ApplicationStore } from '@finos/legend-application';
+import { integrationTest } from '@finos/legend-shared/test';
+import { QueryBuilder_GraphManagerPreset } from '../../graph-manager/QueryBuilder_GraphManagerPreset.js';
 import {
   TEST_DATA__lambda_simpleConditionPostFilter,
   TEST_DATA__lambda_aggregationPostFilter,
@@ -84,10 +82,10 @@ import {
 } from './TEST_DATA__QueryBuilder_Roundtrip_TestPostFilterQueries.js';
 import { INTERNAL__BasicQueryBuilderState } from '../QueryBuilderState.js';
 import {
-  TEST_DATA__lambda_olapGroupBy_MultiStackedGroupBy,
-  TEST_DATA_lambda_olapGroupBy_SimpleStringRankFunc,
-  TEST_DATA__lambda_olapGroupBy_StackedGroupBy,
   TEST_DATA__OlapGroupBy_entities,
+  TEST_DATA__lambda_olapGroupBy_MultiStackedGroupBy,
+  TEST_DATA__lambda_olapGroupBy_SimpleStringRankFunc,
+  TEST_DATA__lambda_olapGroupBy_StackedGroupBy,
   TEST_DATA__lambda_olapGroupBy_SimpleStringRankWithPostFilter,
   TEST_DATA__lambda_olapGroupBy_RankWithPostFilterOnOlapColumn,
   TEST_DATA__lambda_olapGroupBy_StringRankNoSortBy,
@@ -96,8 +94,13 @@ import {
   TEST_DATA__lambda_olapGroupBy_Stacked_Aggregation,
   TEST_DATA__lambda_olapGroupBy_Stacked_Aggregation_Rank,
   TEST_DATA__lambda_olapGroupBy_Stacked_Aggregation_Rank_VarName,
-  TEST_DATA__GroupBy_postFilter_OlapGroupBy,
-} from './TEST_DATA__QueryBuilder_OLAPGroupBy.js';
+  TEST_DATA__lambda_olapGroupBy_withSort,
+  TEST_DATA__lambda_olapGroupBy_withTake,
+  TEST_DATA__lambda_olapGroupBy_withDistinct,
+  TEST_DATA__lambda_groupBy_postFilter_OlapGroupBy,
+  TEST_DATA__lambda_olapGroupBy_withSortOnOlapColumn,
+} from './TEST_DATA__QueryBuilder__OLAPGroupBy.js';
+import { TEST_DATA__graphFetchWithSerializationConfig } from './TEST_DATA__QueryBuilder_GraphFetch.js';
 import {
   TEST_DATA_lambda_watermark_Constant,
   TEST_DATA_lambda_watermark_filter_Constant,
@@ -109,6 +112,15 @@ import {
   TEST_DATA__lambda_ContantExpression_Simple,
   TEST_DATA__lambda_ContantExpression_SimpleUsedAsVariable,
 } from './TEST_DATA__QueryBuilder_ConstantExpression.js';
+import {
+  TEST_DATA__lambda_Externalize_externalize_graphFetch,
+  TEST_DATA__lambda_Externalize_externalize_graphFetch_with_different_trees,
+  TEST_DATA__lambda_Externalize_externalize_graphFetchChecked,
+} from './TEST_DATA__QueryBuilder_Externalize.js';
+import {
+  TEST__LegendApplicationPluginManager,
+  TEST__getGenericApplicationConfig,
+} from '../__test-utils__/QueryBuilderStateTestUtils.js';
 
 type RoundtripTestCase = [
   string,
@@ -149,6 +161,14 @@ const forWatermarkCtx = {
 
 const olapGroupbyCtx = {
   entities: TEST_DATA__OlapGroupBy_entities,
+};
+
+const bindingM2MCtx = {
+  entities: TEST_DATA__BindingM2MModel,
+};
+
+const identitfyM2MCtx = {
+  entities: TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M,
 };
 
 const cases: RoundtripTestCase[] = [
@@ -220,6 +240,12 @@ const cases: RoundtripTestCase[] = [
     'Graph-fetch with subtype',
     graphFetchWithSubtypeCtx,
     TEST_DATA__graphFetchWithSubtype,
+    undefined,
+  ],
+  [
+    'Graph Fetch with serialization config',
+    identitfyM2MCtx,
+    TEST_DATA__graphFetchWithSerializationConfig,
     undefined,
   ],
   // filter
@@ -390,25 +416,25 @@ const cases: RoundtripTestCase[] = [
   [
     'OlapGroupBy with simple string with rank() operation',
     olapGroupbyCtx,
-    TEST_DATA_lambda_olapGroupBy_SimpleStringRankFunc('rank'),
+    TEST_DATA__lambda_olapGroupBy_SimpleStringRankFunc('rank'),
     undefined,
   ],
   [
     'OlapGroupBy with simple string with denseRank() operation',
     olapGroupbyCtx,
-    TEST_DATA_lambda_olapGroupBy_SimpleStringRankFunc('denseRank'),
+    TEST_DATA__lambda_olapGroupBy_SimpleStringRankFunc('denseRank'),
     undefined,
   ],
   [
     'OlapGroupBy with simple string with rowNumber() operation',
     olapGroupbyCtx,
-    TEST_DATA_lambda_olapGroupBy_SimpleStringRankFunc('rowNumber'),
+    TEST_DATA__lambda_olapGroupBy_SimpleStringRankFunc('rowNumber'),
     undefined,
   ],
   [
     'OlapGroupBy with simple string with averageRank() operation',
     olapGroupbyCtx,
-    TEST_DATA_lambda_olapGroupBy_SimpleStringRankFunc('averageRank'),
+    TEST_DATA__lambda_olapGroupBy_SimpleStringRankFunc('averageRank'),
     undefined,
   ],
   [
@@ -496,9 +522,33 @@ const cases: RoundtripTestCase[] = [
     undefined,
   ],
   [
+    'OlapGroupBy with TDS take',
+    olapGroupbyCtx,
+    TEST_DATA__lambda_olapGroupBy_withTake,
+    undefined,
+  ],
+  [
+    'OlapGroupBy with TDS distinct',
+    olapGroupbyCtx,
+    TEST_DATA__lambda_olapGroupBy_withDistinct,
+    undefined,
+  ],
+  [
+    'OlapGroupBy with TDS sort',
+    olapGroupbyCtx,
+    TEST_DATA__lambda_olapGroupBy_withSort,
+    undefined,
+  ],
+  [
+    'OlapGroupBy with TDS sort applied on OLAP column',
+    olapGroupbyCtx,
+    TEST_DATA__lambda_olapGroupBy_withSortOnOlapColumn,
+    undefined,
+  ],
+  [
     'OlapGroupBy with TDS groupBy -> post-filter -> olap groupBy',
     postFilterCtx,
-    TEST_DATA__GroupBy_postFilter_OlapGroupBy,
+    TEST_DATA__lambda_groupBy_postFilter_OlapGroupBy,
     undefined,
   ],
   [
@@ -519,6 +569,25 @@ const cases: RoundtripTestCase[] = [
     TEST_DATA__lambda_ContantExpression_MultiConstantVAriables,
     undefined,
   ],
+  // externalize
+  [
+    'Simple externalize() on graphfetch()',
+    bindingM2MCtx,
+    TEST_DATA__lambda_Externalize_externalize_graphFetch,
+    undefined,
+  ],
+  [
+    'Simple externalize() on graphfetch() with different trees',
+    bindingM2MCtx,
+    TEST_DATA__lambda_Externalize_externalize_graphFetch_with_different_trees,
+    undefined,
+  ],
+  [
+    'Simple externalize() on graphfetchChecked()',
+    bindingM2MCtx,
+    TEST_DATA__lambda_Externalize_externalize_graphFetchChecked,
+    undefined,
+  ],
 ];
 
 describe(
@@ -535,9 +604,12 @@ describe(
         const { entities } = context;
         const pluginManager = TEST__LegendApplicationPluginManager.create();
         pluginManager
-          .usePresets([new QueryBuilder_GraphManagerPreset()])
+          .usePresets([
+            new Core_GraphManagerPreset(),
+            new QueryBuilder_GraphManagerPreset(),
+          ])
           .install();
-        const applicationStore = TEST__getTestApplicationStore(
+        const applicationStore = new ApplicationStore(
           TEST__getGenericApplicationConfig(),
           pluginManager,
         );

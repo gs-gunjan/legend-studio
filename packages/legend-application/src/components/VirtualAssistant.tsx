@@ -31,14 +31,18 @@ import {
   SunglassesIcon,
   WizardHatIcon,
   FaceLaughWinkIcon,
-  VerticalDragHandleThinIcon,
+  ThinVerticalDragHandleIcon,
   CircleIcon,
   PanelLoadingIndicator,
   BasePopover,
   FaceSadTearIcon,
   CogIcon,
+  Draggable,
+  BaseRadioGroup,
+  QuestionCircleIcon,
 } from '@finos/legend-art';
 import {
+  ADVANCED_FUZZY_SEARCH_MODE,
   ContentType,
   debounce,
   downloadFileUsingDataURI,
@@ -48,16 +52,17 @@ import {
 } from '@finos/legend-shared';
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { TAB_SIZE } from '../const.js';
+import {
+  DEFAULT_DATE_TIME_FORMAT,
+  DEFAULT_TAB_SIZE,
+} from '../stores/ApplicationConfig.js';
 import {
   type VirtualAssistantDocumentationEntry,
   VIRTUAL_ASSISTANT_TAB,
 } from '../stores/AssistantService.js';
 import { useApplicationStore } from './ApplicationStoreProvider.js';
-import Draggable from 'react-draggable';
-import { DATE_TIME_FORMAT } from '@finos/legend-graph';
-import { ApplicationTelemetry } from '../stores/ApplicationTelemetry.js';
-import { TextSearchAdvancedConfigMenu } from './shared/TextSearchAdvancedConfigMenu.js';
+import { LegendApplicationTelemetryHelper } from '../__lib__/LegendApplicationTelemetry.js';
+import { LEGEND_APPLICATION_DOCUMENTATION_KEY } from '../__lib__/LegendApplicationDocumentation.js';
 
 const WIZARD_GREETING = `Bonjour, It's Pierre!`;
 
@@ -67,7 +72,7 @@ const VirtualAssistantDocumentationEntryViewer = observer(
     const applicationStore = useApplicationStore();
     const toggleExpand = (): void => {
       if (!entry.isOpen) {
-        ApplicationTelemetry.logEvent_VirtualAssistantDocumentationEntryAccessed(
+        LegendApplicationTelemetryHelper.logEvent_VirtualAssistantDocumentationEntryAccessed(
           applicationStore.telemetryService,
           {
             key: entry.documentationKey,
@@ -77,7 +82,7 @@ const VirtualAssistantDocumentationEntryViewer = observer(
       entry.setIsOpen(!entry.isOpen);
     };
     const onDocumentationLinkClick = (): void => {
-      ApplicationTelemetry.logEvent_VirtualAssistantDocumentationEntryAccessed(
+      LegendApplicationTelemetryHelper.logEvent_VirtualAssistantDocumentationEntryAccessed(
         applicationStore.telemetryService,
         {
           key: entry.documentationKey,
@@ -85,7 +90,9 @@ const VirtualAssistantDocumentationEntryViewer = observer(
       );
     };
     const copyDocumentationKey = applicationStore.guardUnhandledError(() =>
-      applicationStore.copyTextToClipboard(entry.documentationKey),
+      applicationStore.clipboardService.copyTextToClipboard(
+        entry.documentationKey,
+      ),
     );
 
     return (
@@ -163,16 +170,18 @@ const VirtualAssistantContextualSupportPanel = observer(() => {
   const assistantService = applicationStore.assistantService;
   const contextualEntry = assistantService.currentContextualDocumentationEntry;
   const copyContextIDToClipboard = applicationStore.guardUnhandledError(() =>
-    applicationStore.copyTextToClipboard(contextualEntry?.context ?? ''),
+    applicationStore.clipboardService.copyTextToClipboard(
+      contextualEntry?.context ?? '',
+    ),
   );
   const copyCurrentContextIDToClipboard = applicationStore.guardUnhandledError(
     () =>
-      applicationStore.copyTextToClipboard(
+      applicationStore.clipboardService.copyTextToClipboard(
         applicationStore.navigationContextService.currentContext?.key ?? '',
       ),
   );
   const copyContextStackToClipboard = applicationStore.guardUnhandledError(() =>
-    applicationStore.copyTextToClipboard(
+    applicationStore.clipboardService.copyTextToClipboard(
       applicationStore.navigationContextService.contextStack
         .map((context) => context.key)
         .join(' > '),
@@ -261,7 +270,6 @@ const VirtualAssistantContextualSupportPanel = observer(() => {
 const VirtualAssistantSearchPanel = observer(() => {
   const applicationStore = useApplicationStore();
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchConfigButtonRef = useRef<HTMLButtonElement>(null);
   const assistantService = applicationStore.assistantService;
 
   // search text
@@ -281,17 +289,21 @@ const VirtualAssistantSearchPanel = observer(() => {
     assistantService.currentDocumentationEntry = undefined;
     searchInputRef.current?.focus();
   };
+  const toggleSearchConfigMenu = (): void =>
+    assistantService.setShowSearchConfigurationMenu(
+      !assistantService.showSearchConfigurationMenu,
+    );
 
   const downloadDocRegistry = (): void => {
     downloadFileUsingDataURI(
       `documentation-registry_${formatDate(
         new Date(Date.now()),
-        DATE_TIME_FORMAT,
+        DEFAULT_DATE_TIME_FORMAT,
       )}.json`,
       JSON.stringify(
         applicationStore.documentationService.publishDocRegistry(),
         undefined,
-        TAB_SIZE,
+        DEFAULT_TAB_SIZE,
       ),
       ContentType.APPLICATION_JSON,
     );
@@ -300,20 +312,16 @@ const VirtualAssistantSearchPanel = observer(() => {
     downloadFileUsingDataURI(
       `documentation-registry_${formatDate(
         new Date(Date.now()),
-        DATE_TIME_FORMAT,
+        DEFAULT_DATE_TIME_FORMAT,
       )}.json`,
       JSON.stringify(
         applicationStore.documentationService.publishContextualDocIndex(),
         undefined,
-        TAB_SIZE,
+        DEFAULT_TAB_SIZE,
       ),
       ContentType.APPLICATION_JSON,
     );
   };
-  const toggleSearchConfigMenu = (): void =>
-    assistantService.setShowSearchConfigurationMenu(
-      !assistantService.showSearchConfigurationMenu,
-    );
 
   useEffect(() => {
     searchInputRef.current?.focus();
@@ -370,7 +378,6 @@ const VirtualAssistantSearchPanel = observer(() => {
           </div>
         )}
         <button
-          ref={searchConfigButtonRef}
           className={clsx('virtual-assistant__search__input__config__trigger', {
             'virtual-assistant__search__input__config__trigger--toggled':
               assistantService.showSearchConfigurationMenu,
@@ -406,18 +413,53 @@ const VirtualAssistantSearchPanel = observer(() => {
         <PanelLoadingIndicator
           isLoading={assistantService.searchState.isInProgress}
         />
-        {/* {assistantService.showSearchConfigurationMenu && ( */}
         <div
           className={clsx('virtual-assistant__search__input__config__panel', {
             'virtual-assistant__search__input__config__panel--toggled':
               assistantService.showSearchConfigurationMenu,
           })}
         >
-          <TextSearchAdvancedConfigMenu
-            configState={assistantService.searchConfigurationState}
-          />
+          <div className="virtual-assistant__search__input__advanced-config__panel">
+            <div className="virtual-assistant__search__input__advanced-config__panel__header__label">
+              search config
+              {applicationStore.documentationService.hasDocEntry(
+                LEGEND_APPLICATION_DOCUMENTATION_KEY.QUESTION_HOW_TO_USE_ADVANCED_SEARCH_SYNTAX,
+              ) && (
+                <div
+                  onClick={() =>
+                    assistantService.openDocumentationEntryLink(
+                      LEGEND_APPLICATION_DOCUMENTATION_KEY.QUESTION_HOW_TO_USE_ADVANCED_SEARCH_SYNTAX,
+                    )
+                  }
+                  title="Click to see documentation"
+                  className="virtual-assistant__search__input__advanced-config__panel__header__label__hint"
+                >
+                  <QuestionCircleIcon />
+                </div>
+              )}
+            </div>
+            <div>
+              <BaseRadioGroup
+                value={assistantService.searchConfigurationState.currentMode}
+                onChange={(event): void => {
+                  const searchMode = event.target
+                    .value as ADVANCED_FUZZY_SEARCH_MODE;
+                  assistantService.searchConfigurationState.setCurrentMode(
+                    searchMode,
+                  );
+                }}
+                row={false}
+                options={[
+                  ADVANCED_FUZZY_SEARCH_MODE.STANDARD,
+                  ADVANCED_FUZZY_SEARCH_MODE.INCLUDE,
+                  ADVANCED_FUZZY_SEARCH_MODE.EXACT,
+                  ADVANCED_FUZZY_SEARCH_MODE.INVERSE,
+                ]}
+                size={1}
+              />
+            </div>
+          </div>
         </div>
-        {/* )} */}
         {assistantService.currentDocumentationEntry && (
           <div className="virtual-assistant__search__results">
             <VirtualAssistantDocumentationEntryViewer
@@ -743,7 +785,7 @@ export const VirtualAssistant = observer(() => {
               className="virtual-assistant__station__drag-handle__content"
               title={isDragging ? undefined : 'Grab to drag assistant'}
             >
-              <VerticalDragHandleThinIcon />
+              <ThinVerticalDragHandleIcon />
             </div>
           </ContextMenu>
         </div>

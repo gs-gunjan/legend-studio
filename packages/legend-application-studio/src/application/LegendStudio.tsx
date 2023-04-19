@@ -15,38 +15,27 @@
  */
 
 import { createRoot } from 'react-dom/client';
-import { LegendStudioApplication } from '../components/LegendStudioApplication.js';
+import { LegendStudioWebApplication } from '../components/LegendStudioWebApplication.js';
 import { LegendStudioPluginManager } from './LegendStudioPluginManager.js';
 import {
   type LegendApplicationConfig,
-  type LegendApplicationLogger,
   ApplicationStoreProvider,
   LegendApplication,
-  setupLegendApplicationUILibrary,
-  WebApplicationNavigatorProvider,
   type LegendApplicationConfigurationInput,
-  BrowserRouter,
+  Core_LegendApplicationPlugin,
+  getApplicationRootElement,
 } from '@finos/legend-application';
-import { Core_PureGraphManagerPlugin } from '@finos/legend-graph';
-import { getRootElement } from '@finos/legend-art';
+import { Core_GraphManagerPreset } from '@finos/legend-graph';
 import {
   type LegendStudioApplicationConfigurationData,
   LegendStudioApplicationConfig,
 } from './LegendStudioApplicationConfig.js';
-import { Core_LegendStudioApplicationPlugin } from '../components/Core_LegendStudioApplicationPlugin.js';
+import { Core_LegendStudioApplicationPlugin } from '../components/extensions/Core_LegendStudioApplicationPlugin.js';
 import {
   QueryBuilder_GraphManagerPreset,
   QueryBuilder_LegendApplicationPlugin,
-  setupQueryBuilderUILibrary,
 } from '@finos/legend-query-builder';
-
-const setupLegendStudioUILibrary = async (
-  pluginManager: LegendStudioPluginManager,
-  logger: LegendApplicationLogger,
-): Promise<void> => {
-  await setupLegendApplicationUILibrary(pluginManager, logger);
-  await setupQueryBuilderUILibrary();
-};
+import type { LegendStudioApplicationStore } from '../stores/LegendStudioBaseStore.js';
 
 export class LegendStudio extends LegendApplication {
   declare config: LegendStudioApplicationConfig;
@@ -54,12 +43,15 @@ export class LegendStudio extends LegendApplication {
 
   static create(): LegendStudio {
     const application = new LegendStudio(LegendStudioPluginManager.create());
+    application.withBasePresets([
+      new Core_GraphManagerPreset(),
+      new QueryBuilder_GraphManagerPreset(),
+    ]);
     application.withBasePlugins([
-      new Core_PureGraphManagerPlugin(),
+      new Core_LegendApplicationPlugin(),
       new Core_LegendStudioApplicationPlugin(),
       new QueryBuilder_LegendApplicationPlugin(),
     ]);
-    application.withBasePresets([new QueryBuilder_GraphManagerPreset()]);
     return application;
   }
 
@@ -69,29 +61,13 @@ export class LegendStudio extends LegendApplication {
     return new LegendStudioApplicationConfig(input);
   }
 
-  async loadApplication(): Promise<void> {
-    // Setup React application libraries
-    await setupLegendStudioUILibrary(this.pluginManager, this.logger);
-
-    // Render React application
-    const rootElement = createRoot(getRootElement());
-    rootElement.render(
-      // TODO: would be great if we can have <React.StrictMode> here but since Mobx React is not ready for
-      // concurrency yet, we would have to wait
-      // See https://github.com/mobxjs/mobx/issues/2526
-      <BrowserRouter basename={this.baseUrl}>
-        <WebApplicationNavigatorProvider>
-          <ApplicationStoreProvider
-            config={this.config}
-            pluginManager={this.pluginManager}
-          >
-            <LegendStudioApplication
-              config={this.config}
-              pluginManager={this.pluginManager}
-            />
-          </ApplicationStoreProvider>
-        </WebApplicationNavigatorProvider>
-      </BrowserRouter>,
+  async loadApplication(
+    applicationStore: LegendStudioApplicationStore,
+  ): Promise<void> {
+    createRoot(getApplicationRootElement()).render(
+      <ApplicationStoreProvider store={applicationStore}>
+        <LegendStudioWebApplication baseUrl={this.baseAddress} />
+      </ApplicationStoreProvider>,
     );
   }
 }

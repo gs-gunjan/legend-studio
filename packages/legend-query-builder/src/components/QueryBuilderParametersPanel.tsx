@@ -28,6 +28,7 @@ import {
   ModalHeader,
   PanelFormTextField,
   InfoCircleIcon,
+  ModalFooterButton,
 } from '@finos/legend-art';
 import {
   type Type,
@@ -38,19 +39,20 @@ import {
   Multiplicity,
   getMultiplicityPrettyDescription,
 } from '@finos/legend-graph';
-import {
-  type PackageableElementOption,
-  buildElementOption,
-  getPackageableElementOptionFormatter,
-  useApplicationStore,
-  LEGEND_APPLICATION_DOCUMENTATION_KEY,
-} from '@finos/legend-application';
+import { useApplicationStore } from '@finos/legend-application';
 import { generateEnumerableNameFromToken } from '@finos/legend-shared';
 import { DEFAULT_VARIABLE_NAME } from '../stores/QueryBuilderConfig.js';
 import { variableExpression_setName } from '../stores/shared/ValueSpecificationModifierHelper.js';
 import { LambdaParameterState } from '../stores/shared/LambdaParameterState.js';
 import { LambdaParameterValuesEditor } from './shared/LambdaParameterValuesEditor.js';
 import { VariableViewer } from './shared/QueryBuilderVariableSelector.js';
+import { QUERY_BUILDER_TEST_ID } from '../__lib__/QueryBuilderTesting.js';
+import { QUERY_BUILDER_DOCUMENTATION_KEY } from '../__lib__/QueryBuilderDocumentation.js';
+import {
+  buildElementOption,
+  getPackageableElementOptionFormatter,
+  type PackageableElementOption,
+} from '@finos/legend-lego/graph-editor';
 
 type MultiplicityOption = { label: string; value: Multiplicity };
 
@@ -70,12 +72,16 @@ const VariableExpressionEditor = observer(
     const { queryBuilderState, lambdaParameterState } = props;
     const applicationStore = useApplicationStore();
     const queryParametersState = queryBuilderState.parametersState;
+    const allVariableNames = queryBuilderState.allVariableNames;
     const isCreating =
       !queryParametersState.parameterStates.includes(lambdaParameterState);
     const varState = lambdaParameterState.parameter;
     const multiplity = varState.multiplicity;
     const validationMessage = !varState.name
       ? `Parameter name can't be empty`
+      : allVariableNames.filter((e) => e === varState.name).length >
+        (isCreating ? 0 : 1)
+      ? 'Parameter Name Already Exists'
       : (isCreating &&
           queryParametersState.parameterStates.find(
             (p) => p.parameter.name === varState.name,
@@ -168,10 +174,14 @@ const VariableExpressionEditor = observer(
                 options={typeOptions}
                 onChange={changeType}
                 value={selectedType}
-                darkMode={!applicationStore.TEMPORARY__isLightThemeEnabled}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 formatOptionLabel={getPackageableElementOptionFormatter({
-                  darkMode: !applicationStore.TEMPORARY__isLightThemeEnabled,
-                  pureModel: queryBuilderState.graphManagerState.graph,
+                  darkMode:
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled,
                 })}
               />
             </div>
@@ -193,23 +203,22 @@ const VariableExpressionEditor = observer(
                     selectedMultiplicity.value,
                   )
                 }
-                darkMode={!applicationStore.TEMPORARY__isLightThemeEnabled}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
               />
             </div>
           </ModalBody>
           <ModalFooter>
             {isCreating && (
-              <button
-                className="btn modal__footer__close-btn btn--dark"
+              <ModalFooterButton
+                text="Create"
+                inProgress={Boolean(validationMessage)}
                 onClick={onAction}
-                disabled={Boolean(validationMessage)}
-              >
-                Create
-              </button>
+              />
             )}
-            <button className="btn modal__footer__close-btn" onClick={close}>
-              Close
-            </button>
+            <ModalFooterButton onClick={close} text="Close" />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -227,7 +236,7 @@ export const QueryBuilderParametersPanel = observer(
     );
     const seeDocumentation = (): void =>
       queryBuilderState.applicationStore.assistantService.openDocumentationEntry(
-        LEGEND_APPLICATION_DOCUMENTATION_KEY.QUESTION_HOW_TO_ADD_PARAMETERS_TO_QUERY,
+        QUERY_BUILDER_DOCUMENTATION_KEY.QUESTION_HOW_TO_ADD_PARAMETERS_TO_QUERY,
       );
     const addParameter = (): void => {
       if (!isReadOnly && !queryBuilderState.isParameterSupportDisabled) {
@@ -239,7 +248,7 @@ export const QueryBuilderParametersPanel = observer(
               new GenericType(PrimitiveType.STRING),
             ),
           ),
-          queryBuilderState.observableContext,
+          queryBuilderState.observerContext,
           queryBuilderState.graphManagerState.graph,
         );
         queryParameterState.setSelectedParameter(parmaterState);
@@ -248,7 +257,10 @@ export const QueryBuilderParametersPanel = observer(
     };
 
     return (
-      <div className="panel query-builder__variables">
+      <div
+        data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_PARAMETERS}
+        className="panel query-builder__variables"
+      >
         <div className="panel__header">
           <div className="panel__header__title">
             <div className="panel__header__title__label">parameters</div>
@@ -316,7 +328,7 @@ export const QueryBuilderParametersPanel = observer(
         {queryParameterState.parameterValuesEditorState.showModal && (
           <LambdaParameterValuesEditor
             graph={queryBuilderState.graphManagerState.graph}
-            observerContext={queryBuilderState.observableContext}
+            observerContext={queryBuilderState.observerContext}
             lambdaParametersState={queryParameterState}
           />
         )}

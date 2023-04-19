@@ -1,5 +1,83 @@
 # @finos/legend-shared
 
+## 9.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Moved all test utils to a separate export path `@finos/legend-shared/test`.
+
+## 8.2.0
+
+## 8.1.0
+
+### Minor Changes
+
+- [#2094](https://github.com/finos/legend-studio/pull/2094) [`7d8035415`](https://github.com/finos/legend-studio/commit/7d803541596f7dab018fae833eba01fdc7bbfcdb) ([@akphi](https://github.com/akphi)) - Add `FuzzySearch` engine.
+
+## 8.0.5
+
+## 8.0.4
+
+## 8.0.3
+
+## 8.0.2
+
+### Patch Changes
+
+- [#2036](https://github.com/finos/legend-studio/pull/2036) [`06248e48f`](https://github.com/finos/legend-studio/commit/06248e48f346b074b5fdf9795d5bd903a2c82070) ([@xannem](https://github.com/xannem)) - Prettify const names with acronyms
+
+## 8.0.1
+
+## 8.0.0
+
+### Major Changes
+
+- [#1987](https://github.com/finos/legend-studio/pull/1987) [`28ca8adae`](https://github.com/finos/legend-studio/commit/28ca8adaec6eb5e2cd850d247685489b21a5bfbb) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed `Log` to `LogService`.
+
+## 7.0.0
+
+### Major Changes
+
+- [#1973](https://github.com/finos/legend-studio/pull/1973) [`830934048`](https://github.com/finos/legend-studio/commit/8309340482c7a1aa21fedbd90063cd0c521a5ddf) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Moved `EventNotifierService` and `TelemetryService` to `@finos/legend-application` and reshaped `TelemetryService` as well as `TelemetryServicePlugin` to take a `setup()` method for instead of just allowing setting the user ID via `setUserId()`.
+
+### Patch Changes
+
+- [#1973](https://github.com/finos/legend-studio/pull/1973) [`830934048`](https://github.com/finos/legend-studio/commit/8309340482c7a1aa21fedbd90063cd0c521a5ddf) ([@akphi](https://github.com/akphi)) - Fix a bug with `StopWatch` elapsed is not properly calculated.
+
+## 6.2.23
+
+### Patch Changes
+
+- [#1960](https://github.com/finos/legend-studio/pull/1960) [`52c944f93`](https://github.com/finos/legend-studio/commit/52c944f93815d790263711c261ca5514d74b6b28) ([@xannem](https://github.com/xannem)) - Fix pretty const name.
+
+## 6.2.22
+
+## 6.2.21
+
+## 6.2.20
+
+## 6.2.19
+
+### Patch Changes
+
+- [#1909](https://github.com/finos/legend-studio/pull/1909) [`130d068d0`](https://github.com/finos/legend-studio/commit/130d068d0932dde5786ecf8de6dacf2bffcc6143) ([@xannem](https://github.com/xannem)) - Humanize 'ID' and 'Id' names.
+
+## 6.2.18
+
+## 6.2.17
+
+## 6.2.16
+
+### Patch Changes
+
+- [#1873](https://github.com/finos/legend-studio/pull/1873) [`1a5080f89`](https://github.com/finos/legend-studio/commit/1a5080f8914b1827e2f360379f5170f5683453e3) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add `prettyDuaration` to display time interval.
+
+## 6.2.15
+
+## 6.2.14
+
+## 6.2.13
+
 ## 6.2.12
 
 ## 6.2.11

@@ -15,11 +15,10 @@
  */
 
 import {
-  type PackageableElementOption,
   buildElementOption,
   getPackageableElementOptionFormatter,
-  LEGEND_APPLICATION_DOCUMENTATION_KEY,
-} from '@finos/legend-application';
+  type PackageableElementOption,
+} from '@finos/legend-lego/graph-editor';
 import {
   BlankPanelPlaceholder,
   CustomSelectorInput,
@@ -28,6 +27,7 @@ import {
   Modal,
   ModalBody,
   ModalFooter,
+  ModalFooterButton,
   ModalHeader,
   PanelFormSection,
   PanelFormTextField,
@@ -49,8 +49,10 @@ import { buildDefaultInstanceValue } from '../stores/shared/ValueSpecificationEd
 import { variableExpression_setName } from '../stores/shared/ValueSpecificationModifierHelper.js';
 import { BasicValueSpecificationEditor } from './shared/BasicValueSpecificationEditor.js';
 import { VariableViewer } from './shared/QueryBuilderVariableSelector.js';
+import { QUERY_BUILDER_TEST_ID } from '../__lib__/QueryBuilderTesting.js';
+import { QUERY_BUILDER_DOCUMENTATION_KEY } from '../__lib__/QueryBuilderDocumentation.js';
 
-// Note: We currently only allow constant variables for primitive types of multiplicity ONE.
+// NOTE: We currently only allow constant variables for primitive types of multiplicity ONE.
 // This is why we don't show multiplicity in the editor.
 const QueryBuilderConstantExpressionEditor = observer(
   (props: { constantState: QueryBuilderConstantExpressionState }) => {
@@ -98,6 +100,7 @@ const QueryBuilderConstantExpressionEditor = observer(
       const valSpec = buildDefaultInstanceValue(
         queryBuilderState.graphManagerState.graph,
         variableType,
+        queryBuilderState.observerContext,
       );
       constantState.setValueSpec(valSpec);
     };
@@ -135,17 +138,21 @@ const QueryBuilderConstantExpressionEditor = observer(
                 Type
               </div>
               <div className="panel__content__form__section__header__prompt">
-                Data type of the parameter.
+                Data type of the constant.
               </div>
               <CustomSelectorInput
                 placeholder="Choose a type..."
                 options={typeOptions}
                 onChange={changeType}
                 value={selectedType}
-                darkMode={!applicationStore.TEMPORARY__isLightThemeEnabled}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 formatOptionLabel={getPackageableElementOptionFormatter({
-                  darkMode: !applicationStore.TEMPORARY__isLightThemeEnabled,
-                  pureModel: queryBuilderState.graphManagerState.graph,
+                  darkMode:
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled,
                 })}
               />
             </PanelFormSection>
@@ -160,7 +167,7 @@ const QueryBuilderConstantExpressionEditor = observer(
                     constantState.setValueSpec(val);
                   }}
                   graph={queryBuilderState.graphManagerState.graph}
-                  obseverContext={queryBuilderState.observableContext}
+                  obseverContext={queryBuilderState.observerContext}
                   typeCheckOption={{
                     expectedType: variableType,
                     match: variableType === PrimitiveType.DATETIME,
@@ -172,17 +179,13 @@ const QueryBuilderConstantExpressionEditor = observer(
           </ModalBody>
           <ModalFooter>
             {isCreating && (
-              <button
-                className="btn modal__footer__close-btn btn--dark"
+              <ModalFooterButton
+                text="Create"
+                inProgress={Boolean(validationMessage)}
                 onClick={onAction}
-                disabled={Boolean(validationMessage)}
-              >
-                Create
-              </button>
+              />
             )}
-            <button className="btn modal__footer__close-btn" onClick={close}>
-              Close
-            </button>
+            <ModalFooterButton text="Close" onClick={close} />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -199,13 +202,14 @@ export const QueryBuilderConstantExpressionPanel = observer(
     const varNames = queryBuilderState.allVariableNames;
     const seeDocumentation = (): void =>
       queryBuilderState.applicationStore.assistantService.openDocumentationEntry(
-        LEGEND_APPLICATION_DOCUMENTATION_KEY.QUESTION_HOW_TO_ADD_CONSTANTS_TO_QUERY,
+        QUERY_BUILDER_DOCUMENTATION_KEY.QUESTION_HOW_TO_ADD_CONSTANTS_TO_QUERY,
       );
     const addConstant = (): void => {
       if (!isReadOnly) {
         const defaultVal = buildDefaultInstanceValue(
           graph,
           PrimitiveType.STRING,
+          queryBuilderState.observerContext,
         );
         const constantName = generateEnumerableNameFromToken(
           varNames,
@@ -226,7 +230,10 @@ export const QueryBuilderConstantExpressionPanel = observer(
     };
 
     return (
-      <div className="panel query-builder__variables">
+      <div
+        data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_CONSTANTS}
+        className="panel query-builder__variables"
+      >
         <div className="panel__header">
           <div className="panel__header__title">
             <div className="panel__header__title__label">constants</div>
@@ -271,7 +278,7 @@ export const QueryBuilderConstantExpressionPanel = observer(
               ))}
             {!constantState.constants.length && (
               <BlankPanelPlaceholder
-                text="Add a Constants"
+                text="Add a Constant"
                 disabled={isReadOnly}
                 onClick={addConstant}
                 clickActionType="add"

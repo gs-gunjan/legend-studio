@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@use 'mixins' as *;
 
 .input {
   height: 2.8rem;
@@ -52,6 +53,19 @@
   &[disabled] {
     border: 0.1rem solid var(--color-dark-grey-100);
     color: var(--color-dark-grey-400);
+  }
+}
+
+.input--caution {
+  border: 0.1rem solid var(--color-yellow-100);
+  background: var(--color-dark-yellow-500);
+
+  &:hover {
+    border: 0.1rem solid var(--color-yellow-200);
+  }
+
+  &:focus {
+    border: 0.1rem solid var(--color-yellow-200) !important;
   }
 }
 

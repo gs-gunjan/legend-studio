@@ -27,7 +27,6 @@ import {
   GenericType,
   GenericTypeExplicitReference,
   PRIMITIVE_TYPE,
-  SUPPORTED_FUNCTIONS,
 } from '@finos/legend-graph';
 import {
   guaranteeNonNullable,
@@ -49,8 +48,8 @@ import {
   unwrapNotExpression,
 } from '../../../../QueryBuilderValueSpecificationHelper.js';
 import { buildPostFilterConditionExpression } from './QueryBuilderPostFilterOperatorValueSpecificationBuilder.js';
-import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../../../graphManager/QueryBuilderSupportedFunctions.js';
-import { QUERY_BUILDER_HASH_STRUCTURE } from '../../../../../graphManager/QueryBuilderHashUtils.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../../../graph/QueryBuilderMetaModelConst.js';
+import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../../../../QueryBuilderStateHashUtils.js';
 import { buildPrimitiveInstanceValue } from '../../../../shared/ValueSpecificationEditorHelper.js';
 import { instanceValue_setValues } from '../../../../shared/ValueSpecificationModifierHelper.js';
 
@@ -117,6 +116,8 @@ export class QueryBuilderPostFilterOperator_Equal
             .graphManagerState.graph,
           propertyType.path,
           generateDefaultValueForPrimitiveType(propertyType.path),
+          postFilterConditionState.postFilterState.tdsState.queryBuilderState
+            .observerContext,
         );
       }
       case PRIMITIVE_TYPE.DATE: {
@@ -125,6 +126,8 @@ export class QueryBuilderPostFilterOperator_Equal
             .graphManagerState.graph,
           PRIMITIVE_TYPE.STRICTDATE,
           generateDefaultValueForPrimitiveType(propertyType.path),
+          postFilterConditionState.postFilterState.tdsState.queryBuilderState
+            .observerContext,
         );
       }
       default:
@@ -135,9 +138,16 @@ export class QueryBuilderPostFilterOperator_Equal
                 new GenericType(propertyType),
               ),
             );
-            instanceValue_setValues(enumValueInstanceValue, [
-              EnumValueExplicitReference.create(propertyType.values[0] as Enum),
-            ]);
+            instanceValue_setValues(
+              enumValueInstanceValue,
+              [
+                EnumValueExplicitReference.create(
+                  propertyType.values[0] as Enum,
+                ),
+              ],
+              postFilterConditionState.postFilterState.tdsState
+                .queryBuilderState.observerContext,
+            );
             return enumValueInstanceValue;
           }
           throw new UnsupportedOperationError(
@@ -164,7 +174,7 @@ export class QueryBuilderPostFilterOperator_Equal
         PRIMITIVE_TYPE.DATETIME &&
         postFilterConditionState.value?.genericType?.value.rawType.path !==
           PRIMITIVE_TYPE.DATETIME
-        ? SUPPORTED_FUNCTIONS.IS_ON_DAY
+        ? QUERY_BUILDER_SUPPORTED_FUNCTIONS.IS_ON_DAY
         : QUERY_BUILDER_SUPPORTED_FUNCTIONS.EQUAL,
     );
   }
@@ -181,14 +191,16 @@ export class QueryBuilderPostFilterOperator_Equal
           .path === PRIMITIVE_TYPE.DATETIME &&
         expression.parametersValues[1]?.genericType?.value.rawType.path !==
           PRIMITIVE_TYPE.DATETIME
-        ? SUPPORTED_FUNCTIONS.IS_ON_DAY
+        ? QUERY_BUILDER_SUPPORTED_FUNCTIONS.IS_ON_DAY
         : QUERY_BUILDER_SUPPORTED_FUNCTIONS.EQUAL,
       this,
     );
   }
 
   get hashCode(): string {
-    return hashArray([QUERY_BUILDER_HASH_STRUCTURE.POST_FILTER_OPERATOR_EQUAL]);
+    return hashArray([
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.POST_FILTER_OPERATOR_EQUAL,
+    ]);
   }
 }
 export class QueryBuilderPostFilterOperator_NotEqual extends QueryBuilderPostFilterOperator_Equal {
@@ -217,7 +229,7 @@ export class QueryBuilderPostFilterOperator_NotEqual extends QueryBuilderPostFil
 
   override get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.POST_FILTER_OPERATOR_NOT_EQUAL,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.POST_FILTER_OPERATOR_NOT_EQUAL,
     ]);
   }
 }

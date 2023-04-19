@@ -36,7 +36,7 @@ import type { QueryBuilderState } from './QueryBuilderState.js';
 import { buildFilterExpression } from './filter/QueryBuilderFilterValueSpecificationBuilder.js';
 import type { LambdaFunctionBuilderOption } from './QueryBuilderValueSpecificationBuilderHelper.js';
 import type { QueryBuilderFetchStructureState } from './fetch-structure/QueryBuilderFetchStructureState.js';
-import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../graphManager/QueryBuilderSupportedFunctions.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../graph/QueryBuilderMetaModelConst.js';
 import { buildWatermarkExpression } from './watermark/QueryBuilderWatermarkValueSpecificationBuilder.js';
 import { buildExecutionQueryFromLambdaFunction } from './shared/LambdaParameterState.js';
 import type { QueryBuilderConstantExpressionState } from './QueryBuilderConstantsState.js';
@@ -47,6 +47,24 @@ const buildGetAllFunction = (
 ): SimpleFunctionExpression => {
   const _func = new SimpleFunctionExpression(
     extractElementNameFromPath(QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_ALL),
+  );
+  const classInstance = new InstanceValue(
+    multiplicity,
+    GenericTypeExplicitReference.create(new GenericType(_class)),
+  );
+  classInstance.values[0] = PackageableElementExplicitReference.create(_class);
+  _func.parametersValues.push(classInstance);
+  return _func;
+};
+
+const buildGetAllVersionsFunction = (
+  _class: Class,
+  multiplicity: Multiplicity,
+): SimpleFunctionExpression => {
+  const _func = new SimpleFunctionExpression(
+    extractElementNameFromPath(
+      QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_ALL_VERSIONS,
+    ),
   );
   const classInstance = new InstanceValue(
     multiplicity,
@@ -101,20 +119,31 @@ export const buildLambdaFunction = (
     ),
   );
 
-  // build getAll()
-  const getAllFunction = buildGetAllFunction(_class, Multiplicity.ONE);
-
-  // build milestoning parameter(s) for getAll()
   const milestoningStereotype = getMilestoneTemporalStereotype(
     _class,
     queryBuilderState.graphManagerState.graph,
   );
-  if (milestoningStereotype) {
-    queryBuilderState.milestoningState
-      .getMilestoningImplementation(milestoningStereotype)
-      .buildGetAllParameters(getAllFunction);
+
+  if (milestoningStereotype && options?.useAllVersionsForMilestoning) {
+    // build getAllVersions() when we preview data for milestoned classes
+    // because if we use getAll() we need to pass in data to execute the query
+    // but we don't give user that option in this flow.
+    const getAllVersionsFunction = buildGetAllVersionsFunction(
+      _class,
+      Multiplicity.ONE,
+    );
+    lambdaFunction.expressionSequence[0] = getAllVersionsFunction;
+  } else {
+    // build getAll()
+    const getAllFunction = buildGetAllFunction(_class, Multiplicity.ONE);
+    if (milestoningStereotype) {
+      // build milestoning parameter(s) for getAll()
+      queryBuilderState.milestoningState
+        .getMilestoningImplementation(milestoningStereotype)
+        .buildGetAllParameters(getAllFunction);
+    }
+    lambdaFunction.expressionSequence[0] = getAllFunction;
   }
-  lambdaFunction.expressionSequence[0] = getAllFunction;
 
   // build watermark
   buildWatermarkExpression(queryBuilderState.watermarkState, lambdaFunction);
@@ -139,7 +168,10 @@ export const buildLambdaFunction = (
     ];
   }
   // build parameters
-  if (queryBuilderState.parametersState.parameterStates.length) {
+  if (
+    queryBuilderState.parametersState.parameterStates.length &&
+    !options?.useAllVersionsForMilestoning
+  ) {
     if (options?.isBuildingExecutionQuery) {
       buildExecutionQueryFromLambdaFunction(
         lambdaFunction,

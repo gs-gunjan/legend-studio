@@ -42,7 +42,7 @@ import {
   PresetInfo,
   type PluginManagerInfo,
 } from '@finos/legend-shared';
-import { useLegendStudioApplicationStore } from './LegendStudioBaseStoreProvider.js';
+import { useLegendStudioApplicationStore } from './LegendStudioFrameworkProvider.js';
 
 class AppExtensionInfoTreeNodeData implements TreeNodeData {
   id: string;
@@ -161,7 +161,7 @@ export const LegendStudioAppInfo: React.FC<{
   const applicationStore = useLegendStudioApplicationStore();
   const config = applicationStore.config;
   const copyInfo = (): void => {
-    applicationStore
+    applicationStore.clipboardService
       .copyTextToClipboard(
         [
           `Environment: ${config.env}`,
@@ -171,13 +171,14 @@ export const LegendStudioAppInfo: React.FC<{
           `SDLC Server: ${config.sdlcServerUrl}`,
           `Engine Server: ${config.engineServerUrl}`,
           `Depot Server: ${config.depotServerUrl}`,
-          `User Agent: ${window.navigator.userAgent}`,
         ]
           .filter(isNonNullable)
           .join('\n'),
       )
       .then(() =>
-        applicationStore.notifySuccess('Copied application info to clipboard'),
+        applicationStore.notificationService.notifySuccess(
+          'Copied application info to clipboard',
+        ),
       )
       .catch(applicationStore.alertUnhandledError);
   };

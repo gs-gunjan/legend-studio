@@ -34,17 +34,17 @@ import { flowResult } from 'mobx';
 import { useApplicationStore } from '@finos/legend-application';
 import { generateGAVCoordinates } from '@finos/legend-storage';
 import {
-  generateStandaloneDataSpaceViewerRoute,
+  generateDataSpaceViewerRoute,
   generateExploreTaxonomyTreeNodeDataSpaceRoute,
-} from '../stores/LegendTaxonomyRouter.js';
+} from '../__lib__/LegendTaxonomyNavigation.js';
 import {
   DataSpaceViewer,
   type DataSpaceViewerState,
-} from '@finos/legend-extension-dsl-data-space';
+} from '@finos/legend-extension-dsl-data-space/application';
 import { ELEMENT_PATH_DELIMITER } from '@finos/legend-graph';
 import type { DataSpaceTaxonomyContext } from '../stores/TaxonomyExplorerStore.js';
 import type { TaxonomyNodeViewerState } from '../stores/TaxonomyNodeViewerState.js';
-import { useLegendTaxonomyApplicationStore } from './LegendTaxonomyBaseStoreProvider.js';
+import { useLegendTaxonomyApplicationStore } from './LegendTaxonomyFrameworkProvider.js';
 
 const TaxonomyNodeDataSpaceItem = observer(
   (props: {
@@ -72,12 +72,6 @@ const TaxonomyNodeDataSpaceItem = observer(
         </div>
       ) : (
         <div className="taxonomy-node-viewer__explorer__entry__path">
-          <div className="taxonomy-node-viewer__explorer__entry__path__package">
-            {dataSpaceTaxonomyContext.path.substring(
-              0,
-              idx + ELEMENT_PATH_DELIMITER.length,
-            )}
-          </div>
           <div className="taxonomy-node-viewer__explorer__entry__path__name">
             {dataSpaceTaxonomyContext.path.substring(
               idx + ELEMENT_PATH_DELIMITER.length,
@@ -88,9 +82,9 @@ const TaxonomyNodeDataSpaceItem = observer(
     const onContextMenuOpen = (): void => setIsSelectedFromContextMenu(true);
     const onContextMenuClose = (): void => setIsSelectedFromContextMenu(false);
     const copyLink = (): void => {
-      applicationStore
+      applicationStore.clipboardService
         .copyTextToClipboard(
-          applicationStore.navigator.generateAddress(
+          applicationStore.navigationService.navigator.generateAddress(
             generateExploreTaxonomyTreeNodeDataSpaceRoute(
               applicationStore.config.currentTaxonomyTreeOption.key,
               taxonomyNodeViewerState.taxonomyNode.id,
@@ -104,7 +98,9 @@ const TaxonomyNodeDataSpaceItem = observer(
           ),
         )
         .then(() =>
-          applicationStore.notifySuccess('Copied data space link to clipboard'),
+          applicationStore.notificationService.notifySuccess(
+            'Copied data space link to clipboard',
+          ),
         )
         .catch(applicationStore.alertUnhandledError);
     };
@@ -211,9 +207,9 @@ const TaxonomyNodeDataSpaceViewer = observer(
     const queryDataSpace = (): void =>
       nodeViewerState.queryDataSpace(undefined);
     const viewDataSpace = (): void =>
-      applicationStore.navigator.visitAddress(
-        applicationStore.navigator.generateAddress(
-          generateStandaloneDataSpaceViewerRoute(
+      applicationStore.navigationService.navigator.visitAddress(
+        applicationStore.navigationService.navigator.generateAddress(
+          generateDataSpaceViewerRoute(
             generateGAVCoordinates(
               dataSpaceViewerState.groupId,
               dataSpaceViewerState.artifactId,

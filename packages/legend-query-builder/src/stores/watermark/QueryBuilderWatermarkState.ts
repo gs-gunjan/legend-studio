@@ -25,7 +25,7 @@ import {
 } from '@finos/legend-graph';
 import { type Hashable, hashArray } from '@finos/legend-shared';
 import { makeObservable, observable, action, computed } from 'mobx';
-import { QUERY_BUILDER_HASH_STRUCTURE } from '../../graphManager/QueryBuilderHashUtils.js';
+import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../QueryBuilderStateHashUtils.js';
 import type { QueryBuilderState } from '../QueryBuilderState.js';
 import { isValueExpressionReferencedInValue } from '../QueryBuilderValueSpecificationHelper.js';
 
@@ -73,10 +73,7 @@ export class QueryBuilderWatermarkState implements Hashable {
 
   setValue(val: ValueSpecification | undefined): void {
     this.value = val
-      ? observe_ValueSpecification(
-          val,
-          this.queryBuilderState.observableContext,
-        )
+      ? observe_ValueSpecification(val, this.queryBuilderState.observerContext)
       : undefined;
   }
 
@@ -88,7 +85,7 @@ export class QueryBuilderWatermarkState implements Hashable {
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.WATERMARK_STATE,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.WATERMARK_STATE,
       this.value ?? '',
     ]);
   }

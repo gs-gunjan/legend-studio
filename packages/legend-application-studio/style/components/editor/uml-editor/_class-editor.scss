@@ -29,8 +29,11 @@
 }
 
 .property-basic-editor {
-  margin-top: 0.5rem;
   display: flex;
+
+  & + & {
+    margin-top: 0.5rem;
+  }
 
   &__container {
     margin: 0.5rem 0;
@@ -135,6 +138,22 @@
     margin: 0;
     color: var(--color-light-grey-0);
     cursor: default;
+  }
+
+  &__type--error {
+    background: var(--color-red-400);
+  }
+
+  &__error--info {
+    @include flexCenter;
+
+    border-radius: 0.2rem;
+    margin-left: 1rem;
+    color: var(--color-light-grey-300);
+
+    svg {
+      font-size: 1.2rem;
+    }
   }
 
   &__type--show-click-hint {
@@ -346,7 +365,6 @@
 
 .super-type-editor {
   display: flex;
-  margin-top: 0.5rem;
 
   &__container {
     margin: 0.5rem 0;

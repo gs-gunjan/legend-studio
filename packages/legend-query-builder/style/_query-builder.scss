@@ -61,6 +61,12 @@
     flex: 1;
   }
 
+  &__sub-header__query__title {
+    color: var(--color-light-grey-180);
+    margin: 0 1rem;
+    flex: 1;
+  }
+
   &__sub-header__custom-action {
     @include flexCenter;
 
@@ -390,18 +396,22 @@
   &__tds-grid {
     height: 100%;
 
-    // Customize ag-grid theme
-    // See https://www.ag-grid.com/javascript-grid-themes-customising/#customising-themes
-    --ag-border-color: var(--color-dark-grey-200);
-    --ag-background-color: var(--color-dark-grey-50);
-    --ag-foreground-color: var(--color-light-grey-200);
-    --ag-header-background-color: var(--color-dark-grey-100);
-    --ag-header-foreground-color: var(--color-light-grey-50);
-    --ag-balham-active-color: var(--color-blue-200);
-    --ag-odd-row-background-color: var(--color-dark-grey-50);
-    --ag-even-row-background-color: var(--color-dark-grey-50);
-    --ag-row-hover-color: var(--color-dark-blue-shade-100);
-    --ag-row-border-color: var(--color-dark-grey-200);
+    // NOTE: we need to ensure the specificity here in case a later imported ag-theme-balham-dark
+    // might override our theme customization here
+    &.ag-theme-balham-dark {
+      // Customize ag-grid theme
+      // See https://www.ag-grid.com/javascript-grid-themes-customising/#customising-themes
+      --ag-border-color: var(--color-dark-grey-200);
+      --ag-background-color: var(--color-dark-grey-50);
+      --ag-foreground-color: var(--color-light-grey-200);
+      --ag-header-background-color: var(--color-dark-grey-100);
+      --ag-header-foreground-color: var(--color-light-grey-50);
+      --ag-balham-active-color: var(--color-blue-200);
+      --ag-odd-row-background-color: var(--color-dark-grey-50);
+      --ag-even-row-background-color: var(--color-dark-grey-50);
+      --ag-row-hover-color: var(--color-dark-blue-shade-100);
+      --ag-row-border-color: var(--color-dark-grey-200);
+    }
   }
 
   &__header__actions {
@@ -508,19 +518,30 @@
     }
   }
 
+  &__export__dropdown[disabled],
+  &__export__dropdown[disabled]:hover {
+    background: var(--color-dark-grey-250);
+    color: var(--color-dark-grey-500);
+  }
+
+  &__export__dropdown:hover {
+    color: var(--color-light-grey-50);
+  }
+
   &__export__dropdown {
     @include flexVCenter;
 
     margin: 0 0.5rem;
     height: 2.2rem;
     border: 0.1rem solid var(--color-dark-grey-250);
+    background: var(--color-dark-grey-300);
+    color: var(--color-light-grey-180);
 
     &__label {
       @include flexCenter;
       @include flexConstantDimension;
 
       height: 100%;
-      color: var(--color-dark-grey-500);
       font-weight: 500;
       font-size: 1.2rem;
       width: 5rem;
@@ -558,6 +579,10 @@
 
   &__query-option {
     font-size: 1.8rem;
+  }
+
+  &__query-option--small {
+    font-size: 1.4rem;
   }
 }
 
@@ -784,6 +809,7 @@
 
       margin-right: 1rem;
       background: var(--color-red-400);
+      color: var(--color-white);
       height: 2.2rem;
       border-radius: 0.2rem;
       padding: 0.5rem;

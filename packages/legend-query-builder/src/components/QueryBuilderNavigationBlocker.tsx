@@ -29,13 +29,12 @@ export const QueryBuilderNavigationBlocker = observer(
     const applicationStore = useApplicationStore();
 
     useEffect(() => {
-      applicationStore.navigator.blockNavigation(
+      applicationStore.navigationService.navigator.blockNavigation(
         [(): boolean => queryBuilderState.changeDetectionState.hasChanged],
         (onProceed: () => void): void => {
-          applicationStore.setActionAlertInfo({
-            // TODO?: should we make this message generic like the `BeforeUnloadEvent` message?
+          applicationStore.alertService.setActionAlertInfo({
             message:
-              'Unsaved changes to your query will be lost if you continue. Do you still want to proceed?',
+              'Unsaved changes will be lost if you continue. Do you still want to proceed?',
             type: ActionAlertType.CAUTION,
             actions: [
               {
@@ -52,12 +51,12 @@ export const QueryBuilderNavigationBlocker = observer(
           });
         },
         () =>
-          applicationStore.notifyWarning(
+          applicationStore.notificationService.notifyWarning(
             `Navigation from the query builder is blocked`,
           ),
       );
       return (): void => {
-        applicationStore.navigator.unblockNavigation();
+        applicationStore.navigationService.navigator.unblockNavigation();
       };
     }, [applicationStore, queryBuilderState]);
 

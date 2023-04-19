@@ -24,23 +24,21 @@ import {
 } from 'react';
 import { observer, useLocalObservable } from 'mobx-react-lite';
 import { debounce, guaranteeNonNullable } from '@finos/legend-shared';
-import { useSDLCServerClient, WorkspaceType } from '@finos/legend-server-sdlc';
+import { WorkspaceType } from '@finos/legend-server-sdlc';
 import {
   type WorkspaceOption,
   ActivityBarMenu,
   buildWorkspaceOption,
   LEGEND_STUDIO_TEST_ID,
   useLegendStudioApplicationStore,
+  useLegendStudioBaseStore,
 } from '@finos/legend-application-studio';
 import { UpdateServiceQuerySetupStore } from '../../stores/studio/UpdateServiceQuerySetupStore.js';
-import {
-  type ProjectData,
-  useDepotServerClient,
-} from '@finos/legend-server-depot';
+import { type ProjectData } from '@finos/legend-server-depot';
 import {
   type ServiceQueryUpdaterSetupPathParams,
   generateServiceQueryUpdaterRoute,
-} from '../../stores/studio/DSL_Service_LegendStudioRouter.js';
+} from '../../__lib__/studio/DSL_Service_LegendStudioNavigation.js';
 import { flowResult } from 'mobx';
 import {
   type ServiceInfo,
@@ -65,7 +63,7 @@ import {
   UserIcon,
   UsersIcon,
 } from '@finos/legend-art';
-import { useParams } from '@finos/legend-application';
+import { useParams } from '@finos/legend-application/browser';
 
 const UpdateServiceQuerySetupStoreContext = createContext<
   UpdateServiceQuerySetupStore | undefined
@@ -75,14 +73,13 @@ const UpdateServiceQuerySetupStoreProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const applicationStore = useLegendStudioApplicationStore();
-  const sdlcServerClient = useSDLCServerClient();
-  const depotServerClient = useDepotServerClient();
+  const baseStore = useLegendStudioBaseStore();
   const store = useLocalObservable(
     () =>
       new UpdateServiceQuerySetupStore(
         applicationStore,
-        sdlcServerClient,
-        depotServerClient,
+        baseStore.sdlcServerClient,
+        baseStore.depotServerClient,
       ),
   );
   return (
@@ -231,7 +228,7 @@ export const UpdateServiceQuerySetup = withUpdateServiceQuerySetupStore(
         setupStore.currentGroupWorkspace &&
         setupStore.currentWorkspaceService
       ) {
-        applicationStore.navigator.goToLocation(
+        applicationStore.navigationService.navigator.goToLocation(
           generateServiceQueryUpdaterRoute(
             setupStore.currentProject.groupId,
             setupStore.currentProject.artifactId,
@@ -257,7 +254,7 @@ export const UpdateServiceQuerySetup = withUpdateServiceQuerySetupStore(
           ),
         ).catch(applicationStore.alertUnhandledError);
         if (!setupStore.currentProjectConfigurationStatus?.isConfigured) {
-          applicationStore.notifyIllegalState(
+          applicationStore.notificationService.notifyIllegalState(
             `Can't edit current service query as the current project is not configured`,
           );
         }
@@ -301,7 +298,7 @@ export const UpdateServiceQuerySetup = withUpdateServiceQuerySetupStore(
             ),
           ).catch(applicationStore.alertUnhandledError);
           if (!setupStore.currentProjectConfigurationStatus?.isConfigured) {
-            applicationStore.notifyIllegalState(
+            applicationStore.notificationService.notifyIllegalState(
               `Can't edit service query as the project is not configured`,
             );
           }

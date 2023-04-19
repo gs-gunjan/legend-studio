@@ -20,19 +20,21 @@ import fs from 'fs';
 import axios, { type AxiosResponse } from 'axios';
 import {
   WebConsole,
-  Log,
+  LogService,
   LogEvent,
   ContentType,
   type PlainObject,
   HttpHeader,
 } from '@finos/legend-shared';
 import {
-  TEST__GraphManagerPluginManager,
-  TEST__buildGraphWithEntities,
-  TEST__getTestGraphManagerState,
   GRAPH_MANAGER_EVENT,
   type V1_PureModelContextData,
 } from '@finos/legend-graph';
+import {
+  TEST__buildGraphWithEntities,
+  TEST__getTestGraphManagerState,
+  TEST__GraphManagerPluginManager,
+} from '@finos/legend-graph/test';
 
 // NOTE: when we reorganize manual tests, i.e. when we remove this module
 // we should consider moving this performance test to another module, maybe
@@ -114,21 +116,21 @@ function generatePureCode(options: ProfilingConfiguration): string {
 
 const logPhase = (
   phase: Profile_TEST_PHASE,
-  log: Log,
+  logService: LogService,
   debug?: boolean,
 ): void => {
   if (debug) {
-    log.info(LogEvent.create(`Running phase '${phase}'`));
+    logService.info(LogEvent.create(`Running phase '${phase}'`));
   }
 };
 
 const logSuccess = (
   phase: Profile_TEST_PHASE,
-  log: Log,
+  logService: LogService,
   debug?: boolean,
 ): void => {
   if (debug) {
-    log.info(LogEvent.create(`Success running phase '${phase}'`));
+    logService.info(LogEvent.create(`Success running phase '${phase}'`));
   }
 };
 
@@ -154,7 +156,7 @@ const runProfiling = async (config: ProfilingConfiguration): Promise<void> => {
   const pluginManager = new TEST__GraphManagerPluginManager();
   pluginManager.usePlugins([new WebConsole()]);
   pluginManager.install();
-  const log = new Log();
+  const log = new LogService();
   log.registerPlugins(pluginManager.getLoggerPlugins());
   const graphManagerState = TEST__getTestGraphManagerState(pluginManager, log);
 
@@ -196,7 +198,7 @@ const runProfiling = async (config: ProfilingConfiguration): Promise<void> => {
   );
   if (config.debug) {
     log.info(
-      LogEvent.create(GRAPH_MANAGER_EVENT.GRAPH_ENTITIES_FETCHED),
+      LogEvent.create(GRAPH_MANAGER_EVENT.FETCH_GRAPH_ENTITIES__SUCCESS),
       `[entities: ${entities.length}]`,
     );
   }
@@ -210,7 +212,7 @@ const runProfiling = async (config: ProfilingConfiguration): Promise<void> => {
   });
   if (config.debug) {
     log.info(
-      LogEvent.create(GRAPH_MANAGER_EVENT.GRAPH_INITIALIZED),
+      LogEvent.create(GRAPH_MANAGER_EVENT.INITIALIZE_GRAPH__SUCCESS),
       Date.now() - startTime,
       'ms',
     );
@@ -223,7 +225,7 @@ const runProfiling = async (config: ProfilingConfiguration): Promise<void> => {
   );
   if (config.debug) {
     log.info(
-      LogEvent.create(GRAPH_MANAGER_EVENT.GRAPH_PROTOCOL_SERIALIZED),
+      LogEvent.create(GRAPH_MANAGER_EVENT.SERIALIZE_GRAPH_PROTOCOL__SUCCESS),
       Date.now() - startTime,
       'ms',
     );

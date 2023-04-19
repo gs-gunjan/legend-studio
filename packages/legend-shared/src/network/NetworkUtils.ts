@@ -69,6 +69,20 @@ const DEFAULT_CLIENT_REQUEST_OPTIONS = {
   redirect: 'manual', // avoid following authentication redirects
 };
 
+// NOTE: We could further improve this by using the MIME library https://flaviocopes.com/node-get-file-extension-mime-type/
+export const getContentTypeFileExtension = (type: ContentType): string => {
+  switch (type) {
+    case ContentType.APPLICATION_JSON:
+      return 'json';
+    case ContentType.APPLICATION_XML:
+      return 'xml';
+    case ContentType.TEXT_CSV:
+      return 'csv';
+    default:
+      return 'txt';
+  }
+};
+
 /**
  * NOTE: the latter headers value will override the those of the first
  */
@@ -535,10 +549,10 @@ export const getQueryParameters = <T>(url: string, isFullUrl = false): T => {
 };
 
 export const getQueryParameterValue = (
+  key: string,
   data: Record<string, string | undefined>,
-  paramKey: string,
 ): string | undefined => {
-  const paramValue = data[paramKey];
+  const paramValue = data[key];
   return paramValue ? decodeURIComponent(paramValue) : undefined;
 };
 
@@ -553,7 +567,7 @@ export const stringifyQueryParams = (params: PlainObject): string => {
   return queryString.stringify(data);
 };
 
-export const addQueryParamsStringToUrl = (
+export const addQueryParametersToUrl = (
   url: string,
   val: string | undefined,
 ): string => (val ? `${url}?${val}` : url);

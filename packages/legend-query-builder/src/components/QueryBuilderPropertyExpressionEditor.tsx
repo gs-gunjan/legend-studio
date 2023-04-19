@@ -25,6 +25,7 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
+  ModalFooterButton,
 } from '@finos/legend-art';
 import { observer } from 'mobx-react-lite';
 import {
@@ -87,7 +88,7 @@ const DerivedPropertyParameterValueEditor = observer(
           derivedPropertyExpressionState.propertyExpression,
           item.variable,
           idx + 1,
-          derivedPropertyExpressionState.queryBuilderState.observableContext,
+          derivedPropertyExpressionState.queryBuilderState.observerContext,
         );
       },
       [derivedPropertyExpressionState, idx],
@@ -155,7 +156,7 @@ const DerivedPropertyParameterValueEditor = observer(
             guaranteeType(nextExpression, AbstractPropertyExpression),
             guaranteeNonNullable(newParameterValue),
             index + 1,
-            queryBuilderState.observableContext,
+            queryBuilderState.observerContext,
           );
         }
       });
@@ -168,7 +169,7 @@ const DerivedPropertyParameterValueEditor = observer(
         isDefaultDatePropagationSupported(nextExpression, queryBuilderState) &&
         nextExpression.func.value.genericType.value.rawType instanceof Class
       ) {
-        queryBuilderState.applicationStore.setActionAlertInfo({
+        queryBuilderState.applicationStore.alertService.setActionAlertInfo({
           message:
             'You have just changed a milestoning date in the property expression chain, this date will be propagated down the rest of the chain. Do you want to proceed? Otherwise, you can choose to propagate the default milestoning dates instead.',
           type: ActionAlertType.CAUTION,
@@ -200,9 +201,10 @@ const DerivedPropertyParameterValueEditor = observer(
             variable,
             derivedPropertyExpressionState.queryBuilderState.graphManagerState
               .graph,
+            derivedPropertyExpressionState.queryBuilderState.observerContext,
           ),
         idx + 1,
-        derivedPropertyExpressionState.queryBuilderState.observableContext,
+        derivedPropertyExpressionState.queryBuilderState.observerContext,
       );
       const derivedPropertyExpressionStates =
         derivedPropertyExpressionState.propertyExpressionState
@@ -243,13 +245,12 @@ const DerivedPropertyParameterValueEditor = observer(
                   val,
                   idx + 1,
                   derivedPropertyExpressionState.queryBuilderState
-                    .observableContext,
+                    .observerContext,
                 );
               }}
               graph={graph}
               obseverContext={
-                derivedPropertyExpressionState.queryBuilderState
-                  .observableContext
+                derivedPropertyExpressionState.queryBuilderState.observerContext
               }
               typeCheckOption={{
                 expectedType: parameterType,
@@ -304,7 +305,25 @@ export const QueryBuilderPropertyExpressionEditor = observer(
     const { propertyExpressionState } = props;
     const handleClose = (): void =>
       propertyExpressionState.setIsEditingDerivedProperty(false);
-
+    const isParameterCompatibleWithDerivedProperty = (
+      variable: VariableExpression,
+      derivedProperties: QueryBuilderDerivedPropertyExpressionState[],
+    ): boolean =>
+      Boolean(
+        derivedProperties.find((dp) => {
+          if (!variable.genericType?.value.rawType) {
+            return false;
+          }
+          return (
+            isSuperType(
+              dp.derivedProperty.genericType.value.rawType,
+              variable.genericType.value.rawType,
+            ) ||
+            dp.derivedProperty.genericType.value.rawType.name ===
+              variable.genericType.value.rawType.name
+          );
+        }),
+      );
     return (
       <Dialog
         open={Boolean(
@@ -334,16 +353,17 @@ export const QueryBuilderPropertyExpressionEditor = observer(
             <ModalBody className="query-builder__variables__modal__body">
               <VariableSelector
                 queryBuilderState={propertyExpressionState.queryBuilderState}
+                filterBy={(v: VariableExpression) =>
+                  isParameterCompatibleWithDerivedProperty(
+                    v,
+                    propertyExpressionState.derivedPropertyExpressionStates,
+                  )
+                }
               />
             </ModalBody>
           </ModalBody>
           <ModalFooter>
-            <button
-              className="btn modal__footer__close-btn"
-              onClick={handleClose}
-            >
-              Done
-            </button>
+            <ModalFooterButton text="Done" onClick={handleClose} />
           </ModalFooter>
         </Modal>
       </Dialog>

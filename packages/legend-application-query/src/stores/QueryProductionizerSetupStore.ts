@@ -35,7 +35,7 @@ import {
 import { parseProjectIdentifier } from '@finos/legend-storage';
 import { flow, makeObservable, observable } from 'mobx';
 import type { LegendQueryApplicationStore } from './LegendQueryBaseStore.js';
-import { EXTERNAL_APPLICATION_NAVIGATION__generateStudioProductionizeQueryUrl } from './LegendQueryRouter.js';
+import { EXTERNAL_APPLICATION_NAVIGATION__generateStudioProductionizeQueryUrl } from '../__lib__/LegendQueryNavigation.js';
 import { BaseQuerySetupStore } from './QuerySetupStore.js';
 
 export class QueryProductionizerSetupStore extends BaseQuerySetupStore {
@@ -79,19 +79,19 @@ export class QueryProductionizerSetupStore extends BaseQuerySetupStore {
       (entry) => entry.sdlcProjectIDPrefix === projectIDPrefix,
     );
     if (matchingSDLCEntry) {
-      this.applicationStore.setBlockingAlert({
+      this.applicationStore.alertService.setBlockingAlert({
         message: `Loading query...`,
         prompt: 'Please do not close the application',
         showLoading: true,
       });
-      this.applicationStore.navigator.goToAddress(
+      this.applicationStore.navigationService.navigator.goToAddress(
         EXTERNAL_APPLICATION_NAVIGATION__generateStudioProductionizeQueryUrl(
           matchingSDLCEntry.url,
           this.currentQuery.id,
         ),
       );
     } else {
-      this.applicationStore.notifyWarning(
+      this.applicationStore.notificationService.notifyWarning(
         `Can't find the corresponding SDLC instance to productionize the query`,
       );
     }
@@ -105,13 +105,18 @@ export class QueryProductionizerSetupStore extends BaseQuerySetupStore {
           (yield this.graphManagerState.graphManager.getLightQuery(
             queryId,
           )) as LightQuery;
-        this.currentQueryInfo =
+        const queryInfo =
           (yield this.graphManagerState.graphManager.getQueryInfo(
             queryId,
           )) as QueryInfo;
+        queryInfo.content =
+          (yield this.graphManagerState.graphManager.prettyLambdaContent(
+            queryInfo.content,
+          )) as string;
+        this.currentQueryInfo = queryInfo;
       } catch (error) {
         assertErrorThrown(error);
-        this.applicationStore.notifyError(error);
+        this.applicationStore.notificationService.notifyError(error);
       } finally {
         this.loadQueryState.reset();
       }
@@ -136,7 +141,7 @@ export class QueryProductionizerSetupStore extends BaseQuerySetupStore {
       this.loadQueriesState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
       this.loadQueriesState.fail();
     }
   }

@@ -15,95 +15,38 @@
  */
 
 import {
-  type SuperGenericFunction,
   TracerService,
-  TelemetryService,
-  assertTrue,
-  Log,
+  LogService,
   LogEvent,
+  uuid,
+  ActionState,
   assertErrorThrown,
-  isString,
-  ApplicationError,
+  IllegalStateError,
+  type Writable,
 } from '@finos/legend-shared';
-import { action, makeObservable, observable } from 'mobx';
-import { APPLICATION_EVENT } from './ApplicationEvent.js';
+import { APPLICATION_EVENT } from '../__lib__/LegendApplicationEvent.js';
 import type { LegendApplicationConfig } from '../application/LegendApplicationConfig.js';
-import type { WebApplicationNavigator } from './WebApplicationNavigator.js';
 import type { LegendApplicationPluginManager } from '../application/LegendApplicationPluginManager.js';
 import { DocumentationService } from './DocumentationService.js';
 import { AssistantService } from './AssistantService.js';
-import { EventService } from './EventService.js';
+import { EventService } from './event/EventService.js';
 import { ApplicationNavigationContextService } from './ApplicationNavigationContextService.js';
 import type { LegendApplicationPlugin } from './LegendApplicationPlugin.js';
-import { CommandCenter } from './CommandCenter.js';
+import { CommandService } from './CommandService.js';
 import { KeyboardShortcutsService } from './KeyboardShortcutsService.js';
-
-export enum ActionAlertType {
-  STANDARD = 'STANDARD',
-  CAUTION = 'CAUTION',
-}
-
-export enum ActionAlertActionType {
-  STANDARD = 'STANDARD',
-  PROCEED_WITH_CAUTION = 'PROCEED_WITH_CAUTION',
-  PROCEED = 'PROCEED',
-}
-
-export interface ActionAlertInfo {
-  title?: string;
-  message: string;
-  prompt?: string;
-  type?: ActionAlertType;
-  onClose?: () => void;
-  onEnter?: () => void;
-  actions: {
-    label: string;
-    default?: boolean;
-    handler?: () => void; // default to dismiss
-    type?: ActionAlertActionType;
-  }[];
-}
-
-export interface BlockingAlertInfo {
-  message: string;
-  prompt?: string;
-  showLoading?: boolean;
-}
-
-export const DEFAULT_NOTIFICATION_HIDE_TIME = 6000; // ms
-export const DEFAULT_ERROR_NOTIFICATION_HIDE_TIME = 10000; // ms
-
-export enum NOTIFCATION_SEVERITY {
-  ILEGAL_STATE = 'ILEGAL_STATE', // highest priority since this implies bugs - we expect user to never see this
-  ERROR = 'ERROR',
-  WARNING = 'WARNING',
-  SUCCESS = 'SUCCESS',
-  INFO = 'INFO',
-}
-
-export interface NotificationAction {
-  icon: React.ReactNode;
-  action: () => void;
-}
-
-export class Notification {
-  severity: NOTIFCATION_SEVERITY;
-  message: string;
-  actions: NotificationAction[];
-  autoHideDuration?: number | undefined;
-
-  constructor(
-    severity: NOTIFCATION_SEVERITY,
-    message: string,
-    actions: NotificationAction[],
-    autoHideDuration: number | undefined,
-  ) {
-    this.severity = severity;
-    this.message = message;
-    this.actions = actions;
-    this.autoHideDuration = autoHideDuration;
-  }
-}
+import { TerminalService } from './TerminalService.js';
+import { AlertService } from './AlertService.js';
+import { NotificationService } from './NotificationService.js';
+import { IdentityService } from './IdentityService.js';
+import { StorageService } from './storage/StorageService.js';
+import { TelemetryService } from './TelemetryService.js';
+import { TimeService } from './TimeService.js';
+import { LayoutService } from './LayoutService.js';
+import { ClipboardService } from './ClipboardService.js';
+import { NavigationService } from './navigation/NavigationService.js';
+import { SettingService } from './SettingService.js';
+import { DefaultNavigator } from './navigation/DefaultNavigator.js';
+import type { ApplicationPlatform } from './platform/ApplicationPlatform.js';
 
 export type GenericLegendApplicationStore = ApplicationStore<
   LegendApplicationConfig,
@@ -114,257 +57,122 @@ export class ApplicationStore<
   T extends LegendApplicationConfig,
   V extends LegendApplicationPluginManager<LegendApplicationPlugin>,
 > {
-  config: T;
-  pluginManager: V;
+  readonly uuid = uuid();
 
-  // navigation
-  navigator: WebApplicationNavigator;
-  navigationContextService: ApplicationNavigationContextService;
+  readonly config: T;
+  readonly pluginManager: V;
+  readonly initState = ActionState.create();
+  readonly platform?: ApplicationPlatform | undefined;
 
-  // TODO: refactor this to `NotificationService` including notifications and alerts
-  notification?: Notification | undefined;
-  blockingAlertInfo?: BlockingAlertInfo | undefined;
-  actionAlertInfo?: ActionAlertInfo | undefined;
+  // core
+  readonly timeService: TimeService;
+  readonly logService: LogService;
+  readonly storageService: StorageService;
+  readonly settingService: SettingService;
+  readonly alertService: AlertService;
+  readonly notificationService: NotificationService;
 
-  // TODO: consider renaming this to `LogService`
-  log: Log = new Log();
+  readonly identityService: IdentityService;
+  readonly commandService: CommandService;
+  readonly keyboardShortcutsService: KeyboardShortcutsService;
+  readonly layoutService: LayoutService;
+  readonly clipboardService: ClipboardService;
+  readonly terminalService: TerminalService;
+  readonly navigationService: NavigationService;
+  readonly navigationContextService: ApplicationNavigationContextService;
 
-  // documentation & help
-  documentationService: DocumentationService;
-  assistantService: AssistantService;
+  // support
+  readonly documentationService: DocumentationService;
+  readonly assistantService: AssistantService;
 
-  // communication
-  eventService = new EventService();
-  telemetryService = new TelemetryService();
-  tracerService = new TracerService();
+  // event
+  readonly eventService: EventService;
+  readonly telemetryService: TelemetryService;
+  readonly tracerService: TracerService;
 
-  // control and interactions
-  commandCenter: CommandCenter;
-  keyboardShortcutsService: KeyboardShortcutsService;
-
-  // TODO: config
-  // See https://github.com/finos/legend-studio/issues/407
-
-  // backdrop
-  backdropContainerElementID?: string | undefined;
-  showBackdrop = false;
-
-  // theme
-  /**
-   * NOTE: this is the poor man way of doing theming
-   * we would need to revise this flag later
-   * See https://github.com/finos/legend-studio/issues/264
-   */
-  TEMPORARY__isLightThemeEnabled = false;
-
-  constructor(config: T, navigator: WebApplicationNavigator, pluginManager: V) {
-    makeObservable(this, {
-      notification: observable,
-      blockingAlertInfo: observable,
-      actionAlertInfo: observable,
-      TEMPORARY__isLightThemeEnabled: observable,
-      backdropContainerElementID: observable,
-      showBackdrop: observable,
-      setBackdropContainerElementID: action,
-      setShowBackdrop: action,
-      setBlockingAlert: action,
-      setActionAlertInfo: action,
-      setNotification: action,
-      notify: action,
-      notifySuccess: action,
-      notifyWarning: action,
-      notifyIllegalState: action,
-      notifyError: action,
-      TEMPORARY__setIsLightThemeEnabled: action,
-    });
-
+  constructor(config: T, pluginManager: V) {
     this.config = config;
-    this.navigator = navigator;
     this.pluginManager = pluginManager;
-    // NOTE: set the logger first so other loading could use the configured logger
-    this.log.registerPlugins(pluginManager.getLoggerPlugins());
 
+    this.timeService = new TimeService();
+    // NOTE: set the logger first so other loading could use the configured logger
+    this.logService = new LogService();
+    this.logService.registerPlugins(pluginManager.getLoggerPlugins());
+    this.storageService = new StorageService(this);
+    this.settingService = new SettingService(this);
+    this.alertService = new AlertService(this);
+    this.notificationService = new NotificationService();
+
+    this.identityService = new IdentityService(this);
+    this.layoutService = new LayoutService(this);
+    this.clipboardService = new ClipboardService(this);
+    this.terminalService = new TerminalService(this);
+    this.commandService = new CommandService(this);
+    this.keyboardShortcutsService = new KeyboardShortcutsService(this);
+
+    this.navigationService = new NavigationService(new DefaultNavigator());
     this.navigationContextService = new ApplicationNavigationContextService(
       this,
     );
+
     this.documentationService = new DocumentationService(this);
     this.assistantService = new AssistantService(this);
-    this.telemetryService.registerPlugins(
-      pluginManager.getTelemetryServicePlugins(),
-    );
-    this.commandCenter = new CommandCenter(this);
-    this.keyboardShortcutsService = new KeyboardShortcutsService(this);
-    this.tracerService.registerPlugins(pluginManager.getTracerServicePlugins());
+
+    this.eventService = new EventService();
     this.eventService.registerEventNotifierPlugins(
       pluginManager.getEventNotifierPlugins(),
     );
+    this.telemetryService = new TelemetryService(this);
+    this.telemetryService.registerPlugins(
+      pluginManager.getTelemetryServicePlugins(),
+    );
+    this.telemetryService.setup();
+    this.tracerService = new TracerService();
+    this.tracerService.registerPlugins(pluginManager.getTracerServicePlugins());
   }
 
-  TEMPORARY__setIsLightThemeEnabled(val: boolean): void {
-    this.TEMPORARY__isLightThemeEnabled = val;
-  }
-
-  /**
-   * Change the ID used to find the base element to mount the backdrop on.
-   * This is useful when we want to use backdrop with embedded application which
-   * requires its own backdrop usage.
-   */
-  setBackdropContainerElementID(val: string | undefined): void {
-    this.backdropContainerElementID = val;
-  }
-
-  setShowBackdrop(val: boolean): void {
-    this.showBackdrop = val;
-  }
-
-  setBlockingAlert(alertInfo: BlockingAlertInfo | undefined): void {
-    if (alertInfo) {
-      this.keyboardShortcutsService.blockGlobalHotkeys();
-    } else {
-      this.keyboardShortcutsService.unblockGlobalHotkeys();
-    }
-    this.blockingAlertInfo = alertInfo;
-  }
-
-  setActionAlertInfo(alertInfo: ActionAlertInfo | undefined): void {
-    if (this.actionAlertInfo && alertInfo) {
-      this.notifyIllegalState(
-        'Action alert is stacked: new alert is invoked while another one is being displayed',
+  async initialize(platform: ApplicationPlatform): Promise<void> {
+    if (!this.initState.isInInitialState) {
+      this.notificationService.notifyIllegalState(
+        'Application store is re-initialized',
       );
+      return;
     }
-    if (alertInfo) {
-      this.keyboardShortcutsService.blockGlobalHotkeys();
-    } else {
-      this.keyboardShortcutsService.unblockGlobalHotkeys();
-    }
-    this.actionAlertInfo = alertInfo;
-  }
+    this.initState.inProgress();
 
-  setNotification(notification: Notification | undefined): void {
-    this.notification = notification;
-  }
-
-  notify(
-    message: string,
-    actions?: NotificationAction[],
-    autoHideDuration?: number | null,
-  ): void {
-    this.setNotification(
-      new Notification(
-        NOTIFCATION_SEVERITY.INFO,
-        message,
-        actions ?? [],
-        autoHideDuration === null
-          ? undefined
-          : autoHideDuration ?? DEFAULT_NOTIFICATION_HIDE_TIME,
-      ),
-    );
-  }
-
-  notifySuccess(
-    message: string,
-    actions?: NotificationAction[],
-    autoHideDuration?: number | null,
-  ): void {
-    this.setNotification(
-      new Notification(
-        NOTIFCATION_SEVERITY.SUCCESS,
-        message,
-        actions ?? [],
-        autoHideDuration === null
-          ? undefined
-          : autoHideDuration ?? DEFAULT_NOTIFICATION_HIDE_TIME,
-      ),
-    );
-  }
-
-  notifyWarning(
-    content: string | Error,
-    actions?: NotificationAction[],
-    autoHideDuration?: number | null,
-  ): void {
-    this.setNotification(
-      new Notification(
-        NOTIFCATION_SEVERITY.WARNING,
-        content instanceof Error ? content.message : content,
-        actions ?? [],
-        autoHideDuration === null
-          ? undefined
-          : autoHideDuration ?? DEFAULT_NOTIFICATION_HIDE_TIME,
-      ),
-    );
-  }
-
-  notifyIllegalState(
-    message: string,
-    actions?: NotificationAction[],
-    autoHideDuration?: number | null,
-  ): void {
-    this.setNotification(
-      new Notification(
-        NOTIFCATION_SEVERITY.ILEGAL_STATE,
-        isString(message) ? `[PLEASE NOTIFY DEVELOPER] ${message}` : message,
-        actions ?? [],
-        autoHideDuration === null
-          ? undefined
-          : autoHideDuration ?? DEFAULT_NOTIFICATION_HIDE_TIME,
-      ),
-    );
-  }
-
-  notifyError(content: Error | string, actions?: NotificationAction[]): void {
-    let message: string | undefined;
-    if (content instanceof ApplicationError) {
-      message = content.detail;
-    } else if (content instanceof Error) {
-      message = content.message;
-    } else {
-      assertTrue(isString(content), `Can't display error`);
-      message = content;
-    }
-    if (message) {
-      this.setNotification(
-        new Notification(
-          NOTIFCATION_SEVERITY.ERROR,
-          message,
-          actions ?? [],
-          undefined,
-        ),
-      );
-    }
-  }
-
-  /**
-   * This function creates a more user-friendly way to throw error in the UI. Rather than crashing the whole app, we will
-   * just notify and replacing the value should get with an alternative (e.g. `undefined`). A good use-case for this
-   * is where we would not expect an error to throw (i.e. `IllegalStateError`), but we want to be sure that if the error
-   * ever occurs, it still shows very apparently in the UI, as such, printing out in the console is not good enough,
-   * but crashing the app is bad too, so this is a good balance.
-   */
-  notifyAndReturnAlternativeOnError = <U extends SuperGenericFunction, W>(
-    fn: U,
-    alternative: W,
-  ): ReturnType<U> | W | undefined => {
     try {
-      return fn();
+      if (this.platform) {
+        throw new IllegalStateError(`Platform is already configured`);
+      }
+      (this as Writable<ApplicationStore<T, V>>).platform = platform;
+      (this as Writable<ApplicationStore<T, V>>).navigationService =
+        new NavigationService(platform.getNavigator());
+
+      await platform.initialize();
+
+      this.initState.pass();
     } catch (error) {
       assertErrorThrown(error);
-      this.notifyIllegalState(error.message);
-      return alternative;
+      this.notificationService.notifyError(error);
+      this.logService.error(
+        LogEvent.create(APPLICATION_EVENT.APPLICATION_LOAD__FAILURE),
+        'Failed to load Legend application',
+      );
+      this.initState.fail();
     }
-  };
+  }
 
   /**
    * When we call store/state functions from the component, we should handle error thrown at these functions instead
    * of throwing them to the UI. This enforces that by throwing `IllegalStateError`
    */
   alertUnhandledError = (error: Error): void => {
-    this.log.error(
+    this.logService.error(
       LogEvent.create(APPLICATION_EVENT.ILLEGAL_APPLICATION_STATE_OCCURRED),
       'Encountered unhandled error in component tree',
       error,
     );
-    this.notifyIllegalState(error.message);
+    this.notificationService.notifyIllegalState(error.message);
   };
 
   /**
@@ -375,16 +183,4 @@ export class ApplicationStore<
     (): void => {
       actionFn().catch(this.alertUnhandledError);
     };
-
-  async copyTextToClipboard(text: string): Promise<void> {
-    // This is a much cleaner way which requires HTTPS
-    // See https://developers.google.com/web/updates/2018/03/clipboardapi
-    await navigator.clipboard.writeText(text).catch((error) => {
-      this.notifyError(error);
-    });
-  }
-
-  notifyUnsupportedFeature(featureName: string): void {
-    this.notifyWarning(`Unsupported feature: ${featureName}`);
-  }
 }

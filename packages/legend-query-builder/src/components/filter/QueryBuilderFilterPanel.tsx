@@ -29,7 +29,7 @@ import {
   FilledTriangleIcon,
   CompressIcon,
   ExpandIcon,
-  BrushIcon,
+  TrashIcon,
   NewFolderIcon,
   CircleIcon,
   CaretDownIcon,
@@ -68,7 +68,7 @@ import {
   debounce,
   UnsupportedOperationError,
 } from '@finos/legend-shared';
-import { QUERY_BUILDER_TEST_ID } from '../QueryBuilder_TestID.js';
+import { QUERY_BUILDER_TEST_ID } from '../../__lib__/QueryBuilderTesting.js';
 import { useApplicationStore } from '@finos/legend-application';
 import type { ValueSpecification } from '@finos/legend-graph';
 import {
@@ -162,7 +162,7 @@ const QueryBuilderFilterConditionEditor = observer(
         if (isTypeCompatibleForAssignment(parameterType, conditionValueType)) {
           node.condition.setValue(item.variable);
         } else {
-          applicationStore.notifyWarning(
+          applicationStore.notificationService.notifyWarning(
             `Incompatible parameter type ${parameterType?.name}. ${parameterType?.name} is not compatible with type ${conditionValueType.name}.`,
           );
         }
@@ -269,7 +269,7 @@ const QueryBuilderFilterConditionEditor = observer(
                     valueSpecification={node.condition.value}
                     setValueSpecification={changeValueSpecification}
                     graph={graph}
-                    obseverContext={queryBuilderState.observableContext}
+                    obseverContext={queryBuilderState.observerContext}
                     typeCheckOption={{
                       expectedType:
                         node.condition.propertyExpressionState
@@ -423,7 +423,7 @@ const QueryBuilderFilterTreeNodeContainer = observer(
             );
           } catch (error) {
             assertErrorThrown(error);
-            applicationStore.notifyWarning(error.message);
+            applicationStore.notificationService.notifyWarning(error.message);
             return;
           }
           if (node instanceof QueryBuilderFilterTreeGroupNodeData) {
@@ -759,7 +759,7 @@ export const QueryBuilderFilterPanel = observer(
           );
         } catch (error) {
           assertErrorThrown(error);
-          applicationStore.notifyWarning(error.message);
+          applicationStore.notificationService.notifyWarning(error.message);
           return;
         }
         // NOTE: unfocus the current node when DnD a new node to the tree
@@ -850,7 +850,7 @@ export const QueryBuilderFilterPanel = observer(
               tabIndex={-1}
               title="Cleanup Tree"
             >
-              <BrushIcon />
+              <TrashIcon />
             </button>
             <button
               className="panel__header__action"

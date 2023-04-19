@@ -26,9 +26,9 @@ import {
   toGrammarString,
   toTitleCase,
   TITLE_CASE_EXCEPTION_WORDS,
-  isCamelCase,
+  parseCSVString,
 } from '../FormatterUtils.js';
-import { unitTest } from '../../application/TestUtils.js';
+import { unitTest } from '../../__test-utils__/TestUtils.js';
 
 test(unitTest('To sentence case'), () => {
   expect(toSentenceCase('')).toEqual('');
@@ -65,17 +65,26 @@ test(unitTest('Prettify CONST name'), () => {
   expect(prettyCONSTName('TOM_TOM')).toEqual('Tom Tom');
 });
 
-test(unitTest('Camel/Pascal case check'), () => {
-  expect(isCamelCase('aSomething')).toBe(true);
-  expect(isCamelCase('Something')).toBe(true);
-  expect(isCamelCase('SomethingSomething')).toBe(true);
-  expect(isCamelCase(undefined)).toBe(false);
-  expect(isCamelCase('')).toBe(false);
-  expect(isCamelCase('a')).toBe(false);
-  expect(isCamelCase('abcd')).toBe(false);
-  expect(isCamelCase('AAAAA_AAAA')).toBe(false);
-  expect(isCamelCase('AABASD')).toBe(false);
-  expect(isCamelCase('AAasd')).toBe(false);
+test(unitTest('Prettify CONST name with capitalizations'), () => {
+  expect(prettyCONSTName('fiveTwoEight')).toEqual('Five Two Eight');
+  expect(prettyCONSTName('FIVETwoEight')).toEqual('FIVE Two Eight');
+  expect(prettyCONSTName('FIVETwoEIGHT')).toEqual('FIVE Two EIGHT');
+  expect(prettyCONSTName('fiveTWOEight')).toEqual('Five TWO Eight');
+  expect(prettyCONSTName('fiveTwoEIGHT')).toEqual('Five Two EIGHT');
+  expect(prettyCONSTName('   fiveTwoEIGHT   ')).toEqual('Five Two EIGHT');
+  expect(prettyCONSTName('five_Two_EIGHT')).toEqual('Five Two EIGHT');
+  expect(prettyCONSTName('five5TWOEight')).toEqual('Five 5 TWO Eight');
+  expect(prettyCONSTName('five5TwoEIGHT')).toEqual('Five 5 Two EIGHT');
+  expect(prettyCONSTName('five5TWOEight9Two')).toEqual(
+    'Five 5 TWO Eight 9 Two',
+  );
+  expect(prettyCONSTName('five28FOUR91')).toEqual('Five 28 FOUR 91');
+  expect(prettyCONSTName('FIVE5TwoEIGHT')).toEqual('FIVE 5 Two EIGHT');
+  expect(prettyCONSTName('I')).toEqual('I');
+  expect(prettyCONSTName('ID')).toEqual('Id');
+  expect(prettyCONSTName('Id')).toEqual('Id');
+  expect(prettyCONSTName('Personid')).toEqual('Personid');
+  expect(prettyCONSTName('PERSONID')).toEqual('Personid');
 });
 
 test(unitTest('Minify JSON string'), () => {
@@ -128,4 +137,22 @@ test(unitTest('Format lossless JSON'), () => {
   expect(tryToMinifyLosslessJSONString('{"a": "1.00000"}')).toEqual(
     '{"a":"1.00000"}',
   );
+});
+
+test(unitTest('Separate String to List'), () => {
+  const stringSingleWord = 'value';
+  expect(parseCSVString(stringSingleWord)).toEqual(['value']);
+
+  const stringSeparatedByComma = '5,2,8';
+  expect(parseCSVString(stringSeparatedByComma)).toEqual(['5', '2', '8']);
+
+  const stringSeparatedByNewLine = '4\n9\n1';
+  expect(parseCSVString(stringSeparatedByNewLine)).toEqual(['4', '9', '1']);
+
+  const stringNewLinesAndCommas = '5,2,8,4\n2,0,1,0\n9,1';
+  expect(parseCSVString(stringNewLinesAndCommas)).toEqual([
+    '5,2,8,4',
+    '2,0,1,0',
+    '9,1',
+  ]);
 });

@@ -16,8 +16,8 @@
 
 import { useRef, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { EntityDiffViewState } from '../../../stores/editor-state/entity-diff-editor-state/EntityDiffViewState.js';
-import { EntityDiffSideBarItem } from '../../editor/edit-panel/diff-editor/EntityDiffView.js';
+import { EntityDiffViewState } from '../../../stores/editor/editor-state/entity-diff-editor-state/EntityDiffViewState.js';
+import { EntityDiffSideBarItem } from '../editor-group/diff-editor/EntityDiffView.js';
 import {
   clsx,
   PanelLoadingIndicator,
@@ -29,14 +29,14 @@ import {
   ExternalLinkSquareIcon,
   PanelContent,
 } from '@finos/legend-art';
-import { ACTIVITY_MODE } from '../../../stores/EditorConfig.js';
-import { generateReviewRoute } from '../../../stores/LegendStudioRouter.js';
-import { LEGEND_STUDIO_TEST_ID } from '../../LegendStudioTestID.js';
+import { ACTIVITY_MODE } from '../../../stores/editor/EditorConfig.js';
+import { generateReviewRoute } from '../../../__lib__/LegendStudioNavigation.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../../__lib__/LegendStudioTesting.js';
 import { flowResult } from 'mobx';
 import type { EntityDiff } from '@finos/legend-server-sdlc';
-import { entityDiffSorter } from '../../../stores/EditorSDLCState.js';
+import { entityDiffSorter } from '../../../stores/editor/EditorSDLCState.js';
 import { useEditorStore } from '../EditorStoreProvider.js';
-import { useLegendStudioApplicationStore } from '../../LegendStudioBaseStoreProvider.js';
+import { useLegendStudioApplicationStore } from '../../LegendStudioFrameworkProvider.js';
 import { formatDistanceToNow } from '@finos/legend-shared';
 
 export const WorkspaceReviewDiffs = observer(() => {
@@ -258,8 +258,8 @@ export const WorkspaceReview = observer(() => {
                       className="workspace-review__title__content__input__link"
                       tabIndex={-1}
                       onClick={(): void =>
-                        applicationStore.navigator.visitAddress(
-                          applicationStore.navigator.generateAddress(
+                        applicationStore.navigationService.navigator.visitAddress(
+                          applicationStore.navigationService.navigator.generateAddress(
                             generateReviewRoute(
                               workspaceReview.projectId,
                               workspaceReview.id,
@@ -299,11 +299,10 @@ export const WorkspaceReview = observer(() => {
                 </button>
               </div>
               <div className="workspace-review__title__content__review-status">
-                created{' '}
-                {formatDistanceToNow(workspaceReview.createdAt, {
+                {`created ${formatDistanceToNow(workspaceReview.createdAt, {
                   includeSeconds: true,
                   addSuffix: true,
-                })}
+                })}`}
               </div>
             </>
           )}

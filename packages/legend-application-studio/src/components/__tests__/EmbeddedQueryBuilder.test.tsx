@@ -16,16 +16,16 @@
 
 import { test } from '@jest/globals';
 import { fireEvent, getByText, waitFor } from '@testing-library/react';
-import { integrationTest, createMock } from '@finos/legend-shared';
-import { MockedMonacoEditorInstance } from '@finos/legend-art';
+import { integrationTest, createMock } from '@finos/legend-shared/test';
 import { QUERY_BUILDER_TEST_ID } from '@finos/legend-query-builder';
 import {
   TEST__openElementFromExplorerTree,
   TEST__setUpEditorWithDefaultSDLCData,
-} from '../EditorComponentTestUtils.js';
-import { FormModeCompilationOutcome } from '../../stores/EditorGraphState.js';
-import { LEGEND_STUDIO_TEST_ID } from '../LegendStudioTestID.js';
-import { TEST__buildQueryBuilderMockedEditorStore } from './EmbeddedQueryBuilderTestUtils.js';
+} from '../editor/__test-utils__/EditorComponentTestUtils.js';
+import { GraphCompilationOutcome } from '../../stores/editor/EditorGraphState.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../__lib__/LegendStudioTesting.js';
+import { TEST__buildQueryBuilderMockedEditorStore } from '../__test-utils__/EmbeddedQueryBuilderTestUtils.js';
+import { MockedMonacoEditorInstance } from '@finos/legend-lego/code-editor/test';
 
 const entities = [
   {
@@ -200,11 +200,11 @@ test(integrationTest('Open query builder by querying a class'), async () => {
     { entities },
   );
 
-  const MockedGlobalCompileInFormModeFn = createMock();
-  MOCK__editorStore.graphState.globalCompileInFormMode =
-    MockedGlobalCompileInFormModeFn;
-  MockedGlobalCompileInFormModeFn.mockResolvedValue(
-    FormModeCompilationOutcome.SUCCEEDED,
+  const MOCK__GlobalCompileInFormModeFn = createMock();
+  MOCK__editorStore.graphEditorMode.globalCompile =
+    MOCK__GlobalCompileInFormModeFn;
+  MOCK__editorStore.graphState.setMostRecentCompilationOutcome(
+    GraphCompilationOutcome.SUCCEEDED,
   );
   MOCK__editorStore.graphManagerState.graphManager.analyzeMappingModelCoverage =
     createMock();
@@ -237,11 +237,11 @@ test(
       { entities },
     );
 
-    const MockedGlobalCompileInFormModeFn = createMock();
-    MOCK__editorStore.graphState.globalCompileInFormMode =
-      MockedGlobalCompileInFormModeFn;
-    MockedGlobalCompileInFormModeFn.mockResolvedValue(
-      FormModeCompilationOutcome.SUCCEEDED,
+    const MOCK__GlobalCompileInFormModeFn = createMock();
+    MOCK__editorStore.graphEditorMode.globalCompile =
+      MOCK__GlobalCompileInFormModeFn;
+    MOCK__editorStore.graphState.setMostRecentCompilationOutcome(
+      GraphCompilationOutcome.SUCCEEDED,
     );
     MOCK__editorStore.graphManagerState.graphManager.lambdasToPureCode =
       createMock();
@@ -276,11 +276,11 @@ test(
       { entities },
     );
 
-    const MockedGlobalCompileInFormModeFn = createMock();
-    MOCK__editorStore.graphState.globalCompileInFormMode =
-      MockedGlobalCompileInFormModeFn;
-    MockedGlobalCompileInFormModeFn.mockResolvedValue(
-      FormModeCompilationOutcome.SUCCEEDED,
+    const MOCK__GlobalCompileInFormModeFn = createMock();
+    MOCK__editorStore.graphEditorMode.globalCompile =
+      MOCK__GlobalCompileInFormModeFn;
+    MOCK__editorStore.graphState.setMostRecentCompilationOutcome(
+      GraphCompilationOutcome.SUCCEEDED,
     );
     MOCK__editorStore.graphManagerState.graphManager.lambdasToPureCode =
       createMock();
@@ -290,8 +290,8 @@ test(
 
     await TEST__openElementFromExplorerTree('model::MyMapping', renderResult);
     fireEvent.click(renderResult.getByText('test_1'));
-    await waitFor(() => renderResult.getByTitle('Edit query...'));
-    fireEvent.click(renderResult.getByTitle('Edit query...'));
+    await waitFor(() => renderResult.getByText('Edit Query'));
+    fireEvent.click(renderResult.getByText('Edit Query'));
 
     await waitFor(() =>
       renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER),
@@ -308,11 +308,11 @@ test(
       { entities },
     );
 
-    const MockedGlobalCompileInFormModeFn = createMock();
-    MOCK__editorStore.graphState.globalCompileInFormMode =
-      MockedGlobalCompileInFormModeFn;
-    MockedGlobalCompileInFormModeFn.mockResolvedValue(
-      FormModeCompilationOutcome.SUCCEEDED,
+    const MOCK__GlobalCompileInFormModeFn = createMock();
+    MOCK__editorStore.graphEditorMode.globalCompile =
+      MOCK__GlobalCompileInFormModeFn;
+    MOCK__editorStore.graphState.setMostRecentCompilationOutcome(
+      GraphCompilationOutcome.SUCCEEDED,
     );
     MOCK__editorStore.graphManagerState.graphManager.lambdasToPureCode =
       createMock();
@@ -322,8 +322,8 @@ test(
 
     await TEST__openElementFromExplorerTree('model::MyService', renderResult);
     fireEvent.click(renderResult.getByText('Execution'));
-    await waitFor(() => renderResult.getByTitle('Edit query...'));
-    fireEvent.click(renderResult.getByTitle('Edit query...'));
+    await waitFor(() => renderResult.getByText('Edit Query'));
+    fireEvent.click(renderResult.getByText('Edit Query'));
 
     await waitFor(() =>
       renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER),

@@ -26,15 +26,26 @@ export const getBaseJestConfig = (isGlobal) => {
     babelConfigPath: resolve(__dirname, '../../babel.config.cjs'),
     TEMPORARY__esmPackagesToTransform: [
       // These packages went full ESM so we would need to transpile them until we can switch to run Jest in ESM mode
+
+      // react-dnd
       // See https://github.com/react-dnd/react-dnd/issues/3443
       'react-dnd',
       'dnd-core',
       '@react-dnd',
+
+      // query-string
       // See https://github.com/sindresorhus/query-string/releases/tag/v8.0.0
       'query-string',
       'filter-obj',
       'decode-uri-component',
       'split-on-first',
+
+      // fuse.js
+      // See https://github.com/krisk/Fuse/pull/692
+      'fuse.js',
+
+      // yaml
+      'yaml',
     ],
   });
 
@@ -62,6 +73,11 @@ export const getBaseJestConfig = (isGlobal) => {
       // See https://github.com/lodash/lodash/issues/5107
       // See https://github.com/finos/legend-studio/issues/502
       '^lodash-es$': 'lodash',
+      // Force to use the ESM distribution of Fuse
+      // as it does not yet have proper support for Typescript ESM
+      // See https://github.com/krisk/Fuse/pull/692
+      // However, if we
+      '^fuse.js$': 'fuse.js/dist/fuse.esm.js',
     },
     modulePathIgnorePatterns: [
       'packages/.*/lib/',
@@ -123,11 +139,19 @@ export const getBaseJestDOMProjectConfig = (projectName, packageDir) => {
     setupFiles: [
       ...config.setupFiles,
       '@finos/legend-dev-utils/jest/setupDOMPolyfills',
+      'jest-canvas-mock',
+    ],
+    setupFilesAfterEnv: [
+      ...config.setupFilesAfterEnv,
+      // NOTE: we need to call this before each test since there's an issue
+      // with jest-canvas-mock and jest.resetAllMocks(), which is called when we set `restoreMocks: true`
+      // See https://github.com/hustcc/jest-canvas-mock/issues/103
+      '@finos/legend-dev-utils/jest/mockCanvas',
     ],
     moduleNameMapper: {
       ...config.moduleNameMapper,
       '^monaco-editor$':
-        '@finos/legend-art/lib/testMocks/MockedMonacoEditor.js',
+        '@finos/legend-lego/code-editor/test/MockedMonacoEditor.js',
       /**
        * Here, we mock pure ESM modules so we don't have to transform them while running test
        *
@@ -141,8 +165,8 @@ export const getBaseJestDOMProjectConfig = (projectName, packageDir) => {
        * See https://github.com/finos/legend-studio/issues/502
        */
       '^react-markdown$':
-        '@finos/legend-art/lib/testMocks/MockedReactMarkdown.js',
-      '^remark-gfm$': '@finos/legend-art/lib/testMocks/MockedRemarkGFM.js',
+        '@finos/legend-art/markdown/test/MockedReactMarkdown.js',
+      '^remark-gfm$': '@finos/legend-art/markdown/test/MockedRemarkGFM.js',
     },
   };
 };

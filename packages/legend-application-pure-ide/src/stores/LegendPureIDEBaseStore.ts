@@ -24,13 +24,11 @@ export type LegendPureIDEApplicationStore = ApplicationStore<
 >;
 
 export class LegendPureIDEBaseStore {
-  applicationStore: LegendPureIDEApplicationStore;
-  pluginManager: LegendPureIDEPluginManager;
+  readonly applicationStore: LegendPureIDEApplicationStore;
+  readonly pluginManager: LegendPureIDEPluginManager;
 
   constructor(applicationStore: LegendPureIDEApplicationStore) {
     this.applicationStore = applicationStore;
     this.pluginManager = applicationStore.pluginManager;
-
-    this.applicationStore.assistantService.hideAssistant();
   }
 }

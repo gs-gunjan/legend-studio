@@ -15,8 +15,11 @@
  */
 
 import type { LegendStudioPluginManager } from '../application/LegendStudioPluginManager.js';
-import type { ElementEditorState } from './editor-state/element-editor-state/ElementEditorState.js';
-import type { EditorExtensionState, EditorStore } from './EditorStore.js';
+import type { ElementEditorState } from './editor/editor-state/element-editor-state/ElementEditorState.js';
+import type {
+  EditorExtensionState,
+  EditorStore,
+} from './editor/EditorStore.js';
 import type {
   NewElementDriver,
   NewElementState,
@@ -24,14 +27,14 @@ import type {
 import type { Class, PackageableElement, Testable } from '@finos/legend-graph';
 import {
   type DocumentationEntry,
-  type PureGrammarTextSuggestion,
   LegendApplicationPlugin,
 } from '@finos/legend-application';
-import type { TestableMetadata } from './sidebar-state/testable/GlobalTestRunnerState.js';
+import type { TestableMetadata } from './editor/sidebar-state/testable/GlobalTestRunnerState.js';
 import type {
   ExtensionModelImportRendererState,
   ModelImporterState,
-} from './editor-state/ModelImporterState.js';
+} from './editor/editor-state/ModelImporterState.js';
+import type { PureGrammarTextSuggestion } from '@finos/legend-lego/code-editor';
 
 export type ExplorerContextMenuItemRendererConfiguration = {
   key: string;
@@ -98,14 +101,14 @@ export abstract class LegendStudioApplicationPlugin extends LegendApplicationPlu
   getExtraEditorExtensionStateCreators?(): EditorExtensionStateCreator[];
 
   /**
-   * Get the list of renderers for the preview panel of a class.
-   */
-  getExtraClassPreviewRenderers?(): ClassPreviewRenderer[];
-
-  /**
    * Get the list of configurations for the renderer of editor extension states.
    */
   getExtraEditorExtensionComponentRendererConfigurations?(): EditorExtensionComponentRendererConfiguration[];
+
+  /**
+   * Get the list of renderers for the preview panel of a class.
+   */
+  getExtraClassPreviewRenderers?(): ClassPreviewRenderer[];
 
   /**
    * Get the list of extension configurations for model importer.
@@ -117,6 +120,10 @@ export abstract class LegendStudioApplicationPlugin extends LegendApplicationPlu
    */
   getExtraTestableMetadata?(): TestableMetadataGetter[];
 }
+
+export type PureGrammarElementLabeler = (
+  metamodel: PackageableElement,
+) => string | undefined;
 
 export type ElementClassifier = (
   metamodel: PackageableElement,
@@ -195,6 +202,21 @@ export type PureGrammarParserElementSnippetSuggestionsGetter = (
  */
 export interface DSL_LegendStudioApplicationPlugin_Extension
   extends LegendStudioApplicationPlugin {
+  /**
+   * Get the list of supported Pure grammar parsers.
+   */
+  getExtraPureGrammarParserNames?(): string[];
+
+  /**
+   * Get the list of supported Pure grammar keywords.
+   */
+  getExtraPureGrammarKeywords?(): string[];
+
+  /**
+   * Get the list of Pure grammar element labelers.
+   */
+  getExtraPureGrammarElementLabelers?(): PureGrammarElementLabeler[];
+
   /**
    * Get the list of the supported packageable element type specifiers.
    */

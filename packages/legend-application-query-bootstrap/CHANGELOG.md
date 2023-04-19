@@ -1,5 +1,103 @@
 # @finos/legend-application-query-bootstrap
 
+## 9.23.0
+
+## 9.22.0
+
+## 9.21.0
+
+## 9.20.0
+
+## 9.19.0
+
+## 9.18.0
+
+## 9.17.0
+
+## 9.16.0
+
+## 9.15.0
+
+## 9.14.0
+
+## 9.13.0
+
+## 9.12.0
+
+## 9.11.0
+
+## 9.10.0
+
+## 9.9.0
+
+## 9.8.0
+
+## 9.7.0
+
+## 9.6.0
+
+## 9.5.0
+
+## 9.4.0
+
+## 9.3.0
+
+## 9.2.0
+
+## 9.1.0
+
+## 9.0.0
+
+## 8.45.0
+
+### Patch Changes
+
+- [#1927](https://github.com/finos/legend-studio/pull/1927) [`e351947ff`](https://github.com/finos/legend-studio/commit/e351947fffc792113128678a83721b89f51b2361) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support check entitlements in Dataspace.
+
+## 8.44.0
+
+## 8.43.0
+
+### Patch Changes
+
+- [#1939](https://github.com/finos/legend-studio/pull/1939) [`a6cb0d1c7`](https://github.com/finos/legend-studio/commit/a6cb0d1c7b35ac0b71fd29473d3e84d0bf2161e6) ([@xannem](https://github.com/xannem)) - Increase readability of query builder icon option buttons
+
+## 8.42.0
+
+## 8.41.0
+
+## 8.40.0
+
+### Patch Changes
+
+- [#1911](https://github.com/finos/legend-studio/pull/1911) [`418d96ab7`](https://github.com/finos/legend-studio/commit/418d96ab772f2fab5ffd89ed8c34b96a7593e1b9) ([@xannem](https://github.com/xannem)) - Clarify status of sorting column in query.
+
+## 8.39.0
+
+## 8.38.0
+
+### Patch Changes
+
+- [#1882](https://github.com/finos/legend-studio/pull/1882) [`87c71c559`](https://github.com/finos/legend-studio/commit/87c71c5592e4d1cbcc04ef9d915d7ac2f072ad1f) ([@xannem](https://github.com/xannem)) - Styling feedbacks for query upon closing and running.
+
+## 8.37.0
+
+## 8.36.0
+
+## 8.35.0
+
+## 8.34.0
+
+## 8.33.0
+
+## 8.32.0
+
+## 8.31.0
+
+## 8.30.0
+
+## 8.29.0
+
 ## 8.28.0
 
 ## 8.27.0

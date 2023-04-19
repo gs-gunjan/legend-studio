@@ -16,23 +16,20 @@
 
 import { describe, test, expect } from '@jest/globals';
 import { fireEvent, getByText, waitFor } from '@testing-library/react';
-import {
-  integrationTest,
-  guaranteeNonNullable,
-  createMock,
-} from '@finos/legend-shared';
-import { MockedMonacoEditorInstance } from '@finos/legend-art';
+import { guaranteeNonNullable } from '@finos/legend-shared';
+import { integrationTest, createMock } from '@finos/legend-shared/test';
 import { QUERY_BUILDER_TEST_ID } from '@finos/legend-query-builder';
 import {
   TEST__openElementFromExplorerTree,
   TEST__setUpEditorWithDefaultSDLCData,
-} from '../EditorComponentTestUtils.js';
-import { FormModeCompilationOutcome } from '../../stores/EditorGraphState.js';
-import { LEGEND_STUDIO_TEST_ID } from '../LegendStudioTestID.js';
-import { queryClass } from '../editor/edit-panel/uml-editor/ClassQueryBuilder.js';
+} from '../editor/__test-utils__/EditorComponentTestUtils.js';
+import { GraphCompilationOutcome } from '../../stores/editor/EditorGraphState.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../__lib__/LegendStudioTesting.js';
+import { queryClass } from '../editor/editor-group/uml-editor/ClassQueryBuilder.js';
 import { extractElementNameFromPath } from '@finos/legend-graph';
 import TEST_DATA__ClassQueryBuilder from './TEST_DATA__ClassQueryBuilderModel.json';
-import { TEST__buildQueryBuilderMockedEditorStore } from './EmbeddedQueryBuilderTestUtils.js';
+import { TEST__buildQueryBuilderMockedEditorStore } from '../__test-utils__/EmbeddedQueryBuilderTestUtils.js';
+import { MockedMonacoEditorInstance } from '@finos/legend-lego/code-editor/test';
 
 type TestCase = [
   string,
@@ -94,12 +91,13 @@ describe(
           },
         );
 
-        const MockedGlobalCompileInFormModeFn = createMock();
-        MOCK__editorStore.graphState.globalCompileInFormMode =
-          MockedGlobalCompileInFormModeFn;
-        MockedGlobalCompileInFormModeFn.mockResolvedValue(
-          FormModeCompilationOutcome.SUCCEEDED,
+        const MOCK__GlobalCompileInFormModeFn = createMock();
+        MOCK__editorStore.graphEditorMode.globalCompile =
+          MOCK__GlobalCompileInFormModeFn;
+        MOCK__editorStore.graphState.setMostRecentCompilationOutcome(
+          GraphCompilationOutcome.SUCCEEDED,
         );
+
         MOCK__editorStore.graphManagerState.graphManager.analyzeMappingModelCoverage =
           createMock();
         MockedMonacoEditorInstance.getValue.mockReturnValue('');

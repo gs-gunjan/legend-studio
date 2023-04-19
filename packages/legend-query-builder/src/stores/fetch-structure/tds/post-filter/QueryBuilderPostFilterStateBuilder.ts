@@ -45,10 +45,11 @@ import {
   TDS_COLUMN_GETTER,
   getTypeFromDerivedProperty,
 } from './QueryBuilderPostFilterState.js';
-import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../../graphManager/QueryBuilderSupportedFunctions.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../../graph/QueryBuilderMetaModelConst.js';
 import type { QueryBuilderState } from '../../../QueryBuilderState.js';
 import { QueryBuilderTDSState } from '../QueryBuilderTDSState.js';
 import { toGroupOperation } from '../../../QueryBuilderGroupOperationHelper.js';
+import { simplifyValueExpression } from '../../../QueryBuilderValueSpecificationHelper.js';
 
 const findProjectionColumnState = (
   propertyExpression: AbstractPropertyExpression,
@@ -150,11 +151,17 @@ export const buildPostFilterConditionState = (
 
     // get operation value specification
     const value = expression.parametersValues[1];
+
     // create state
     postConditionState = new PostFilterConditionState(
       postFilterState,
       columnState,
-      value,
+      value
+        ? simplifyValueExpression(
+            value,
+            postFilterState.tdsState.queryBuilderState.observerContext,
+          )
+        : undefined,
       operator,
     );
 
@@ -178,6 +185,24 @@ const processPostFilterTree = (
   postFilterState: QueryBuilderPostFilterState,
   parentPostFilterNodeId: string | undefined,
 ): void => {
+  // // NOTE: This checks if the expression is a simple function expression of Minus
+  // // since negative numbers are returned as a SimpleFunctionExpression of minus(number)
+  // // rather than a PrimitiveInstanceValue of -number, so here
+  // // we replace the parameter value of the expression directly with a PrimitiveInstanceValue
+  // if (
+  //   expression.parametersValues[1] instanceof SimpleFunctionExpression &&
+  //   expression.parametersValues[1].functionName === MINUS_STRING &&
+  //   expression.parametersValues[1].parametersValues[0] instanceof
+  //     PrimitiveInstanceValue
+  // ) {
+  //   expression.parametersValues[1].parametersValues[0].values[0] =
+  //     parseFloat(
+  //       expression.parametersValues[1].parametersValues[0].values[0] as string,
+  //     ) * -1;
+  //   expression.parametersValues[1] =
+  //     expression.parametersValues[1].parametersValues[0];
+  // }
+
   const parentNode = parentPostFilterNodeId
     ? postFilterState.getNode(parentPostFilterNodeId)
     : undefined;

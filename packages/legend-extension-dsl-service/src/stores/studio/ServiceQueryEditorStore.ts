@@ -29,10 +29,9 @@ import {
 } from '@finos/legend-application-studio';
 import {
   type Service,
-  type ServiceRegistrationResult,
-  GraphManagerState,
   PureExecution,
   ServiceExecutionMode,
+  type ServiceRegistrationSuccess,
 } from '@finos/legend-graph';
 import {
   type QueryBuilderState,
@@ -72,7 +71,7 @@ import {
   makeObservable,
   observable,
 } from 'mobx';
-import { parseServiceCoordinates } from './DSL_Service_LegendStudioRouter.js';
+import { parseServiceCoordinates } from '../../__lib__/studio/DSL_Service_LegendStudioNavigation.js';
 
 type ProjectServiceCoordinates = {
   projectId: string;
@@ -100,16 +99,7 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
     sdlcServerClient: SDLCServerClient,
     depotServerClient: DepotServerClient,
   ) {
-    const graphManagerState = new GraphManagerState(
-      applicationStore.pluginManager,
-      applicationStore.log,
-    );
-    super(
-      applicationStore,
-      sdlcServerClient,
-      depotServerClient,
-      graphManagerState,
-    );
+    super(applicationStore, sdlcServerClient, depotServerClient);
 
     makeObservable(this, {
       queryBuilderState: observable,
@@ -204,11 +194,11 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
       this.queryBuilderState = queryBuilderState;
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.log.error(
+      this.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.WORKSPACE_SETUP_FAILURE),
         error,
       );
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
     }
   }
 
@@ -226,7 +216,7 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
     }
 
     this.localChangesState.pushChangesState.inProgress();
-    this.applicationStore.setBlockingAlert({
+    this.applicationStore.alertService.setBlockingAlert({
       message: `Saving workspace...`,
       prompt: 'Please do not close the application',
       showLoading: true,
@@ -268,14 +258,14 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
         `Can't save workspace: empty change set was pushed - this may be due to an error with change detection`,
       );
 
-      this.applicationStore.log.info(
-        LogEvent.create(LEGEND_STUDIO_APP_EVENT.WORKSPACE_LOCAL_CHANGES_PUSHED),
+      this.applicationStore.logService.info(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.PUSH_LOCAL_CHANGES__SUCCESS),
       );
 
       onSuccess?.();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.log.error(
+      this.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
@@ -285,21 +275,21 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
       ) {
         // NOTE: a confict here indicates that the reference revision ID sent along with update call
         // does not match the HEAD of the workspace, therefore, we need to prompt user to refresh the application
-        this.applicationStore.notifyWarning(
+        this.applicationStore.notificationService.notifyWarning(
           `Can't save workspace: current workspace revision is not the latest; please backup your work and refresh the application`,
         );
       } else {
-        this.applicationStore.notifyError(error);
+        this.applicationStore.notificationService.notifyError(error);
       }
     } finally {
-      this.applicationStore.setBlockingAlert(undefined);
+      this.applicationStore.alertService.setBlockingAlert(undefined);
       this.localChangesState.pushChangesState.complete();
     }
   }
 
   *recreateWorkspace(): GeneratorFn<void> {
     try {
-      this.applicationStore.setBlockingAlert({
+      this.applicationStore.alertService.setBlockingAlert({
         message: 'Recreating workspace...',
         prompt: 'Please do not close the application',
         showLoading: true,
@@ -313,16 +303,16 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
         this.sdlcState.activeWorkspace.workspaceId,
         this.sdlcState.activeWorkspace.workspaceType,
       );
-      this.applicationStore.navigator.reload();
+      this.applicationStore.navigationService.navigator.reload();
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.log.error(
+      this.applicationStore.logService.error(
         LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
-      this.applicationStore.notifyError(error);
+      this.applicationStore.notificationService.notifyError(error);
     } finally {
-      this.applicationStore.setBlockingAlert(undefined);
+      this.applicationStore.alertService.setBlockingAlert(undefined);
     }
   }
 
@@ -370,7 +360,7 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
             {
               TEMPORARY__semiInteractiveOverridePattern: overridePattern,
             },
-          )) as ServiceRegistrationResult;
+          )) as ServiceRegistrationSuccess;
 
         this.registerServiceState.setMessage(`Activating service...`);
         yield this.graphManagerState.graphManager.activateService(
@@ -384,7 +374,7 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
           'Service registration pattern is missing or empty',
         );
 
-        this.applicationStore.setActionAlertInfo({
+        this.applicationStore.alertService.setActionAlertInfo({
           message: `Service with pattern ${serviceRegistrationResult.pattern} registered and activated`,
           prompt:
             'You can now launch and monitor the operation of your service',
@@ -394,7 +384,7 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
               label: 'Launch Service',
               type: ActionAlertActionType.PROCEED,
               handler: (): void => {
-                this.applicationStore.navigator.visitAddress(
+                this.applicationStore.navigationService.navigator.visitAddress(
                   generateServiceManagementUrl(
                     registrationConfig.managementUrl,
                     serviceRegistrationResult.pattern,
@@ -411,11 +401,11 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
         });
       } catch (error) {
         assertErrorThrown(error);
-        this.applicationStore.log.error(
+        this.applicationStore.logService.error(
           LogEvent.create(LEGEND_STUDIO_APP_EVENT.SERVICE_REGISTRATION_FAILURE),
           error,
         );
-        this.applicationStore.notifyError(error);
+        this.applicationStore.notificationService.notifyError(error);
       } finally {
         this.registerServiceState.reset();
         this.registerServiceState.setMessage(undefined);

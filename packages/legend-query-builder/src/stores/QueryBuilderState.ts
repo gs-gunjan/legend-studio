@@ -61,6 +61,7 @@ import {
   isStubbed_RawLambda,
   buildLambdaVariableExpressions,
   buildRawLambdaFromLambdaFunction,
+  type ValueSpecification,
 } from '@finos/legend-graph';
 import { buildLambdaFunction } from './QueryBuilderValueSpecificationBuilder.js';
 import type {
@@ -73,16 +74,20 @@ import type { QueryBuilderFilterOperator } from './filter/QueryBuilderFilterOper
 import { getQueryBuilderCoreFilterOperators } from './filter/QueryBuilderFilterOperatorLoader.js';
 import { QueryBuilderChangeDetectionState } from './QueryBuilderChangeDetectionState.js';
 import { QueryBuilderMilestoningState } from './milestoning/QueryBuilderMilestoningState.js';
-import { QUERY_BUILDER_HASH_STRUCTURE } from '../graphManager/QueryBuilderHashUtils.js';
+import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from './QueryBuilderStateHashUtils.js';
 import { QUERY_BUILDER_COMMAND_KEY } from './QueryBuilderCommand.js';
 import { QueryBuilderWatermarkState } from './watermark/QueryBuilderWatermarkState.js';
 import { QueryBuilderConstantsState } from './QueryBuilderConstantsState.js';
+import { QueryBuilderCheckEntitlementsState } from './entitlements/QueryBuilderCheckEntitlementsState.js';
 
 export abstract class QueryBuilderState implements CommandRegistrar {
-  applicationStore: GenericLegendApplicationStore;
-  graphManagerState: GraphManagerState;
+  readonly applicationStore: GenericLegendApplicationStore;
+  readonly graphManagerState: GraphManagerState;
 
-  changeDetectionState: QueryBuilderChangeDetectionState;
+  readonly changeDetectionState: QueryBuilderChangeDetectionState;
+  readonly queryCompileState = ActionState.create();
+  readonly observerContext: ObserverContext;
+
   explorerState: QueryBuilderExplorerState;
   functionsExplorerState: QueryFunctionsExplorerState;
   parametersState: QueryBuilderParametersState;
@@ -91,17 +96,18 @@ export abstract class QueryBuilderState implements CommandRegistrar {
   fetchStructureState: QueryBuilderFetchStructureState;
   filterState: QueryBuilderFilterState;
   watermarkState: QueryBuilderWatermarkState;
+  checkEntitlementsState: QueryBuilderCheckEntitlementsState;
   filterOperators: QueryBuilderFilterOperator[] =
     getQueryBuilderCoreFilterOperators();
   resultState: QueryBuilderResultState;
   textEditorState: QueryBuilderTextEditorState;
   unsupportedQueryState: QueryBuilderUnsupportedQueryState;
-  observableContext: ObserverContext;
 
-  queryCompileState = ActionState.create();
+  titleOfQuery: string | undefined;
   showFunctionsExplorerPanel = false;
   showParametersPanel = false;
   isEditingWatermark = false;
+  isCheckingEntitlments = false;
 
   class?: Class | undefined;
   mapping?: Mapping | undefined;
@@ -123,12 +129,15 @@ export abstract class QueryBuilderState implements CommandRegistrar {
       fetchStructureState: observable,
       filterState: observable,
       watermarkState: observable,
+      titleOfQuery: observable,
+      checkEntitlementsState: observable,
       resultState: observable,
       textEditorState: observable,
       unsupportedQueryState: observable,
       showFunctionsExplorerPanel: observable,
       showParametersPanel: observable,
       isEditingWatermark: observable,
+      isCheckingEntitlments: observable,
       changeDetectionState: observable,
       class: observable,
       mapping: observable,
@@ -136,14 +145,17 @@ export abstract class QueryBuilderState implements CommandRegistrar {
 
       sideBarClassName: computed,
       isQuerySupported: computed,
-      validationIssues: computed,
+      allValidationIssues: computed,
 
       setShowFunctionsExplorerPanel: action,
       setShowParametersPanel: action,
       setIsEditingWatermark: action,
+      setIsCheckingEntitlments: action,
       setClass: action,
       setMapping: action,
       setRuntimeValue: action,
+
+      setTitleOfQuery: action,
 
       resetQueryResult: action,
       resetQueryContent: action,
@@ -167,10 +179,11 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     this.fetchStructureState = new QueryBuilderFetchStructureState(this);
     this.filterState = new QueryBuilderFilterState(this, this.filterOperators);
     this.watermarkState = new QueryBuilderWatermarkState(this);
+    this.checkEntitlementsState = new QueryBuilderCheckEntitlementsState(this);
     this.resultState = new QueryBuilderResultState(this);
     this.textEditorState = new QueryBuilderTextEditorState(this);
     this.unsupportedQueryState = new QueryBuilderUnsupportedQueryState(this);
-    this.observableContext = new ObserverContext(
+    this.observerContext = new ObserverContext(
       this.graphManagerState.pluginManager.getPureGraphManagerPlugins(),
     );
     this.changeDetectionState = new QueryBuilderChangeDetectionState(this);
@@ -230,6 +243,10 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     this.isEditingWatermark = val;
   }
 
+  setIsCheckingEntitlments(val: boolean): void {
+    this.isCheckingEntitlments = val;
+  }
+
   setClass(val: Class | undefined): void {
     this.class = val;
   }
@@ -242,12 +259,16 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     this.runtimeValue = val;
   }
 
+  setTitleOfQuery(val: string | undefined): void {
+    this.titleOfQuery = val;
+  }
+
   get isQuerySupported(): boolean {
     return !this.unsupportedQueryState.rawLambda;
   }
 
   registerCommands(): void {
-    this.applicationStore.commandCenter.registerCommand({
+    this.applicationStore.commandService.registerCommand({
       key: QUERY_BUILDER_COMMAND_KEY.COMPILE,
       action: () => {
         flowResult(this.compileQuery()).catch(
@@ -270,13 +291,18 @@ export abstract class QueryBuilderState implements CommandRegistrar {
 
   deregisterCommands(): void {
     [QUERY_BUILDER_COMMAND_KEY.COMPILE].forEach((key) =>
-      this.applicationStore.commandCenter.deregisterCommand(key),
+      this.applicationStore.commandService.deregisterCommand(key),
     );
   }
 
-  resetQueryResult(): void {
+  resetQueryResult(options?: { preserveResult?: boolean | undefined }): void {
     const resultState = new QueryBuilderResultState(this);
     resultState.setPreviewLimit(this.resultState.previewLimit);
+    if (options?.preserveResult) {
+      resultState.setExecutionResult(this.resultState.executionResult);
+      resultState.setExecutionDuration(this.resultState.executionDuration);
+      resultState.latestRunHashCode = this.resultState.latestRunHashCode;
+    }
     this.resultState = resultState;
   }
 
@@ -284,13 +310,20 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     this.textEditorState = new QueryBuilderTextEditorState(this);
     this.unsupportedQueryState = new QueryBuilderUnsupportedQueryState(this);
     this.milestoningState = new QueryBuilderMilestoningState(this);
+    const mappingModelCoverageAnalysisResult =
+      this.explorerState.mappingModelCoverageAnalysisResult;
     this.explorerState = new QueryBuilderExplorerState(this);
+    if (mappingModelCoverageAnalysisResult) {
+      this.explorerState.mappingModelCoverageAnalysisResult =
+        mappingModelCoverageAnalysisResult;
+    }
     this.explorerState.refreshTreeData();
-    this.parametersState = new QueryBuilderParametersState(this);
     this.constantState = new QueryBuilderConstantsState(this);
     this.functionsExplorerState = new QueryFunctionsExplorerState(this);
+    this.parametersState = new QueryBuilderParametersState(this);
     this.filterState = new QueryBuilderFilterState(this, this.filterOperators);
     this.watermarkState = new QueryBuilderWatermarkState(this);
+    this.checkEntitlementsState = new QueryBuilderCheckEntitlementsState(this);
 
     const currentFetchStructureImplementationType =
       this.fetchStructureState.implementation.type;
@@ -350,15 +383,32 @@ export abstract class QueryBuilderState implements CommandRegistrar {
 
   initializeWithQuery(query: RawLambda): void {
     this.rebuildWithQuery(query);
+    this.resetQueryResult();
     this.changeDetectionState.initialize(query);
   }
 
   /**
    * Process the provided query, and rebuild the query builder state.
    */
-  rebuildWithQuery(query: RawLambda): void {
+  rebuildWithQuery(
+    query: RawLambda,
+    options?: {
+      preserveParameterValues?: boolean | undefined;
+      preserveResult?: boolean | undefined;
+    },
+  ): void {
+    const previousStateParameterValues = new Map<
+      VariableExpression,
+      ValueSpecification | undefined
+    >();
     try {
-      this.resetQueryResult();
+      if (options?.preserveParameterValues) {
+        // Preserving parameter values
+        this.parametersState.parameterStates.forEach((ps) => {
+          previousStateParameterValues.set(ps.parameter, ps.value);
+        });
+      }
+      this.resetQueryResult({ preserveResult: options?.preserveResult });
       this.resetQueryContent();
 
       if (!isStubbed_RawLambda(query)) {
@@ -369,7 +419,7 @@ export abstract class QueryBuilderState implements CommandRegistrar {
             ),
             this.graphManagerState.graph,
           ),
-          this.observableContext,
+          this.observerContext,
         );
         const compiledValueSpecification = guaranteeType(
           valueSpec,
@@ -379,6 +429,7 @@ export abstract class QueryBuilderState implements CommandRegistrar {
         processQueryLambdaFunction(
           guaranteeNonNullable(compiledValueSpecification.values[0]),
           this,
+          previousStateParameterValues,
         );
       }
       if (this.parametersState.parameterStates.length > 0) {
@@ -386,8 +437,8 @@ export abstract class QueryBuilderState implements CommandRegistrar {
       }
     } catch (error) {
       assertErrorThrown(error);
-      this.resetQueryContent();
       this.resetQueryResult();
+      this.resetQueryContent();
       this.unsupportedQueryState.setLambdaError(error);
       this.unsupportedQueryState.setRawLambda(query);
       this.setClass(undefined);
@@ -395,9 +446,7 @@ export abstract class QueryBuilderState implements CommandRegistrar {
         query,
         this.graphManagerState,
       )
-        .map((param) =>
-          observe_ValueSpecification(param, this.observableContext),
-        )
+        .map((param) => observe_ValueSpecification(param, this.observerContext))
         .filter(filterByType(VariableExpression));
       processParameters(parameters, this);
     }
@@ -411,7 +460,9 @@ export abstract class QueryBuilderState implements CommandRegistrar {
       await onSaveQuery(query);
     } catch (error) {
       assertErrorThrown(error);
-      this.applicationStore.notifyError(`Can't save query: ${error.message}`);
+      this.applicationStore.notificationService.notifyError(
+        `Can't save query: ${error.message}`,
+      );
     }
   }
 
@@ -429,10 +480,12 @@ export abstract class QueryBuilderState implements CommandRegistrar {
           this.graphManagerState.graph,
           { keepSourceInformation: true },
         )) as string;
-        this.applicationStore.notifySuccess('Compiled successfully');
+        this.applicationStore.notificationService.notifySuccess(
+          'Compiled successfully',
+        );
       } catch (error) {
         assertErrorThrown(error);
-        this.applicationStore.log.error(
+        this.applicationStore.logService.error(
           LogEvent.create(GRAPH_MANAGER_EVENT.COMPILATION_FAILURE),
           error,
         );
@@ -448,7 +501,7 @@ export abstract class QueryBuilderState implements CommandRegistrar {
 
         // decide if we need to fall back to text mode for debugging
         if (fallbackToTextModeForDebugging) {
-          this.applicationStore.notifyWarning(
+          this.applicationStore.notificationService.notifyWarning(
             'Compilation failed and error cannot be located in form mode. Redirected to text mode for debugging.',
           );
           this.textEditorState.openModal(QueryBuilderTextEditorMode.TEXT);
@@ -459,7 +512,7 @@ export abstract class QueryBuilderState implements CommandRegistrar {
           // of query builder text-mode
           // See https://github.com/finos/legend-studio/issues/319
         } else {
-          this.applicationStore.notifyWarning(
+          this.applicationStore.notificationService.notifyWarning(
             `Compilation failed: ${error.message}`,
           );
         }
@@ -475,15 +528,17 @@ export abstract class QueryBuilderState implements CommandRegistrar {
           this.graphManagerState.graph,
           { keepSourceInformation: true },
         )) as string;
-        this.applicationStore.notifySuccess('Compiled successfully');
+        this.applicationStore.notificationService.notifySuccess(
+          'Compiled successfully',
+        );
       } catch (error) {
         assertErrorThrown(error);
         if (error instanceof CompilationError) {
-          this.applicationStore.log.error(
+          this.applicationStore.logService.error(
             LogEvent.create(GRAPH_MANAGER_EVENT.COMPILATION_FAILURE),
             error,
           );
-          this.applicationStore.notifyWarning(
+          this.applicationStore.notificationService.notifyWarning(
             `Compilation failed: ${error.message}`,
           );
           const errorElementCoordinates = extractSourceInformationCoordinates(
@@ -499,8 +554,8 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     }
   }
 
-  get validationIssues(): string[] | undefined {
-    return this.fetchStructureState.implementation.validationIssues;
+  get allValidationIssues(): string[] {
+    return this.fetchStructureState.implementation.allValidationIssues;
   }
 
   /**
@@ -522,12 +577,13 @@ export abstract class QueryBuilderState implements CommandRegistrar {
 
   get hashCode(): string {
     return hashArray([
-      QUERY_BUILDER_HASH_STRUCTURE.QUERY_BUILDER_STATE,
+      QUERY_BUILDER_STATE_HASH_STRUCTURE.QUERY_BUILDER_STATE,
       this.unsupportedQueryState,
       this.milestoningState,
       this.parametersState,
       this.filterState,
       this.watermarkState,
+      this.checkEntitlementsState,
       this.fetchStructureState.implementation,
     ]);
   }

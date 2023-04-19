@@ -31,17 +31,15 @@ import {
   PanelForm,
   PanelDivider,
 } from '@finos/legend-art';
-import { LEGEND_STUDIO_TEST_ID } from '../LegendStudioTestID.js';
+import { LEGEND_STUDIO_TEST_ID } from '../../__lib__/LegendStudioTesting.js';
 import { isNumber } from '@finos/legend-shared';
 import { flowResult } from 'mobx';
-import {
-  DocumentationLink,
-  useConditionedApplicationNavigationContext,
-} from '@finos/legend-application';
-import { LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../stores/LegendStudioDocumentation.js';
-import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../stores/LegendStudioApplicationNavigationContext.js';
-import { useLegendStudioApplicationStore } from '../LegendStudioBaseStoreProvider.js';
+import { useConditionedApplicationNavigationContext } from '@finos/legend-application';
+import { LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../__lib__/LegendStudioDocumentation.js';
+import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../__lib__/LegendStudioApplicationNavigationContext.js';
+import { useLegendStudioApplicationStore } from '../LegendStudioFrameworkProvider.js';
 import { useWorkspaceSetupStore } from './WorkspaceSetup.js';
+import { DocumentationLink } from '@finos/legend-lego/application';
 
 enum CREATE_PROJECT_MODAL_TAB {
   CREATE = 'CREATE',
@@ -405,7 +403,7 @@ const ImportProjectTab = observer(() => {
 
   const handleSubmit = (): void => {
     if (importProjectSuccessReport) {
-      applicationStore.navigator.visitAddress(
+      applicationStore.navigationService.navigator.visitAddress(
         importProjectSuccessReport.reviewUrl,
       );
     } else {

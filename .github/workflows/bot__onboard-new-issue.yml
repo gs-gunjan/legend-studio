@@ -1,0 +1,39 @@
+name: (Bot) Onboard New Issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  onboard-new-issue:
+    name: Onboard New Issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3.5.2
+      - name: Get Yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+      - name: Setup Yarn cache
+        uses: actions/cache@v3.3.1
+        id: yarn-cache
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-yarn-
+      - name: Setup Node
+        uses: actions/setup-node@v3.6.0
+        with:
+          node-version: 16
+      - name: Install dependencies
+        run: yarn workspaces focus --production @finos/legend-internal-github-bot
+      - name: Onboard new issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORGANIZATION_READ_TOKEN: ${{ secrets.READ_ORG_TOKEN }}
+          ORGANIZATION_NAME: finos
+          TEAM_NAME: legend-contributors
+          TEAM_LABEL: 'Studio Core Team'
+          FALLBACK_MILESTONE: 'Backlog'
+        working-directory: ./scripts/github-bot
+        run: node ./onboardNewIssue.js

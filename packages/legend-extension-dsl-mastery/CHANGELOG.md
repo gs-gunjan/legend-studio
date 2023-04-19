@@ -1,5 +1,89 @@
 # @finos/legend-extension-dsl-mastery
 
+## 3.0.2
+
+## 3.0.1
+
+## 3.0.0
+
+### Major Changes
+
+- [#2113](https://github.com/finos/legend-studio/pull/2113) [`4e7b750ee`](https://github.com/finos/legend-studio/commit/4e7b750ee649033b66c87b84b4ff242ad3829580) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Partition exports into separate paths, `/graph` for graph and graph manager extensions, `/application` for generic application extensions, `/application-studio` for `Legend Studio` specific application extensions, and `/application-query` for `Legend Query` specific application extensions.
+
+## 2.0.69
+
+## 2.0.68
+
+## 2.0.67
+
+## 2.0.66
+
+## 2.0.65
+
+## 2.0.64
+
+## 2.0.63
+
+## 2.0.62
+
+## 2.0.61
+
+## 2.0.60
+
+## 2.0.59
+
+## 2.0.58
+
+## 2.0.57
+
+## 2.0.56
+
+## 2.0.55
+
+## 2.0.54
+
+## 2.0.53
+
+## 2.0.52
+
+## 2.0.51
+
+## 2.0.50
+
+## 2.0.49
+
+## 2.0.48
+
+## 2.0.47
+
+## 2.0.46
+
+## 2.0.45
+
+## 2.0.44
+
+## 2.0.43
+
+## 2.0.42
+
+## 2.0.41
+
+## 2.0.40
+
+## 2.0.39
+
+## 2.0.38
+
+## 2.0.37
+
+## 2.0.36
+
+## 2.0.35
+
+## 2.0.34
+
+## 2.0.33
+
 ## 2.0.32
 
 ## 2.0.31

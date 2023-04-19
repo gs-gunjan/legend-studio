@@ -16,11 +16,10 @@
 
 import {
   type DataSpaceAnalysisResult,
-  DataSpaceViewerState,
   DSL_DataSpace_getGraphManagerExtension,
   retrieveAnalyticsResultCache,
-} from '@finos/legend-extension-dsl-data-space';
-import type { ClassView } from '@finos/legend-extension-dsl-diagram';
+} from '@finos/legend-extension-dsl-data-space/graph';
+import type { ClassView } from '@finos/legend-extension-dsl-diagram/graph';
 import {
   ProjectData,
   retrieveProjectEntitiesWithDependencies,
@@ -39,7 +38,7 @@ import {
   flowResult,
   computed,
 } from 'mobx';
-import { EXTERNAL_APPLICATION_NAVIGATION__generateDataSpaceQueryEditorUrl } from './LegendTaxonomyRouter.js';
+import { EXTERNAL_APPLICATION_NAVIGATION__generateDataSpaceQueryEditorUrl } from '../__lib__/LegendTaxonomyNavigation.js';
 import type {
   DataSpaceTaxonomyContext,
   TaxonomyExplorerStore,
@@ -49,6 +48,8 @@ import {
   createViewProjectHandler,
   createViewSDLCProjectHandler,
 } from './LegendTaxonomyDataSpaceViewerHelper.js';
+import { GraphDataWithOrigin, LegendSDLC } from '@finos/legend-graph';
+import { DataSpaceViewerState } from '@finos/legend-extension-dsl-data-space/application';
 
 interface TaxonomyNodeDataSpaceOption {
   label: string;
@@ -148,11 +149,20 @@ export class TaxonomyNodeViewerState {
       )) as DataSpaceAnalysisResult;
       const dataSpaceViewerState = new DataSpaceViewerState(
         this.explorerStore.applicationStore,
+        this.explorerStore.graphManagerState,
         dataSpaceTaxonomyContext.groupId,
         dataSpaceTaxonomyContext.artifactId,
         dataSpaceTaxonomyContext.versionId,
         analysisResult,
         {
+          retriveGraphData: () =>
+            new GraphDataWithOrigin(
+              new LegendSDLC(
+                dataSpaceTaxonomyContext.groupId,
+                dataSpaceTaxonomyContext.artifactId,
+                dataSpaceTaxonomyContext.versionId,
+              ),
+            ),
           viewProject: createViewProjectHandler(
             this.explorerStore.applicationStore,
           ),
@@ -167,7 +177,9 @@ export class TaxonomyNodeViewerState {
       this.dataSpaceViewerState = dataSpaceViewerState;
     } catch (error) {
       assertErrorThrown(error);
-      this.explorerStore.applicationStore.notifyError(error);
+      this.explorerStore.applicationStore.notificationService.notifyError(
+        error,
+      );
       this.clearDataSpaceViewerState();
     } finally {
       this.initDataSpaceViewerState.complete();
@@ -177,9 +189,9 @@ export class TaxonomyNodeViewerState {
 
   queryDataSpace(classPath?: string | undefined): void {
     if (this.dataSpaceViewerState) {
-      this.explorerStore.applicationStore.navigator.visitAddress(
+      this.explorerStore.applicationStore.navigationService.navigator.visitAddress(
         EXTERNAL_APPLICATION_NAVIGATION__generateDataSpaceQueryEditorUrl(
-          this.explorerStore.applicationStore.config.queryUrl,
+          this.explorerStore.applicationStore.config.queryApplicationUrl,
           this.dataSpaceViewerState.groupId,
           this.dataSpaceViewerState.artifactId,
           this.dataSpaceViewerState.versionId,

@@ -22,8 +22,8 @@ import {
   ActionAlertActionType,
   ActionAlertType,
   useApplicationStore,
-  useParams,
 } from '@finos/legend-application';
+import { useParams } from '@finos/legend-application/browser';
 import {
   type SelectComponent,
   BlankPanelContent,
@@ -46,10 +46,10 @@ import {
 import {
   type ProjectServiceQueryUpdaterPathParams,
   type ServiceQueryUpdaterPathParams,
-  DSL_SERVICE_PATH_PARAM_TOKEN,
+  DSL_SERVICE_ROUTE_PATTERN_TOKEN,
   generateServiceQueryUpdaterRoute,
   generateProjectServiceQueryUpdaterRoute,
-} from '../../stores/studio/DSL_Service_LegendStudioRouter.js';
+} from '../../__lib__/studio/DSL_Service_LegendStudioNavigation.js';
 import {
   ProjectServiceQueryUpdaterStoreProvider,
   ServiceQueryUpdaterStoreProvider,
@@ -116,7 +116,7 @@ const NewServiceModal = observer(() => {
       flowResult(
         editorStore.saveWorkspace(serviceEntity, true, (): void => {
           onClose();
-          applicationStore.setActionAlertInfo({
+          applicationStore.alertService.setActionAlertInfo({
             message: `Successfully created service '${serviceName}'. Now your service can be found in workspace '${editorStore.sdlcState.activeWorkspace.workspaceId}' of project '${editorStore.sdlcState.activeProject.name}' (${editorStore.sdlcState.activeProject.projectId})`,
             prompt: `Please make sure to review the service and submit a review to officially make the service part of the project`,
             type: ActionAlertType.STANDARD,
@@ -125,7 +125,7 @@ const NewServiceModal = observer(() => {
                 label: 'Open Service',
                 type: ActionAlertActionType.PROCEED,
                 handler: (): void => {
-                  applicationStore.navigator.goToLocation(
+                  applicationStore.navigationService.navigator.goToLocation(
                     generateProjectServiceQueryUpdaterRoute(
                       editorStore.sdlcState.activeProject.projectId,
                       editorStore.sdlcState.activeWorkspace.workspaceId,
@@ -389,8 +389,8 @@ const ServiceQueryEditorHeaderContent = observer(() => {
   const editorStore = useServiceQueryEditorStore();
   const applicationStore = useLegendStudioApplicationStore();
   const openWorkspace = (): void =>
-    applicationStore.navigator.visitAddress(
-      applicationStore.navigator.generateAddress(
+    applicationStore.navigationService.navigator.visitAddress(
+      applicationStore.navigationService.navigator.generateAddress(
         generateEditorRoute(
           editorStore.sdlcState.activeProject.projectId,
           editorStore.sdlcState.activeWorkspace.workspaceId,
@@ -411,7 +411,7 @@ const ServiceQueryEditorHeaderContent = observer(() => {
       );
     flowResult(
       editorStore.saveWorkspace(serviceEntity, false, (): void => {
-        applicationStore.navigator.goToLocation(
+        applicationStore.navigationService.navigator.goToLocation(
           generateServiceQueryUpdaterRoute(
             editorStore.projectConfigurationEditorState
               .currentProjectConfiguration.groupId,
@@ -530,9 +530,9 @@ export const ServiceQueryEditor = observer(() => {
 export const ServiceQueryUpdater = observer(() => {
   const params = useParams<ServiceQueryUpdaterPathParams>();
   const serviceCoordinates =
-    params[DSL_SERVICE_PATH_PARAM_TOKEN.SERVICE_COORDINATES];
+    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.SERVICE_COORDINATES];
   const groupWorkspaceId =
-    params[DSL_SERVICE_PATH_PARAM_TOKEN.GROUP_WORKSPACE_ID];
+    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID];
 
   return (
     <ServiceQueryUpdaterStoreProvider
@@ -546,10 +546,10 @@ export const ServiceQueryUpdater = observer(() => {
 
 export const ProjectServiceQueryUpdater = observer(() => {
   const params = useParams<ProjectServiceQueryUpdaterPathParams>();
-  const projectId = params[DSL_SERVICE_PATH_PARAM_TOKEN.PROJECT_ID];
+  const projectId = params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.PROJECT_ID];
   const groupWorkspaceId =
-    params[DSL_SERVICE_PATH_PARAM_TOKEN.GROUP_WORKSPACE_ID];
-  const servicePath = params[DSL_SERVICE_PATH_PARAM_TOKEN.SERVICE_PATH];
+    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID];
+  const servicePath = params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.SERVICE_PATH];
 
   return (
     <ProjectServiceQueryUpdaterStoreProvider

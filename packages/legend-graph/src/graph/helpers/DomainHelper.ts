@@ -27,6 +27,7 @@ import {
   ROOT_PACKAGE_NAME,
   MILESTONING_VERSION_PROPERTY_SUFFIX,
   FUNCTION_SIGNATURE_MULTIPLICITY_INFINITE_TOKEN,
+  PURE_DOC_TAG,
 } from '../MetaModelConst.js';
 import { Package } from '../metamodel/pure/packageableElements/domain/Package.js';
 import type { PackageableElement } from '../metamodel/pure/packageableElements/PackageableElement.js';
@@ -67,6 +68,7 @@ import type { GenericType } from '../metamodel/pure/packageableElements/domain/G
 import { Multiplicity } from '../metamodel/pure/packageableElements/domain/Multiplicity.js';
 import type { AnnotatedElement } from '../metamodel/pure/packageableElements/domain/AnnotatedElement.js';
 import type { ConcreteFunctionDefinition } from '../metamodel/pure/packageableElements/domain/ConcreteFunctionDefinition.js';
+import { extractDependencyGACoordinateFromRootPackageName } from '../DependencyManager.js';
 
 export const addElementToPackage = (
   parent: Package,
@@ -84,6 +86,18 @@ export const deleteElementFromPackage = (
   parent.children = parent.children.filter(
     (child) => child !== packageableElement,
   );
+};
+
+export const getDescendantsOfPackage = (
+  parent: Package,
+): Set<PackageableElement> => {
+  const descendants: Set<PackageableElement> = new Set<PackageableElement>();
+  parent.children.forEach((c) => {
+    c instanceof Package
+      ? getDescendantsOfPackage(c).forEach((e) => descendants.add(e))
+      : descendants.add(c);
+  });
+  return descendants;
 };
 
 export const getElementRootPackage = (element: PackageableElement): Package =>
@@ -232,13 +246,14 @@ export const isElementReadOnly = (element: PackageableElement): boolean =>
 
 export const isDependencyElement = (
   element: PackageableElement,
-  pureModel: PureModel,
 ): element is PackageableElement => {
   const rootPackage = returnUndefOnError(() => getElementRootPackage(element));
   return (
     rootPackage?.name === ROOT_PACKAGE_NAME.PROJECT_DEPENDENCY_ROOT ||
     (rootPackage !== undefined &&
-      pureModel.dependencyManager.roots.includes(rootPackage))
+      Boolean(
+        extractDependencyGACoordinateFromRootPackageName(rootPackage.name),
+      ))
   );
 };
 
@@ -490,6 +505,9 @@ export const getOwnProperty = (
  * See https://en.wikipedia.org/wiki/Covariance_and_contravariance_of_vectors
  */
 export const isSubType = (type1: Type, type2: Type): boolean => {
+  if (type1 === type2) {
+    return true;
+  }
   if (type1 instanceof Unit) {
     return type1.measure === type2;
   } else if (type1 instanceof Measure) {
@@ -531,6 +549,9 @@ export const isSubType = (type1: Type, type2: Type): boolean => {
  * See https://en.wikipedia.org/wiki/Covariance_and_contravariance_of_vectors
  */
 export const isSuperType = (type1: Type, type2: Type): boolean => {
+  if (type1 === type2) {
+    return true;
+  }
   if (type1 instanceof Unit) {
     return false;
   } else if (type1 instanceof Measure) {
@@ -622,6 +643,23 @@ export const isElementDeprecated = (
         .getProfile(CORE_PURE_PATH.PROFILE_DOC)
         .p_stereotypes.find((s) => s.value === PURE_DEPRECATED_STEREOTYPE),
   );
+
+export const extractAnnotatedElementDocumentation = (
+  el: AnnotatedElement,
+): string | undefined => {
+  let result: string | undefined = undefined;
+  for (const taggedValue of el.taggedValues) {
+    if (
+      taggedValue.tag.ownerReference.value.path ===
+        CORE_PURE_PATH.PROFILE_DOC &&
+      taggedValue.tag.value.value === PURE_DOC_TAG
+    ) {
+      result = taggedValue.value;
+      break;
+    }
+  }
+  return result;
+};
 
 /**
  *  Gets the generated milestoned properties of a property owner
