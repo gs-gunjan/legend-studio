@@ -22,7 +22,6 @@ import {
   ActionState,
   LogEvent,
   assertErrorThrown,
-  NetworkClient,
 } from '@finos/legend-shared';
 import {
   type ApplicationStore,
@@ -31,7 +30,7 @@ import {
   LegendApplicationTelemetryHelper,
   APPLICATION_EVENT,
 } from '@finos/legend-application';
-import { matchPath } from '@finos/legend-application/browser';
+import { matchRoutes } from '@finos/legend-application/browser';
 import {
   action,
   computed,
@@ -47,6 +46,8 @@ import type { LegendStudioPluginManager } from '../application/LegendStudioPlugi
 import type { LegendStudioApplicationConfig } from '../application/LegendStudioApplicationConfig.js';
 import { LegendStudioEventHelper } from '../__lib__/LegendStudioEventHelper.js';
 import { LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN } from '../__lib__/LegendStudioNavigation.js';
+import { ShowcaseManagerState } from './ShowcaseManagerState.js';
+import { getCurrentUserIDFromEngineServer } from '@finos/legend-graph';
 
 export type LegendStudioApplicationStore = ApplicationStore<
   LegendStudioApplicationConfig,
@@ -78,20 +79,21 @@ export class LegendStudioBaseStore {
     this.applicationStore = applicationStore;
     this.pluginManager = applicationStore.pluginManager;
 
-    // setup servers
-    this.sdlcServerClient = new SDLCServerClient({
-      env: this.applicationStore.config.env,
-      serverUrl: this.applicationStore.config.sdlcServerUrl,
-      baseHeaders: this.applicationStore.config.SDLCServerBaseHeaders,
-    });
-    this.sdlcServerClient.setTracerService(this.applicationStore.tracerService);
-
+    // depot
     this.depotServerClient = new DepotServerClient({
       serverUrl: this.applicationStore.config.depotServerUrl,
     });
     this.depotServerClient.setTracerService(
       this.applicationStore.tracerService,
     );
+
+    // sdlc
+    this.sdlcServerClient = new SDLCServerClient({
+      env: this.applicationStore.config.env,
+      serverUrl: this.applicationStore.config.sdlcServerUrl,
+      baseHeaders: this.applicationStore.config.sdlcServerBaseHeaders,
+    });
+    this.sdlcServerClient.setTracerService(this.applicationStore.tracerService);
   }
 
   *initialize(): GeneratorFn<void> {
@@ -103,15 +105,32 @@ export class LegendStudioBaseStore {
     }
     this.initState.inProgress();
 
+    // initialization components asynchronously
+    // TODO: this is a nice non-blocking pattern for initialization
+    // we should do this for things like documentation, etc.
+    Promise.all([
+      ShowcaseManagerState.retrieveNullableState(
+        this.applicationStore,
+      )?.initialize(),
+    ]).catch((error) => {
+      // do nothing
+    });
+
     // authorize SDLC, unless navigation location match SDLC-bypassed patterns
     if (
-      !matchPath(
-        this.applicationStore.navigationService.navigator.getCurrentLocation(),
+      !matchRoutes(
         [
-          LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN.VIEW_BY_GAV,
-          LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN.VIEW_BY_GAV_ENTITY,
-          LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN.PREVIEW_BY_GAV_ENTITY,
+          { path: LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN.VIEW_BY_GAV },
+          {
+            path: LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN.VIEW_BY_GAV_ENTITY,
+          },
+          {
+            path: LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN.PREVIEW_BY_GAV_ENTITY,
+          },
+          { path: LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN.SHOWCASE },
+          { path: LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN.PCT_REPORT },
         ],
+        this.applicationStore.navigationService.navigator.getCurrentLocation(),
       )
     ) {
       // setup SDLC server client
@@ -149,8 +168,8 @@ export class LegendStudioBaseStore {
     if (this.applicationStore.identityService.isAnonymous) {
       try {
         this.applicationStore.identityService.setCurrentUser(
-          (yield new NetworkClient().get(
-            `${this.applicationStore.config.engineServerUrl}/server/v1/currentUser`,
+          (yield getCurrentUserIDFromEngineServer(
+            this.applicationStore.config.engineServerUrl,
           )) as string,
         );
       } catch (error) {

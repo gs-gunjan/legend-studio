@@ -14,50 +14,30 @@
  * limitations under the License.
  */
 
-import { SerializationFactory } from '@finos/legend-shared';
-import {
-  list,
-  primitive,
-  createModelSchema,
-  optional,
-  object,
-} from 'serializr';
+import { SerializationFactory, usingModelSchema } from '@finos/legend-shared';
+import { list, primitive, createModelSchema, optional } from 'serializr';
+import { ProjectDependencyCoordinates } from './ProjectVersionEntities.js';
 
 class PlatformsVersion {
   propertyName!: string;
   value!: string;
   projectVersionId!: string;
+
+  static readonly serialization = new SerializationFactory(
+    createModelSchema(PlatformsVersion, {
+      propertyName: primitive(),
+      value: primitive(),
+      projectVersionId: primitive(),
+    }),
+  );
 }
-
-createModelSchema(PlatformsVersion, {
-  propertyName: primitive(),
-  value: primitive(),
-  projectVersionId: primitive(),
-});
-
-class Dependency {
-  groupId!: string;
-  artifactid!: string;
-  versionId!: string;
-}
-
-createModelSchema(Dependency, {
-  groupId: primitive(),
-  artifactid: primitive(),
-  versionId: primitive(),
-});
 
 export class ProjectVersionPlatformDependency {
   groupId!: string;
   artifactId!: string;
   versionId!: string;
-  platformsVersionSpecific?: string[] | undefined;
   platformsVersion: PlatformsVersion[] | undefined;
-  dependency!: {
-    groupId: string;
-    artifactid: string;
-    versionId: string;
-  };
+  dependency!: ProjectDependencyCoordinates;
   projectId?: string | undefined;
 
   static readonly serialization = new SerializationFactory(
@@ -65,9 +45,12 @@ export class ProjectVersionPlatformDependency {
       groupId: primitive(),
       artifactId: primitive(),
       versionId: primitive(),
-      platformsVersionSpecific: optional(list(primitive())),
-      platformsVersion: optional(list(object(PlatformsVersion))),
-      dependency: optional(object(Dependency)),
+      platformsVersion: optional(
+        list(usingModelSchema(PlatformsVersion.serialization.schema)),
+      ),
+      dependency: usingModelSchema(
+        ProjectDependencyCoordinates.serialization.schema,
+      ),
       projectId: optional(primitive()),
     }),
   );

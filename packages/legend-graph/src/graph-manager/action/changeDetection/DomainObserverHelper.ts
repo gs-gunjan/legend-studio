@@ -66,6 +66,24 @@ import {
   observe_RawVariableExpression,
 } from './RawValueSpecificationObserver.js';
 import type { INTERNAL__UnknownFunctionActivator } from '../../../graph/metamodel/pure/packageableElements/function/INTERNAL__UnknownFunctionActivator.js';
+import type { SnowflakeApp } from '../../../graph/metamodel/pure/packageableElements/function/SnowflakeApp.js';
+import {
+  observe_HostedServiceDeploymentConfiguration,
+  observe_FunctionActivatorOwnership,
+  observe_SnowflakeAppDeploymentConfiguration,
+} from './DSL_FunctionActivatorObserverHelper.js';
+import type {
+  FunctionParameterValue,
+  FunctionTest,
+} from '../../../graph/metamodel/pure/packageableElements/function/test/FunctionTest.js';
+import type { FunctionTestSuite } from '../../../graph/metamodel/pure/packageableElements/function/test/FunctionTestSuite.js';
+import {
+  observe_AtomicTest,
+  observe_TestAssertion,
+} from './Testable_ObserverHelper.js';
+import type { FunctionStoreTestData } from '../../../graph/metamodel/pure/packageableElements/function/test/FunctionStoreTestData.js';
+import { observe_EmbeddedData } from './DSL_Data_ObserverHelper.js';
+import type { HostedService } from '../../../graph/metamodel/pure/packageableElements/function/HostedService.js';
 
 const _observe_Abstract_Package = (metamodel: Package): void => {
   observe_Abstract_PackageableElement(metamodel);
@@ -81,7 +99,7 @@ const _observe_Abstract_Package = (metamodel: Package): void => {
  * and observe all descendents.
  */
 export const observe_Package = skipObservedWithContext(
-  (metamodel: Package, context): Package => {
+  (metamodel: Package, context: ObserverContext): Package => {
     _observe_Abstract_Package(metamodel);
 
     metamodel.children.forEach((child) => {
@@ -450,9 +468,64 @@ export const observe_Association = skipObserved(
 );
 
 // ------------------------------------- Function -------------------------------------
+export const observe_FunctionParameterValue = skipObserved(
+  (metamodel: FunctionParameterValue): FunctionParameterValue => {
+    makeObservable(metamodel, {
+      name: observable,
+      value: observable.ref,
+      hashCode: computed,
+    });
+    return metamodel;
+  },
+);
 
-export const observe_ConcreteFunctionDefinition = skipObserved(
-  (metamodel: ConcreteFunctionDefinition): ConcreteFunctionDefinition => {
+export const observe_FunctionTest = skipObserved(
+  (metamodel: FunctionTest): FunctionTest => {
+    makeObservable(metamodel, {
+      id: observable,
+      doc: observable,
+      assertions: observable,
+      hashCode: computed,
+    });
+    metamodel.parameters?.forEach(observe_FunctionParameterValue);
+    metamodel.assertions.forEach(observe_TestAssertion);
+    return metamodel;
+  },
+);
+
+export const observe_FunctionTestData = skipObservedWithContext(
+  (metamodel: FunctionStoreTestData, context: ObserverContext) => {
+    makeObservable(metamodel, {
+      store: observable,
+      data: observable,
+      hashCode: computed,
+    });
+    observe_EmbeddedData(metamodel.data, context);
+    return metamodel;
+  },
+);
+
+export const observe_FunctionTestSuite = skipObservedWithContext(
+  (
+    metamodel: FunctionTestSuite,
+    context: ObserverContext,
+  ): FunctionTestSuite => {
+    makeObservable(metamodel, {
+      id: observable,
+      tests: observable,
+      testData: observable,
+      hashCode: computed,
+    });
+    metamodel.tests.forEach((t) => observe_AtomicTest(t, context));
+    metamodel.testData?.forEach((t) => observe_FunctionTestData(t, context));
+    return metamodel;
+  },
+);
+export const observe_ConcreteFunctionDefinition = skipObservedWithContext(
+  (
+    metamodel: ConcreteFunctionDefinition,
+    context: ObserverContext,
+  ): ConcreteFunctionDefinition => {
     observe_Abstract_PackageableElement(metamodel);
 
     makeObservable<ConcreteFunctionDefinition, '_elementHashCode'>(metamodel, {
@@ -462,14 +535,15 @@ export const observe_ConcreteFunctionDefinition = skipObserved(
       expressionSequence: observable.ref, // only observe the reference, the object itself is not observed
       stereotypes: observable,
       taggedValues: observable,
+      tests: observable,
       _elementHashCode: override,
     });
 
     metamodel.parameters.forEach(observe_RawVariableExpression);
-    observe_PackageableElementReference(metamodel.returnType);
+    observe_GenericTypeReference(metamodel.returnType);
     metamodel.stereotypes.forEach(observe_StereotypeReference);
     metamodel.taggedValues.forEach(observe_TaggedValue);
-
+    metamodel.tests.forEach((t) => observe_FunctionTestSuite(t, context));
     return metamodel;
   },
 );
@@ -484,6 +558,54 @@ export const observe_INTERNAL__UnknownFunctionActivator = skipObserved(
       content: observable.ref,
     });
 
+    return metamodel;
+  },
+);
+
+export const observe_SnowflakeApp = skipObserved(
+  (metamodel: SnowflakeApp): SnowflakeApp => {
+    observe_Abstract_PackageableElement(metamodel);
+
+    makeObservable<SnowflakeApp, '_elementHashCode'>(metamodel, {
+      applicationName: observable,
+      description: observable,
+      ownership: observable,
+      permissionScheme: observable,
+      usageRole: observable,
+      activationConfiguration: observable,
+      _elementHashCode: override,
+    });
+
+    observe_SnowflakeAppDeploymentConfiguration(
+      metamodel.activationConfiguration,
+    );
+    return metamodel;
+  },
+);
+
+export const observe_HostedService = skipObserved(
+  (metamodel: HostedService): HostedService => {
+    observe_Abstract_PackageableElement(metamodel);
+    makeObservable<HostedService, '_elementHashCode'>(metamodel, {
+      documentation: observable,
+      pattern: observable,
+      autoActivateUpdates: observable,
+      storeModel: observable,
+      generateLineage: observable,
+      ownership: observable,
+      activationConfiguration: observable,
+      _elementHashCode: override,
+      stereotypes: observable,
+      taggedValues: observable,
+    });
+    metamodel.stereotypes.forEach(observe_StereotypeReference);
+    metamodel.taggedValues.forEach(observe_TaggedValue);
+    observe_FunctionActivatorOwnership(metamodel.ownership);
+    if (metamodel.activationConfiguration) {
+      observe_HostedServiceDeploymentConfiguration(
+        metamodel.activationConfiguration,
+      );
+    }
     return metamodel;
   },
 );

@@ -18,11 +18,9 @@ import {
   CustomSelectorInput,
   createFilter,
   CogIcon,
-  PURE_ClassIcon,
-  PURE_MappingIcon,
-  PURE_RuntimeIcon,
-  ClockIcon,
   clsx,
+  PanelHeader,
+  compareLabelFn,
 } from '@finos/legend-art';
 import { observer } from 'mobx-react-lite';
 import type { QueryBuilderState } from '../stores/QueryBuilderState.js';
@@ -35,7 +33,6 @@ import {
   LATEST_DATE,
   PrimitiveInstanceValue,
   VariableExpression,
-  getMilestoneTemporalStereotype,
   PackageableElementExplicitReference,
   RuntimePointer,
   VARIABLE_REFERENCE_TOKEN,
@@ -48,7 +45,7 @@ import {
   getPackageableElementOptionFormatter,
   type PackageableElementOption,
 } from '@finos/legend-lego/graph-editor';
-import { MilestoningParametersEditor } from './explorer/QueryBuilderMilestoningEditor.js';
+import type { QueryBuilder_LegendApplicationPlugin_Extension } from '../stores/QueryBuilder_LegendApplicationPlugin_Extension.js';
 
 export const getParameterValue = (
   parameter: ValueSpecification | undefined,
@@ -74,23 +71,11 @@ export const getParameterValue = (
 const generateClassLabel = (
   val: Class,
   queryBuilderState: QueryBuilderState,
-): string | React.ReactNode => {
-  const milestoneStereotype = getMilestoneTemporalStereotype(
-    val,
-    queryBuilderState.graphManagerState.graph,
-  );
-
+): React.ReactNode => {
   const isDeprecatedClass = isElementDeprecated(
     val,
     queryBuilderState.graphManagerState.graph,
   );
-
-  let milestoningTooltipText: string | undefined;
-  if (milestoneStereotype) {
-    milestoningTooltipText = queryBuilderState.milestoningState
-      .getMilestoningImplementation(milestoneStereotype)
-      .getMilestoningToolTipText();
-  }
 
   return (
     <div
@@ -102,12 +87,6 @@ const generateClassLabel = (
       <div className="query-builder__setup__class-option-label__name">
         {val.name}
       </div>
-      {milestoningTooltipText && (
-        <ClockIcon
-          className="query-builder__setup__class-option-label__milestoning"
-          title={`This class is milestoned:\n${milestoningTooltipText}`}
-        />
-      )}
     </div>
   );
 };
@@ -120,26 +99,27 @@ export const QueryBuilderClassSelector = observer(
     noMatchMessage?: string | undefined;
   }) => {
     const { queryBuilderState, classes, onClassChange, noMatchMessage } = props;
-    const milestoningState = queryBuilderState.milestoningState;
     const applicationStore = useApplicationStore();
 
     // class
     const elementFilterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: PackageableElementOption<Class>): string =>
-        option.value.path,
+      stringify: (option: { data: PackageableElementOption<Class> }): string =>
+        option.data.value.path,
     });
 
-    const classOptions = classes.map((_class) => ({
-      value: _class,
-      label: generateClassLabel(_class, queryBuilderState),
-    }));
+    const classOptions = classes
+      .toSorted((a, b) => a.name.localeCompare(b.name))
+      .map((_class) => ({
+        value: _class,
+        label: generateClassLabel(_class, queryBuilderState),
+      })) as PackageableElementOption<Class>[];
     const selectedClassOption = queryBuilderState.class
-      ? {
+      ? ({
           value: queryBuilderState.class,
           label: generateClassLabel(queryBuilderState.class, queryBuilderState),
-        }
+        } as PackageableElementOption<Class>)
       : null;
     const changeClass = (val: PackageableElementOption<Class>): void => {
       if (val.value === queryBuilderState.class) {
@@ -149,63 +129,43 @@ export const QueryBuilderClassSelector = observer(
       onClassChange?.(val.value);
     };
 
-    // milestoning
-    const showMilestoningEditor = (): void =>
-      milestoningState.setShowMilestoningEditor(true);
-
     return (
       <div className="query-builder__setup__config-group query-builder__setup__config-group--class">
-        <div className="query-builder__setup__config-group__content">
-          <div className="query-builder__setup__config-group__item ">
-            <div
-              className="btn--sm query-builder__setup__config-group__item__label"
-              title="class"
-            >
-              <PURE_ClassIcon />
-            </div>
-            <CustomSelectorInput
-              className="panel__content__form__section__dropdown query-builder__setup__config-group__item__selector query-builder__setup__config-group__item__selector__milestoned"
-              placeholder={
-                classOptions.length
-                  ? 'Choose a class...'
-                  : noMatchMessage ?? 'No class found'
-              }
-              disabled={
-                classOptions.length < 1 ||
-                (classOptions.length === 1 && Boolean(selectedClassOption))
-              }
-              noMatchMessage={noMatchMessage}
-              options={classOptions}
-              onChange={changeClass}
-              value={selectedClassOption}
-              darkMode={
+        <div className="query-builder__setup__config-group__item">
+          <label
+            className="btn--sm query-builder__setup__config-group__item__label"
+            title="entity"
+            htmlFor="query-builder__setup__class-selector"
+          >
+            Entity
+          </label>
+          <CustomSelectorInput
+            inputId="query-builder__setup__class-selector"
+            className="panel__content__form__section__dropdown query-builder__setup__config-group__item__selector query-builder__setup__config-group__item__selector__milestoned"
+            placeholder={
+              classOptions.length
+                ? 'Choose an entity...'
+                : (noMatchMessage ?? 'No entity found')
+            }
+            disabled={
+              classOptions.length < 1 ||
+              (classOptions.length === 1 && Boolean(selectedClassOption))
+            }
+            noMatchMessage={noMatchMessage}
+            options={classOptions}
+            onChange={changeClass}
+            value={selectedClassOption}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
+            filterOption={elementFilterOption}
+            formatOptionLabel={getPackageableElementOptionFormatter({
+              darkMode:
                 !applicationStore.layoutService
-                  .TEMPORARY__isLightColorThemeEnabled
-              }
-              filterOption={elementFilterOption}
-              formatOptionLabel={getPackageableElementOptionFormatter({
-                darkMode:
-                  !applicationStore.layoutService
-                    .TEMPORARY__isLightColorThemeEnabled,
-              })}
-            />
-            {queryBuilderState.isQuerySupported && (
-              <button
-                className="btn--dark btn__icon--dark query-builder__setup__milestoning"
-                tabIndex={-1}
-                onClick={showMilestoningEditor}
-                disabled={!milestoningState.isMilestonedQuery}
-                title="Edit Milestoning Parameters"
-              >
-                <ClockIcon />
-              </button>
-            )}
-            {milestoningState.isMilestonedQuery && (
-              <MilestoningParametersEditor
-                queryBuilderState={queryBuilderState}
-              />
-            )}
-          </div>
+                  .TEMPORARY__isLightColorThemeEnabled,
+            })}
+          />
         </div>
       </div>
     );
@@ -253,17 +213,17 @@ const BasicQueryBuilderSetup = observer(
     const classes = queryBuilderState.graphManagerState.usableClasses;
 
     // mapping
-    const mappingOptions =
-      queryBuilderState.graphManagerState.usableMappings.map(
-        buildElementOption,
-      );
-    const selectedMappingOption = queryBuilderState.mapping
-      ? buildElementOption(queryBuilderState.mapping)
+    const mappingOptions = queryBuilderState.graphManagerState.usableMappings
+      .map(buildElementOption)
+      .sort(compareLabelFn);
+    const selectedMappingOption = queryBuilderState.executionContextState
+      .mapping
+      ? buildElementOption(queryBuilderState.executionContextState.mapping)
       : null;
     const changeMapping = (val: PackageableElementOption<Mapping>): void => {
       if (
         !queryBuilderState.class ||
-        val.value === queryBuilderState.mapping ||
+        val.value === queryBuilderState.executionContextState.mapping ||
         queryBuilderState.isMappingReadOnly
       ) {
         return;
@@ -273,8 +233,9 @@ const BasicQueryBuilderSetup = observer(
     const mappingFilterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: PackageableElementOption<Mapping>): string =>
-        option.value.path,
+      stringify: (option: {
+        data: PackageableElementOption<Mapping>;
+      }): string => option.data.value.path,
     });
 
     // runtime
@@ -283,13 +244,17 @@ const BasicQueryBuilderSetup = observer(
         (rt) =>
           new RuntimePointer(PackageableElementExplicitReference.create(rt)),
       )
-      .map(buildRuntimeValueOption);
-    const selectedRuntimeOption = queryBuilderState.runtimeValue
-      ? buildRuntimeValueOption(queryBuilderState.runtimeValue)
+      .map(buildRuntimeValueOption)
+      .sort(compareLabelFn);
+    const selectedRuntimeOption = queryBuilderState.executionContextState
+      .runtimeValue
+      ? buildRuntimeValueOption(
+          queryBuilderState.executionContextState.runtimeValue,
+        )
       : null;
     const changeRuntime = (val: { value: Runtime }): void => {
       if (
-        val.value === queryBuilderState.runtimeValue ||
+        val.value === queryBuilderState.executionContextState.runtimeValue ||
         queryBuilderState.isRuntimeReadOnly
       ) {
         return;
@@ -299,95 +264,94 @@ const BasicQueryBuilderSetup = observer(
     const runtimeFilterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: { value: Runtime }): string =>
-        option.value instanceof RuntimePointer
-          ? option.value.packageableRuntime.value.path
+      stringify: (option: { data: { value: Runtime } }): string =>
+        option.data.value instanceof RuntimePointer
+          ? option.data.value.packageableRuntime.value.path
           : 'custom',
     });
 
     return (
-      <>
-        <QueryBuilderClassSelector
-          queryBuilderState={queryBuilderState}
-          classes={classes}
-        />
-        <div className="query-builder__setup__config-group">
-          <div className="query-builder__setup__config-group__header">
-            <div className="query-builder__setup__config-group__header__title">
-              execution context
-            </div>
+      <div className="query-builder__setup__config-group">
+        <PanelHeader title="properties" />
+        <div className="query-builder__setup__config-group__content">
+          <div className="query-builder__setup__config-group__item">
+            <label
+              className="btn--sm query-builder__setup__config-group__item__label"
+              title="mapping"
+              htmlFor="query-builder__setup__mapping-selector"
+            >
+              Mapping
+            </label>
+            <CustomSelectorInput
+              inputId="query-builder__setup__mapping-selector"
+              className="panel__content__form__section__dropdown query-builder__setup__config-group__item__selector"
+              placeholder={
+                mappingOptions.length
+                  ? 'Choose a mapping...'
+                  : 'No mapping found'
+              }
+              disabled={
+                queryBuilderState.isMappingReadOnly || !queryBuilderState.class
+              }
+              options={mappingOptions}
+              onChange={changeMapping}
+              value={selectedMappingOption}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
+              filterOption={mappingFilterOption}
+              formatOptionLabel={getPackageableElementOptionFormatter({
+                darkMode:
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled,
+              })}
+            />
           </div>
-          <div className="query-builder__setup__config-group__content">
-            <div className="query-builder__setup__config-group__item">
-              <div
-                className="btn--sm query-builder__setup__config-group__item__label"
-                title="mapping"
-              >
-                <PURE_MappingIcon />
-              </div>
-              <CustomSelectorInput
-                className="panel__content__form__section__dropdown query-builder__setup__config-group__item__selector"
-                placeholder={
-                  mappingOptions.length
-                    ? 'Choose a mapping...'
-                    : 'No mapping found'
-                }
-                disabled={
-                  queryBuilderState.isMappingReadOnly ||
-                  !queryBuilderState.class
-                }
-                options={mappingOptions}
-                onChange={changeMapping}
-                value={selectedMappingOption}
-                darkMode={
+          <div className="query-builder__setup__config-group__item">
+            <label
+              className="btn--sm query-builder__setup__config-group__item__label"
+              title="runtime"
+              htmlFor="query-builder__setup__runtime-selector"
+            >
+              Runtime
+            </label>
+            <CustomSelectorInput
+              inputId="query-builder__setup__runtime-selector"
+              className="panel__content__form__section__dropdown query-builder__setup__config-group__item__selector"
+              placeholder={
+                runtimeOptions.length
+                  ? 'Choose a runtime...'
+                  : 'No runtime found'
+              }
+              disabled={
+                queryBuilderState.isRuntimeReadOnly ||
+                !queryBuilderState.class ||
+                !queryBuilderState.executionContextState.mapping
+              }
+              options={runtimeOptions}
+              onChange={changeRuntime}
+              value={selectedRuntimeOption}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
+              filterOption={runtimeFilterOption}
+              formatOptionLabel={getRuntimeOptionFormatter({
+                darkMode:
                   !applicationStore.layoutService
-                    .TEMPORARY__isLightColorThemeEnabled
-                }
-                filterOption={mappingFilterOption}
-                formatOptionLabel={getPackageableElementOptionFormatter({
-                  darkMode:
-                    !applicationStore.layoutService
-                      .TEMPORARY__isLightColorThemeEnabled,
-                })}
-              />
-            </div>
-            <div className="query-builder__setup__config-group__item">
-              <div
-                className="btn--sm query-builder__setup__config-group__item__label"
-                title="runtime"
-              >
-                <PURE_RuntimeIcon />
-              </div>
-              <CustomSelectorInput
-                className="panel__content__form__section__dropdown query-builder__setup__config-group__item__selector"
-                placeholder={
-                  runtimeOptions.length
-                    ? 'Choose a runtime...'
-                    : 'No runtime found'
-                }
-                disabled={
-                  queryBuilderState.isRuntimeReadOnly ||
-                  !queryBuilderState.class ||
-                  !queryBuilderState.mapping
-                }
-                options={runtimeOptions}
-                onChange={changeRuntime}
-                value={selectedRuntimeOption}
-                darkMode={
-                  !applicationStore.layoutService
-                    .TEMPORARY__isLightColorThemeEnabled
-                }
-                filterOption={runtimeFilterOption}
-                formatOptionLabel={getRuntimeOptionFormatter({
-                  darkMode:
-                    !applicationStore.layoutService
-                      .TEMPORARY__isLightColorThemeEnabled,
-                })}
-              />
-            </div>
+                    .TEMPORARY__isLightColorThemeEnabled,
+              })}
+            />
+          </div>
+          <div className="query-builder__setup__config-group__item">
+            <QueryBuilderClassSelector
+              queryBuilderState={queryBuilderState}
+              classes={classes}
+            />
           </div>
         </div>
-      </>
+      </div>
     );
   },
 );
@@ -398,6 +362,22 @@ export const QueryBuilderSidebar = observer(
     children: React.ReactNode;
   }) => {
     const { queryBuilderState, children } = props;
+    const applicationStore = useApplicationStore();
+    const extraTemplateQueryPanelContentRenderer =
+      applicationStore.pluginManager
+        .getApplicationPlugins()
+        .flatMap(
+          (plugin) =>
+            (
+              plugin as QueryBuilder_LegendApplicationPlugin_Extension
+            ).getExtraTemplateQueryPanelContentRenderer?.() ?? [],
+        );
+    const templateQueryPanelContentTab =
+      extraTemplateQueryPanelContentRenderer[0] ? (
+        extraTemplateQueryPanelContentRenderer[0](queryBuilderState)
+      ) : (
+        <></>
+      );
 
     return (
       <div
@@ -415,6 +395,12 @@ export const QueryBuilderSidebar = observer(
               <BasicQueryBuilderSetup queryBuilderState={queryBuilderState} />
             )}
           </div>
+        </div>
+        <div
+          data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TEMPLATE_QUERY_PANE}
+          className="query-builder__template-query"
+        >
+          {templateQueryPanelContentTab}
         </div>
         <div className="query-builder__side-bar__content">{children}</div>
       </div>

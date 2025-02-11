@@ -71,7 +71,9 @@ export const LambdaParameterValuesEditor = observer(
         }}
       >
         <Modal
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
           className="editor-modal lambda-parameter-values__modal"
         >
           <ModalHeader title="Set Parameter Values" />
@@ -101,7 +103,7 @@ export const LambdaParameterValuesEditor = observer(
                         paramState.setValue(val);
                       }}
                       graph={graph}
-                      obseverContext={observerContext}
+                      observerContext={observerContext}
                       typeCheckOption={{
                         expectedType: variableType,
                         match: variableType === PrimitiveType.DATETIME,
@@ -131,6 +133,7 @@ export const LambdaParameterValuesEditor = observer(
               inProgressText={isClosingAction ? 'Closing...' : undefined}
               onClick={close}
               text="Close"
+              type="secondary"
             />
           </ModalFooter>
         </Modal>

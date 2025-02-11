@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../package.json';
+import packageJson from '../../../package.json' with { type: 'json' };
 import {
   LegendStudioApplicationPlugin,
   type NewElementFromStateCreator,
@@ -31,6 +31,7 @@ import {
   type PureGrammarParserKeywordSuggestionGetter,
   type PureGrammarParserElementSnippetSuggestionsGetter,
   type PureGrammarParserElementDocumentationGetter,
+  PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY,
 } from '@finos/legend-application-studio';
 import { FileIcon } from '@finos/legend-art';
 import { TextEditorState } from '../../stores/studio/TextEditorState.js';
@@ -43,9 +44,9 @@ import {
   PLAIN_TEXT_SNIPPET,
 } from '../../__lib__/studio/DSL_Text_LegendStudioCodeSnippet.js';
 import { create_TextElement } from '../../graph/helpers/DSL_Text_Helper.js';
-import type { DocumentationEntry } from '@finos/legend-application';
 import { DSL_TEXT_LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../__lib__/studio/DSL_Text_LegendStudioApplicationNavigationContext.js';
-import type { PureGrammarTextSuggestion } from '@finos/legend-lego/code-editor';
+import type { PureGrammarTextSuggestion } from '@finos/legend-code-editor';
+import type { DocumentationEntry } from '@finos/legend-shared';
 
 const TEXT_ELEMENT_TYPE = 'TEXT';
 const TEXT_ELEMENT_PROJECT_EXPLORER_DND_TYPE = 'PROJECT_EXPLORER_TEXT';
@@ -80,6 +81,15 @@ export class DSL_Text_LegendStudioApplicationPlugin
 
   getExtraSupportedElementTypes(): string[] {
     return [TEXT_ELEMENT_TYPE];
+  }
+
+  getExtraSupportedElementTypesWithCategory?(): Map<string, string[]> {
+    const elementTypesWithCategoryMap = new Map<string, string[]>();
+    elementTypesWithCategoryMap.set(
+      PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.OTHER,
+      [TEXT_ELEMENT_TYPE],
+    );
+    return elementTypesWithCategoryMap;
   }
 
   getExtraElementClassifiers(): ElementClassifier[] {
@@ -235,5 +245,9 @@ export class DSL_Text_LegendStudioApplicationPlugin
             ]
           : undefined,
     ];
+  }
+
+  getExtraGrammarTextEditorAutoFoldingElementCreatorKeywords(): string[] {
+    return [PURE_GRAMMAR_TEXT_PARSER_NAME];
   }
 }

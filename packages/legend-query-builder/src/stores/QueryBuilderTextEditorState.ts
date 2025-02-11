@@ -67,6 +67,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
    * TODO: consider moving this to another state if we need to simplify the logic of text-mode
    */
   readOnlylambdaJson = '';
+  isReadOnly: boolean | undefined;
 
   constructor(queryBuilderState: QueryBuilderState) {
     super('', '');
@@ -75,7 +76,9 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
       rawLambdaState: observable,
       isConvertingLambdaToString: observable,
       mode: observable,
+      isReadOnly: observable,
       setQueryRawLambdaState: action,
+      setIsReadOnly: action,
       setMode: action,
       openModal: action,
       closeModal: flow,
@@ -89,8 +92,21 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
     return buildSourceInformationSourceId(['query-builder']);
   }
 
+  get text(): string | undefined {
+    if (this.mode === QueryBuilderTextEditorMode.TEXT) {
+      return this.fullLambdaString;
+    } else if (this.mode === QueryBuilderTextEditorMode.JSON) {
+      return this.readOnlylambdaJson;
+    }
+    return undefined;
+  }
+
   setQueryRawLambdaState(rawLambdaState: QueryBuilderRawLambdaState): void {
     this.rawLambdaState = rawLambdaState;
+  }
+
+  setIsReadOnly(val: boolean | undefined): void {
+    this.isReadOnly = val;
   }
 
   setMode(openModal: QueryBuilderTextEditorMode | undefined): void {
@@ -129,7 +145,9 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
     }
   }
 
-  *convertLambdaObjectToGrammarString(pretty: boolean): GeneratorFn<void> {
+  *convertLambdaObjectToGrammarString(options: {
+    pretty?: boolean | undefined;
+  }): GeneratorFn<void> {
     if (this.rawLambdaState.lambda.body) {
       this.isConvertingLambdaToString = true;
       try {
@@ -144,7 +162,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
         const isolatedLambdas =
           (yield this.queryBuilderState.graphManagerState.graphManager.lambdasToPureCode(
             lambdas,
-            pretty,
+            options.pretty,
           )) as Map<string, string>;
         const grammarText = isolatedLambdas.get(this.lambdaId);
         this.setLambdaString(
@@ -168,7 +186,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
     }
   }
 
-  openModal(mode: QueryBuilderTextEditorMode): void {
+  openModal(mode: QueryBuilderTextEditorMode, isReadOnly?: boolean): void {
     try {
       const rawLambda = this.queryBuilderState.buildQuery();
       if (mode === QueryBuilderTextEditorMode.TEXT) {
@@ -188,6 +206,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
         );
       }
       this.setMode(mode);
+      this.setIsReadOnly(isReadOnly);
     } catch (error) {
       assertErrorThrown(error);
       this.queryBuilderState.applicationStore.notificationService.notifyError(
@@ -198,7 +217,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
 
   *closeModal(): GeneratorFn<void> {
     this.closingQueryState.inProgress();
-    if (this.mode === QueryBuilderTextEditorMode.TEXT) {
+    if (this.mode === QueryBuilderTextEditorMode.TEXT && !this.isReadOnly) {
       yield flowResult(this.convertLambdaGrammarStringToObject());
       if (this.parserError) {
         this.queryBuilderState.applicationStore.notificationService.notifyError(
@@ -213,6 +232,7 @@ export class QueryBuilderTextEditorState extends LambdaEditorState {
       }
       return;
     }
+    this.setIsReadOnly(undefined);
     this.closingQueryState.complete();
 
     this.setMode(undefined);

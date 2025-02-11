@@ -12,31 +12,31 @@ jobs:
     if: github.repository == 'finos/legend-studio' # prevent running this action in forks
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3.5.3
+        uses: actions/checkout@v4.2.2
       - name: Get Yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
       - name: Setup Yarn cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.2.0
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: ${{ runner.os }}-yarn-
       - name: Setup Node
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.2.0
         with:
-          node-version: 16
+          node-version: 21
       - name: Install dependencies
         run: yarn
       - name: Build website content
         env:
           # Typedoc build could consume a large amount of memory
           # See https://github.com/TypeStrong/typedoc/issues/1606
-          NODE_OPTIONS: '--max_old_space_size=4096'
+          NODE_OPTIONS: '--max-old-space-size=4096'
         run: yarn build:ts && yarn build:website
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1.0.9
+        uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: ./build/docs
   deploy-documentation-website:
@@ -55,4 +55,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2.0.2
+        uses: actions/deploy-pages@v4.0.5

@@ -142,7 +142,12 @@
             "lowerBound": 0,
             "upperBound": 1
           },
-          "returnType": "Integer"
+          "returnGenericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         }
       ],
       "superTypes": ["model::pure::tests::model::simple::Person"]
@@ -2300,7 +2305,12 @@
             "lowerBound": 1,
             "upperBound": 1
           },
-          "returnType": "Integer"
+          "returnGenericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         },
         {
           "body": [
@@ -2333,7 +2343,12 @@
             "lowerBound": 0,
             "upperBound": 1
           },
-          "returnType": "Integer"
+          "returnGenericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         },
         {
           "body": [
@@ -4474,7 +4489,12 @@
             "lowerBound": 1,
             "upperBound": 1
           },
-          "returnType": "Integer"
+          "returnGenericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         },
         {
           "body": [
@@ -4605,7 +4625,12 @@
                 "lowerBound": 1,
                 "upperBound": 1
               },
-              "class": "Date"
+              "genericType": {
+                "rawType": {
+                  "_type": "packageableType",
+                  "fullPath": "Date"
+                }
+              }
             }
           ],
           "returnMultiplicity": {
@@ -5122,7 +5147,12 @@
             "lowerBound": 1,
             "upperBound": 1
           },
-          "returnType": "Integer"
+          "returnGenericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         },
         {
           "body": [

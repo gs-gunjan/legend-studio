@@ -32,7 +32,7 @@ import {
   MenuContentItemIcon,
   MenuContentItemLabel,
   ContextMenu,
-  DropdownMenu,
+  ControlledDropdownMenu,
   PanelLoadingIndicator,
   BlankPanelContent,
   TreeView,
@@ -101,23 +101,33 @@ import {
   isElementReadOnly,
   ConcreteFunctionDefinition,
   Class,
+  type PackageableElement,
   isMainGraphElement,
   getFunctionSignature,
   getFunctionNameWithPath,
   getElementRootPackage,
-  type PackageableElement,
   PackageableConnection,
-  RelationalDatabaseConnection,
   guaranteeRelationalDatabaseConnection,
   extractDependencyGACoordinateFromRootPackageName,
-  type FunctionActivatorConfiguration,
+  Database,
+  DEPENDENCY_ROOT_PACKAGE_PREFIX,
+  Service,
+  isRelationalDatabaseConnection,
+  LegendSDLC,
 } from '@finos/legend-graph';
-import { useApplicationStore } from '@finos/legend-application';
+import {
+  ActionAlertActionType,
+  ActionAlertType,
+  useApplicationStore,
+} from '@finos/legend-application';
 import {
   getPackageableElementOptionFormatter,
   type PackageableElementOption,
 } from '@finos/legend-lego/graph-editor';
-import { PACKAGEABLE_ELEMENT_TYPE } from '../../../stores/editor/utils/ModelClassifierUtils.js';
+import {
+  PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY,
+  PACKAGEABLE_ELEMENT_TYPE,
+} from '../../../stores/editor/utils/ModelClassifierUtils.js';
 import { useLegendStudioApplicationStore } from '../../LegendStudioFrameworkProvider.js';
 import { queryClass } from '../editor-group/uml-editor/ClassQueryBuilder.js';
 import { createViewSDLCProjectHandler } from '../../../stores/editor/DependencyProjectViewerHelper.js';
@@ -129,12 +139,16 @@ import {
   CLASS_MOCK_DATA_GENERATION_FORMAT,
   createMockDataForClassWithFormat,
 } from '../../../stores/editor/utils/MockDataUtils.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 import { DatabaseBuilderWizard } from '../editor-group/connection-editor/DatabaseBuilderWizard.js';
-import { FunctionEditorState } from '../../../stores/editor/editor-state/element-editor-state/FunctionEditorState.js';
+import { DatabaseModelBuilder } from '../editor-group/connection-editor/DatabaseModelBuilder.js';
+import { queryService } from '../editor-group/service-editor/ServiceExecutionQueryEditor.js';
+import { QueryDatabaseState } from '../../../stores/editor/editor-state/element-editor-state/database/QueryDatabaseState.js';
+import {
+  isElementSupportedByDataCube,
+  openDataCube,
+} from '../../../stores/editor/data-cube/LegendStudioDataCubeHelper.js';
 
 const ElementRenamer = observer(() => {
   const editorStore = useEditorStore();
@@ -179,12 +193,12 @@ const ElementRenamer = observer(() => {
     const errorMessage = !isElementPathNonEmpty
       ? `Element path cannot be empty`
       : !isNotTopLevelElement
-      ? `Creating top level element is not allowed`
-      : !isValidElementPath
-      ? `Element path is not valid`
-      : !isElementUnique
-      ? `Element of the same path already existed`
-      : '';
+        ? `Creating top level element is not allowed`
+        : !isValidElementPath
+          ? `Element path is not valid`
+          : !isElementUnique
+            ? `Element of the same path already existed`
+            : '';
     setElementRenameValidationErrorMessage(errorMessage);
     setCanRenameElement(
       isElementPathNonEmpty &&
@@ -292,6 +306,7 @@ const getMockDataEditorLanguage = (
 
 const SampleDataGenerator = observer(() => {
   const editorStore = useEditorStore();
+  const applicationStore = editorStore.applicationStore;
   const explorerTreeState = editorStore.explorerTreeState;
   const selectedClass = explorerTreeState.classToGenerateSampleData;
   const [format, setFormat] = useState(GENERATION_DEFAULT_FORMAT);
@@ -307,8 +322,8 @@ const SampleDataGenerator = observer(() => {
   const elementFilterOption = createFilter({
     ignoreCase: true,
     ignoreAccents: false,
-    stringify: (option: PackageableElementOption<Class>): string =>
-      option.value.path,
+    stringify: (option: { data: PackageableElementOption<Class> }): string =>
+      option.data.value.path,
   });
   const classOptions = editorStore.graphManagerState.usableClasses.map(
     (_class) => ({
@@ -371,15 +386,20 @@ const SampleDataGenerator = observer(() => {
             <PURE_ClassIcon />
           </div>
           <CustomSelectorInput
-            ref={classSelectorRef}
+            inputRef={classSelectorRef}
             className="sample-data-generator__controller__class-selector"
             options={classOptions}
             onChange={changeClass}
             value={selectedClassOption}
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
             filterOption={elementFilterOption}
             formatOptionLabel={getPackageableElementOptionFormatter({
-              darkMode: true,
+              darkMode:
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled,
             })}
           />
           <div
@@ -388,7 +408,7 @@ const SampleDataGenerator = observer(() => {
           >
             <CodeIcon />
           </div>
-          <DropdownMenu
+          <ControlledDropdownMenu
             className="sample-data-generator__controller__format-selector"
             title="Choose Element Type..."
             content={
@@ -411,7 +431,7 @@ const SampleDataGenerator = observer(() => {
             <div className="sample-data-generator__controller__format-selector__dropdown-indicator">
               <CaretDownIcon />
             </div>
-          </DropdownMenu>
+          </ControlledDropdownMenu>
           <div
             className="sample-data-generator__controller__icon"
             title="depth"
@@ -446,11 +466,9 @@ const SampleDataGenerator = observer(() => {
   );
 });
 
-const isRelationalDatabaseConnection = (
+const isRelationalDatabase = (
   val: PackageableElement | undefined,
-): boolean =>
-  val instanceof PackageableConnection &&
-  val.connectionValue instanceof RelationalDatabaseConnection;
+): Database | undefined => (val instanceof Database ? val : undefined);
 
 const ExplorerContextMenu = observer(
   forwardRef<
@@ -479,7 +497,8 @@ const ExplorerContextMenu = observer(
       })
       .filter(isNonNullable);
     const projectId = editorStore.sdlcState.currentProject?.projectId;
-    const isReadOnly = editorStore.isInViewerMode || Boolean(nodeIsImmutable);
+    const isReadOnly =
+      editorStore.disableGraphEditing || Boolean(nodeIsImmutable);
     const isDependencyProjectElement =
       node && isDependencyElement(node.packageableElement);
     const _package = node
@@ -487,20 +506,49 @@ const ExplorerContextMenu = observer(
         ? node.packageableElement
         : undefined
       : editorStore.graphManagerState.graph.root;
-    const elementTypes = ([PACKAGEABLE_ELEMENT_TYPE.PACKAGE] as string[])
-      .concat(editorStore.getSupportedElementTypes())
-      .filter(
-        // NOTE: we can only create package in root
-        (type) =>
-          _package !== editorStore.graphManagerState.graph.root ||
-          type === PACKAGEABLE_ELEMENT_TYPE.PACKAGE,
-      );
+
+    const elementTypesWithCategory =
+      _package === editorStore.graphManagerState.graph.root
+        ? new Map<string, string[]>([
+            [
+              PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.MODEL,
+              [PACKAGEABLE_ELEMENT_TYPE.PACKAGE],
+            ],
+          ])
+        : editorStore.supportedElementTypesWithCategory;
 
     // actions
     const buildQuery = editorStore.applicationStore.guardUnhandledError(
       async () => {
         if (node?.packageableElement instanceof Class) {
           await queryClass(node.packageableElement, editorStore);
+        }
+      },
+    );
+    const buildServiceQuery = editorStore.applicationStore.guardUnhandledError(
+      async () => {
+        if (node?.packageableElement instanceof Service) {
+          await queryService(node.packageableElement, editorStore);
+        }
+      },
+    );
+    const openCubeViewer = editorStore.applicationStore.guardUnhandledError(
+      async () => {
+        if (node?.packageableElement) {
+          await openDataCube(node.packageableElement, editorStore);
+        }
+      },
+    );
+    const buildDatabaseQuery = editorStore.applicationStore.guardUnhandledError(
+      async () => {
+        if (node?.packageableElement instanceof Database) {
+          const state = new QueryDatabaseState(
+            node.packageableElement,
+            editorStore,
+          );
+          flowResult(state.init()).catch(
+            editorStore.applicationStore.alertUnhandledError,
+          );
         }
       },
     );
@@ -523,6 +571,41 @@ const ExplorerContextMenu = observer(
         }
       },
     );
+    const generateModelsFromDatabaseSpecification =
+      editorStore.applicationStore.guardUnhandledError(async () => {
+        const database = isRelationalDatabase(node?.packageableElement);
+        if (database) {
+          if (database.joins.length === 0) {
+            applicationStore.alertService.setActionAlertInfo({
+              message:
+                'You are attempting to build models but have defined no joins. Are you sure you wish to proceed?',
+              type: ActionAlertType.CAUTION,
+              actions: [
+                {
+                  label: 'Proceed',
+                  type: ActionAlertActionType.PROCEED_WITH_CAUTION,
+                  handler: () => {
+                    editorStore.explorerTreeState.buildDatabaseModels(
+                      database,
+                      editorStore.disableGraphEditing,
+                    );
+                  },
+                },
+                {
+                  label: 'Abort',
+                  type: ActionAlertActionType.PROCEED,
+                  default: true,
+                },
+              ],
+            });
+          } else {
+            editorStore.explorerTreeState.buildDatabaseModels(
+              database,
+              editorStore.disableGraphEditing,
+            );
+          }
+        }
+      });
     const openSQLPlayground = (): void => {
       if (isRelationalDatabaseConnection(node?.packageableElement)) {
         editorStore.panelGroupDisplayState.open();
@@ -572,7 +655,7 @@ const ExplorerContextMenu = observer(
         const dependency =
           editorStore.projectConfigurationEditorState.projectConfiguration?.projectDependencies.find(
             (dep) =>
-              dep.projectId ===
+              DEPENDENCY_ROOT_PACKAGE_PREFIX + dep.projectId ===
               getElementRootPackage(node.packageableElement).name,
           );
         if (dependency) {
@@ -614,7 +697,7 @@ const ExplorerContextMenu = observer(
         const dependency =
           editorStore.projectConfigurationEditorState.projectConfiguration?.projectDependencies.find(
             (dep) =>
-              dep.projectId ===
+              DEPENDENCY_ROOT_PACKAGE_PREFIX + dep.projectId ===
               getElementRootPackage(node.packageableElement).name,
           );
         if (dependency) {
@@ -648,82 +731,47 @@ const ExplorerContextMenu = observer(
       editorStore.graphManagerState.graph.dependencyManager.roots.includes(
         node.packageableElement,
       );
+
     const viewProject = (): void => {
-      const projectDependency =
-        editorStore.projectConfigurationEditorState.projectConfiguration?.projectDependencies.find(
-          (dep) => dep.projectId === node?.packageableElement.name,
-        );
-      if (projectDependency && !projectDependency.isLegacyDependency) {
-        applicationStore.navigationService.navigator.visitAddress(
-          applicationStore.navigationService.navigator.generateAddress(
-            generateViewProjectByGAVRoute(
-              guaranteeNonNullable(projectDependency.groupId),
-              guaranteeNonNullable(projectDependency.artifactId),
-              projectDependency.versionId === MASTER_SNAPSHOT_ALIAS
-                ? SNAPSHOT_VERSION_ALIAS
-                : projectDependency.versionId,
+      if (node?.packageableElement.name) {
+        const projectOrigin =
+          editorStore.graphManagerState.graph.dependencyManager.projectDependencyModelsIndex.get(
+            node.packageableElement.name.substring(
+              DEPENDENCY_ROOT_PACKAGE_PREFIX.length,
             ),
-          ),
-        );
+          )?.origin;
+        if (projectOrigin instanceof LegendSDLC) {
+          applicationStore.navigationService.navigator.visitAddress(
+            applicationStore.navigationService.navigator.generateAddress(
+              generateViewProjectByGAVRoute(
+                guaranteeNonNullable(projectOrigin.groupId),
+                guaranteeNonNullable(projectOrigin.artifactId),
+                projectOrigin.versionId === MASTER_SNAPSHOT_ALIAS
+                  ? SNAPSHOT_VERSION_ALIAS
+                  : projectOrigin.versionId,
+              ),
+            ),
+          );
+        }
       }
     };
     const viewSDLCProject = (): void => {
-      const dependency =
-        editorStore.projectConfigurationEditorState.projectConfiguration?.projectDependencies.find(
-          (dep) => dep.projectId === node?.packageableElement.name,
-        );
-      if (dependency) {
-        createViewSDLCProjectHandler(
-          applicationStore,
-          editorStore.depotServerClient,
-        )(
-          guaranteeNonEmptyString(dependency.groupId),
-          guaranteeNonEmptyString(dependency.artifactId),
-        ).catch(applicationStore.alertUnhandledError);
-      }
-    };
-    const activateFunction = (): void => {
-      if (node?.packageableElement instanceof ConcreteFunctionDefinition) {
-        editorStore.setQuickInputState({
-          title: 'Activate function',
-          placeholder: 'Select an activation...',
-          options: editorStore.graphState.functionActivatorConfigurations.map(
-            (config) => ({
-              value: config,
-              label: (
-                <div
-                  className="function-editor__activator__selector__option"
-                  title={config.description}
-                >
-                  <div className="function-editor__activator__selector__option__name">
-                    {config.name}
-                  </div>
-                  <div className="function-editor__activator__selector__option__description">
-                    {config.description}
-                  </div>
-                </div>
-              ),
-            }),
-          ),
-          getSearchValue: (option: {
-            value: FunctionActivatorConfiguration;
-            label: React.ReactNode;
-          }): string => option.value.name,
-          onSelect: (option: {
-            value: FunctionActivatorConfiguration;
-            label: React.ReactNode;
-          }) => {
-            editorStore.graphEditorMode.openElement(node.packageableElement);
-            editorStore.tabManagerState
-              .getCurrentEditorState(FunctionEditorState)
-              .activatorBuilderState.setCurrentActivatorConfiguration(
-                option.value,
-              );
-          },
-          customization: {
-            rowHeight: 70,
-          },
-        });
+      if (node?.packageableElement.name) {
+        const sdlcProjectOrigin =
+          editorStore.graphManagerState.graph.dependencyManager.projectDependencyModelsIndex.get(
+            node.packageableElement.name.substring(
+              DEPENDENCY_ROOT_PACKAGE_PREFIX.length,
+            ),
+          )?.origin;
+        if (sdlcProjectOrigin instanceof LegendSDLC) {
+          createViewSDLCProjectHandler(
+            applicationStore,
+            editorStore.depotServerClient,
+          )(
+            guaranteeNonEmptyString(sdlcProjectOrigin.groupId),
+            guaranteeNonEmptyString(sdlcProjectOrigin.artifactId),
+          ).catch(applicationStore.alertUnhandledError);
+        }
       }
     };
 
@@ -745,15 +793,27 @@ const ExplorerContextMenu = observer(
     if (_package && !isReadOnly) {
       return (
         <MenuContent data-testid={LEGEND_STUDIO_TEST_ID.EXPLORER_CONTEXT_MENU}>
-          {elementTypes.map((type) => (
-            <MenuContentItem key={type} onClick={createNewElement(type)}>
-              <MenuContentItemIcon>
-                {getElementTypeIcon(type, editorStore)}
-              </MenuContentItemIcon>
-              <MenuContentItemLabel>
-                New {toTitleCase(getElementTypeLabel(editorStore, type))}...
-              </MenuContentItemLabel>
-            </MenuContentItem>
+          {Array.from(elementTypesWithCategory.entries()).map((entry) => (
+            <div
+              className="editor-group__view-mode__option__group editor-group__view-mode__option__group--native"
+              key={entry[0]}
+            >
+              <div className="editor-group__view-mode__option__group__name">
+                {entry[0]}
+              </div>
+              <div className="editor-group__view-mode__option__group__options editor-group__view-mode__option__group__options--center">
+                {entry[1].map((type) => (
+                  <MenuContentItem key={type} onClick={createNewElement(type)}>
+                    <MenuContentItemIcon>
+                      {getElementTypeIcon(type, editorStore)}
+                    </MenuContentItemIcon>
+                    <MenuContentItemLabel>
+                      {toTitleCase(getElementTypeLabel(editorStore, type))}
+                    </MenuContentItemLabel>
+                  </MenuContentItem>
+                ))}
+              </div>
+            </div>
           ))}
           {node && (
             <>
@@ -785,29 +845,40 @@ const ExplorerContextMenu = observer(
             <MenuContentDivider />
           </>
         )}
-        {node.packageableElement instanceof ConcreteFunctionDefinition && (
+        {node.packageableElement instanceof Service && (
           <>
-            {editorStore.applicationStore.config.options
-              .TEMPORARY__enableFunctionActivatorSupport && (
-              <>
-                <MenuContentItem onClick={activateFunction}>
-                  Activate...
-                </MenuContentItem>
-                <MenuContentDivider />
-              </>
-            )}
+            <MenuContentItem onClick={buildServiceQuery}>
+              Query...
+            </MenuContentItem>
+          </>
+        )}
+        {isElementSupportedByDataCube(node.packageableElement) && (
+          <>
+            <MenuContentItem onClick={openCubeViewer}>
+              Data Cube (BETA)...
+            </MenuContentItem>
+            <MenuContentDivider />
           </>
         )}
         {isRelationalDatabaseConnection(node.packageableElement) && (
           <>
-            {editorStore.applicationStore.config.options
-              .TEMPORARY__enableRawSQLExecutor && (
-              <MenuContentItem onClick={openSQLPlayground}>
-                Execute SQL...
-              </MenuContentItem>
-            )}
+            <MenuContentItem onClick={openSQLPlayground}>
+              Execute SQL...
+            </MenuContentItem>
+
             <MenuContentItem onClick={buildDatabase}>
               Build Database...
+            </MenuContentItem>
+            <MenuContentDivider />
+          </>
+        )}
+        {isRelationalDatabase(node.packageableElement) && (
+          <>
+            <MenuContentItem onClick={generateModelsFromDatabaseSpecification}>
+              Build Models
+            </MenuContentItem>
+            <MenuContentItem onClick={buildDatabaseQuery}>
+              Query (Beta)...
             </MenuContentItem>
             <MenuContentDivider />
           </>
@@ -892,13 +963,16 @@ const PackageTreeNodeContainer = observer(
     const [isSelectedFromContextMenu, setIsSelectedFromContextMenu] =
       useState(false);
     const { disableContextMenu, isContextImmutable } = innerProps;
-    const [, dragRef] = useDrag(
+    const [, dragConnector] = useDrag(
       () => ({
         type: node.dndType,
         item: new ElementDragSource(node),
       }),
       [node],
     );
+    const ref = useRef<HTMLDivElement>(null);
+    dragConnector(ref);
+
     const isPackage = node.packageableElement instanceof Package;
     const expandIcon = !isPackage ? (
       <div />
@@ -911,10 +985,10 @@ const PackageTreeNodeContainer = observer(
     const iconPackageColor = isGeneratedElement(node.packageableElement)
       ? 'color--generated'
       : isSystemElement(node.packageableElement)
-      ? 'color--system'
-      : isDependencyElement(node.packageableElement)
-      ? 'color--dependency'
-      : '';
+        ? 'color--system'
+        : isDependencyElement(node.packageableElement)
+          ? 'color--dependency'
+          : '';
 
     const nodeIcon = isPackage ? (
       node.isOpen ? (
@@ -958,7 +1032,7 @@ const PackageTreeNodeContainer = observer(
                 node.isSelected,
             },
           )}
-          ref={dragRef}
+          ref={ref}
           onClick={selectNode}
           style={{
             paddingLeft: `${level * (stepPaddingInRem ?? 1)}rem`,
@@ -995,26 +1069,39 @@ const ExplorerDropdownMenu = observer(() => {
     (): void =>
       editorStore.newElementState.openModal(type, _package);
 
-  const elementTypes = ([PACKAGEABLE_ELEMENT_TYPE.PACKAGE] as string[])
-    .concat(editorStore.getSupportedElementTypes())
-    .filter(
-      // NOTE: we can only create package in root
-      (type) =>
-        _package !== editorStore.graphManagerState.graph.root ||
-        type === PACKAGEABLE_ELEMENT_TYPE.PACKAGE,
-    );
+  const elementTypesWithCategory =
+    _package === editorStore.graphManagerState.graph.root
+      ? new Map<string, string[]>([
+          [
+            PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.MODEL,
+            [PACKAGEABLE_ELEMENT_TYPE.PACKAGE],
+          ],
+        ])
+      : editorStore.supportedElementTypesWithCategory;
 
   return (
     <MenuContent data-testid={LEGEND_STUDIO_TEST_ID.EXPLORER_CONTEXT_MENU}>
-      {elementTypes.map((type) => (
-        <MenuContentItem key={type} onClick={createNewElement(type)}>
-          <MenuContentItemIcon>
-            {getElementTypeIcon(type, editorStore)}
-          </MenuContentItemIcon>
-          <MenuContentItemLabel>
-            New {toTitleCase(getElementTypeLabel(editorStore, type))}...
-          </MenuContentItemLabel>
-        </MenuContentItem>
+      {Array.from(elementTypesWithCategory.entries()).map((entry) => (
+        <div
+          className="editor-group__view-mode__option__group editor-group__view-mode__option__group--native"
+          key={entry[0]}
+        >
+          <div className="editor-group__view-mode__option__group__name">
+            {entry[0]}
+          </div>
+          <div className="editor-group__view-mode__option__group__options editor-group__view-mode__option__group__options--center">
+            {entry[1].map((type) => (
+              <MenuContentItem key={type} onClick={createNewElement(type)}>
+                <MenuContentItemIcon>
+                  {getElementTypeIcon(type, editorStore)}
+                </MenuContentItemIcon>
+                <MenuContentItemLabel>
+                  {toTitleCase(getElementTypeLabel(editorStore, type))}
+                </MenuContentItemLabel>
+              </MenuContentItem>
+            ))}
+          </div>
+        </div>
       ))}
     </MenuContent>
   );
@@ -1022,7 +1109,7 @@ const ExplorerDropdownMenu = observer(() => {
 
 const ExplorerTrees = observer(() => {
   const editorStore = useEditorStore();
-  const { isInViewerMode } = editorStore;
+  const { disableGraphEditing } = editorStore;
   const isInGrammarTextMode =
     editorStore.graphEditorMode.mode === GRAPH_EDITOR_MODE.GRAMMAR_TEXT;
   const openModelImport = (): void =>
@@ -1101,11 +1188,10 @@ const ExplorerTrees = observer(() => {
     getTreeChildNodes(editorStore, node, dependencyTreeData, true);
   const showPackageTrees =
     treeData.nodes.size || graph.dependencyManager.hasDependencies;
-
   return (
     <ContextMenu
       className="explorer__content"
-      disabled={isInGrammarTextMode || isInViewerMode}
+      disabled={isInGrammarTextMode || disableGraphEditing}
       content={<ExplorerContextMenu />}
       menuProps={{ elevation: 7 }}
     >
@@ -1131,6 +1217,14 @@ const ExplorerTrees = observer(() => {
                 <DatabaseBuilderWizard
                   databaseBuilderState={
                     editorStore.explorerTreeState.databaseBuilderState
+                  }
+                  isReadOnly={false}
+                />
+              )}
+              {editorStore.explorerTreeState.databaseModelBuilderState && (
+                <DatabaseModelBuilder
+                  databaseModelBuilderState={
+                    editorStore.explorerTreeState.databaseModelBuilderState
                   }
                   isReadOnly={false}
                 />
@@ -1249,7 +1343,7 @@ const ProjectExplorerActionPanel = observer((props: { disabled: boolean }) => {
 
   return (
     <div className="panel__header__actions">
-      {!editorStore.isInViewerMode && (
+      {
         <button
           className="panel__header__action"
           disabled={disabled}
@@ -1258,17 +1352,19 @@ const ProjectExplorerActionPanel = observer((props: { disabled: boolean }) => {
         >
           <FileImportIcon />
         </button>
+      }
+      {editorStore.editorMode.supportSdlcOperations && (
+        <button
+          className="panel__header__action panel__header__action--config"
+          disabled={disabled}
+          title="Project Configuration Panel"
+          onClick={openConfigurationEditor}
+        >
+          <SettingsEthernetIcon />
+        </button>
       )}
-      <button
-        className="panel__header__action panel__header__action--config"
-        disabled={disabled}
-        title="Project Configuration Panel"
-        onClick={openConfigurationEditor}
-      >
-        <SettingsEthernetIcon />
-      </button>
-      {!editorStore.isInViewerMode && (
-        <DropdownMenu
+      {!editorStore.disableGraphEditing && (
+        <ControlledDropdownMenu
           className="panel__header__action"
           title="New Element... (Ctrl + Shift + N)"
           disabled={
@@ -1285,7 +1381,7 @@ const ProjectExplorerActionPanel = observer((props: { disabled: boolean }) => {
           }}
         >
           <PlusIcon />
-        </DropdownMenu>
+        </ControlledDropdownMenu>
       )}
       <button
         className="panel__header__action"
@@ -1350,33 +1446,36 @@ export const Explorer = observer(() => {
             EXPLORER
           </div>
         </div>
-        {editorStore.isInViewerMode && (
+        {editorStore.editorMode.disableEditing &&
+          !editorStore.editorMode.label && (
+            <div className="panel__header__title side-bar__header__title__viewer-mode-badge">
+              <LockIcon />
+              READ-ONLY
+            </div>
+          )}
+        {editorStore.editorMode.label && (
           <div className="panel__header__title side-bar__header__title__viewer-mode-badge">
-            <LockIcon />
-            READ-ONLY
+            {editorStore.editorMode.label}
           </div>
         )}
       </div>
       <div className="panel__content side-bar__content">
         <div className="panel explorer">
           <div className="panel__header explorer__header">
-            <div className="panel__header__title">
-              {sdlcState.currentProject && (
-                <>
-                  <div className="panel__header__title__label">
-                    {sdlcState.currentWorkspace && !editorStore.isInViewerMode
-                      ? 'workspace'
-                      : 'project'}
-                  </div>
-                  <div className="panel__header__title__content">
-                    {editorStore.isInViewerMode &&
-                      sdlcState.currentProject.name}
-                    {!editorStore.isInViewerMode &&
-                      (sdlcState.currentWorkspace?.workspaceId ?? '(unknown) ')}
-                  </div>
-                </>
-              )}
-            </div>
+            {sdlcState.currentProject && (
+              <>
+                <div className="panel__header__title__label">
+                  {sdlcState.currentWorkspace && !editorStore.isInViewerMode
+                    ? 'workspace'
+                    : 'project'}
+                </div>
+                <div className="panel__header__title__content">
+                  {editorStore.isInViewerMode && sdlcState.currentProject.name}
+                  {!editorStore.isInViewerMode &&
+                    (sdlcState.currentWorkspace?.workspaceId ?? '(unknown) ')}
+                </div>
+              </>
+            )}
             <ProjectExplorerActionPanel
               disabled={!editorStore.explorerTreeState.buildState.hasCompleted}
             />

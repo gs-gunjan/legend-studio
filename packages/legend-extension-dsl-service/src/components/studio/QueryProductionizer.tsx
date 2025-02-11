@@ -54,11 +54,10 @@ import type { QueryInfo } from '@finos/legend-graph';
 import { generateGAVCoordinates } from '@finos/legend-storage';
 import { useParams } from '@finos/legend-application/browser';
 import { DSL_SERVICE_LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../__lib__/studio/DSL_Service_LegendStudioDocumentation.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 import { DocumentationLink } from '@finos/legend-lego/application';
+import { useApplicationStore } from '@finos/legend-application';
 
 export type UserOption = { label: string; value: string };
 
@@ -108,6 +107,7 @@ const withQueryProductionizerStore = (WrappedComponent: React.FC): React.FC =>
 
 const QueryPreviewModal = observer((props: { queryInfo: QueryInfo }) => {
   const { queryInfo } = props;
+  const applicationStore = useApplicationStore();
   const productionizerStore = useQueryProductionizerStore();
 
   // life-cycles
@@ -121,7 +121,12 @@ const QueryPreviewModal = observer((props: { queryInfo: QueryInfo }) => {
       classes={{ container: 'search-modal__container' }}
       PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
     >
-      <Modal darkMode={true} className="search-modal">
+      <Modal
+        darkMode={
+          !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+        }
+        className="search-modal"
+      >
         <ModalTitle title="Query Preview" />
         <Panel>
           <PanelFullContent>
@@ -400,7 +405,10 @@ const QueryProductionizerContent = observer(() => {
                     value={selectedQueryOption}
                     onChange={onQueryOptionChange}
                     placeholder="Search for query..."
-                    darkMode={true}
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
                     isClearable={true}
                     escapeClearsValue={true}
                     formatOptionLabel={formatQueryOptionLabel}
@@ -422,10 +430,7 @@ const QueryProductionizerContent = observer(() => {
                   <CustomSelectorInput
                     className="query-productionizer__input__selector"
                     options={projectOptions}
-                    disabled={
-                      !productionizerStore.currentQuery ||
-                      productionizerStore.loadProjectsState.isInProgress
-                    }
+                    disabled={!productionizerStore.currentQuery}
                     isLoading={
                       productionizerStore.loadProjectsState.isInProgress
                     }
@@ -434,7 +439,10 @@ const QueryProductionizerContent = observer(() => {
                     value={selectedProjectOption}
                     onChange={onProjectOptionChange}
                     placeholder="Search for project..."
-                    darkMode={true}
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
                     isClearable={true}
                     escapeClearsValue={true}
                     formatOptionLabel={getProjectOptionLabelFormatter(
@@ -561,10 +569,12 @@ const QueryProductionizerContent = observer(() => {
                       className="query-productionizer___service-owner__selector"
                       placeholder="Enter an owner..."
                       isLoading={isLoadingUsers}
-                      spellCheck={false}
                       inputValue={searchText}
                       options={userOptions}
-                      darkMode={true}
+                      darkMode={
+                        !applicationStore.layoutService
+                          .TEMPORARY__isLightColorThemeEnabled
+                      }
                       onInputChange={onSearchTextChange}
                       onChange={onUserOptionChange}
                       isMulti={true}

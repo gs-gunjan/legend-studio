@@ -34,6 +34,7 @@ import {
 import { GrammarTextEditor } from './editor-group/GrammarTextEditor.js';
 import { StatusBar } from './StatusBar.js';
 import { ActivityBar } from './ActivityBar.js';
+import { ShowcaseSideBar } from './ShowcaseSideBar.js';
 import type { WorkspaceEditorPathParams } from '../../__lib__/LegendStudioNavigation.js';
 import { ProjectSearchCommand } from '../editor/command-center/ProjectSearchCommand.js';
 import { guaranteeNonNullable, isNonNullable } from '@finos/legend-shared';
@@ -50,14 +51,17 @@ import { useParams } from '@finos/legend-application/browser';
 import { WorkspaceType } from '@finos/legend-server-sdlc';
 import { WorkspaceSyncConflictResolver } from './side-bar/WorkspaceSyncConflictResolver.js';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../__lib__/LegendStudioApplicationNavigationContext.js';
-import { EmbeddedQueryBuilder } from '../EmbeddedQueryBuilder.js';
+import { EmbeddedQueryBuilder } from './EmbeddedQueryBuilder.js';
 import { GRAPH_EDITOR_MODE } from '../../stores/editor/EditorConfig.js';
 import { QuickInput } from './QuickInput.js';
+import { ShowcaseManager } from '../ShowcaseManager.js';
+import { QueryDataCubeViewer } from '@finos/legend-query-builder';
 
 export const Editor = withEditorStore(
   observer(() => {
     const params = useParams<WorkspaceEditorPathParams>();
-    const projectId = params.projectId;
+    const projectId = guaranteeNonNullable(params.projectId);
+    const patchReleaseVersionId = params.patchReleaseVersionId;
     const workspaceType = params.groupWorkspaceId
       ? WorkspaceType.GROUP
       : WorkspaceType.USER;
@@ -117,6 +121,22 @@ export const Editor = withEditorStore(
     const maximizedCollapsiblePanelGroupProps = getCollapsiblePanelGroupProps(
       editorStore.panelGroupDisplayState.isMaximized,
     );
+    // handle resizing showcase sidebar
+    const showcaseResizeSideBar = (
+      handleProps: ResizablePanelHandlerProps,
+    ): void =>
+      editorStore.showcasePanelDisplayState.setSize(
+        (handleProps.domElement as HTMLDivElement).getBoundingClientRect()
+          .width,
+      );
+
+    const showcaseCollapsibleSideBarGroupProps = getCollapsiblePanelGroupProps(
+      editorStore.showcasePanelDisplayState.size === 0,
+      {
+        onStopResize: showcaseResizeSideBar,
+        size: editorStore.showcasePanelDisplayState.size,
+      },
+    );
 
     useEffect(() => {
       if (ref.current) {
@@ -128,11 +148,24 @@ export const Editor = withEditorStore(
     useEffect(() => {
       editorStore.internalizeEntityPath(params);
     }, [editorStore, params]);
+
     useEffect(() => {
       flowResult(
-        editorStore.initialize(projectId, workspaceId, workspaceType),
+        editorStore.initialize(
+          projectId,
+          patchReleaseVersionId,
+          workspaceId,
+          workspaceType,
+        ),
       ).catch(applicationStore.alertUnhandledError);
-    }, [editorStore, applicationStore, projectId, workspaceId, workspaceType]);
+    }, [
+      editorStore,
+      patchReleaseVersionId,
+      applicationStore,
+      projectId,
+      workspaceId,
+      workspaceType,
+    ]);
 
     useEffect(() => {
       applicationStore.navigationService.navigator.blockNavigation(
@@ -180,7 +213,6 @@ export const Editor = withEditorStore(
 
     // Cleanup the editor
     useEffect(() => (): void => editorStore.cleanUp(), [editorStore]);
-
     return (
       <div className="app__page">
         <div className="editor">
@@ -197,7 +229,10 @@ export const Editor = withEditorStore(
                   </ResizablePanel>
                   <ResizablePanelSplitter />
                   <ResizablePanel
-                    {...collapsibleSideBarGroupProps.remainingPanel}
+                    {...(!editorStore.sideBarDisplayState.isOpen &&
+                    !editorStore.showcasePanelDisplayState.isOpen
+                      ? { flex: 1 }
+                      : {})}
                     minSize={300}
                   >
                     <ResizablePanelGroup orientation="horizontal">
@@ -237,9 +272,19 @@ export const Editor = withEditorStore(
                       </ResizablePanel>
                     </ResizablePanelGroup>
                   </ResizablePanel>
+                  <ResizablePanelSplitter />
+                  <ResizablePanel
+                    {...showcaseCollapsibleSideBarGroupProps.collapsiblePanel}
+                    direction={-1}
+                  >
+                    <div className="panel__content explorer__content__container">
+                      <ShowcaseManager />
+                    </div>
+                  </ResizablePanel>
                 </ResizablePanelGroup>
               </div>
             </div>
+            <ShowcaseSideBar />
           </div>
           <QuickInput />
           <StatusBar actionsDisabled={!editable} />
@@ -249,6 +294,17 @@ export const Editor = withEditorStore(
             <WorkspaceSyncConflictResolver />
           )}
           <EmbeddedQueryBuilder />
+          {editorStore.embeddedDataCubeViewerState && (
+            <QueryDataCubeViewer
+              state={editorStore.embeddedDataCubeViewerState}
+              close={() =>
+                editorStore.setEmbeddedDataCubeViewerState(undefined)
+              }
+              options={{
+                fullScreen: true,
+              }}
+            />
+          )}
           {extraEditorExtensionComponents}
         </div>
       </div>

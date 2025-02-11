@@ -23,7 +23,7 @@ import {
   getByText,
   fireEvent,
 } from '@testing-library/react';
-import TEST_DATA__enumerationMappingEntities from './TEST_DATA__EnumerationMapping.json';
+import TEST_DATA__enumerationMappingEntities from './TEST_DATA__EnumerationMapping.json' with { type: 'json' };
 import { integrationTest } from '@finos/legend-shared/test';
 import {
   TEST__openElementFromExplorerTree,
@@ -44,7 +44,7 @@ beforeEach(async () => {
   });
 });
 
-test.only(
+test(
   integrationTest('Enumeration mapping editor basic functionality'),
   async () => {
     await TEST__openElementFromExplorerTree('demo::MyMap', renderResult);

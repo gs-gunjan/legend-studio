@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../../package.json';
+import packageJson from '../../../../package.json' with { type: 'json' };
 import {
   V1_buildExistsFunctionExpression,
   V1_buildFilterFunctionExpression,
   V1_buildGetAllFunctionExpression,
+  V1_buildGetAllVersionsFunctionExpression,
+  V1_buildGetAllVersionsInRangeFunctionExpression,
   V1_buildGroupByFunctionExpression,
   V1_buildOLAPGroupByFunctionExpression,
   V1_buildProjectFunctionExpression,
@@ -45,6 +47,7 @@ import {
 import {
   QUERY_BUILDER_SUPPORTED_CALENDAR_AGGREGATION_FUNCTIONS,
   QUERY_BUILDER_SUPPORTED_FUNCTIONS,
+  QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS,
 } from '../../../graph/QueryBuilderMetaModelConst.js';
 
 export class QueryBuilder_PureProtocolProcessorPlugin extends PureProtocolProcessorPlugin {
@@ -67,10 +70,36 @@ export class QueryBuilder_PureProtocolProcessorPlugin extends PureProtocolProces
         if (
           matchFunctionName(
             functionName,
-            QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_ALL,
+            QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL,
           )
         ) {
           return V1_buildGetAllFunctionExpression(
+            functionName,
+            parameters,
+            openVariables,
+            compileContext,
+            processingContext,
+          );
+        } else if (
+          matchFunctionName(
+            functionName,
+            QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS_IN_RANGE,
+          )
+        ) {
+          return V1_buildGetAllVersionsInRangeFunctionExpression(
+            functionName,
+            parameters,
+            openVariables,
+            compileContext,
+            processingContext,
+          );
+        } else if (
+          matchFunctionName(
+            functionName,
+            QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS,
+          )
+        ) {
+          return V1_buildGetAllVersionsFunctionExpression(
             functionName,
             parameters,
             openVariables,
@@ -117,10 +146,10 @@ export class QueryBuilder_PureProtocolProcessorPlugin extends PureProtocolProces
             processingContext,
           );
         } else if (
-          matchFunctionName(
-            functionName,
+          matchFunctionName(functionName, [
             QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_PROJECT,
-          )
+            QUERY_BUILDER_SUPPORTED_FUNCTIONS.RELATION_PROJECT,
+          ])
         ) {
           return V1_buildProjectFunctionExpression(
             functionName,
@@ -188,7 +217,9 @@ export class QueryBuilder_PureProtocolProcessorPlugin extends PureProtocolProces
           return expression;
         } else if (
           matchFunctionName(functionName, [
+            QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_THIS_YEAR,
             QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_YEAR,
+            QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_THIS_MONTH,
             QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_MONTH,
             QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_WEEK,
             QUERY_BUILDER_SUPPORTED_FUNCTIONS.PREVIOUS_DAY_OF_WEEK,
@@ -237,8 +268,6 @@ export class QueryBuilder_PureProtocolProcessorPlugin extends PureProtocolProces
   override V1_getExtraPropertyExpressionTypeInferrers(): V1_PropertyExpressionTypeInferrer[] {
     return [
       (inferredVariable: ValueSpecification | undefined): Type | undefined => {
-        let inferredType: Type | undefined =
-          inferredVariable?.genericType?.value.rawType;
         if (
           inferredVariable instanceof SimpleFunctionExpression &&
           matchFunctionName(
@@ -248,10 +277,11 @@ export class QueryBuilder_PureProtocolProcessorPlugin extends PureProtocolProces
             ),
           )
         ) {
-          inferredType =
-            V1_buildSubTypePropertyExpressionTypeInference(inferredVariable);
+          return V1_buildSubTypePropertyExpressionTypeInference(
+            inferredVariable,
+          );
         }
-        return inferredType;
+        return undefined;
       },
     ];
   }

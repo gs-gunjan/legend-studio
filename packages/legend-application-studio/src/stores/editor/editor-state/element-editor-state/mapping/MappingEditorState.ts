@@ -33,7 +33,7 @@ import {
   MAPPING_TEST_EDITOR_TAB_TYPE,
   DEPRECATED__MappingTestState,
   TEST_RESULT,
-} from './DEPRECATED__MappingTestState.js';
+} from './legacy/DEPRECATED__MappingTestState.js';
 import { createMockDataForMappingElementSource } from '../../../utils/MockDataUtils.js';
 import {
   type GeneratorFn,
@@ -59,7 +59,7 @@ import { RootRelationalInstanceSetImplementationState } from './relational/Relat
 import {
   type CompilationError,
   type PackageableElement,
-  type InputData,
+  type DEPRECATED__InputData,
   Type,
   type EmbeddedSetImplementation,
   type ExecutionResult,
@@ -74,8 +74,8 @@ import {
   EnumerationMapping,
   SetImplementation,
   PureInstanceSetImplementation,
-  ExpectedOutputMappingTestAssert,
-  ObjectInputData,
+  DEPRECATED__ExpectedOutputMappingTestAssert,
+  DEPRECATED__ObjectInputData,
   ObjectInputType,
   FlatDataInstanceSetImplementation,
   InstanceSetImplementation,
@@ -102,6 +102,7 @@ import {
   type Store,
   ModelStore,
   INTERNAL__UnknownSetImplementation,
+  RelationFunctionInstanceSetImplementation,
 } from '@finos/legend-graph';
 import type {
   DSL_Mapping_LegendStudioApplicationPlugin_Extension,
@@ -125,6 +126,7 @@ import { rootRelationalSetImp_setMainTableAlias } from '../../../../graph-modifi
 import { LambdaEditorState } from '@finos/legend-query-builder';
 import type { MappingEditorTabState } from './MappingTabManagerState.js';
 import { MappingTestableState } from './testable/MappingTestableState.js';
+import { MappingTestMigrationState } from './legacy/MappingTestMigrationState.js';
 
 export interface MappingExplorerTreeNodeData extends TreeNodeData {
   mappingElement: MappingElement;
@@ -144,7 +146,7 @@ export const generateMappingTestName = (mapping: Mapping): string => {
 
 export enum MAPPING_EDITOR_TAB {
   CLASS_MAPPINGS = 'CLASS_MAPPINGS',
-  BETA_TEST_SUITES = 'TEST_SUITES',
+  TEST_SUITES = 'TEST_SUITES',
 }
 
 export enum MAPPING_ELEMENT_SOURCE_ID_LABEL {
@@ -274,7 +276,7 @@ export const getMappingElementLabel = (
 export const getMappingElementSource = (
   mappingElement: MappingElement,
   plugins: LegendStudioApplicationPlugin[],
-): MappingElementSource | undefined => {
+): MappingElementSource => {
   if (mappingElement instanceof INTERNAL__UnknownSetImplementation) {
     return undefined;
   } else if (mappingElement instanceof OperationSetImplementation) {
@@ -310,6 +312,12 @@ export const getMappingElementSource = (
       mappingElement.mainSetImplementation,
       plugins,
     );
+  }
+  // TODO: We could probably return the relation function used for the mapping here once we implement the form mode support for it
+  else if (
+    mappingElement instanceof RelationFunctionInstanceSetImplementation
+  ) {
+    return undefined;
   }
   const extraMappingElementSourceExtractors = plugins.flatMap(
     (plugin) =>
@@ -615,19 +623,20 @@ export interface MappingElementSpec {
 }
 
 export class MappingEditorState extends ElementEditorState {
-  selectedTab = MAPPING_EDITOR_TAB.BETA_TEST_SUITES;
+  selectedTab = MAPPING_EDITOR_TAB.CLASS_MAPPINGS;
   currentTabState?: MappingEditorTabState | undefined;
   openedTabStates: MappingEditorTabState[] = [];
 
   mappingExplorerTreeData: TreeData<MappingExplorerTreeNodeData>;
   newMappingElementSpec?: MappingElementSpec | undefined;
 
+  mappingTestableState: MappingTestableState;
+
   // DEPREACTED legacy tests: TO REMOVE once mapping testable dev work is complete
-  mappingTestStates: DEPRECATED__MappingTestState[] = [];
+  DEPRECATED_mappingTestStates: DEPRECATED__MappingTestState[] = [];
+  migrationState: MappingTestMigrationState | undefined;
   isRunningAllTests = false;
   allTestRunTime = 0;
-  //
-  mappingTestableState: MappingTestableState;
 
   constructor(editorStore: EditorStore, element: PackageableElement) {
     super(editorStore, element);
@@ -635,16 +644,20 @@ export class MappingEditorState extends ElementEditorState {
     makeObservable<MappingEditorState, 'closeMappingElementTabState'>(this, {
       currentTabState: observable,
       openedTabStates: observable,
-      mappingTestStates: observable,
+      DEPRECATED_mappingTestStates: observable,
       newMappingElementSpec: observable,
       isRunningAllTests: observable,
       allTestRunTime: observable,
       selectedTab: observable,
+      migrationState: observable,
       mappingExplorerTreeData: observable.ref,
       mapping: computed,
       testSuiteResult: computed,
       setNewMappingElementSpec: action,
+      openMigrationTool: action,
+      closeMigrationTool: action,
       setMappingExplorerTreeNodeData: action,
+      buildLegacyTestsStates: action,
       openMappingElement: action,
       closeAllTabs: action,
       createMappingElement: action,
@@ -666,17 +679,12 @@ export class MappingEditorState extends ElementEditorState {
       deleteMappingElement: flow,
     });
 
-    this.mappingTestStates = this.mapping.test.map(
-      (t) => new DEPRECATED__MappingTestState(editorStore, t, this),
-    );
+    this.DEPRECATED_mappingTestStates = this.buildLegacyTestsStates();
     this.mappingExplorerTreeData = getMappingElementTreeData(
       this.mapping,
       editorStore,
     );
-    this.mappingTestableState = new MappingTestableState(
-      this.editorStore,
-      this,
-    );
+    this.mappingTestableState = new MappingTestableState(this);
   }
 
   get mapping(): Mapping {
@@ -684,6 +692,12 @@ export class MappingEditorState extends ElementEditorState {
       this.element,
       Mapping,
       'Element inside mapping editor state must be a mapping',
+    );
+  }
+
+  buildLegacyTestsStates(): DEPRECATED__MappingTestState[] {
+    return this.mapping.test.map(
+      (t) => new DEPRECATED__MappingTestState(this.editorStore, t, this),
     );
   }
 
@@ -752,8 +766,8 @@ export class MappingEditorState extends ElementEditorState {
           openIndex >= 0
             ? this.openedTabStates[openIndex]
             : this.openedTabStates.length
-            ? this.openedTabStates[0]
-            : undefined;
+              ? this.openedTabStates[0]
+              : undefined;
         if (tabStateToOpen) {
           yield flowResult(this.openTab(tabStateToOpen));
         } else {
@@ -893,6 +907,12 @@ export class MappingEditorState extends ElementEditorState {
       );
       return;
     }
+    if (mappingElement instanceof RelationFunctionInstanceSetImplementation) {
+      this.editorStore.applicationStore.notificationService.notifyUnsupportedFeature(
+        'Relation Function mapping editor',
+      );
+      return;
+    }
     // Open mapping element from included mapping in another mapping editor tab
     if (mappingElement._PARENT !== this.element) {
       this.editorStore.graphEditorMode.openElement(mappingElement._PARENT);
@@ -941,7 +961,7 @@ export class MappingEditorState extends ElementEditorState {
 
   *changeClassMappingSourceDriver(
     setImplementation: InstanceSetImplementation,
-    newSource: MappingElementSource | undefined,
+    newSource: MappingElementSource,
   ): GeneratorFn<void> {
     const currentSource = getMappingElementSource(
       setImplementation,
@@ -1238,7 +1258,7 @@ export class MappingEditorState extends ElementEditorState {
           );
           return this.createMappingElementState(mappingElement);
         } else if (tabState instanceof DEPRECATED__MappingTestState) {
-          return mappingEditorState.mappingTestStates.find(
+          return mappingEditorState.DEPRECATED_mappingTestStates.find(
             (testState) => testState.test.name === tabState.test.name,
           );
         } else if (tabState instanceof MappingExecutionState) {
@@ -1264,7 +1284,7 @@ export class MappingEditorState extends ElementEditorState {
       );
     } else if (this.currentTabState instanceof DEPRECATED__MappingTestState) {
       const currentlyOpenedMappingTest =
-        mappingEditorState.mappingTestStates.find(
+        mappingEditorState.DEPRECATED_mappingTestStates.find(
           (testState) =>
             this.currentTabState instanceof DEPRECATED__MappingTestState &&
             testState.test.name === this.currentTabState.test.name,
@@ -1396,6 +1416,23 @@ export class MappingEditorState extends ElementEditorState {
 
   // -------------------------------------- Test ---------------------------------------
 
+  openMigrationTool(): void {
+    if (!this.mapping.test.length) {
+      this.editorStore.applicationStore.notificationService.notifyError(
+        'No legacy tests to migrate',
+      );
+      return;
+    }
+    this.migrationState = MappingTestMigrationState.build(
+      this.editorStore,
+      this,
+    );
+  }
+
+  closeMigrationTool(): void {
+    this.migrationState = undefined;
+  }
+
   *openTest(
     test: DEPRECATED__MappingTest,
     openTab?: MAPPING_TEST_EDITOR_TAB_TYPE,
@@ -1407,7 +1444,7 @@ export class MappingEditorState extends ElementEditorState {
           tabState.test === test,
       ),
     );
-    const testState = this.mappingTestStates.find(
+    const testState = this.DEPRECATED_mappingTestStates.find(
       (mappingTestState) => mappingTestState.test === test,
     );
     assertNonNullable(
@@ -1442,10 +1479,10 @@ export class MappingEditorState extends ElementEditorState {
   }
 
   get testSuiteResult(): TEST_RESULT {
-    const numberOfTestPassed = this.mappingTestStates.filter(
+    const numberOfTestPassed = this.DEPRECATED_mappingTestStates.filter(
       (testState) => testState.result === TEST_RESULT.PASSED,
     ).length;
-    const numberOfTestFailed = this.mappingTestStates.filter(
+    const numberOfTestFailed = this.DEPRECATED_mappingTestStates.filter(
       (testState) =>
         testState.result === TEST_RESULT.FAILED ||
         testState.result === TEST_RESULT.ERROR,
@@ -1453,19 +1490,19 @@ export class MappingEditorState extends ElementEditorState {
     return numberOfTestFailed
       ? TEST_RESULT.FAILED
       : numberOfTestPassed
-      ? TEST_RESULT.PASSED
-      : TEST_RESULT.NONE;
+        ? TEST_RESULT.PASSED
+        : TEST_RESULT.NONE;
   }
 
   *runTests(): GeneratorFn<void> {
     try {
       const startTime = Date.now();
       this.isRunningAllTests = true;
-      this.mappingTestStates.forEach((testState) =>
+      this.DEPRECATED_mappingTestStates.forEach((testState) =>
         testState.resetTestRunStatus(),
       );
-      const input = this.mappingTestStates
-        .map((testState: DEPRECATED__MappingTestState) => {
+      const input = this.DEPRECATED_mappingTestStates.map(
+        (testState: DEPRECATED__MappingTestState) => {
           // run non-skip tests, and reset all skipped tests
           if (!testState.isSkipped) {
             testState.setIsRunningTest(true);
@@ -1480,8 +1517,8 @@ export class MappingEditorState extends ElementEditorState {
           }
           testState.resetTestRunStatus();
           return undefined;
-        })
-        .filter(isNonNullable);
+        },
+      ).filter(isNonNullable);
       yield this.editorStore.graphManagerState.graphManager.DEPRECATED__runLegacyMappingTests(
         input,
         this.mapping,
@@ -1505,7 +1542,7 @@ export class MappingEditorState extends ElementEditorState {
   }
 
   *addTest(test: DEPRECATED__MappingTest): GeneratorFn<void> {
-    this.mappingTestStates.push(
+    this.DEPRECATED_mappingTestStates.push(
       new DEPRECATED__MappingTestState(this.editorStore, test, this),
     );
     mapping_addDEPRECATEDTest(
@@ -1529,9 +1566,10 @@ export class MappingEditorState extends ElementEditorState {
     this.openedTabStates = this.openedTabStates.filter(
       (tabState) => !matchMappingTestState(tabState),
     );
-    this.mappingTestStates = this.mappingTestStates.filter(
-      (tabState) => !matchMappingTestState(tabState),
-    );
+    this.DEPRECATED_mappingTestStates =
+      this.DEPRECATED_mappingTestStates.filter(
+        (tabState) => !matchMappingTestState(tabState),
+      );
   }
 
   *createNewTest(setImplementation: SetImplementation): GeneratorFn<void> {
@@ -1548,9 +1586,9 @@ export class MappingEditorState extends ElementEditorState {
         `Can't auto-generate input data for operation class mapping. Please pick a concrete class mapping instead`,
       );
     }
-    let inputData: InputData;
+    let inputData: DEPRECATED__InputData;
     if (source === undefined || source instanceof Class) {
-      inputData = new ObjectInputData(
+      inputData = new DEPRECATED__ObjectInputData(
         PackageableElementExplicitReference.create(source ?? stub_Class()),
         ObjectInputType.JSON,
         source
@@ -1580,7 +1618,7 @@ export class MappingEditorState extends ElementEditorState {
       generateMappingTestName(this.mapping),
       query,
       [inputData],
-      new ExpectedOutputMappingTestAssert('{}'),
+      new DEPRECATED__ExpectedOutputMappingTestAssert('{}'),
     );
     mapping_addDEPRECATEDTest(
       this.mapping,
@@ -1588,7 +1626,7 @@ export class MappingEditorState extends ElementEditorState {
       this.editorStore.changeDetectionState.observerContext,
     );
     // open the test
-    this.mappingTestStates.push(
+    this.DEPRECATED_mappingTestStates.push(
       new DEPRECATED__MappingTestState(this.editorStore, newTest, this),
     );
     yield flowResult(this.openTest(newTest));

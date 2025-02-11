@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { UnsupportedOperationError, guaranteeType } from '@finos/legend-shared';
+import {
+  UnsupportedOperationError,
+  guaranteeType,
+  isNonNullable,
+} from '@finos/legend-shared';
 import {
   V1_buildFullPath,
   type V1_GraphBuilderContext,
@@ -56,6 +60,9 @@ import type { V1_ExecutionEnvironmentInstance } from '../../../model/packageable
 import type { V1_INTERNAL__UnknownPackageableElement } from '../../../model/packageableElements/V1_INTERNAL__UnknownPackageableElement.js';
 import type { V1_INTERNAL__UnknownFunctionActivator } from '../../../model/packageableElements/function/V1_INTERNAL__UnknownFunctionActivator.js';
 import type { V1_INTERNAL__UnknownStore } from '../../../model/packageableElements/store/V1_INTERNAL__UnknownStore.js';
+import type { V1_SnowflakeApp } from '../../../model/packageableElements/function/V1_SnowflakeApp.js';
+import type { V1_INTERNAL__UnknownElement } from '../../../model/packageableElements/V1_INTERNAL__UnknownElement.js';
+import type { V1_HostedService } from '../../../model/packageableElements/function/V1_HostedService.js';
 
 export class V1_ElementFourthPassBuilder
   implements V1_PackageableElementVisitor<void>
@@ -72,6 +79,10 @@ export class V1_ElementFourthPassBuilder
       .runFourthPass(element, this.context);
   }
 
+  visit_INTERNAL__UnknownElement(element: V1_INTERNAL__UnknownElement): void {
+    throw new UnsupportedOperationError();
+  }
+
   visit_INTERNAL__UnknownPackageableElement(
     element: V1_INTERNAL__UnknownPackageableElement,
   ): void {
@@ -81,6 +92,14 @@ export class V1_ElementFourthPassBuilder
   visit_INTERNAL__UnknownFunctionActivator(
     element: V1_INTERNAL__UnknownFunctionActivator,
   ): void {
+    throw new UnsupportedOperationError();
+  }
+
+  visit_SnowflakeApp(element: V1_SnowflakeApp): void {
+    throw new UnsupportedOperationError();
+  }
+
+  visit_HostedService(element: V1_HostedService): void {
     throw new UnsupportedOperationError();
   }
 
@@ -142,6 +161,9 @@ export class V1_ElementFourthPassBuilder
     database.filters = element.filters.map((filter) =>
       V1_buildDatabaseFilter(filter, this.context, database),
     );
+    database.stereotypes = element.stereotypes
+      .map((stereotype) => this.context.resolveStereotype(stereotype))
+      .filter(isNonNullable);
   }
 
   visit_ExecutionEnvironmentInstance(

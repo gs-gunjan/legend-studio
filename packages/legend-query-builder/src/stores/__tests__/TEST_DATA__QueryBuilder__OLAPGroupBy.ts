@@ -2480,7 +2480,12 @@ export const TEST_DATA__OlapGroupBy_entities = [
             lowerBound: 1,
           },
           name: 'employees',
-          type: 'model::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'model::Person',
+            },
+          },
         },
         {
           multiplicity: {
@@ -2496,7 +2501,12 @@ export const TEST_DATA__OlapGroupBy_entities = [
             upperBound: 1,
           },
           name: 'isApple',
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
       ],
       qualifiedProperties: [
@@ -2561,7 +2571,12 @@ export const TEST_DATA__OlapGroupBy_entities = [
             upperBound: 1,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
       qualifiedProperties: [

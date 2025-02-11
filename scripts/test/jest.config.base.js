@@ -17,8 +17,49 @@
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { getBaseConfig } from '@finos/legend-dev-utils/JestConfigUtils';
+import chalk from 'chalk';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const GROUPS = [
+  {
+    name: 'Core',
+    description:
+      'Core group. Tests with no specific extension, by default, will run in this group',
+    key: 'core',
+    extension: '',
+  },
+  {
+    name: 'Engine Roundtrip',
+    description:
+      'Group of roundtrip tests which require engine APIs (these should be deprecated and distributed to varius DSLs)',
+    key: 'engine-roundtrip',
+    extension: 'engine-roundtrip',
+  },
+  {
+    name: 'Profiling',
+    description: 'Profilier',
+    key: 'profiling',
+    extension: 'profiling',
+    manual: true,
+  },
+  {
+    name: 'Data Cube',
+    key: 'data-cube',
+    extension: 'data-cube',
+  },
+];
+
+export function printTestGroups() {
+  console.log('Available test groups:\n');
+  [GROUPS[0]]
+    .concat(GROUPS.slice(1).toSorted((a, b) => a.name.localeCompare(b.name)))
+    .forEach((group, idx) => {
+      console.log(
+        `${idx + 1}) ${group.name} [${group.key}]${group.description ? ` - ${group.description}` : ''}\nExtension: ${chalk.greenBright(group.extension ? group.extension : '(empty)')} - e.g. SomeTestFile.${group.extension ? `${group.extension}-` : ''}test.js\n`,
+      );
+    });
+}
 
 export const getBaseJestConfig = (isGlobal) => {
   const baseConfig = getBaseConfig({
@@ -40,18 +81,26 @@ export const getBaseJestConfig = (isGlobal) => {
       'decode-uri-component',
       'split-on-first',
 
-      // fuse.js
-      // See https://github.com/krisk/Fuse/pull/692
-      'fuse.js',
-
       // yaml
       'yaml',
 
       // ag-grid
-      '@ag-grid-community',
+      'ag-grid-community',
+      'ag-grid-enterprise',
+
+      // color-parse
+      'color-parse',
+      'color-name',
+
+      // MUI
+      // TODO: we might be able to remove this when the following issue is resolved
+      // See https://github.com/mui/mui-x/issues/11568
+      '@mui/x-date-pickers',
+      '@babel/runtime',
     ],
   });
 
+  /** @type {import('jest').Config} */
   const config = {
     ...baseConfig,
     setupFiles: [
@@ -76,11 +125,6 @@ export const getBaseJestConfig = (isGlobal) => {
       // See https://github.com/lodash/lodash/issues/5107
       // See https://github.com/finos/legend-studio/issues/502
       '^lodash-es$': 'lodash',
-      // Force to use the ESM distribution of Fuse
-      // as it does not yet have proper support for Typescript ESM
-      // See https://github.com/krisk/Fuse/pull/692
-      // However, if we
-      '^fuse.js$': 'fuse.js/dist/fuse.esm.js',
     },
     modulePathIgnorePatterns: [
       'packages/.*/lib/',
@@ -109,8 +153,12 @@ export const getBaseJestConfig = (isGlobal) => {
           '!**/scripts/**',
           '!**/fixtures/**',
           '!<rootDir>/packages/legend-dev-utils/WebpackConfigUtils.js', // TODO: remove this when Jest supports `import.meta.url`
-          '!<rootDir>/packages/legend-manual-tests/cypress/**', // TODO: update this when restructure `e2e` test suite
         ],
+        // Do not use `babel` when generating coverage report to avoid various errors
+        // See https://jestjs.io/docs/configuration#coverageprovider-string
+        // See https://github.com/jestjs/jest/issues/13186
+        coverageProvider: 'v8',
+        coverageReporters: ['clover', 'json', 'lcov', 'text-summary'],
         coverageDirectory: '<rootDir>/build/coverage',
         watchPathIgnorePatterns: [
           ...baseConfig.watchPathIgnorePatterns,
@@ -126,33 +174,65 @@ export const getBaseJestConfig = (isGlobal) => {
     : config;
 };
 
-export const getBaseJestProjectConfig = (projectName, packageDir) => ({
-  ...getBaseJestConfig(false),
-  displayName: projectName,
-  rootDir: '../..',
-  testMatch: [`<rootDir>/${packageDir}/**/__tests__/**/*(*.)test.[jt]s?(x)`],
-});
+export const getBaseJestProjectConfig = (projectName, packageDir) => {
+  let testMatch = [];
+  if (!process.env.TEST_GROUP) {
+    testMatch.push(
+      `<rootDir>/${packageDir}/**/__tests__/**/*(*.)test.[jt]s?(x)`,
+    );
+    testMatch.push(
+      `<rootDir>/${packageDir}/**/__tests__/**/*(*.)(${GROUPS.filter(
+        (group) => group.extension && !group.manual,
+      )
+        .map((group) => group.extension)
+        .join('|')})-test.[jt]s?(x)`,
+    );
+  } else {
+    for (const _group of GROUPS) {
+      if (process.env.TEST_GROUP === _group.key) {
+        testMatch.push(
+          `<rootDir>/${packageDir}/**/__tests__/**/*(*.)${_group.extension ? `${_group.extension}-` : ''}test.[jt]s?(x)`,
+        );
+        break;
+      }
+    }
+  }
 
-export const getBaseJestDOMProjectConfig = (projectName, packageDir) => {
-  const config = getBaseJestProjectConfig(projectName, packageDir);
+  if (testMatch.length === 0) {
+    throw new Error(
+      `Can't configure to run tests for group '${process.env.TEST_GROUP}'`,
+    );
+  }
 
   return {
-    ...config,
+    ...getBaseJestConfig(false),
+    displayName: projectName,
+    rootDir: '../..',
+    testMatch,
+  };
+};
+
+export const getBaseJestDOMProjectConfig = (projectName, packageDir) => {
+  const baseConfig = getBaseJestProjectConfig(projectName, packageDir);
+
+  /** @type {import('jest').Config} */
+  const config = {
+    ...baseConfig,
     testEnvironment: 'jsdom',
     setupFiles: [
-      ...config.setupFiles,
+      ...baseConfig.setupFiles,
       '@finos/legend-dev-utils/jest/setupDOMPolyfills',
       'jest-canvas-mock',
     ],
     setupFilesAfterEnv: [
-      ...config.setupFilesAfterEnv,
+      ...baseConfig.setupFilesAfterEnv,
       // NOTE: we need to call this before each test since there's an issue
       // with jest-canvas-mock and jest.resetAllMocks(), which is called when we set `restoreMocks: true`
       // See https://github.com/hustcc/jest-canvas-mock/issues/103
       '@finos/legend-dev-utils/jest/mockCanvas',
     ],
     moduleNameMapper: {
-      ...config.moduleNameMapper,
+      ...baseConfig.moduleNameMapper,
       '^monaco-editor$':
         '@finos/legend-lego/code-editor/test/MockedMonacoEditor.js',
       /**
@@ -170,6 +250,11 @@ export const getBaseJestDOMProjectConfig = (projectName, packageDir) => {
       '^react-markdown$':
         '@finos/legend-art/markdown/test/MockedReactMarkdown.js',
       '^remark-gfm$': '@finos/legend-art/markdown/test/MockedRemarkGFM.js',
+      '^mermaid$': '@finos/legend-art/markdown/test/MockedMermaid.js',
+    },
+    globals: {
+      AG_GRID_LICENSE: null,
     },
   };
+  return config;
 };

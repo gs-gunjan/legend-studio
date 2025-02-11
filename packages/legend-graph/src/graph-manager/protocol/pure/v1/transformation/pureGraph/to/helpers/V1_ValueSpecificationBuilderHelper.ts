@@ -21,6 +21,7 @@ import {
   isNonNullable,
   uniq,
   returnUndefOnError,
+  assertTrue,
 } from '@finos/legend-shared';
 import {
   PRIMITIVE_TYPE,
@@ -45,6 +46,7 @@ import { ValueSpecification } from '../../../../../../../../graph/metamodel/pure
 import {
   SimpleFunctionExpression,
   AbstractPropertyExpression,
+  FunctionExpression,
 } from '../../../../../../../../graph/metamodel/pure/valueSpecification/Expression.js';
 import { GenericType } from '../../../../../../../../graph/metamodel/pure/packageableElements/domain/GenericType.js';
 import { GenericTypeExplicitReference } from '../../../../../../../../graph/metamodel/pure/packageableElements/domain/GenericTypeReference.js';
@@ -95,13 +97,28 @@ import { getEnumValue } from '../../../../../../../../graph/helpers/DomainHelper
 import { matchFunctionName } from '../../../../../../../../graph/MetaModelUtils.js';
 import type { V1_ClassInstance } from '../../../../model/valueSpecification/raw/V1_ClassInstance.js';
 import type { V1_GenericTypeInstance } from '../../../../model/valueSpecification/raw/V1_GenericTypeInstance.js';
-import { V1_ClassInstanceType } from '../../../pureProtocol/serializationHelpers/V1_ValueSpecificationSerializer.js';
+import {
+  V1_ClassInstanceType,
+  V1_serializeValueSpecification,
+} from '../../../pureProtocol/serializationHelpers/V1_ValueSpecificationSerializer.js';
 import { Multiplicity } from '../../../../../../../../graph/metamodel/pure/packageableElements/domain/Multiplicity.js';
 import {
   KeyExpression,
   KeyExpressionInstanceValue,
 } from '../../../../../../../../graph/metamodel/pure/valueSpecification/KeyExpressionInstanceValue.js';
 import { V1_SubTypeGraphFetchTree } from '../../../../model/valueSpecification/raw/classInstance/graph/V1_SubTypeGraphFetchTree.js';
+import { findMappingLocalProperty } from '../../../../../../../../graph/helpers/DSL_Mapping_Helper.js';
+import { getRelationTypeGenericType } from '../../../../../../../../graph/helpers/ValueSpecificationHelper.js';
+import { RelationType } from '../../../../../../../../graph/metamodel/pure/packageableElements/relation/RelationType.js';
+import {
+  V1_getGenericTypeFullPath,
+  V1_createGenericTypeWithElementPath,
+} from '../../../../helpers/V1_DomainHelper.js';
+import {
+  ColSpec,
+  ColSpecInstanceValue,
+} from '../../../../../../../../graph/metamodel/pure/valueSpecification/RelationValueSpecification.js';
+import { V1_ColSpec } from '../../../../model/valueSpecification/raw/classInstance/relation/V1_ColSpec.js';
 
 const buildPrimtiveInstanceValue = (
   type: PRIMITIVE_TYPE,
@@ -120,15 +137,18 @@ export class V1_ValueSpecificationBuilder
   context: V1_GraphBuilderContext;
   processingContext: V1_ProcessingContext;
   openVariables: string[] = [];
+  checkFunctionName?: boolean | undefined;
 
   constructor(
     context: V1_GraphBuilderContext,
     processingContext: V1_ProcessingContext,
     openVariables: string[],
+    checkFunctionName?: boolean | undefined,
   ) {
     this.context = context;
     this.processingContext = processingContext;
     this.openVariables = openVariables;
+    this.checkFunctionName = checkFunctionName;
   }
 
   visit_INTERNAL__UnknownValueSpecfication(
@@ -142,13 +162,15 @@ export class V1_ValueSpecificationBuilder
 
   visit_Variable(variable: V1_Variable): ValueSpecification {
     this.openVariables.push(variable.name);
-    if (variable.class) {
+    if (variable.genericType) {
       const multiplicity = this.context.graph.getMultiplicity(
         variable.multiplicity.lowerBound,
         variable.multiplicity.upperBound,
       );
       const ve = new VariableExpression(variable.name, multiplicity);
-      ve.genericType = this.context.resolveGenericType(variable.class);
+      ve.genericType = this.context.resolveGenericType(
+        V1_getGenericTypeFullPath(variable.genericType),
+      );
       this.processingContext.addInferredVariables(variable.name, ve);
       return ve;
     } else {
@@ -216,12 +238,15 @@ export class V1_ValueSpecificationBuilder
       `Applying function '${appliedFunction.function}'`,
     );
     if (matchFunctionName(appliedFunction.function, SUPPORTED_FUNCTIONS.LET)) {
+      // We will build the let parameters to assign the right side of the expression to the left side
       const parameters = appliedFunction.parameters.map((expression) =>
-        expression.accept_ValueSpecificationVisitor(
-          new V1_ValueSpecificationBuilder(
-            this.context,
-            this.processingContext,
-            this.openVariables,
+        returnUndefOnError(() =>
+          expression.accept_ValueSpecificationVisitor(
+            new V1_ValueSpecificationBuilder(
+              this.context,
+              this.processingContext,
+              this.openVariables,
+            ),
           ),
         ),
       );
@@ -230,13 +255,13 @@ export class V1_ValueSpecificationBuilder
         V1_CString,
       ).value;
       // right side (value spec)
-      const rightSide = guaranteeNonNullable(parameters[1]);
+      const rightSide = parameters[1];
       const variableExpression = new VariableExpression(
         letName,
-        rightSide.multiplicity,
+        rightSide?.multiplicity ?? Multiplicity.ONE,
       );
 
-      variableExpression.genericType = rightSide.genericType;
+      variableExpression.genericType = rightSide?.genericType;
       this.processingContext.addInferredVariables(letName, variableExpression);
       this.openVariables.push(letName);
     }
@@ -246,6 +271,7 @@ export class V1_ValueSpecificationBuilder
       this.openVariables,
       this.context,
       this.processingContext,
+      this.checkFunctionName,
     );
     this.processingContext.pop();
 
@@ -285,7 +311,9 @@ export class V1_ValueSpecificationBuilder
   ): ValueSpecification {
     const instanceValue = new InstanceValue(
       Multiplicity.ONE,
-      this.context.resolveGenericType(valueSpecification.fullPath),
+      this.context.resolveGenericType(
+        V1_getGenericTypeFullPath(valueSpecification.genericType),
+      ),
     );
     return instanceValue;
   }
@@ -435,6 +463,17 @@ export class V1_ValueSpecificationBuilder
         instanceValue.values = [tree];
         return instanceValue;
       }
+      case V1_ClassInstanceType.COL_SPEC: {
+        const instanceValue = new ColSpecInstanceValue(
+          Multiplicity.ONE,
+          undefined,
+        );
+        const protocol = guaranteeType(valueSpecification.value, V1_ColSpec);
+        const value = new ColSpec();
+        value.name = protocol.name;
+        instanceValue.values = [value];
+        return instanceValue;
+      }
       default: {
         const builders = this.context.extensions.plugins.flatMap(
           (plugin) => plugin.V1_getExtraClassInstanceValueBuilders?.() ?? [],
@@ -562,6 +601,15 @@ export function V1_processProperty(
       EnumValueExplicitReference.create(getEnumValue(inferredType, property)),
     ];
     return enumValueInstanceValue;
+  } else if (inferredType instanceof RelationType) {
+    const col = guaranteeNonNullable(
+      inferredType.columns.find((e) => property === e.name),
+      `Can't find property ${property} in relation`,
+    );
+    const _funcExp = new FunctionExpression(col.name);
+    _funcExp.func = col;
+    _funcExp.parametersValues = processedParameters;
+    return _funcExp;
   }
   throw new UnsupportedOperationError(
     `Can't resolve property '${property}' of type '${inferredType?.name}'`,
@@ -580,9 +628,7 @@ export const V1_buildBaseSimpleFunctionExpression = (
   expression.func = func;
   if (func) {
     const val = func.value;
-    expression.genericType = GenericTypeExplicitReference.create(
-      new GenericType(val.returnType.value),
-    );
+    expression.genericType = val.returnType;
     expression.multiplicity = val.returnMultiplicity;
   }
   expression.parametersValues = processedParameters;
@@ -614,6 +660,63 @@ export const V1_buildGenericFunctionExpression = (
     functionName,
     compileContext,
   );
+
+export const V1_buildGenericLetFunctionExpression = (
+  functionName: string,
+  parameters: V1_ValueSpecification[],
+  openVariables: string[],
+  compileContext: V1_GraphBuilderContext,
+  processingContext: V1_ProcessingContext,
+): SimpleFunctionExpression => {
+  try {
+    return V1_buildGenericFunctionExpression(
+      functionName,
+      parameters,
+      openVariables,
+      compileContext,
+      processingContext,
+    );
+  } catch {
+    // let statement
+    assertTrue(
+      matchFunctionName(functionName, SUPPORTED_FUNCTIONS.LET),
+      'Expected let() function for custom let() handling',
+    );
+    assertTrue(parameters.length === 2, 'Let() function expects 2 parameters');
+    const leftSide = guaranteeNonNullable(
+      parameters[0],
+      'Left side of let statement expected to be defined',
+    ).accept_ValueSpecificationVisitor(
+      new V1_ValueSpecificationBuilder(
+        compileContext,
+        processingContext,
+        openVariables,
+      ),
+    );
+    const rightSideParam = guaranteeNonNullable(parameters[1]);
+    const rightSide =
+      returnUndefOnError(() =>
+        rightSideParam.accept_ValueSpecificationVisitor(
+          new V1_ValueSpecificationBuilder(
+            compileContext,
+            processingContext,
+            openVariables,
+          ),
+        ),
+      ) ??
+      new INTERNAL__UnknownValueSpecification(
+        V1_serializeValueSpecification(
+          rightSideParam,
+          compileContext.extensions.plugins,
+        ),
+      );
+    return V1_buildBaseSimpleFunctionExpression(
+      [leftSide, rightSide],
+      functionName,
+      compileContext,
+    );
+  }
+};
 /**
  * This is fairly similar to how engine does function matching in a way.
  * Notice that Studio core should not attempt to do any function inferencing/matching
@@ -628,8 +731,29 @@ export function V1_buildFunctionExpression(
   openVariables: string[],
   compileContext: V1_GraphBuilderContext,
   processingContext: V1_ProcessingContext,
+  // We don't want to throw error when we build valuespecification outside
+  // query context (for ex: while building execution plan)
+  checkFunctionName?: boolean | undefined,
 ): SimpleFunctionExpression {
+  if (checkFunctionName === false) {
+    return V1_buildGenericFunctionExpression(
+      functionName,
+      parameters,
+      openVariables,
+      compileContext,
+      processingContext,
+    );
+  }
   if (matchFunctionName(functionName, Object.values(SUPPORTED_FUNCTIONS))) {
+    if (matchFunctionName(functionName, SUPPORTED_FUNCTIONS.LET)) {
+      return V1_buildGenericLetFunctionExpression(
+        functionName,
+        parameters,
+        openVariables,
+        compileContext,
+        processingContext,
+      );
+    }
     // NOTE: this is a catch-all builder that is only meant for basic function expression
     // such as and(), or(), etc. It will fail when type-inferencing/function-matching is required
     // such as for project(), filter(), getAll(), etc.
@@ -675,9 +799,13 @@ export function V1_resolvePropertyExpressionTypeInference(
       return inferredType;
     }
   }
-  throw new UnsupportedOperationError(
-    `Can't infer type for variable '${inferredVariable}': no compatible property expression type inferrer available from plugins`,
-  );
+  const relationType = inferredVariable
+    ? getRelationTypeGenericType(inferredVariable)
+    : undefined;
+  if (relationType) {
+    return relationType;
+  }
+  return inferredVariable?.genericType?.value.rawType;
 }
 
 // --------------------------------------------- Graph Fetch Tree ---------------------------------------------
@@ -688,21 +816,24 @@ export function V1_buildGraphFetchTree(
   parentClass: Class | undefined,
   openVariables: string[],
   processingContext: V1_ProcessingContext,
+  canResolveLocalProperty?: boolean | undefined,
 ): GraphFetchTree {
   if (graphFetchTree instanceof V1_PropertyGraphFetchTree) {
-    return buildPropertyGraphFetchTree(
+    return V1_buildPropertyGraphFetchTree(
       graphFetchTree,
       context,
       guaranteeNonNullable(parentClass),
       openVariables,
       processingContext,
+      canResolveLocalProperty,
     );
   } else if (graphFetchTree instanceof V1_RootGraphFetchTree) {
-    return buildRootGraphFetchTree(
+    return V1_buildRootGraphFetchTree(
       graphFetchTree,
       context,
       openVariables,
       processingContext,
+      canResolveLocalProperty,
     );
   } else if (graphFetchTree instanceof V1_SubTypeGraphFetchTree) {
     return buildSubTypeGraphFetchTree(
@@ -710,6 +841,7 @@ export function V1_buildGraphFetchTree(
       context,
       openVariables,
       processingContext,
+      canResolveLocalProperty,
     );
   }
   throw new UnsupportedOperationError(
@@ -728,19 +860,22 @@ const createThisVariableForClass = (
   return _var;
 };
 
-function buildPropertyGraphFetchTree(
+export function V1_buildPropertyGraphFetchTree(
   propertyGraphFetchTree: V1_PropertyGraphFetchTree,
   context: V1_GraphBuilderContext,
   parentClass: Class,
   openVariables: string[],
   processingContext: V1_ProcessingContext,
+  canResolveLocalProperty?: boolean | undefined,
 ): PropertyGraphFetchTree {
   let property: AbstractProperty;
   let pureParameters: ValueSpecification[] = [];
   if (propertyGraphFetchTree.parameters.length) {
     const thisVariable = new V1_Variable();
     thisVariable.name = 'this';
-    thisVariable.class = parentClass.path;
+    thisVariable.genericType = V1_createGenericTypeWithElementPath(
+      parentClass.path,
+    );
     thisVariable.multiplicity = V1_Multiplicity.ONE;
     const parameters: V1_ValueSpecification[] =
       propertyGraphFetchTree.parameters.concat([thisVariable]);
@@ -766,11 +901,38 @@ function buildPropertyGraphFetchTree(
     processingContext.flushVariable('this');
     processingContext.pop();
   } else {
-    property = V1_getAppliedProperty(
-      parentClass,
-      undefined,
-      propertyGraphFetchTree.property,
-    );
+    // While building property graph fetch tree, the Class of root graph
+    // fetch tree is passed as the parentClass of property graph fetch tree.
+    // This Class contains the properties of property graph fetch trees.
+    // But sometimes, a local property is missing in the parentClass and
+    // causing error in V1_getAppliedProperty.
+    // To fix this, we get the local property from PureModel context.graph
+    // mappings. The function findProperty() is used for this purpose.
+    if (canResolveLocalProperty) {
+      try {
+        property = V1_getAppliedProperty(
+          parentClass,
+          undefined,
+          propertyGraphFetchTree.property,
+        );
+      } catch (error) {
+        const newProperty = findMappingLocalProperty(
+          context.graph.mappings,
+          propertyGraphFetchTree.property,
+        );
+        if (newProperty) {
+          property = newProperty;
+        } else {
+          throw error;
+        }
+      }
+    } else {
+      property = V1_getAppliedProperty(
+        parentClass,
+        undefined,
+        propertyGraphFetchTree.property,
+      );
+    }
   }
   const _subType = propertyGraphFetchTree.subType
     ? context.resolveClass(propertyGraphFetchTree.subType)
@@ -790,6 +952,7 @@ function buildPropertyGraphFetchTree(
         _returnTypeClasss,
         openVariables,
         processingContext,
+        canResolveLocalProperty,
       ),
     );
   }
@@ -804,11 +967,12 @@ function buildPropertyGraphFetchTree(
   return _propertyGraphFetchTree;
 }
 
-function buildRootGraphFetchTree(
+export function V1_buildRootGraphFetchTree(
   rootGraphFetchTree: V1_RootGraphFetchTree,
   context: V1_GraphBuilderContext,
   openVariables: string[],
   processingContext: V1_ProcessingContext,
+  canResolveLocalProperty?: boolean | undefined,
 ): RootGraphFetchTree {
   const _class = context.resolveClass(rootGraphFetchTree.class);
   const subTreeChildren = rootGraphFetchTree.subTrees.map((subTree) =>
@@ -818,6 +982,7 @@ function buildRootGraphFetchTree(
       _class.value,
       openVariables,
       processingContext,
+      canResolveLocalProperty,
     ),
   );
   const subTypeTreeChildren = rootGraphFetchTree.subTypeTrees.map(
@@ -827,6 +992,7 @@ function buildRootGraphFetchTree(
         context,
         openVariables,
         processingContext,
+        canResolveLocalProperty,
       ),
   );
   const _rootGraphFetchTree = new RootGraphFetchTree(
@@ -842,6 +1008,7 @@ function buildSubTypeGraphFetchTree(
   context: V1_GraphBuilderContext,
   openVariables: string[],
   processingContext: V1_ProcessingContext,
+  canResolveLocalProperty?: boolean | undefined,
 ): SubTypeGraphFetchTree {
   const subTypeClass = context.resolveClass(subTypeGraphFetchTree.subTypeClass);
   const children = subTypeGraphFetchTree.subTrees.map((subTree) =>
@@ -851,6 +1018,7 @@ function buildSubTypeGraphFetchTree(
       subTypeClass.value,
       openVariables,
       processingContext,
+      canResolveLocalProperty,
     ),
   );
   const _subTypeGraphFetchTree = new SubTypeGraphFetchTree(

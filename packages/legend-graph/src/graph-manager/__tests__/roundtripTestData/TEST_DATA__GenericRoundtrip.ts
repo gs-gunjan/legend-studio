@@ -26,12 +26,22 @@ export const TEST_DATA__simpleDebuggingCase = [
         {
           multiplicity: { lowerBound: 0, upperBound: 1 },
           name: 'fullName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: { lowerBound: 0, upperBound: 1 },
           name: 'title',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -80,12 +90,22 @@ export const TEST_DATA__simpleDebuggingCase = [
         {
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'legalName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: { lowerBound: 0 },
           name: 'employees',
-          type: 'myPack::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'myPack::Person',
+            },
+          },
         },
       ],
       qualifiedProperties: [
@@ -106,11 +126,21 @@ export const TEST_DATA__simpleDebuggingCase = [
           name: 'firstEmployee',
           parameters: [],
           returnMultiplicity: { lowerBound: 0, upperBound: 1 },
-          returnType: 'myPack::Person',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'myPack::Person',
+            },
+          },
         },
       ],
       stereotypes: [{ profile: 'myPack::MyExtenstion', value: 'important' }],
-      superTypes: ['myPack::LegalEntity'],
+      superTypes: [
+        {
+          path: 'myPack::LegalEntity',
+          type: 'CLASS',
+        },
+      ],
       taggedValues: [
         {
           tag: { profile: 'myPack::MyExtenstion', value: 'doc' },
@@ -131,8 +161,16 @@ export const TEST_DATA__simpleDebuggingCase = [
       _type: 'profile',
       name: 'MyExtenstion',
       package: 'myPack',
-      stereotypes: ['important'],
-      tags: ['doc'],
+      stereotypes: [
+        {
+          value: 'important',
+        },
+      ],
+      tags: [
+        {
+          value: 'doc',
+        },
+      ],
     },
   },
   {
@@ -236,12 +274,22 @@ export const TEST_DATA__simpleDebuggingCase = [
         {
           multiplicity: { lowerBound: 0, upperBound: 1 },
           name: 'firstName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: { lowerBound: 0, upperBound: 1 },
           name: 'lastName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -294,7 +342,12 @@ export const TEST_DATA__AutoImportsWithAny = [
             upperBound: 1,
           },
           name: 'prop',
-          type: 'Any',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Any',
+            },
+          },
         },
       ],
     },

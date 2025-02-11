@@ -21,7 +21,7 @@ import {
   type DEPRECATED__MappingTestState,
   MAPPING_TEST_EDITOR_TAB_TYPE,
   TEST_RESULT,
-} from '../../../../stores/editor/editor-state/element-editor-state/mapping/DEPRECATED__MappingTestState.js';
+} from '../../../../stores/editor/editor-state/element-editor-state/mapping/legacy/DEPRECATED__MappingTestState.js';
 import {
   clsx,
   ContextMenu,
@@ -36,10 +36,10 @@ import {
   ExclamationCircleIcon,
   PauseCircleIcon,
   PanelDropZone,
-  BlankPanelPlaceholder,
   MenuContent,
   MenuContentItem,
   Panel,
+  WarningIcon,
 } from '@finos/legend-art';
 import {
   type MappingElementDragSource,
@@ -47,16 +47,10 @@ import {
 } from '../../../../stores/editor/utils/DnDUtils.js';
 import { ClassMappingSelectorModal } from './MappingExecutionBuilder.js';
 import { flowResult } from 'mobx';
-import { Randomizer } from '@finos/legend-shared';
 import { useEditorStore } from '../../EditorStoreProvider.js';
 import { useApplicationStore } from '@finos/legend-application';
 import { SetImplementation } from '@finos/legend-graph';
 import { MappingEditorState } from '../../../../stores/editor/editor-state/element-editor-state/mapping/MappingEditorState.js';
-
-const addTestPromps = [
-  `Let's add some tests!`,
-  `"A test a day keeps the QA away"`,
-];
 
 export const MappingTestExplorerContextMenu = observer(
   forwardRef<
@@ -296,20 +290,24 @@ export const MappingTestsExplorer = observer(
       flowResult(mappingEditorState.runTests()),
     );
     // all test run report summary
-    const numberOfTests = mappingEditorState.mappingTestStates.length;
-    const numberOfTestsPassed = mappingEditorState.mappingTestStates.filter(
-      (testState) => testState.result === TEST_RESULT.PASSED,
-    ).length;
-    const numberOfTestsFailed = mappingEditorState.mappingTestStates.filter(
-      (testState) =>
-        testState.result === TEST_RESULT.FAILED ||
-        testState.result === TEST_RESULT.ERROR,
-    ).length;
-    const numberOfTestSkipped = mappingEditorState.mappingTestStates.filter(
-      (testState) => testState.isSkipped,
-    ).length;
+    const numberOfTests =
+      mappingEditorState.DEPRECATED_mappingTestStates.length;
+    const numberOfTestsPassed =
+      mappingEditorState.DEPRECATED_mappingTestStates.filter(
+        (testState) => testState.result === TEST_RESULT.PASSED,
+      ).length;
+    const numberOfTestsFailed =
+      mappingEditorState.DEPRECATED_mappingTestStates.filter(
+        (testState) =>
+          testState.result === TEST_RESULT.FAILED ||
+          testState.result === TEST_RESULT.ERROR,
+      ).length;
+    const numberOfTestSkipped =
+      mappingEditorState.DEPRECATED_mappingTestStates.filter(
+        (testState) => testState.isSkipped,
+      ).length;
     const percentageTestRun = Math.floor(
-      (mappingEditorState.mappingTestStates.filter(
+      (mappingEditorState.DEPRECATED_mappingTestStates.filter(
         (testState) => testState.result !== TEST_RESULT.NONE,
       ).length /
         numberOfTests) *
@@ -348,7 +346,7 @@ export const MappingTestsExplorer = observer(
       },
       [applicationStore.alertUnhandledError, isReadOnly, mappingEditorState],
     );
-    const [{ isDragOver }, dropRef] = useDrop<
+    const [{ isDragOver }, dropConnector] = useDrop<
       MappingElementDragSource,
       void,
       { isDragOver: boolean }
@@ -366,6 +364,9 @@ export const MappingTestsExplorer = observer(
     // Class mapping selector
     const [openClassMappingSelectorModal, setOpenClassMappingSelectorModal] =
       useState(false);
+
+    const openMigrationtool = (): void =>
+      mappingEditorState.openMigrationTool();
     const showClassMappingSelectorModal = (): void =>
       setOpenClassMappingSelectorModal(true);
     const hideClassMappingSelectorModal = (): void =>
@@ -412,6 +413,17 @@ export const MappingTestsExplorer = observer(
               </div>
             </div>
             <div className="panel__header__actions">
+              {Boolean(mappingEditorState.mapping.test.length) && (
+                <button
+                  className="panel__header__action"
+                  onClick={openMigrationtool}
+                  disabled={isReadOnly}
+                  tabIndex={-1}
+                  title="Please migrate to new mapping test framework"
+                >
+                  <WarningIcon />
+                </button>
+              )}
               <button
                 className="panel__header__action"
                 onClick={showClassMappingSelectorModal}
@@ -425,7 +437,7 @@ export const MappingTestsExplorer = observer(
                 className="panel__header__action"
                 onClick={runAllTests}
                 disabled={
-                  !mappingEditorState.mappingTestStates.length ||
+                  !mappingEditorState.DEPRECATED_mappingTestStates.length ||
                   mappingEditorState.isRunningAllTests
                 }
                 tabIndex={-1}
@@ -459,34 +471,21 @@ export const MappingTestsExplorer = observer(
         >
           <PanelDropZone
             isDragOver={isDragOver && !isReadOnly}
-            dropTargetConnector={dropRef}
+            dropTargetConnector={dropConnector}
           >
             <div className="mapping-test-explorer__content">
-              {Boolean(mappingEditorState.mappingTestStates.length) &&
-                mappingEditorState.mappingTestStates
-                  .slice()
-                  .map((testState) => (
+              {Boolean(
+                mappingEditorState.DEPRECATED_mappingTestStates.length,
+              ) &&
+                mappingEditorState.DEPRECATED_mappingTestStates.slice().map(
+                  (testState) => (
                     <MappingTestExplorer
                       key={testState.test._UUID}
                       testState={testState}
                       isReadOnly={isReadOnly}
                     />
-                  ))}
-              {!isReadOnly && !mappingEditorState.mappingTestStates.length && (
-                <BlankPanelPlaceholder
-                  text={
-                    new Randomizer().getRandomItemInCollection(addTestPromps) ??
-                    addTestPromps[0] ??
-                    'Add a mapping test'
-                  }
-                  onClick={showClassMappingSelectorModal}
-                  clickActionType="add"
-                  tooltipText="Drop a mapping element to start testing"
-                  isDropZoneActive={isDragOver && !isReadOnly}
-                  disabled={isReadOnly}
-                  previewText="No test"
-                />
-              )}
+                  ),
+                )}
             </div>
           </PanelDropZone>
         </ContextMenu>

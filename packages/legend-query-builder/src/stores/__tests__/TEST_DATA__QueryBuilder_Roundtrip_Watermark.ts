@@ -68,7 +68,12 @@ export const TEST_DATA_lambda_watermark_Parameter = {
   parameters: [
     {
       _type: 'var',
-      class: 'String',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'String',
+        },
+      },
       multiplicity: {
         lowerBound: 1,
         upperBound: 1,
@@ -77,7 +82,12 @@ export const TEST_DATA_lambda_watermark_Parameter = {
     },
     {
       _type: 'var',
-      class: 'String',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'String',
+        },
+      },
       multiplicity: {
         lowerBound: 1,
         upperBound: 1,

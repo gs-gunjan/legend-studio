@@ -16,6 +16,7 @@
 
 import {
   guaranteeNonEmptyString,
+  guaranteeNonNullable,
   IllegalStateError,
   isNonNullable,
   UnsupportedOperationError,
@@ -174,6 +175,12 @@ import { INTERNAL__UnknownPropertyMapping } from '../../../../../../../graph/met
 import { V1_INTERNAL__UnknownPropertyMapping } from '../../../model/packageableElements/mapping/V1_INTERNAL__UnknownPropertyMapping.js';
 import type { INTERNAL__UnknownSetImplementation } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/INTERNAL__UnknownSetImplementation.js';
 import { V1_INTERNAL__UnknownClassMapping } from '../../../model/packageableElements/mapping/V1_INTERNAL__UnknownClassMapping.js';
+import { V1_PackageableElementPointer } from '../../../model/packageableElements/V1_PackageableElement.js';
+import type { RelationFunctionInstanceSetImplementation } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/relationFunction/RelationFunctionInstanceSetImplementation.js';
+import type { RelationFunctionPropertyMapping } from '../../../../../../../graph/metamodel/pure/packageableElements/mapping/relationFunction/RelationFunctionPropertyMapping.js';
+import { V1_RelationFunctionPropertyMapping } from '../../../model/packageableElements/mapping/V1_RelationFunctionPropertyMapping.js';
+import { V1_RelationFunctionClassMapping } from '../../../model/packageableElements/mapping/V1_RelationFunctionClassMapping.js';
+import { generateFunctionPrettyName } from '../../../../../../../graph/helpers/PureLanguageHelper.js';
 
 export const V1_transformPropertyReference = (
   element: PropertyReference,
@@ -187,7 +194,7 @@ export const V1_transformPropertyReference = (
     options?.isTransformingEmbeddedPropertyMapping ||
     options?.isTransformingLocalPropertyMapping
       ? undefined
-      : element.ownerReference.valueForSerialization ?? '';
+      : (element.ownerReference.valueForSerialization ?? '');
   property.property = element.value.name;
   return property;
 };
@@ -245,8 +252,10 @@ const transformEnumerationMapping = (
   enumerationMapping.enumValueMappings = element.enumValueMappings
     .filter((e) => !isStubbed_EnumValueMapping(e))
     .map(transformEnumValueMapping);
-  enumerationMapping.enumeration =
-    element.enumeration.valueForSerialization ?? '';
+  enumerationMapping.enumeration = new V1_PackageableElementPointer(
+    PackageableElementPointerType.ENUMERATION,
+    element.enumeration.valueForSerialization ?? '',
+  );
   enumerationMapping.id = mappingElementIdSerializer(element.id);
   return enumerationMapping;
 };
@@ -358,7 +367,10 @@ const transformMappingStoreTestData = (
 ): V1_MappingStoreTestData => {
   const testData = new V1_MappingStoreTestData();
   testData.data = V1_transformEmbeddedData(element.data, context);
-  testData.store = element.store.valueForSerialization ?? '';
+  testData.store = new V1_PackageableElementPointer(
+    PackageableElementPointerType.STORE,
+    element.store.valueForSerialization ?? '',
+  );
   return testData;
 };
 
@@ -408,12 +420,12 @@ const transformMappingInclude = (
     mappingInclude.includedMapping =
       element.included.valueForSerialization ?? '';
     mappingInclude.sourceDatabasePath = element.storeSubstitutions.length
-      ? (element.storeSubstitutions[0] as SubstituteStore).original
-          .valueForSerialization ?? ''
+      ? ((element.storeSubstitutions[0] as SubstituteStore).original
+          .valueForSerialization ?? '')
       : undefined;
     mappingInclude.targetDatabasePath = element.storeSubstitutions.length
-      ? (element.storeSubstitutions[0] as SubstituteStore).substitute
-          .valueForSerialization ?? ''
+      ? ((element.storeSubstitutions[0] as SubstituteStore).substitute
+          .valueForSerialization ?? '')
       : undefined;
     return mappingInclude;
   }
@@ -760,6 +772,25 @@ const transformAggregationAwarePropertyMapping = (
   return propertyMapping;
 };
 
+const transformRelationFunctionPropertyMapping = (
+  element: RelationFunctionPropertyMapping,
+): V1_RelationFunctionPropertyMapping => {
+  const propertyMapping = new V1_RelationFunctionPropertyMapping();
+  propertyMapping.column = element.column.name;
+  propertyMapping.property = V1_transformPropertyReference(element.property);
+  propertyMapping.source =
+    element.sourceSetImplementation.valueForSerialization;
+  propertyMapping.target =
+    element.targetSetImplementation?.valueForSerialization;
+  if (element.localMappingProperty) {
+    propertyMapping.localMappingProperty = transformLocalPropertyInfo(
+      element.localMappingProperty,
+    );
+  }
+  propertyMapping.column = element.column.name;
+  return propertyMapping;
+};
+
 class PropertyMappingTransformer
   implements PropertyMappingVisitor<V1_PropertyMapping>
 {
@@ -878,6 +909,12 @@ class PropertyMappingTransformer
     propertyMapping: AggregationAwarePropertyMapping,
   ): V1_PropertyMapping {
     return transformAggregationAwarePropertyMapping(propertyMapping);
+  }
+
+  visit_RelationFunctionPropertyMapping(
+    propertyMapping: RelationFunctionPropertyMapping,
+  ): V1_PropertyMapping {
+    return transformRelationFunctionPropertyMapping(propertyMapping);
   }
 }
 
@@ -1156,6 +1193,37 @@ const transformAggregationAwareSetImplementation = (
   return classMapping;
 };
 
+const transformRelationFunctionInstanceSetImplementation = (
+  element: RelationFunctionInstanceSetImplementation,
+  context: V1_GraphTransformerContext,
+): V1_RelationFunctionClassMapping => {
+  const functionName = generateFunctionPrettyName(
+    guaranteeNonNullable(element.relationFunction),
+    {
+      fullPath: true,
+      spacing: false,
+      notIncludeParamName: true,
+    },
+  );
+
+  const classMapping = new V1_RelationFunctionClassMapping();
+  classMapping.relationFunction = new V1_PackageableElementPointer(
+    PackageableElementPointerType.FUNCTION,
+    functionName,
+  );
+  classMapping.id = mappingElementIdSerializer(element.id);
+  classMapping.class = element.class.valueForSerialization ?? '';
+  classMapping.root = element.root.valueForSerialization;
+
+  classMapping.propertyMappings = transformClassMappingPropertyMappings(
+    element.propertyMappings,
+    false,
+    context,
+  );
+  classMapping.extendsClassMappingId = element.superSetImplementationId;
+  return classMapping;
+};
+
 // NOTE: this needs to be a function to avoid error with using before declaration for embedded property mappings due to the hoisting behavior in ES
 function transformProperyMapping(
   propertyMapping: PropertyMapping,
@@ -1273,6 +1341,15 @@ export class V1_SetImplementationTransformer
     );
   }
 
+  visit_RelationFunctionInstanceSetImplementation(
+    setImplementation: RelationFunctionInstanceSetImplementation,
+  ): V1_ClassMapping | undefined {
+    return transformRelationFunctionInstanceSetImplementation(
+      setImplementation,
+      this.context,
+    );
+  }
+
   /**
    * This test is skipped because we want to temporarily relax graph building algorithm
    * to ease Pure -> Legend migration push.
@@ -1307,8 +1384,10 @@ const transformRelationalAssociationImplementation = (
   relationalMapping.stores = element.stores.map(
     (store) => store.valueForSerialization ?? '',
   );
-  relationalMapping.association =
-    element.association.valueForSerialization ?? '';
+  relationalMapping.association = new V1_PackageableElementPointer(
+    PackageableElementPointerType.ASSOCIATION,
+    element.association.valueForSerialization ?? '',
+  );
   relationalMapping.propertyMappings = transformClassMappingPropertyMappings(
     element.propertyMappings,
     true,
@@ -1326,8 +1405,10 @@ const transformFlatDataAssociationImplementation = (
   flatDataAssociationMapping.stores = element.stores.map(
     (store) => store.valueForSerialization ?? '',
   );
-  flatDataAssociationMapping.association =
-    element.association.valueForSerialization ?? '';
+  flatDataAssociationMapping.association = new V1_PackageableElementPointer(
+    PackageableElementPointerType.ASSOCIATION,
+    element.association.valueForSerialization ?? '',
+  );
   flatDataAssociationMapping.propertyMappings =
     transformClassMappingPropertyMappings(
       element.propertyMappings,
@@ -1346,7 +1427,10 @@ const transformXStorelAssociationImplementation = (
   xStoreMapping.stores = element.stores.map(
     (store) => store.valueForSerialization ?? '',
   );
-  xStoreMapping.association = element.association.valueForSerialization ?? '';
+  xStoreMapping.association = new V1_PackageableElementPointer(
+    PackageableElementPointerType.ASSOCIATION,
+    element.association.valueForSerialization ?? '',
+  );
   xStoreMapping.propertyMappings = transformClassMappingPropertyMappings(
     element.propertyMappings,
     false,

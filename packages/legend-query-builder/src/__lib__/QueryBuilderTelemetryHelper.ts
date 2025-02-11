@@ -21,18 +21,29 @@ import {
   QUERY_BUILDER_FILTER_EVENT,
   QUERY_BUILDER_POST_FILTER_EVENT,
 } from './QueryBuilderEvent.js';
+import type { QueryableClassMappingRuntimeInfo } from '../stores/QueryBuilderState.js';
 
 type QueryExecution_TelemetryData = GraphManagerOperationReport & {
   dependenciesCount: number;
+  state?: QueryableClassMappingRuntimeInfo | undefined;
 };
 type QueryMappingModelCoverageAnalysis_TelemetryData =
   GraphManagerOperationReport & {
     dependenciesCount: number;
+    state?: QueryableClassMappingRuntimeInfo | undefined;
   };
+
+type GraphFetchPanel_TelemtryData = {
+  serializationType: string | undefined;
+};
 
 export class QueryBuilderTelemetryHelper {
   static logEvent_QueryRunLaunched(service: TelemetryService): void {
     service.logEvent(QUERY_BUILDER_EVENT.RUN_QUERY__LAUNCH, {});
+  }
+
+  static logEvent_ExportQueryDataLaunched(service: TelemetryService): void {
+    service.logEvent(QUERY_BUILDER_EVENT.EXPORT_QUERY_DATA__LAUNCH, {});
   }
 
   static logEvent_ExecutionPlanGenerationLaunched(
@@ -50,6 +61,13 @@ export class QueryBuilderTelemetryHelper {
     data: QueryExecution_TelemetryData,
   ): void {
     service.logEvent(QUERY_BUILDER_EVENT.RUN_QUERY__SUCCESS, data);
+  }
+
+  static logEvent_ExportQueryDatSucceeded(
+    service: TelemetryService,
+    data: QueryExecution_TelemetryData,
+  ): void {
+    service.logEvent(QUERY_BUILDER_EVENT.EXPORT_QUERY_DATA__SUCCESS, data);
   }
 
   static logEvent_ExecutionPlanGenerationSucceeded(
@@ -204,5 +222,43 @@ export class QueryBuilderTelemetryHelper {
       QUERY_BUILDER_EVENT.MAPPING_MODEL_COVERAGE_ANALYSYS__SUCCESS,
       data,
     );
+  }
+
+  static logEvent_ShowUnmappedPropertyInExplorerTreeLaunched(
+    service: TelemetryService,
+  ): void {
+    service.logEvent(QUERY_BUILDER_EVENT.SHOW_UNMAPPED_PROPERTIES__LAUNCH, {});
+  }
+
+  static logEvent_ShowPropertyExplorerOptions(service: TelemetryService): void {
+    service.logEvent(QUERY_BUILDER_EVENT.PROPERTY_EXPLORER_OPTIONS__LAUNCH, {});
+  }
+
+  static logEvent_TogglePanelFunctionExplorer(service: TelemetryService): void {
+    service.logEvent(QUERY_BUILDER_EVENT.PANEL_FUNCTION_EXPLORER__TOGGLE, {});
+  }
+
+  static logEvent_RenderPanelFunctionExplorer(service: TelemetryService): void {
+    service.logEvent(QUERY_BUILDER_EVENT.PANEL_FUNCTION_EXPLORER__RENDER, {});
+  }
+
+  static logEvent_TogglePanelFunctionExplorerDependencyView(
+    service: TelemetryService,
+  ): void {
+    service.logEvent(
+      QUERY_BUILDER_EVENT.PANEL_FUNCTION_EXPLORER_DEPENDENCY_VIEW__TOGGLE,
+      {},
+    );
+  }
+
+  static logEvent_ToggleFetchStructure(service: TelemetryService): void {
+    service.logEvent(QUERY_BUILDER_EVENT.PANEL_FETCH_STRUCTURE_TOGGLE, {});
+  }
+
+  static logEvent_RenderGraphFetchPanel(
+    service: TelemetryService,
+    data: GraphFetchPanel_TelemtryData,
+  ): void {
+    service.logEvent(QUERY_BUILDER_EVENT.PANEL_GRAPH_FETCH_RENDER, data);
   }
 }

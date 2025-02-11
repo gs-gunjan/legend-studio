@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { type Entity, EntitiesWithOrigin } from '@finos/legend-storage';
+import {
+  type Entity,
+  type StoredFileGeneration,
+  EntitiesWithOrigin,
+} from '@finos/legend-storage';
 import {
   type PlainObject,
   AbstractServerClient,
@@ -53,8 +57,6 @@ export class DepotServerClient extends AbstractServerClient {
     `${this._projects()}/${encodeURIComponent(groupId)}/${encodeURIComponent(
       artifactId,
     )}`;
-  private _projectById = (projectId: string): string =>
-    `${this._projects()}/${encodeURIComponent(projectId)}`;
 
   getProjects = (): Promise<PlainObject<StoreProjectData>[]> =>
     this.get(this._projectConfigurations());
@@ -69,11 +71,6 @@ export class DepotServerClient extends AbstractServerClient {
       )}/${encodeURIComponent(artifactId)}`,
     );
 
-  getProjectById = (
-    projectId: string,
-  ): Promise<PlainObject<StoreProjectData>[]> =>
-    this.get(this._projectById(projectId));
-
   // ------------------------------------------- Entities -------------------------------------------
 
   private _versions = (groupId: string, artifactId: string): string =>
@@ -82,8 +79,9 @@ export class DepotServerClient extends AbstractServerClient {
     groupId: string,
     artifactId: string,
     version: string,
+    classifier?: string,
   ): string =>
-    `${this._versions(groupId, artifactId)}/${encodeURIComponent(version)}`;
+    `${this._versions(groupId, artifactId)}/${encodeURIComponent(version)}${classifier ? `/classifiers/${classifier}` : ``}`;
 
   getAllVersions = (groupId: string, artifactId: string): Promise<string[]> =>
     this.get(this._versions(groupId, artifactId));
@@ -92,17 +90,20 @@ export class DepotServerClient extends AbstractServerClient {
     groupId: string,
     artifactId: string,
     version: string,
+    classifier?: string,
   ): Promise<PlainObject<Entity>[]> =>
-    this.get(this._version(groupId, artifactId, version));
+    this.get(this._version(groupId, artifactId, version, classifier));
 
   getEntities(
     project: StoreProjectData,
     versionId: string,
+    classifier?: string,
   ): Promise<PlainObject<Entity>[]> {
     return this.getVersionEntities(
       project.groupId,
       project.artifactId,
       resolveVersion(versionId),
+      classifier,
     );
   }
 
@@ -134,7 +135,7 @@ export class DepotServerClient extends AbstractServerClient {
   }
 
   // NOTE: this is experimental API to get elements by classifier path
-  getEntitiesByClassifierPath = (
+  DEPRECATED_getEntitiesByClassifierPath = (
     classifierPath: string,
     options?: {
       search?: string | undefined;
@@ -152,6 +153,23 @@ export class DepotServerClient extends AbstractServerClient {
         search: options?.search,
         scope: options?.scope,
         limit: options?.limit,
+      },
+    );
+
+  getEntitiesByClassifier = (
+    classifierPath: string,
+    options?: {
+      scope?: DepotScope | undefined;
+    },
+  ): Promise<PlainObject<StoredEntity>[]> =>
+    this.get(
+      `${this.baseUrl}/classifiers/${encodeURIComponent(
+        classifierPath,
+      )}/entities`,
+      undefined,
+      undefined,
+      {
+        scope: options?.scope,
       },
     );
 
@@ -203,9 +221,10 @@ export class DepotServerClient extends AbstractServerClient {
      * Flag indicating whether to return the root of the dependency tree.
      */
     includeOrigin: boolean,
+    classifier?: string,
   ): Promise<PlainObject<ProjectVersionEntities>[]> =>
     this.get(
-      `${this._version(groupId, artifactId, version)}/dependencies`,
+      `${this._version(groupId, artifactId, version)}${classifier ? `/classifiers/${classifier}` : ''}/dependencies`,
       undefined,
       undefined,
       {
@@ -218,6 +237,7 @@ export class DepotServerClient extends AbstractServerClient {
   async getIndexedDependencyEntities(
     project: StoreProjectData,
     versionId: string,
+    classifier?: string,
   ): Promise<Map<string, EntitiesWithOrigin>> {
     const dependencyEntitiesIndex = new Map<string, EntitiesWithOrigin>();
     const dependencies = await this.getDependencyEntities(
@@ -226,6 +246,7 @@ export class DepotServerClient extends AbstractServerClient {
       resolveVersion(versionId),
       true,
       false,
+      classifier,
     );
     dependencies
       .map((v) => ProjectVersionEntities.serialization.fromJson(v))
@@ -282,6 +303,8 @@ export class DepotServerClient extends AbstractServerClient {
   private _generationContent = (): string =>
     `${this.baseUrl}/generationFileContent`;
 
+  private _generations = (): string => `${this.baseUrl}/generations`;
+
   private _generationContentByGAV = (
     groupId: string,
     artifactId: string,
@@ -292,6 +315,15 @@ export class DepotServerClient extends AbstractServerClient {
     )}/${encodeURIComponent(artifactId)}/versions/${encodeURIComponent(
       versionId,
     )}`;
+
+  private _generationsByGAV = (
+    groupId: string,
+    artifactId: string,
+    versionId: string,
+  ): string =>
+    `${this._generations()}/${encodeURIComponent(
+      groupId,
+    )}/${encodeURIComponent(artifactId)}/${encodeURIComponent(versionId)}`;
 
   getGenerationContentByPath = async (
     project: StoreProjectData,
@@ -308,8 +340,20 @@ export class DepotServerClient extends AbstractServerClient {
       { [HttpHeader.ACCEPT]: ContentType.TEXT_PLAIN },
     );
 
-  // ------------------------------------------- Versions -------------------------------------------
+  getGenerationFilesByType = async (
+    project: StoreProjectData,
+    versionId: string,
+    type: string,
+  ): Promise<PlainObject<StoredFileGeneration>[]> =>
+    this.get(
+      `${this._generationsByGAV(
+        project.groupId,
+        project.artifactId,
+        resolveVersion(versionId),
+      )}/types/${encodeURIComponent(type)}`,
+    );
 
+  // ------------------------------------------- Versions -------------------------------------------
   private _versionedStoreProjectData = (
     groupId: string,
     artifactId: string,

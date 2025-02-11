@@ -46,6 +46,7 @@ import {
   ATOMIC_TEST_TYPE,
   PRIMITIVE_TYPE,
   ELEMENT_PATH_DELIMITER,
+  PackageableElementPointerType,
 } from '../../../../../../../graph/MetaModelConst.js';
 import { V1_Mapping } from '../../../model/packageableElements/mapping/V1_Mapping.js';
 import {
@@ -60,6 +61,7 @@ import {
 import {
   V1_multiplicityModelSchema,
   V1_packageableElementPointerModelSchema,
+  V1_serializePackageableElementPointer,
 } from '../../../transformation/pureProtocol/serializationHelpers/V1_CoreSerializationHelper.js';
 import { V1_propertyPointerModelSchema } from './V1_DomainSerializationHelper.js';
 import type { V1_AssociationMapping } from '../../../model/packageableElements/mapping/V1_AssociationMapping.js';
@@ -132,6 +134,8 @@ import { V1_MappingTest } from '../../../model/packageableElements/mapping/V1_Ma
 import type { V1_TestSuite } from '../../../model/test/V1_TestSuite.js';
 import { V1_INTERNAL__UnknownClassMapping } from '../../../model/packageableElements/mapping/V1_INTERNAL__UnknownClassMapping.js';
 import { V1_INTERNAL__UnknownMappingInclude } from '../../../model/packageableElements/mapping/V1_INTERNAL__UnknownMappingInclude.js';
+import { V1_RelationFunctionClassMapping } from '../../../model/packageableElements/mapping/V1_RelationFunctionClassMapping.js';
+import { V1_RelationFunctionPropertyMapping } from '../../../model/packageableElements/mapping/V1_RelationFunctionPropertyMapping.js';
 
 enum V1_ClassMappingType {
   OPERATION = 'operation',
@@ -141,6 +145,7 @@ enum V1_ClassMappingType {
   ROOT_RELATIONAL = 'relational',
   RELATIONAL = 'embedded',
   AGGREGATION_AWARE = 'aggregationAware',
+  RELATION_FUNCTION = 'relation',
 }
 
 enum V1_PropertyMappingType {
@@ -154,6 +159,7 @@ enum V1_PropertyMappingType {
   OTHERWISE_EMBEDDED_RELATIONAL = 'otherwiseEmbeddedPropertyMapping',
   AGGREGATION_AWARE = 'AggregationAwarePropertyMapping',
   XSTORE = 'xStorePropertyMapping',
+  RELATION_FUNCTION = 'relationFunctionPropertyMapping',
 }
 
 // ------------------------------------- Shared -------------------------------------
@@ -656,6 +662,57 @@ const aggregationAwareClassMappingModelSchema = (
     root: primitive(),
   });
 
+// ------------------------------------- Relation Function Mapping -------------------------------------
+
+const relationFunctionPropertyMappingModelSchema = createModelSchema(
+  V1_RelationFunctionPropertyMapping,
+  {
+    _type: usingConstantValueSchema(V1_PropertyMappingType.RELATION_FUNCTION),
+    localMappingProperty: usingModelSchema(
+      V1_localMappingPropertyInfoModelSchema,
+    ),
+    property: usingModelSchema(V1_propertyPointerModelSchema),
+    source: optional(primitive()),
+    target: optional(primitive()),
+    column: primitive(),
+  },
+);
+
+function V1_serializeRelationFunctionPropertyMapping(
+  protocol: V1_RelationFunctionPropertyMapping,
+): PlainObject<V1_RelationFunctionPropertyMapping> {
+  return serialize(relationFunctionPropertyMappingModelSchema, protocol);
+}
+
+function V1_deserializeRelationFunctionPropertyMapping(
+  json: PlainObject<V1_RelationFunctionPropertyMapping>,
+): V1_RelationFunctionPropertyMapping | typeof SKIP {
+  switch (json._type) {
+    case V1_PropertyMappingType.RELATION_FUNCTION:
+      return deserialize(relationFunctionPropertyMappingModelSchema, json);
+    default:
+      return SKIP;
+  }
+}
+
+const relationFunctionClassMappingModelSchema = createModelSchema(
+  V1_RelationFunctionClassMapping,
+  {
+    _type: usingConstantValueSchema(V1_ClassMappingType.RELATION_FUNCTION),
+    class: primitive(),
+    extendsClassMappingId: optional(primitive()),
+    id: optional(primitive()),
+    propertyMappings: list(
+      custom(
+        V1_serializeRelationFunctionPropertyMapping,
+        V1_deserializeRelationFunctionPropertyMapping,
+      ),
+    ),
+    root: primitive(),
+    relationFunction: usingModelSchema(V1_packageableElementPointerModelSchema),
+  },
+);
+
 // ------------------------------------- Class Mapping -------------------------------------
 
 function V1_serializeClassMapping(
@@ -678,6 +735,8 @@ function V1_serializeClassMapping(
     return serialize(relationalClassMappingModelSchema, value);
   } else if (value instanceof V1_AggregationAwareClassMapping) {
     return serialize(aggregationAwareClassMappingModelSchema(plugins), value);
+  } else if (value instanceof V1_RelationFunctionClassMapping) {
+    return serialize(relationFunctionClassMappingModelSchema, value);
   }
   const extraClassMappingSerializers = plugins.flatMap(
     (plugin) =>
@@ -728,6 +787,8 @@ function V1_deserializeClassMapping(
         aggregationAwareClassMappingModelSchema(plugins),
         json,
       );
+    case V1_ClassMappingType.RELATION_FUNCTION:
+      return deserialize(relationFunctionClassMappingModelSchema, json);
     default: {
       const extraClassMappingDeserializers = plugins.flatMap(
         (plugin) =>
@@ -878,7 +939,14 @@ export const V1_mappingStoreTestDataModelSchema = (
       (val) => V1_serializeEmbeddedDataType(val, plugins),
       (val) => V1_deserializeEmbeddedDataType(val, plugins),
     ),
-    store: primitive(),
+    store: custom(
+      (val) => serialize(V1_packageableElementPointerModelSchema, val),
+      (val) =>
+        V1_serializePackageableElementPointer(
+          val,
+          PackageableElementPointerType.STORE,
+        ),
+    ),
   });
 
 export const V1_mappingTestModelSchema = (
@@ -952,7 +1020,14 @@ const relationalAssociationMappingModelschema = createModelSchema(
   V1_RelationalAssociationMapping,
   {
     _type: usingConstantValueSchema(V1_AssociationMappingType.RELATIONAL),
-    association: primitive(),
+    association: custom(
+      (val) => serialize(V1_packageableElementPointerModelSchema, val),
+      (val) =>
+        V1_serializePackageableElementPointer(
+          val,
+          PackageableElementPointerType.ASSOCIATION,
+        ),
+    ),
     id: optional(primitive()),
     propertyMappings: list(
       custom(
@@ -968,7 +1043,14 @@ const flatDataAssociationMappingModelschema = createModelSchema(
   V1_FlatDataAssociationMapping,
   {
     _type: usingConstantValueSchema(V1_AssociationMappingType.FLAT_DATA),
-    association: primitive(),
+    association: custom(
+      (val) => serialize(V1_packageableElementPointerModelSchema, val),
+      (val) =>
+        V1_serializePackageableElementPointer(
+          val,
+          PackageableElementPointerType.ASSOCIATION,
+        ),
+    ),
     id: optional(primitive()),
     propertyMappings: list(
       custom(
@@ -984,7 +1066,14 @@ const xStoreAssociationMappingModelschema = createModelSchema(
   V1_XStoreAssociationMapping,
   {
     _type: usingConstantValueSchema(V1_AssociationMappingType.XSTORE),
-    association: primitive(),
+    association: custom(
+      (val) => serialize(V1_packageableElementPointerModelSchema, val),
+      (val) =>
+        V1_serializePackageableElementPointer(
+          val,
+          PackageableElementPointerType.ASSOCIATION,
+        ),
+    ),
     id: optional(primitive()),
     propertyMappings: list(
       custom(
@@ -1167,7 +1256,14 @@ const V1_enumerationMappingModelSchema = createModelSchema(
           ),
       ),
     ),
-    enumeration: primitive(),
+    enumeration: custom(
+      (val) => serialize(V1_packageableElementPointerModelSchema, val),
+      (val) =>
+        V1_serializePackageableElementPointer(
+          val,
+          PackageableElementPointerType.ENUMERATION,
+        ),
+    ),
     id: optional(primitive()),
   },
 );
@@ -1222,9 +1318,7 @@ const V1_deserializeMappingInclude = (
   if (!json._type || json._type === V1_MAPPING_INCLUDE_MAPPING_TYPE) {
     return deserialize(V1_mappingIncludeMappingModelSchema, {
       ...json,
-      /**
-       * @backwardCompatibility
-       */
+      /** @backwardCompatibility */
       includedMapping:
         json.includedMapping ??
         `${json.includedMappingPackage}${ELEMENT_PATH_DELIMITER}${json.includedMappingName}`,

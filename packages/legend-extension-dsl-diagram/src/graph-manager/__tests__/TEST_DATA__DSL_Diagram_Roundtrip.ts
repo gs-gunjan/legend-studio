@@ -40,10 +40,20 @@ export const TEST_DATA__roundtrip = [
             lowerBound: 0,
           },
           name: 'prop1',
-          type: 'test::tClass2',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'test::tClass2',
+            },
+          },
         },
       ],
-      superTypes: ['test::tClass2'],
+      superTypes: [
+        {
+          path: 'test::tClass2',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -183,7 +193,12 @@ export const TEST_DATA__diagramWithAssociationProperty = [
             upperBound: 1,
           },
           name: 'class1',
-          type: 'test::class1',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'test::class1',
+            },
+          },
         },
         {
           multiplicity: {
@@ -191,7 +206,12 @@ export const TEST_DATA__diagramWithAssociationProperty = [
             upperBound: 1,
           },
           name: 'class2',
-          type: 'test::class2',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'test::class2',
+            },
+          },
         },
       ],
     },
@@ -286,9 +306,14 @@ export const TEST_DATA__diagramWithOverlappingConnectedClassViews = [
       package: 'model',
       properties: [
         {
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'firstName',
-          type: 'String',
         },
       ],
     },
@@ -304,7 +329,12 @@ export const TEST_DATA__diagramWithOverlappingConnectedClassViews = [
         {
           multiplicity: { lowerBound: 0 },
           name: 'employees',
-          type: 'model::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'model::Person',
+            },
+          },
         },
       ],
     },

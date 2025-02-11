@@ -87,8 +87,10 @@ export const ModalFooterButton: React.FC<{
   inProgressText?: string | undefined;
   children?: React.ReactNode;
   className?: string;
-  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   formatText?: boolean | undefined;
+  type?: 'primary' | 'secondary';
+  preventFormSubmit?: boolean;
 }> = (props) => {
   const {
     onClick,
@@ -100,29 +102,37 @@ export const ModalFooterButton: React.FC<{
     className,
     darkMode,
     formatText,
+    type,
+    preventFormSubmit,
   } = props;
   const isDarkMode = darkMode ?? true;
   const isFormatText = formatText ?? true;
+  const isSecondary = type === 'secondary';
+  const isPreventFormSubmit = preventFormSubmit ?? false;
 
   return (
     <button
       className={clsx(
-        'btn modal__footer__btn',
+        'btn',
+        'modal__footer__btn',
         {
           'btn--dark': isDarkMode,
+          'btn--light': !isDarkMode,
+          'modal__footer__btn--primary': !isSecondary,
+          'modal__footer__btn--secondary': isSecondary,
         },
-        { 'btn--light': !isDarkMode },
         className,
       )}
       title={title}
       onClick={onClick}
       disabled={Boolean(inProgressText) || disabled}
+      type={isPreventFormSubmit ? 'button' : undefined}
     >
       {inProgressText
         ? prettyCONSTName(inProgressText)
         : isFormatText
-        ? prettyCONSTName(text)
-        : text}
+          ? prettyCONSTName(text)
+          : text}
       {children}
     </button>
   );

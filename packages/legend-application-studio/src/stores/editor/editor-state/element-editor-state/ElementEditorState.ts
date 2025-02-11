@@ -23,12 +23,15 @@ import {
   LogEvent,
   assertErrorThrown,
   guaranteeNonNullable,
+  guaranteeType,
+  isType,
 } from '@finos/legend-shared';
 import {
   type CompilationError,
   type PackageableElement,
   GRAPH_MANAGER_EVENT,
   isElementReadOnly,
+  INTERNAL__UnknownElement,
 } from '@finos/legend-graph';
 import { DEFAULT_TAB_SIZE } from '@finos/legend-application';
 import type { ElementFileGenerationState } from './ElementFileGenerationState.js';
@@ -121,7 +124,8 @@ export abstract class ElementEditorState extends EditorState {
     });
 
     this.element = element;
-    this.isReadOnly = isElementReadOnly(element) || editorStore.isInViewerMode;
+    this.isReadOnly =
+      isElementReadOnly(element) || editorStore.disableGraphEditing;
   }
 
   get label(): string {
@@ -197,12 +201,23 @@ export abstract class ElementEditorState extends EditorState {
       );
     } catch (error) {
       assertErrorThrown(error);
-      this.setTextContent(
-        generateMultiLineCommentForError(
-          `Can't generate protocol JSON for element`,
-          error,
-        ),
-      );
+      const isUnknownEntity = isType(this.element, INTERNAL__UnknownElement);
+      if (isUnknownEntity) {
+        const unknownEntity = guaranteeType(
+          this.element,
+          INTERNAL__UnknownElement,
+        );
+        this.setTextContent(
+          JSON.stringify(unknownEntity.content, undefined, DEFAULT_TAB_SIZE),
+        );
+      } else {
+        this.setTextContent(
+          generateMultiLineCommentForError(
+            `Can't generate protocol JSON for element`,
+            error,
+          ),
+        );
+      }
       this.editorStore.applicationStore.logService.error(
         LogEvent.create(GRAPH_MANAGER_EVENT.PARSING_FAILURE),
         error,
@@ -219,6 +234,7 @@ export abstract class ElementEditorState extends EditorState {
               this.element,
             ),
           ],
+          { pretty: true },
         )) as string;
       this.setTextContent(grammar);
     } catch (error) {

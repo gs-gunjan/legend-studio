@@ -39,7 +39,10 @@ import type { GenerationSpecification } from '../../../../../../../graph/metamod
 import type { Package } from '../../../../../../../graph/metamodel/pure/packageableElements/domain/Package.js';
 import type { PrimitiveType } from '../../../../../../../graph/metamodel/pure/packageableElements/domain/PrimitiveType.js';
 import type { SectionIndex } from '../../../../../../../graph/metamodel/pure/packageableElements/section/SectionIndex.js';
-import type { V1_PackageableElement } from '../../../model/packageableElements/V1_PackageableElement.js';
+import {
+  V1_PackageableElementPointer,
+  type V1_PackageableElement,
+} from '../../../model/packageableElements/V1_PackageableElement.js';
 import {
   V1_transformAssociation,
   V1_transformClass,
@@ -47,6 +50,8 @@ import {
   V1_transformFunction,
   V1_transformMeasure,
   V1_transformProfile,
+  V1_transformStereotype,
+  V1_transformTaggedValue,
 } from './V1_DomainTransformer.js';
 import { V1_transformSectionIndex } from './V1_SectionIndexTransformer.js';
 import {
@@ -76,6 +81,20 @@ import { V1_INTERNAL__UnknownFunctionActivator } from '../../../model/packageabl
 import type { INTERNAL__UnknownStore } from '../../../../../../../graph/metamodel/pure/packageableElements/store/INTERNAL__UnknownStore.js';
 import { V1_INTERNAL__UnknownStore } from '../../../model/packageableElements/store/V1_INTERNAL__UnknownStore.js';
 import { generateFunctionPrettyName } from '../../../../../../../graph/helpers/PureLanguageHelper.js';
+import { V1_SnowflakeApp } from '../../../model/packageableElements/function/V1_SnowflakeApp.js';
+import type { SnowflakeApp } from '../../../../../../../graph/metamodel/pure/packageableElements/function/SnowflakeApp.js';
+import {
+  V1_transformDeployment,
+  V1_transformHostedServiceDeploymentConfiguration,
+  V1_transformOwnership,
+  V1_transformSnowflakeAppDeploymentConfiguration,
+} from './V1_FunctionActivatorTransformer.js';
+import { PackageableElementPointerType } from '../../../../../../../graph/MetaModelConst.js';
+import type { INTERNAL__UnknownElement } from '../../../../../../../graph/metamodel/pure/packageableElements/INTERNAL__UnknownElement.js';
+import { V1_INTERNAL__UnknownElement } from '../../../model/packageableElements/V1_INTERNAL__UnknownElement.js';
+import type { HostedService } from '../../../../../../../graph/metamodel/pure/packageableElements/function/HostedService.js';
+import { V1_HostedService } from '../../../model/packageableElements/function/V1_HostedService.js';
+import { V1_transformFunctionActivatorActions } from '../to/helpers/V1_LegendLambdaTransformerHelper.js';
 
 class V1_PackageableElementTransformer
   implements PackageableElementVisitor<V1_PackageableElement>
@@ -106,6 +125,16 @@ class V1_PackageableElementTransformer
     );
   }
 
+  visit_INTERNAL__UnknownElement(
+    element: INTERNAL__UnknownElement,
+  ): V1_PackageableElement {
+    const protocol = new V1_INTERNAL__UnknownElement();
+    V1_initPackageableElement(protocol, element);
+    protocol.content = element.content;
+    protocol.classifierPath = element.classifierPath;
+    return protocol;
+  }
+
   visit_INTERNAL__UnknownPackageableElement(
     element: INTERNAL__UnknownPackageableElement,
   ): V1_PackageableElement {
@@ -120,11 +149,74 @@ class V1_PackageableElementTransformer
   ): V1_PackageableElement {
     const protocol = new V1_INTERNAL__UnknownFunctionActivator();
     V1_initPackageableElement(protocol, element);
-    protocol.function = generateFunctionPrettyName(element.function.value, {
-      fullPath: true,
-      spacing: false,
-    });
+    protocol.function = new V1_PackageableElementPointer(
+      PackageableElementPointerType.FUNCTION,
+      generateFunctionPrettyName(element.function.value, {
+        fullPath: true,
+        spacing: false,
+      }),
+    );
+
     protocol.content = element.content;
+    return protocol;
+  }
+
+  visit_SnowflakeApp(element: SnowflakeApp): V1_PackageableElement {
+    const protocol = new V1_SnowflakeApp();
+    V1_initPackageableElement(protocol, element);
+    protocol.function = new V1_PackageableElementPointer(
+      PackageableElementPointerType.FUNCTION,
+      generateFunctionPrettyName(element.function.value, {
+        fullPath: true,
+        spacing: false,
+        notIncludeParamName: true,
+      }),
+    );
+    protocol.applicationName = element.applicationName;
+    if (element.usageRole) {
+      protocol.usageRole = element.usageRole;
+    }
+    if (element.permissionScheme) {
+      protocol.permissionScheme = element.permissionScheme;
+    }
+    protocol.description = element.description;
+    protocol.ownership = V1_transformDeployment(element.ownership);
+    protocol.activationConfiguration =
+      V1_transformSnowflakeAppDeploymentConfiguration(
+        element.activationConfiguration,
+      );
+    protocol.stereotypes = element.stereotypes.map(V1_transformStereotype);
+    protocol.taggedValues = element.taggedValues.map(V1_transformTaggedValue);
+    V1_transformFunctionActivatorActions(protocol, element);
+    return protocol;
+  }
+
+  visit_HostedService(element: HostedService): V1_PackageableElement {
+    const protocol = new V1_HostedService();
+    V1_initPackageableElement(protocol, element);
+    protocol.function = new V1_PackageableElementPointer(
+      PackageableElementPointerType.FUNCTION,
+      generateFunctionPrettyName(element.function.value, {
+        fullPath: true,
+        spacing: false,
+        notIncludeParamName: true,
+      }),
+    );
+    protocol.documentation = element.documentation;
+    protocol.pattern = element.pattern;
+    protocol.autoActivateUpdates = element.autoActivateUpdates;
+    protocol.storeModel = element.storeModel;
+    protocol.generateLineage = element.generateLineage;
+    protocol.ownership = V1_transformOwnership(element.ownership);
+    if (element.activationConfiguration) {
+      protocol.activationConfiguration =
+        V1_transformHostedServiceDeploymentConfiguration(
+          element.activationConfiguration,
+        );
+    }
+    protocol.taggedValues = element.taggedValues.map(V1_transformTaggedValue);
+    protocol.stereotypes = element.stereotypes.map(V1_transformStereotype);
+    V1_transformFunctionActivatorActions(protocol, element);
     return protocol;
   }
 

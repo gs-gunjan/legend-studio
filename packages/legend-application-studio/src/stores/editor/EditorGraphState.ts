@@ -42,11 +42,7 @@ import { ElementEditorState } from './editor-state/element-editor-state/ElementE
 import { GraphGenerationState } from './editor-state/GraphGenerationState.js';
 import { MODEL_IMPORT_NATIVE_INPUT_TYPE } from './editor-state/ModelImporterState.js';
 import type { DSL_LegendStudioApplicationPlugin_Extension } from '../LegendStudioApplicationPlugin.js';
-import {
-  type Entity,
-  EntitiesWithOrigin,
-  generateGAVCoordinates,
-} from '@finos/legend-storage';
+import { type Entity, EntitiesWithOrigin } from '@finos/legend-storage';
 import {
   type EntityChange,
   type ProjectDependency,
@@ -59,11 +55,15 @@ import {
   ProjectDependencyCoordinates,
   RawProjectDependencyReport,
   buildDependencyReport,
-  StoreProjectData,
 } from '@finos/legend-server-depot';
 import {
-  GRAPH_MANAGER_EVENT,
   type EngineError,
+  type PackageableElement,
+  type CompilationWarning,
+  type PureModel,
+  type FunctionActivatorConfiguration,
+  type RelationalDatabaseTypeConfiguration,
+  GRAPH_MANAGER_EVENT,
   Package,
   Profile,
   PrimitiveType,
@@ -85,20 +85,17 @@ import {
   DependencyGraphBuilderError,
   GraphDataDeserializationError,
   DataElement,
-  type PackageableElement,
-  type CompilationWarning,
-  type PureModel,
   createGraphBuilderReport,
   ExecutionEnvironmentInstance,
-  type FunctionActivatorConfiguration,
+  SnowflakeApp,
+  GraphEntities,
+  HostedService,
 } from '@finos/legend-graph';
 import { CONFIGURATION_EDITOR_TAB } from './editor-state/project-configuration-editor-state/ProjectConfigurationEditorState.js';
 import { PACKAGEABLE_ELEMENT_TYPE } from './utils/ModelClassifierUtils.js';
 import { LEGEND_STUDIO_APP_EVENT } from '../../__lib__/LegendStudioEvent.js';
 import { LEGEND_STUDIO_SETTING_KEY } from '../../__lib__/LegendStudioSetting.js';
-import type { TabState } from '@finos/legend-lego/application';
 import { LegendStudioTelemetryHelper } from '../../__lib__/LegendStudioTelemetryHelper.js';
-import { ArtifactGenerationViewerState } from './editor-state/ArtifactGenerationViewerState.js';
 
 export enum GraphBuilderStatus {
   SUCCEEDED = 'SUCCEEDED',
@@ -131,6 +128,9 @@ export class EditorGraphState {
   isUpdatingApplication = false; // including graph update and async operations such as change detection
 
   functionActivatorConfigurations: FunctionActivatorConfiguration[] = [];
+  relationalDatabseTypeConfigurations:
+    | RelationalDatabaseTypeConfiguration[]
+    | undefined;
 
   warnings: CompilationWarning[] = [];
   error: EngineError | undefined;
@@ -156,17 +156,20 @@ export class EditorGraphState {
       warnings: observable,
       error: observable,
       enableStrictMode: observable,
+      relationalDatabseTypeConfigurations: observable,
       problems: computed,
       areProblemsStale: computed,
       isApplicationUpdateOperationIsRunning: computed,
       clearProblems: action,
       setEnableStrictMode: action,
       setMostRecentCompilationGraphHash: action,
+      fetchAvailableRelationalDatabseTypeConfigurations: flow,
       fetchAvailableFunctionActivatorConfigurations: flow,
       buildGraph: flow,
       loadEntityChangesToGraph: flow,
       updateGenerationGraphAndApplication: flow,
       rebuildDependencies: flow,
+      buildGraphForLazyText: flow,
     });
 
     this.editorStore = editorStore;
@@ -292,6 +295,30 @@ export class EditorGraphState {
       );
       this.editorStore.applicationStore.notificationService.notifyError(error);
     }
+  }
+
+  *fetchAvailableRelationalDatabseTypeConfigurations(): GeneratorFn<void> {
+    try {
+      this.relationalDatabseTypeConfigurations =
+        (yield this.editorStore.graphManagerState.graphManager.getAvailableRelationalDatabaseTypeConfigurations()) as
+          | RelationalDatabaseTypeConfiguration[]
+          | undefined;
+    } catch (error) {
+      assertErrorThrown(error);
+      this.editorStore.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.GENERIC_FAILURE),
+        error,
+      );
+      this.editorStore.applicationStore.notificationService.notifyError(error);
+    }
+  }
+
+  findRelationalDatabaseTypeConfiguration(
+    type: string,
+  ): RelationalDatabaseTypeConfiguration | undefined {
+    return this.relationalDatabseTypeConfigurations?.find(
+      (aFlow) => aFlow.type === type,
+    );
   }
 
   *buildGraph(entities: Entity[]): GeneratorFn<GraphBuilderResult> {
@@ -424,6 +451,10 @@ export class EditorGraphState {
         this.editorStore.applicationStore.notificationService.notifyError(
           `Can't build graph. Redirected to text mode for debugging. Error: ${error.message}`,
         );
+        this.editorStore.applicationStore.logService.error(
+          LogEvent.create(GRAPH_MANAGER_EVENT.GRAPH_BUILDER_FAILURE),
+          error,
+        );
         try {
           yield flowResult(
             this.editorStore.switchModes(GRAPH_EDITOR_MODE.GRAMMAR_TEXT, {
@@ -463,6 +494,41 @@ export class EditorGraphState {
     } finally {
       this.isInitializingGraph = false;
     }
+  }
+
+  *buildGraphForLazyText(): GeneratorFn<void> {
+    this.isInitializingGraph = true;
+    const stopWatch = new StopWatch();
+    // reset
+    this.editorStore.graphManagerState.resetGraph();
+    // fetch and build dependencies
+    stopWatch.record();
+    const dependencyManager =
+      this.editorStore.graphManagerState.graphManager.createDependencyManager();
+    this.editorStore.graphManagerState.graph.dependencyManager =
+      dependencyManager;
+    this.editorStore.graphManagerState.dependenciesBuildState.setMessage(
+      `Fetching dependencies...`,
+    );
+    const dependencyEntitiesIndex = (yield flowResult(
+      this.getIndexedDependencyEntities(),
+    )) as Map<string, EntitiesWithOrigin>;
+    stopWatch.record(GRAPH_MANAGER_EVENT.FETCH_GRAPH_DEPENDENCIES__SUCCESS);
+    dependencyManager.initialize(dependencyEntitiesIndex);
+    // set dependency manager graph origin to entities
+    if (dependencyManager.origin === undefined) {
+      dependencyManager.setOrigin(
+        new GraphEntities(
+          Array.from(dependencyEntitiesIndex.values())
+            .map((e) => e.entities)
+            .flat(),
+        ),
+      );
+    }
+    this.isInitializingGraph = false;
+    this.editorStore.graphManagerState.dependenciesBuildState.sync(
+      ActionState.create().pass(),
+    );
   }
 
   private redirectToModelImporterForDebugging(error: Error): void {
@@ -575,26 +641,7 @@ export class EditorGraphState {
     );
     this.isUpdatingApplication = true;
     try {
-      /**
-       * Backup and editor states info before resetting
-       */
-      const openedTabEditorPaths: string[] = [];
-      this.editorStore.tabManagerState.tabs.forEach((state: TabState) => {
-        if (state instanceof ElementEditorState) {
-          openedTabEditorPaths.push(state.elementPath);
-        }
-      });
-      const currentTab = this.editorStore.tabManagerState.currentTab;
-      const currentTabState =
-        currentTab instanceof ElementEditorState ||
-        currentTab instanceof ArtifactGenerationViewerState
-          ? undefined
-          : currentTab;
-      const currentTabElementPath =
-        currentTab instanceof ElementEditorState
-          ? currentTab.elementPath
-          : undefined;
-      this.editorStore.tabManagerState.closeAllTabs();
+      this.editorStore.tabManagerState.cacheAndClose({ cacheGeneration: true });
 
       yield flowResult(
         this.editorStore.graphManagerState.graph.generationModel.dispose(),
@@ -608,11 +655,7 @@ export class EditorGraphState {
         this.editorStore.graphManagerState.generationsBuildState,
       );
       this.editorStore.explorerTreeState.reprocess();
-      this.editorStore.tabManagerState.recoverTabs(
-        openedTabEditorPaths,
-        currentTabState,
-        currentTabElementPath,
-      );
+      this.editorStore.tabManagerState.recoverTabs();
     } catch (error) {
       assertErrorThrown(error);
       this.editorStore.applicationStore.logService.error(
@@ -752,53 +795,15 @@ export class EditorGraphState {
     projectDependencies: ProjectDependency[],
   ): Promise<ProjectDependencyCoordinates[]> {
     return Promise.all(
-      projectDependencies.map(async (dep) => {
-        /**
-         * We expect current dependency ids to be in the format of {groupId}:{artifactId}.
-         * For the legacy dependency we must fetch the corresponding coordinates (group, artifact ids) from the depot server
-         *
-         * @backwardCompatibility
-         */
-        if (dep.isLegacyDependency) {
-          return this.editorStore.depotServerClient
-            .getProjectById(dep.projectId)
-            .then((projects) => {
-              const projectsData = projects.map((p) =>
-                StoreProjectData.serialization.fromJson(p),
-              );
-              if (projectsData.length !== 1) {
-                throw new Error(
-                  `Expected 1 project for project ID '${dep.projectId}'. Got ${
-                    projectsData.length
-                  } projects with coordinates ${projectsData
-                    .map(
-                      (i) =>
-                        `'${generateGAVCoordinates(
-                          i.groupId,
-                          i.artifactId,
-                          undefined,
-                        )}'`,
-                    )
-                    .join(', ')}.`,
-                );
-              }
-              const project = projectsData[0] as StoreProjectData;
-              return new ProjectDependencyCoordinates(
-                project.groupId,
-                project.artifactId,
-                dep.versionId,
-              );
-            });
-        } else {
-          return Promise.resolve(
-            new ProjectDependencyCoordinates(
-              guaranteeNonNullable(dep.groupId),
-              guaranteeNonNullable(dep.artifactId),
-              dep.versionId,
-            ),
-          );
-        }
-      }),
+      projectDependencies.map(async (dep) =>
+        Promise.resolve(
+          new ProjectDependencyCoordinates(
+            guaranteeNonNullable(dep.groupId),
+            guaranteeNonNullable(dep.artifactId),
+            dep.versionId,
+          ),
+        ),
+      ),
     );
   }
 
@@ -845,6 +850,10 @@ export class EditorGraphState {
       return PACKAGEABLE_ELEMENT_TYPE.DATA;
     } else if (element instanceof ExecutionEnvironmentInstance) {
       return PACKAGEABLE_ELEMENT_TYPE.EXECUTION_ENVIRONMENT;
+    } else if (element instanceof SnowflakeApp) {
+      return PACKAGEABLE_ELEMENT_TYPE.SNOWFLAKE_APP;
+    } else if (element instanceof HostedService) {
+      return PACKAGEABLE_ELEMENT_TYPE.HOSTED_SERVICE;
     }
     const extraElementTypeLabelGetters = this.editorStore.pluginManager
       .getApplicationPlugins()
@@ -860,6 +869,6 @@ export class EditorGraphState {
         return label;
       }
     }
-    return PACKAGEABLE_ELEMENT_TYPE.INTERNAL__UNKNOWN;
+    return PACKAGEABLE_ELEMENT_TYPE.INTERNAL__UnknownElement;
   }
 }

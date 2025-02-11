@@ -86,6 +86,14 @@ import { V1_ClassInstance } from '../../../model/valueSpecification/raw/V1_Class
 import { V1_ClassInstanceType } from '../../pureProtocol/serializationHelpers/V1_ValueSpecificationSerializer.js';
 import type { KeyExpressionInstanceValue } from '../../../../../../../graph/metamodel/pure/valueSpecification/KeyExpressionInstanceValue.js';
 import { V1_CByteArray } from '../../../model/valueSpecification/raw/V1_CByteArray.js';
+import type {
+  ColSpecArrayInstance,
+  ColSpecInstanceValue,
+} from '../../../../../../../graph/metamodel/pure/valueSpecification/RelationValueSpecification.js';
+import { V1_ColSpecArray } from '../../../model/valueSpecification/raw/classInstance/relation/V1_ColSpecArray.js';
+import { V1_ColSpec } from '../../../model/valueSpecification/raw/classInstance/relation/V1_ColSpec.js';
+import { RelationColumn } from '../../../../../../../graph/metamodel/pure/packageableElements/relation/RelationType.js';
+import { V1_createGenericTypeWithElementPath } from '../../../helpers/V1_DomainHelper.js';
 
 class V1_ValueSpecificationTransformer
   implements ValueSpecificationVisitor<V1_ValueSpecification>
@@ -128,6 +136,22 @@ class V1_ValueSpecificationTransformer
   visit_FunctionExpression(
     valueSpecification: FunctionExpression,
   ): V1_ValueSpecification {
+    // handle relational column
+    if (valueSpecification.func instanceof RelationColumn) {
+      const _property = new V1_AppliedProperty();
+      _property.property = valueSpecification.func.name;
+      _property.parameters = valueSpecification.parametersValues.map((value) =>
+        value.accept_ValueSpecificationVisitor(
+          new V1_ValueSpecificationTransformer(
+            this.inScope,
+            this.open,
+            this.isParameter,
+            this.useAppliedFunction,
+          ),
+        ),
+      );
+      return _property;
+    }
     const appliedFunc = new V1_AppliedFunction();
     appliedFunc.function = valueSpecification.functionName;
     appliedFunc.parameters = valueSpecification.parametersValues.map((value) =>
@@ -173,7 +197,9 @@ class V1_ValueSpecificationTransformer
         valueSpecification.multiplicity.upperBound,
       );
       _variable.multiplicity = multiplicity;
-      _variable.class = genericType.value.rawType.path;
+      _variable.genericType = V1_createGenericTypeWithElementPath(
+        genericType.value.rawType.path,
+      );
     }
     return _variable;
   }
@@ -216,9 +242,10 @@ class V1_ValueSpecificationTransformer
         valueSpecification.genericType.value.rawType instanceof Class)
     ) {
       const protocol = new V1_GenericTypeInstance();
-      protocol.fullPath =
+      protocol.genericType = V1_createGenericTypeWithElementPath(
         valueSpecification.genericType.ownerReference.valueForSerialization ??
-        '';
+          '',
+      );
       return protocol;
     }
     throw new UnsupportedOperationError(
@@ -371,6 +398,56 @@ class V1_ValueSpecificationTransformer
       this.isParameter,
       this.useAppliedFunction,
     );
+    return classInstance;
+  }
+
+  visit_ColSpecArrayInstance(
+    valueSpecification: ColSpecArrayInstance,
+  ): V1_ValueSpecification {
+    const classInstance = new V1_ClassInstance();
+    classInstance.type = V1_ClassInstanceType.COL_SPEC_ARRAY;
+    const val = guaranteeNonNullable(valueSpecification.values[0]);
+    const colSpecArray = new V1_ColSpecArray();
+    colSpecArray.colSpecs = val.colSpecs.map((col) => {
+      const colProtocol = new V1_ColSpec();
+      colProtocol.name = col.name;
+      const fun1 = col.function1?.accept_ValueSpecificationVisitor(
+        new V1_ValueSpecificationTransformer(
+          this.inScope,
+          this.open,
+          this.isParameter,
+          this.useAppliedFunction,
+        ),
+      );
+      if (fun1) {
+        colProtocol.function1 = guaranteeType(fun1, V1_Lambda);
+      }
+      return colProtocol;
+    });
+    classInstance.value = colSpecArray;
+    return classInstance;
+  }
+
+  visit_ColSpecInstance(
+    valueSpecification: ColSpecInstanceValue,
+  ): V1_ValueSpecification {
+    const classInstance = new V1_ClassInstance();
+    classInstance.type = V1_ClassInstanceType.COL_SPEC;
+    const val = guaranteeNonNullable(valueSpecification.values[0]);
+    const colProtocol = new V1_ColSpec();
+    colProtocol.name = val.name;
+    const fun1 = val.function1?.accept_ValueSpecificationVisitor(
+      new V1_ValueSpecificationTransformer(
+        this.inScope,
+        this.open,
+        this.isParameter,
+        this.useAppliedFunction,
+      ),
+    );
+    if (fun1) {
+      colProtocol.function1 = guaranteeType(fun1, V1_Lambda);
+    }
+    classInstance.value = colProtocol;
     return classInstance;
   }
 }

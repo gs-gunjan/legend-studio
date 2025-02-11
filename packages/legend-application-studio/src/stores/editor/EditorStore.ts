@@ -93,19 +93,31 @@ import { LEGEND_STUDIO_APP_EVENT } from '../../__lib__/LegendStudioEvent.js';
 import type { EditorMode } from './EditorMode.js';
 import { StandardEditorMode } from './StandardEditorMode.js';
 import { WorkspaceUpdateConflictResolutionState } from './sidebar-state/WorkspaceUpdateConflictResolutionState.js';
-import { PACKAGEABLE_ELEMENT_TYPE } from './utils/ModelClassifierUtils.js';
+import {
+  PACKAGEABLE_ELEMENT_TYPE,
+  PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY,
+} from './utils/ModelClassifierUtils.js';
 import { GlobalTestRunnerState } from './sidebar-state/testable/GlobalTestRunnerState.js';
 import type { LegendStudioApplicationStore } from '../LegendStudioBaseStore.js';
 import { EmbeddedQueryBuilderState } from './EmbeddedQueryBuilderState.js';
 import { LEGEND_STUDIO_COMMAND_KEY } from '../../__lib__/LegendStudioCommand.js';
 import { EditorTabManagerState } from './EditorTabManagerState.js';
-import type { ProjectViewerEditorMode } from '../project-view/ProjectViewerEditorMode.js';
 import { GraphEditFormModeState } from './GraphEditFormModeState.js';
 import type { GraphEditorMode } from './GraphEditorMode.js';
 import { GraphEditGrammarModeState } from './GraphEditGrammarModeState.js';
 import { GlobalBulkServiceRegistrationState } from './sidebar-state/BulkServiceRegistrationState.js';
 import { SQLPlaygroundPanelState } from './panel-group/SQLPlaygroundPanelState.js';
 import type { QuickInputState } from './QuickInputState.js';
+import { GlobalEndToEndWorkflowState } from './sidebar-state/end-to-end-workflow/GlobalEndToEndFlowState.js';
+import {
+  SHOWCASE_PANEL_LOCAL_STORAGE,
+  toggleShowcasePanel,
+} from '../../components/editor/ShowcaseSideBar.js';
+import {
+  GraphEditLazyGrammarModeState,
+  LazyTextEditorStore,
+} from '../lazy-text-editor/LazyTextEditorStore.js';
+import type { QueryBuilderDataCubeViewerState } from '@finos/legend-query-builder';
 
 export abstract class EditorExtensionState {
   /**
@@ -113,6 +125,8 @@ export abstract class EditorExtensionState {
    * See https://github.com/finos/legend-studio/blob/master/docs/technical/typescript-usage.md#understand-typescript-structual-type-system
    */
   private readonly _$nominalTypeBrand!: 'EditorExtensionState';
+
+  abstract get INTERNAL__identifierKey(): string;
 }
 
 export class EditorStore implements CommandRegistrar {
@@ -120,6 +134,13 @@ export class EditorStore implements CommandRegistrar {
   readonly sdlcServerClient: SDLCServerClient;
   readonly depotServerClient: DepotServerClient;
   readonly pluginManager: LegendStudioPluginManager;
+
+  /**
+   * This is a mechanism to have the store holds references to extension states
+   * so that we can refer back to these states when needed or do cross-extensions
+   * operations
+   */
+  readonly extensionStates: EditorExtensionState[] = [];
 
   readonly initState = ActionState.create();
 
@@ -131,8 +152,6 @@ export class EditorStore implements CommandRegistrar {
   // Instead, we will gradually move these `boolean` flags into `EditorMode`
   // See https://github.com/finos/legend-studio/issues/317
   mode = EDITOR_MODE.STANDARD;
-
-  editorExtensionStates: EditorExtensionState[] = [];
 
   // SDLC
   sdlcState: EditorSDLCState;
@@ -153,12 +172,14 @@ export class EditorStore implements CommandRegistrar {
   localChangesState: LocalChangesState;
   conflictResolutionState: WorkspaceUpdateConflictResolutionState;
   globalBulkServiceRegistrationState: GlobalBulkServiceRegistrationState;
+  globalEndToEndWorkflowState: GlobalEndToEndWorkflowState;
   devToolState: DevToolPanelState;
   sqlPlaygroundState: SQLPlaygroundPanelState;
 
   modelImporterState: ModelImporterState;
   projectConfigurationEditorState: ProjectConfigurationEditorState;
   embeddedQueryBuilderState: EmbeddedQueryBuilderState;
+  embeddedDataCubeViewerState: QueryBuilderDataCubeViewerState | undefined;
   newElementState: NewElementState;
   /**
    * Since we want to share element generation state across all element in the editor, we will create 1 element generate state
@@ -180,7 +201,12 @@ export class EditorStore implements CommandRegistrar {
     default: 300,
     snap: 150,
   });
+  readonly showcasePanelDisplayState: PanelDisplayState;
+  readonly showcaseDefaultSize = 500;
   readonly tabManagerState = new EditorTabManagerState(this);
+  supportedElementTypesWithCategory: Map<string, string[]>;
+
+  lazyTextEditorStore = new LazyTextEditorStore(this);
 
   constructor(
     applicationStore: LegendStudioApplicationStore,
@@ -198,8 +224,10 @@ export class EditorStore implements CommandRegistrar {
       graphEditorMode: observable,
       showSearchElementCommand: observable,
       quickInputState: observable,
+      lazyTextEditorStore: observable,
 
       isInViewerMode: computed,
+      disableGraphEditing: computed,
       isInConflictResolutionMode: computed,
       isInitialized: computed,
 
@@ -216,10 +244,14 @@ export class EditorStore implements CommandRegistrar {
       initialize: flow,
       initMode: flow,
       initStandardMode: flow,
+      initializeLazyTextMode: flow,
       initConflictResolutionMode: flow,
       buildGraph: flow,
       toggleTextMode: flow,
       switchModes: flow,
+
+      embeddedDataCubeViewerState: observable,
+      setEmbeddedDataCubeViewerState: action,
     });
 
     this.applicationStore = applicationStore;
@@ -247,6 +279,7 @@ export class EditorStore implements CommandRegistrar {
       this,
       this.sdlcState,
     );
+    this.globalEndToEndWorkflowState = new GlobalEndToEndWorkflowState(this);
     this.workspaceWorkflowManagerState = new WorkspaceWorkflowManagerState(
       this,
       this.sdlcState,
@@ -271,25 +304,43 @@ export class EditorStore implements CommandRegistrar {
       this.sdlcState,
     );
     // extensions
-    this.editorExtensionStates = this.pluginManager
+    this.extensionStates = this.pluginManager
       .getApplicationPlugins()
       .flatMap(
-        (plugin) => plugin.getExtraEditorExtensionStateCreators?.() ?? [],
+        (plugin) => plugin.getExtraEditorExtensionStateBuilders?.() ?? [],
       )
       .map((creator) => creator(this))
       .filter(isNonNullable);
+    this.supportedElementTypesWithCategory =
+      this.getSupportedElementTypesWithCategory();
+
+    this.showcasePanelDisplayState = new PanelDisplayState({
+      initial: this.showcaseInitialSize,
+      default: this.showcaseDefaultSize,
+      snap: 150,
+    });
+  }
+
+  get showcaseInitialSize(): number {
+    const showcasesSavedAsOpen =
+      this.applicationStore.userDataService.getBooleanValue(
+        SHOWCASE_PANEL_LOCAL_STORAGE.PANEL_STATE_KEY,
+      );
+    const showcaseEnabled = this.applicationStore.config.showcaseServerUrl;
+    if (
+      showcaseEnabled &&
+      (showcasesSavedAsOpen || showcasesSavedAsOpen === undefined)
+    ) {
+      return this.showcaseDefaultSize;
+    } else {
+      return 0;
+    }
   }
 
   get isInitialized(): boolean {
     if (this.isInViewerMode) {
       return (
-        (Boolean(
-          this.sdlcState.currentProject && this.sdlcState.currentWorkspace,
-        ) ||
-          Boolean(
-            (this.sdlcState.editorStore.editorMode as ProjectViewerEditorMode)
-              .viewerStore.projectGAVCoordinates,
-          )) &&
+        this.editorMode.isInitialized &&
         this.graphManagerState.systemBuildState.hasSucceeded
       );
     } else {
@@ -308,6 +359,10 @@ export class EditorStore implements CommandRegistrar {
     return this.mode === EDITOR_MODE.VIEWER;
   }
 
+  get disableGraphEditing(): boolean {
+    return this.isInViewerMode && this.editorMode.disableEditing;
+  }
+
   get isInConflictResolutionMode(): boolean {
     return this.mode === EDITOR_MODE.CONFLICT_RESOLUTION;
   }
@@ -322,6 +377,12 @@ export class EditorStore implements CommandRegistrar {
 
   setShowSearchElementCommand(val: boolean): void {
     this.showSearchElementCommand = val;
+  }
+
+  setEmbeddedDataCubeViewerState(
+    val: QueryBuilderDataCubeViewerState | undefined,
+  ): void {
+    this.embeddedDataCubeViewerState = val;
   }
 
   setQuickInputState<T>(val: QuickInputState<T> | undefined): void {
@@ -408,6 +469,18 @@ export class EditorStore implements CommandRegistrar {
       },
     });
     this.applicationStore.commandService.registerCommand({
+      key: LEGEND_STUDIO_COMMAND_KEY.OPEN_SHOWCASES,
+      trigger: this.createEditorCommandTrigger(
+        () =>
+          this.isInitialized &&
+          (!this.isInConflictResolutionMode ||
+            this.conflictResolutionState.hasResolvedAllConflicts),
+      ),
+      action: () => {
+        toggleShowcasePanel(this);
+      },
+    });
+    this.applicationStore.commandService.registerCommand({
       key: LEGEND_STUDIO_COMMAND_KEY.TOGGLE_MODEL_LOADER,
       trigger: this.createEditorCommandTrigger(() => !this.isInViewerMode),
       action: () => this.tabManagerState.openTab(this.modelImporterState),
@@ -476,7 +549,7 @@ export class EditorStore implements CommandRegistrar {
     this.explorerTreeState = new ExplorerTreeState(this);
   }
 
-  internalizeEntityPath(params: WorkspaceEditorPathParams): void {
+  internalizeEntityPath(params: Partial<WorkspaceEditorPathParams>): void {
     const { projectId, entityPath } = params;
     const workspaceType = params.groupWorkspaceId
       ? WorkspaceType.GROUP
@@ -488,7 +561,12 @@ export class EditorStore implements CommandRegistrar {
     if (entityPath) {
       this.initialEntityPath = entityPath;
       this.applicationStore.navigationService.navigator.updateCurrentLocation(
-        generateEditorRoute(projectId, workspaceId, workspaceType),
+        generateEditorRoute(
+          guaranteeNonNullable(projectId),
+          params.patchReleaseVersionId,
+          workspaceId,
+          workspaceType,
+        ),
       );
     }
   }
@@ -500,6 +578,7 @@ export class EditorStore implements CommandRegistrar {
    */
   *initialize(
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     workspaceId: string,
     workspaceType: WorkspaceType,
   ): GeneratorFn<void> {
@@ -507,21 +586,29 @@ export class EditorStore implements CommandRegistrar {
       /**
        * Since React `fast-refresh` will sometimes cause `Editor` to rerender, this method will be called again
        * as all hooks are recalled, as such, ONLY IN DEVELOPMENT mode we allow this to not fail-fast
-       * we also have to `undo` some of what the `cleanUp` does to this store as the cleanup part of all hooks will be triggered
-       * as well
+       * we also have to `undo` some of what the `cleanUp` does to this store as the cleanup part of all hooks
+       * will be triggered as well
        */
       // eslint-disable-next-line no-process-env
       if (process.env.NODE_ENV === 'development') {
-        this.applicationStore.logService.info(
-          LogEvent.create(APPLICATION_EVENT.DEVELOPMENT_ISSUE),
+        this.applicationStore.logService.debug(
+          LogEvent.create(APPLICATION_EVENT.DEBUG),
           `Fast-refreshing the app - undoing cleanUp() and preventing initialize() recall in editor store...`,
         );
         this.changeDetectionState.start();
         return;
       }
-      this.applicationStore.notificationService.notifyIllegalState(
-        'Editor store is re-initialized',
-      );
+      // eslint-disable-next-line no-process-env
+      if (process.env.NODE_ENV === 'production') {
+        this.applicationStore.notificationService.notifyIllegalState(
+          'Editor store is re-initialized',
+        );
+      } else {
+        this.applicationStore.logService.debug(
+          LogEvent.create(APPLICATION_EVENT.DEBUG),
+          'Editor store is re-initialized',
+        );
+      }
       return;
     }
     this.initState.inProgress();
@@ -564,7 +651,7 @@ export class EditorStore implements CommandRegistrar {
             type: ActionAlertActionType.STANDARD,
             handler: (): void => {
               this.applicationStore.navigationService.navigator.goToLocation(
-                generateSetupRoute(undefined),
+                generateSetupRoute(undefined, undefined),
               );
             },
           },
@@ -574,8 +661,14 @@ export class EditorStore implements CommandRegistrar {
       return;
     }
     yield flowResult(
+      this.sdlcState.fetchCurrentPatch(projectId, patchReleaseVersionId, {
+        suppressNotification: true,
+      }),
+    );
+    yield flowResult(
       this.sdlcState.fetchCurrentWorkspace(
         projectId,
+        patchReleaseVersionId,
         workspaceId,
         workspaceType,
         {
@@ -598,6 +691,7 @@ export class EditorStore implements CommandRegistrar {
           });
           const workspace = await this.sdlcServerClient.createWorkspace(
             projectId,
+            patchReleaseVersionId,
             workspaceId,
             workspaceType,
           );
@@ -671,13 +765,11 @@ export class EditorStore implements CommandRegistrar {
         },
         {
           tracerService: this.applicationStore.tracerService,
-          TEMPORARY__enableNewServiceRegistrationInputCollectorMechanism:
-            this.applicationStore.config.options
-              .TEMPORARY__enableNewServiceRegistrationInputCollectorMechanism,
         },
       ),
     ]);
     yield this.graphManagerState.initializeSystem();
+
     yield flowResult(this.initMode());
 
     onLeave(true);
@@ -690,6 +782,9 @@ export class EditorStore implements CommandRegistrar {
         return;
       case EDITOR_MODE.CONFLICT_RESOLUTION:
         yield flowResult(this.initConflictResolutionMode());
+        return;
+      case EDITOR_MODE.LAZY_TEXT_EDITOR:
+        yield flowResult(this.initializeLazyTextMode());
         return;
       default:
         throw new UnsupportedOperationError(
@@ -722,9 +817,104 @@ export class EditorStore implements CommandRegistrar {
       this.graphState.graphGenerationState.globalFileGenerationState.fetchAvailableFileGenerationDescriptions(),
       this.graphState.graphGenerationState.externalFormatState.fetchExternalFormatDescriptions(),
       this.graphState.fetchAvailableFunctionActivatorConfigurations(),
+      this.graphState.fetchAvailableRelationalDatabseTypeConfigurations(),
       this.sdlcState.fetchProjectVersions(),
       this.sdlcState.fetchPublishedProjectVersions(),
+      this.sdlcState.fetchAuthorizedActions(),
     ]);
+  }
+
+  *initializeLazyTextMode(): GeneratorFn<void> {
+    // set up
+    const projectId = this.sdlcState.activeProject.projectId;
+    const activeWorkspace = this.sdlcState.activeWorkspace;
+    const projectConfiguration = (yield this.sdlcServerClient.getConfiguration(
+      projectId,
+      activeWorkspace,
+    )) as PlainObject<ProjectConfiguration>;
+    this.projectConfigurationEditorState.setProjectConfiguration(
+      ProjectConfiguration.serialization.fromJson(projectConfiguration),
+    );
+    // make sure we set the original project configuration to a different object
+    this.projectConfigurationEditorState.setOriginalProjectConfiguration(
+      ProjectConfiguration.serialization.fromJson(projectConfiguration),
+    );
+
+    const startTime = Date.now();
+    let entities: Entity[];
+
+    this.initState.setMessage(`Fetching entities...`);
+    try {
+      entities = (yield this.sdlcServerClient.getEntities(
+        projectId,
+        activeWorkspace,
+      )) as Entity[];
+      this.changeDetectionState.workspaceLocalLatestRevisionState.setEntities(
+        entities,
+      );
+      this.applicationStore.logService.info(
+        LogEvent.create(GRAPH_MANAGER_EVENT.FETCH_GRAPH_ENTITIES__SUCCESS),
+        Date.now() - startTime,
+        'ms',
+      );
+    } catch (error) {
+      assertErrorThrown(error);
+      this.applicationStore.logService.error(
+        LogEvent.create(GRAPH_MANAGER_EVENT.FETCH_GRAPH_ENTITIES_ERROR),
+        Date.now() - startTime,
+        'ms',
+      );
+      this.applicationStore.notificationService.notifyError(error);
+      return;
+    } finally {
+      this.initState.setMessage(undefined);
+    }
+    this.initState.setMessage('Building entities hash...');
+    yield flowResult(
+      this.changeDetectionState.workspaceLocalLatestRevisionState.buildEntityHashesIndex(
+        entities,
+        LogEvent.create(
+          LEGEND_STUDIO_APP_EVENT.CHANGE_DETECTION_BUILD_LOCAL_HASHES_INDEX__SUCCESS,
+        ),
+      ),
+    );
+
+    this.initState.setMessage('Building strict lazy graph...');
+    (yield flowResult(
+      this.graphState.buildGraphForLazyText(),
+    )) as GraphBuilderResult;
+    this.graphManagerState.graphBuildState.sync(ActionState.create().pass());
+    this.graphManagerState.generationsBuildState.sync(
+      ActionState.create().pass(),
+    );
+    this.initState.setMessage(undefined);
+    // switch to text mode
+    const graphEditorMode = new GraphEditLazyGrammarModeState(this);
+    try {
+      const editorGrammar =
+        (yield this.graphManagerState.graphManager.entitiesToPureCode(
+          this.changeDetectionState.workspaceLocalLatestRevisionState.entities,
+          { pretty: true },
+        )) as string;
+      yield flowResult(
+        graphEditorMode.grammarTextEditorState.setGraphGrammarText(
+          editorGrammar,
+        ),
+      );
+      this.graphEditorMode = graphEditorMode;
+      yield flowResult(
+        this.graphEditorMode.initialize({
+          useStoredEntities: true,
+        }),
+      );
+    } catch (error) {
+      assertErrorThrown(error);
+      this.applicationStore.notificationService.notifyWarning(
+        `Can't initialize strict text mode. Issue converting entities to grammar: ${error.message}`,
+      );
+      this.applicationStore.alertService.setBlockingAlert(undefined);
+      return;
+    }
   }
 
   private *initConflictResolutionMode(): GeneratorFn<void> {
@@ -763,8 +953,10 @@ export class EditorStore implements CommandRegistrar {
       this.graphState.graphGenerationState.globalFileGenerationState.fetchAvailableFileGenerationDescriptions(),
       this.graphState.graphGenerationState.externalFormatState.fetchExternalFormatDescriptions(),
       this.graphState.fetchAvailableFunctionActivatorConfigurations(),
+      this.graphState.fetchAvailableRelationalDatabseTypeConfigurations(),
       this.sdlcState.fetchProjectVersions(),
       this.sdlcState.fetchPublishedProjectVersions(),
+      this.sdlcState.fetchAuthorizedActions(),
     ]);
   }
 
@@ -789,7 +981,14 @@ export class EditorStore implements CommandRegistrar {
         Date.now() - startTime,
         'ms',
       );
-    } catch {
+    } catch (error) {
+      assertErrorThrown(error);
+      this.applicationStore.logService.error(
+        LogEvent.create(GRAPH_MANAGER_EVENT.FETCH_GRAPH_ENTITIES_ERROR),
+        Date.now() - startTime,
+        'ms',
+      );
+      this.applicationStore.notificationService.notifyError(error);
       return;
     } finally {
       this.initState.setMessage(undefined);
@@ -905,11 +1104,15 @@ export class EditorStore implements CommandRegistrar {
     if (this.graphState.checkIfApplicationUpdateOperationIsRunning()) {
       return;
     }
-    this.applicationStore.alertService.setBlockingAlert({
-      message: 'Switching to text mode...',
-      showLoading: true,
-    });
+    if (this.graphEditorMode.disableLeaveMode) {
+      this.graphEditorMode.onLeave();
+      return;
+    }
     if (this.graphEditorMode instanceof GraphEditFormModeState) {
+      this.applicationStore.alertService.setBlockingAlert({
+        message: 'Switching to text mode...',
+        showLoading: true,
+      });
       yield flowResult(this.switchModes(GRAPH_EDITOR_MODE.GRAMMAR_TEXT));
     } else if (this.graphEditorMode instanceof GraphEditGrammarModeState) {
       yield flowResult(this.switchModes(GRAPH_EDITOR_MODE.FORM));
@@ -918,6 +1121,133 @@ export class EditorStore implements CommandRegistrar {
         'Editor only support form mode and text mode at the moment',
       );
     }
+  }
+
+  getSupportedElementTypesWithCategory(): Map<string, string[]> {
+    const elementTypesWithCategoryMap = new Map<string, string[]>();
+    Object.values(PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY).forEach((value) => {
+      switch (value) {
+        case PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.MODEL: {
+          const elements = [
+            PACKAGEABLE_ELEMENT_TYPE.PACKAGE,
+            PACKAGEABLE_ELEMENT_TYPE.CLASS,
+            PACKAGEABLE_ELEMENT_TYPE.ASSOCIATION,
+            PACKAGEABLE_ELEMENT_TYPE.ENUMERATION,
+            PACKAGEABLE_ELEMENT_TYPE.PROFILE,
+            PACKAGEABLE_ELEMENT_TYPE.FUNCTION,
+            PACKAGEABLE_ELEMENT_TYPE.MEASURE,
+            PACKAGEABLE_ELEMENT_TYPE.DATA,
+          ] as string[];
+          elementTypesWithCategoryMap.set(
+            PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.MODEL,
+            elements,
+          );
+          break;
+        }
+        case PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.STORE: {
+          const elements = [
+            PACKAGEABLE_ELEMENT_TYPE.DATABASE,
+            PACKAGEABLE_ELEMENT_TYPE.FLAT_DATA_STORE,
+          ] as string[];
+          elementTypesWithCategoryMap.set(
+            PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.STORE,
+            elements,
+          );
+          break;
+        }
+        case PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.QUERY: {
+          const elements = [
+            PACKAGEABLE_ELEMENT_TYPE.CONNECTION,
+            PACKAGEABLE_ELEMENT_TYPE.RUNTIME,
+            PACKAGEABLE_ELEMENT_TYPE.MAPPING,
+            PACKAGEABLE_ELEMENT_TYPE.SERVICE,
+            this.applicationStore.config.options
+              .TEMPORARY__enableLocalConnectionBuilder
+              ? PACKAGEABLE_ELEMENT_TYPE.TEMPORARY__LOCAL_CONNECTION
+              : undefined,
+          ] as (string | undefined)[];
+          elementTypesWithCategoryMap.set(
+            PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.QUERY,
+            elements.filter(isNonNullable),
+          );
+          break;
+        }
+        // for displaying categories in order
+        case PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.EXTERNAL_FORMAT: {
+          elementTypesWithCategoryMap.set(
+            PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.EXTERNAL_FORMAT,
+            [],
+          );
+          break;
+        }
+        case PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.GENERATION: {
+          const elements = [
+            PACKAGEABLE_ELEMENT_TYPE.FILE_GENERATION,
+            PACKAGEABLE_ELEMENT_TYPE.GENERATION_SPECIFICATION,
+          ] as string[];
+          elementTypesWithCategoryMap.set(
+            PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.GENERATION,
+            elements,
+          );
+          break;
+        }
+        // for displaying categories in order
+        case PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.OTHER: {
+          elementTypesWithCategoryMap.set(
+            PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.OTHER,
+            [],
+          );
+          break;
+        }
+        default:
+          break;
+      }
+    });
+    const extensions = this.pluginManager
+      .getApplicationPlugins()
+      .flatMap(
+        (plugin) =>
+          (
+            plugin as DSL_LegendStudioApplicationPlugin_Extension
+          ).getExtraSupportedElementTypesWithCategory?.() ??
+          new Map<string, string[]>(),
+      );
+    const elementTypesWithCategoryMapFromExtensions = new Map<
+      string,
+      string[]
+    >();
+    extensions.forEach((typeCategoryMap) => {
+      Array.from(typeCategoryMap.entries()).forEach((entry) => {
+        const [key, value] = entry;
+        elementTypesWithCategoryMapFromExtensions.set(
+          key,
+          elementTypesWithCategoryMapFromExtensions.get(key) === undefined
+            ? [...value]
+            : [
+                ...guaranteeNonNullable(
+                  elementTypesWithCategoryMapFromExtensions.get(key),
+                ),
+                ...value,
+              ],
+        );
+      });
+    });
+    // sort extensions alphabetically and insert extensions into the base elementTypesWithCategoryMap
+    Array.from(elementTypesWithCategoryMapFromExtensions.entries()).forEach(
+      (entry) => {
+        const [key, value] = entry;
+        value.sort((a, b) => a.localeCompare(b));
+        const existingValues = elementTypesWithCategoryMap.get(key);
+        elementTypesWithCategoryMap.set(
+          key,
+          existingValues === undefined
+            ? [...value]
+            : [...guaranteeNonNullable(existingValues), ...value],
+        );
+      },
+    );
+
+    return elementTypesWithCategoryMap;
   }
 
   getSupportedElementTypes(): string[] {
@@ -968,6 +1298,7 @@ export class EditorStore implements CommandRegistrar {
     fallbackOptions?: {
       isCompilationFailure?: boolean;
       isGraphBuildFailure?: boolean;
+      useStoredEntities?: boolean;
     },
   ): GeneratorFn<void> {
     switch (to) {
@@ -979,9 +1310,7 @@ export class EditorStore implements CommandRegistrar {
             graphEditorMode.cleanupBeforeEntering(fallbackOptions),
           );
           this.graphEditorMode = graphEditorMode;
-          yield flowResult(
-            this.graphEditorMode.initialize(Boolean(fallbackOptions)),
-          );
+          yield flowResult(this.graphEditorMode.initialize(fallbackOptions));
         } catch (error) {
           assertErrorThrown(error);
           this.applicationStore.notificationService.notifyWarning(

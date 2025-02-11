@@ -47,7 +47,6 @@ import {
   ArrowUpIcon,
 } from '@finos/legend-art';
 import {
-  disposeCodeEditor,
   getBaseCodeEditorOptions,
   moveCursorToPosition,
   setErrorMarkers,
@@ -57,7 +56,10 @@ import {
   clearMarkers,
   CODE_EDITOR_THEME,
   CODE_EDITOR_LANGUAGE,
+} from '@finos/legend-code-editor';
+import {
   CodeDiffView,
+  disposeCodeEditor,
 } from '@finos/legend-lego/code-editor';
 import { getPrettyLabelForRevision } from '../../../../stores/editor/editor-state/entity-diff-editor-state/EntityDiffEditorState.js';
 import { flowResult } from 'mobx';
@@ -161,7 +163,8 @@ const MergeConflictEditor = observer(
       ? normalizeLineEnding(conflictEditorState.mergedText)
       : '';
     const error = conflictEditorState.mergeEditorParserError;
-    const decorations = useRef<monacoEditorAPI.IEditorDecorationsCollection>();
+    const decorations =
+      useRef<monacoEditorAPI.IEditorDecorationsCollection>(null);
     const mergeConflictResolutionCodeLensDisposer = useRef<
       IDisposable | undefined
     >(undefined);
@@ -695,8 +698,8 @@ export const EntityChangeConflictEditor = observer(
                 {isReadOnly
                   ? 'Merge preview'
                   : conflictEditorState.mergeSucceeded
-                  ? 'Merged successfully'
-                  : 'Merged with conflict(s)'}
+                    ? 'Merged successfully'
+                    : 'Merged with conflict(s)'}
               </div>
             </div>
             <div className="entity-change-conflict-editor__header__info__comparison-summary">
@@ -743,7 +746,10 @@ export const EntityChangeConflictEditor = observer(
                 currentMode,
                 conflictEditorState.getModeComparisonViewInfo(currentMode),
               )}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
         </div>
@@ -768,7 +774,7 @@ export const EntityChangeConflictEditor = observer(
         {!isReadOnly && (
           <div className="entity-change-conflict-editor__actions">
             <button
-              className="btn--dark btn--important  entity-change-conflict-editor__action entity-change-conflict-editor__action__use-yours-btn"
+              className="btn--dark btn--important entity-change-conflict-editor__action entity-change-conflict-editor__action__use-yours-btn"
               disabled={!conflictEditorState.canUseYours}
               onClick={useYours}
             >

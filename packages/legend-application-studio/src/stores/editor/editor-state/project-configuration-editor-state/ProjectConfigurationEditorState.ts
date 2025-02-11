@@ -32,6 +32,7 @@ import {
   guaranteeNonNullable,
   hashArray,
   ActionState,
+  prettyCONSTName,
 } from '@finos/legend-shared';
 import type { EditorSDLCState } from '../../EditorSDLCState.js';
 import {
@@ -39,6 +40,7 @@ import {
   ProjectStructureVersion,
   UpdateProjectConfigurationCommand,
   UpdatePlatformConfigurationsCommand,
+  ProjectType,
 } from '@finos/legend-server-sdlc';
 import { LEGEND_STUDIO_APP_EVENT } from '../../../../__lib__/LegendStudioEvent.js';
 import { SNAPSHOT_ALIAS, StoreProjectData } from '@finos/legend-server-depot';
@@ -48,7 +50,21 @@ export enum CONFIGURATION_EDITOR_TAB {
   PROJECT_STRUCTURE = 'PROJECT_STRUCTURE',
   PROJECT_DEPENDENCIES = 'PROJECT_DEPENDENCIES',
   PLATFORM_CONFIGURATIONS = 'PLATFORM_CONFIGURATIONS',
+  ADVANCED = 'ADVANCED',
 }
+
+export const projectTypeTabFilter = (
+  mode: ProjectType,
+  tab: CONFIGURATION_EDITOR_TAB,
+): boolean => {
+  if (
+    mode === ProjectType.EMBEDDED &&
+    tab === CONFIGURATION_EDITOR_TAB.PLATFORM_CONFIGURATIONS
+  ) {
+    return false;
+  }
+  return true;
+};
 
 export class ProjectConfigurationEditorState extends EditorState {
   readonly sdlcState: EditorSDLCState;
@@ -95,6 +111,7 @@ export class ProjectConfigurationEditorState extends EditorState {
       updateToLatestStructure: flow,
       updateConfigs: flow,
       fetchLatestProjectStructureVersion: flow,
+      changeProjectType: flow,
     });
 
     this.projectDependencyEditorState = new ProjectDependencyEditorState(
@@ -168,6 +185,12 @@ export class ProjectConfigurationEditorState extends EditorState {
     );
   }
 
+  get isInEmbeddedMode(): boolean {
+    return (
+      this.originalProjectConfiguration?.projectType === ProjectType.EMBEDDED
+    );
+  }
+
   *fectchAssociatedProjectsAndVersions(): GeneratorFn<void> {
     this.fetchingProjectVersionsState.inProgress();
     try {
@@ -176,22 +199,6 @@ export class ProjectConfigurationEditorState extends EditorState {
       )
         .map((v) => StoreProjectData.serialization.fromJson(v))
         .forEach((project) => this.projects.set(project.coordinates, project));
-
-      // Update the legacy dependency to newer format (using group ID and artifact ID instead of just project ID)
-      this.projectConfiguration?.projectDependencies.forEach(
-        (dependency): void => {
-          if (!dependency.isLegacyDependency) {
-            return;
-          }
-          const project = Array.from(this.projects.values()).find(
-            (e) => e.projectId === dependency.projectId,
-          );
-          // re-write to new format
-          if (project) {
-            dependency.setProjectId(project.coordinates);
-          }
-        },
-      );
 
       // fetch the versions for the dependency projects
       for (const dep of this.projectConfiguration?.projectDependencies ?? []) {
@@ -239,6 +246,7 @@ export class ProjectConfigurationEditorState extends EditorState {
       yield flowResult(
         this.editorStore.sdlcState.fetchCurrentWorkspace(
           this.editorStore.sdlcState.activeProject.projectId,
+          this.editorStore.sdlcState.activePatch?.patchReleaseVersionId.id,
           this.editorStore.sdlcState.activeWorkspace.workspaceId,
           this.editorStore.sdlcState.activeWorkspace.workspaceType,
         ),
@@ -268,11 +276,20 @@ export class ProjectConfigurationEditorState extends EditorState {
   *updateToLatestStructure(): GeneratorFn<void> {
     if (this.latestProjectStructureVersion) {
       try {
+        let latestStructure = this.latestProjectStructureVersion;
+        if (this.isInEmbeddedMode) {
+          const projectStructureVersion = new ProjectStructureVersion();
+          projectStructureVersion.version =
+            this.latestProjectStructureVersion.version;
+          // extension version does not exists in embedded mode
+          projectStructureVersion.extensionVersion = undefined;
+          latestStructure = projectStructureVersion;
+        }
         const updateCommand = new UpdateProjectConfigurationCommand(
           this.currentProjectConfiguration.groupId,
           this.currentProjectConfiguration.artifactId,
-          this.latestProjectStructureVersion,
-          `update project configuration from ${this.editorStore.applicationStore.config.appName}`,
+          latestStructure,
+          `update project configuration from ${this.editorStore.applicationStore.config.appName}: update to latest project structure`,
         );
         yield flowResult(this.updateProjectConfiguration(updateCommand));
       } catch (error) {
@@ -285,6 +302,31 @@ export class ProjectConfigurationEditorState extends EditorState {
           error,
         );
       }
+    }
+  }
+
+  *changeProjectType(): GeneratorFn<void> {
+    try {
+      const newProjectType = this.isInEmbeddedMode
+        ? ProjectType.MANAGED
+        : ProjectType.EMBEDDED;
+      const updateCommand = new UpdateProjectConfigurationCommand(
+        this.currentProjectConfiguration.groupId,
+        this.currentProjectConfiguration.artifactId,
+        undefined,
+        `update project configuration from ${
+          this.editorStore.applicationStore.config.appName
+        }: changed project type to ${prettyCONSTName(newProjectType)}`,
+      );
+      updateCommand.projectType = newProjectType;
+      yield flowResult(this.updateProjectConfiguration(updateCommand));
+    } catch (error) {
+      assertErrorThrown(error);
+      this.editorStore.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
+        error,
+      );
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     }
   }
 
@@ -315,7 +357,13 @@ export class ProjectConfigurationEditorState extends EditorState {
             this.currentProjectConfiguration.platformConfigurations,
           );
       }
-
+      if (
+        this.originalConfig.runDependencyTests !==
+        this.currentProjectConfiguration.runDependencyTests
+      ) {
+        updateProjectConfigurationCommand.runDependencyTests =
+          this.currentProjectConfiguration.runDependencyTests;
+      }
       updateProjectConfigurationCommand.projectDependenciesToAdd =
         this.currentProjectConfiguration.projectDependencies.filter(
           (dep) =>

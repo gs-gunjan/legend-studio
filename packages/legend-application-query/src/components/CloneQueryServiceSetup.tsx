@@ -27,6 +27,7 @@ import {
   assertErrorThrown,
   guaranteeNonNullable,
   guaranteeType,
+  compareSemVerVersions,
 } from '@finos/legend-shared';
 import { flowResult } from 'mobx';
 import { observer, useLocalObservable } from 'mobx-react-lite';
@@ -53,7 +54,6 @@ import {
   type ProjectOption,
   type VersionOption,
 } from './QuerySetup.js';
-import { compareSemVerVersions } from '@finos/legend-storage';
 
 const CloneServiceQuerySetupStoreProvider: React.FC<{
   children: React.ReactNode;
@@ -125,10 +125,10 @@ const CloneQueryServiceSetupContent = observer(() => {
     .isInProgress
     ? 'Loading projects'
     : querySetupState.loadProjectsState.hasFailed
-    ? 'Error fetching projects'
-    : querySetupState.projects.length
-    ? 'Choose a project'
-    : 'You have no projects, please create or acquire access for at least one';
+      ? 'Error fetching projects'
+      : querySetupState.projects.length
+        ? 'Choose a project'
+        : 'You have no projects, please create or acquire access for at least one';
   const onProjectOptionChange = async (
     option: ProjectOption | null,
   ): Promise<void> => {
@@ -140,14 +140,12 @@ const CloneQueryServiceSetupContent = observer(() => {
       querySetupState.setCurrentProjectVersions([]);
       try {
         fetchSelectedProjectVersionsStatus.inProgress();
-        const v = (await flowResult(
-          depotServerClient.getVersions(
-            guaranteeNonNullable(option?.value.groupId),
-            guaranteeNonNullable(option?.value.artifactId),
-            true,
-          ),
-        )) as string[];
-        querySetupState.setCurrentProjectVersions(v);
+        const versions = await depotServerClient.getVersions(
+          guaranteeNonNullable(option?.value.groupId),
+          guaranteeNonNullable(option?.value.artifactId),
+          true,
+        );
+        querySetupState.setCurrentProjectVersions(versions);
       } catch (error) {
         assertErrorThrown(error);
         applicationStore.notificationService.notifyError(error);
@@ -162,8 +160,7 @@ const CloneQueryServiceSetupContent = observer(() => {
     LATEST_VERSION_ALIAS,
     ...(querySetupState.currentProjectVersions ?? []),
   ]
-    .slice()
-    .sort((v1, v2) => compareSemVerVersions(v2, v1))
+    .toSorted((v1, v2) => compareSemVerVersions(v2, v1))
     .map(buildVersionOption);
   const selectedVersionOption = querySetupState.currentVersionId
     ? buildVersionOption(querySetupState.currentVersionId)
@@ -262,12 +259,19 @@ const CloneQueryServiceSetupContent = observer(() => {
                 !projectOptions.length
               }
               isLoading={querySetupState.loadProjectsState.isInProgress}
-              onChange={onProjectOptionChange}
+              onChange={(option: ProjectOption | null) => {
+                onProjectOptionChange(option).catch(
+                  applicationStore.alertUnhandledError,
+                );
+              }}
               value={selectedProjectOption}
               placeholder={projectSelectorPlaceholder}
               isClearable={true}
               escapeClearsValue={true}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
           <div className="query-setup__wizard__group">
@@ -277,7 +281,11 @@ const CloneQueryServiceSetupContent = observer(() => {
               options={versionOptions}
               disabled={!querySetupState.currentProject}
               isLoading={fetchSelectedProjectVersionsStatus.isInProgress}
-              onChange={onVersionOptionChange}
+              onChange={(option: VersionOption | null) => {
+                onVersionOptionChange(option).catch(
+                  applicationStore.alertUnhandledError,
+                );
+              }}
               value={selectedVersionOption}
               placeholder={
                 fetchSelectedProjectVersionsStatus.isInProgress
@@ -286,7 +294,10 @@ const CloneQueryServiceSetupContent = observer(() => {
               }
               isClearable={true}
               escapeClearsValue={true}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
         </div>
@@ -306,8 +317,8 @@ const CloneQueryServiceSetupContent = observer(() => {
                 {querySetupState.loadServiceExecutionsState.isInProgress
                   ? `Surveying service executions...`
                   : querySetupState.loadServiceExecutionsState.hasFailed
-                  ? `Can't load service executions`
-                  : 'Project and version must be specified'}
+                    ? `Can't load service executions`
+                    : 'Project and version must be specified'}
               </BlankPanelContent>
             </div>
           )}
@@ -328,7 +339,10 @@ const CloneQueryServiceSetupContent = observer(() => {
                     placeholder={serviceExecutionSelectorPlaceholder}
                     isClearable={true}
                     escapeClearsValue={true}
-                    darkMode={true}
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
                   />
                 </div>
               </>

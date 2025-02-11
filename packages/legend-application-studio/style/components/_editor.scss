@@ -32,6 +32,8 @@
 @forward 'editor/function-editor';
 @forward 'editor/project-configuration-editor';
 @forward 'editor/function-activator-editor';
+@forward 'editor/snowflake-app-function-activator-editor';
+@forward 'editor/hosted-service-function-activator-editor';
 @forward 'editor/entity-diff-view';
 @forward 'editor/entity-change-conflict-editor';
 @forward 'editor/service-editor';
@@ -61,7 +63,7 @@
 
     background: var(--color-dark-grey-80);
     flex: 1 0 auto;
-    width: calc(100% - 5rem);
+    width: calc(100% - 10rem);
   }
 
   &__content {

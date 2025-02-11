@@ -29,7 +29,12 @@ export const TEST_DATA__MissingSuperType = [
             upperBound: 1,
           },
           name: 'legs',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -37,7 +42,12 @@ export const TEST_DATA__MissingSuperType = [
             upperBound: 1,
           },
           name: 'arms',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
       superTypes: ['ui::test1::Organism'],
@@ -60,7 +70,12 @@ export const TEST_DATA__MissingProfile = [
             upperBound: 1,
           },
           name: 'legs',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -68,7 +83,12 @@ export const TEST_DATA__MissingProfile = [
             upperBound: 1,
           },
           name: 'arms',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
       superTypes: [],
@@ -100,7 +120,12 @@ export const TEST_DATA__MissingStereoType = [
             upperBound: 1,
           },
           name: 'id',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -155,7 +180,12 @@ export const TEST_DATA__MissingTagValue = [
             upperBound: 1,
           },
           name: 'id',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -213,7 +243,12 @@ export const TEST_DATA__MissingProperty = [
             upperBound: 1,
           },
           name: 'legs',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -472,7 +507,12 @@ export const TEST_DATA__MissingSetImp = [
             lowerBound: 0,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
     },
@@ -497,7 +537,12 @@ export const TEST_DATA__MissingSetImp = [
             lowerBound: 0,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -741,7 +786,12 @@ export const TEST_DATA__MissingClassInDiagram = [
             lowerBound: 0,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
     },
@@ -795,7 +845,12 @@ export const TEST_DATA__MissingClassMapping = [
           name: 'employees',
           stereotypes: [],
           taggedValues: [],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
       qualifiedProperties: [],
@@ -959,7 +1014,12 @@ export const TEST_DATA__MissingClassMappingWithTargetId = [
           name: 'employees',
           stereotypes: [],
           taggedValues: [],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
       qualifiedProperties: [],

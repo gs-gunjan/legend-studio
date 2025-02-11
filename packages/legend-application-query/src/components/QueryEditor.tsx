@@ -18,10 +18,9 @@ import {
   Dialog,
   PanelLoadingIndicator,
   BlankPanelContent,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentItem,
-  CaretDownIcon,
   MenuIcon,
   MenuContentDivider,
   MenuContentItemIcon,
@@ -33,20 +32,20 @@ import {
   ModalFooter,
   ModalTitle,
   ModalFooterButton,
-  ManageSearchIcon,
-  LightBulbIcon,
-  EmptyLightBulbIcon,
-  SaveCurrIcon,
-  SaveAsIcon,
   ExclamationTriangleIcon,
   PanelListItem,
-  Button,
   clsx,
   ModalHeaderActions,
   TimesIcon,
+  Panel,
+  PanelFullContent,
+  CustomSelectorInput,
+  PencilIcon,
+  MoonIcon,
+  SunIcon,
 } from '@finos/legend-art';
 import { observer } from 'mobx-react-lite';
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   type MappingQueryCreatorPathParams,
   type ExistingQueryEditorPathParams,
@@ -54,14 +53,15 @@ import {
   LEGEND_QUERY_QUERY_PARAM_TOKEN,
   LEGEND_QUERY_ROUTE_PATTERN_TOKEN,
   generateQuerySetupRoute,
+  generateExistingQueryEditorRoute,
 } from '../__lib__/LegendQueryNavigation.js';
-import {
-  createViewProjectHandler,
-  createViewSDLCProjectHandler,
-  ExistingQueryEditorStore,
-} from '../stores/QueryEditorStore.js';
+import { ExistingQueryEditorStore } from '../stores/QueryEditorStore.js';
+import { LegendQueryTelemetryHelper } from '../__lib__/LegendQueryTelemetryHelper.js';
+import { DataSpaceQuerySetupState } from './../stores/data-space/DataSpaceQuerySetupState.js';
 import {
   LEGEND_APPLICATION_COLOR_THEME,
+  ReleaseLogManager,
+  ReleaseNotesManager,
   useApplicationStore,
 } from '@finos/legend-application';
 import { useParams } from '@finos/legend-application/browser';
@@ -72,7 +72,6 @@ import {
   useQueryEditorStore,
 } from './QueryEditorStoreProvider.js';
 import { flowResult } from 'mobx';
-import { useLegendQueryApplicationStore } from './LegendQueryFrameworkProvider.js';
 import {
   QueryBuilder,
   QueryBuilderNavigationBlocker,
@@ -80,10 +79,24 @@ import {
   QueryBuilderDiffViewPanel,
   type QueryBuilderState,
 } from '@finos/legend-query-builder';
-import { QUERY_DOCUMENTATION_KEY } from '../application/LegendQueryDocumentation.js';
-import { debounce } from '@finos/legend-shared';
-import { LegendQueryTelemetryHelper } from '../__lib__/LegendQueryTelemetryHelper.js';
-import { QUERY_EDITOR_TEST_ID } from '../__lib__/LegendQueryTesting.js';
+
+import { generateGAVCoordinates } from '@finos/legend-storage';
+import {
+  type Query,
+  QueryDataSpaceExecutionContext,
+  QueryExplicitExecutionContext,
+} from '@finos/legend-graph';
+import { LATEST_VERSION_ALIAS } from '@finos/legend-server-depot';
+import { buildVersionOption, type VersionOption } from './QuerySetup.js';
+import { QueryEditorExistingQueryVersionRevertModal } from './QueryEdtiorExistingQueryVersionRevertModal.js';
+import {
+  debounce,
+  compareSemVerVersions,
+  guaranteeNonNullable,
+} from '@finos/legend-shared';
+import { LegendQueryInfo } from './LegendQueryAppInfo.js';
+import { QueryEditorDataspaceInfoModal } from './data-space/DataSpaceInfo.js';
+import { DataSpaceQueryBuilderState } from '@finos/legend-extension-dsl-data-space/application';
 
 const CreateQueryDialog = observer(() => {
   const editorStore = useQueryEditorStore();
@@ -96,6 +109,7 @@ const CreateQueryDialog = observer(() => {
     );
   };
   const isExistingQueryName = createQueryState.editorStore.existingQueryName;
+  const isEmptyName = !createQueryState.queryName;
   // name
   const nameInputRef = useRef<HTMLInputElement>(null);
   const debouncedLoadQueries = useMemo(
@@ -107,13 +121,16 @@ const CreateQueryDialog = observer(() => {
       }, 500),
     [applicationStore, createQueryState.editorStore],
   );
+  const setFocus = (): void => {
+    nameInputRef.current?.focus();
+  };
 
   const changeName: React.ChangeEventHandler<HTMLInputElement> = (event) => {
     createQueryState.setQueryName(event.target.value);
   };
 
   useEffect(() => {
-    nameInputRef.current?.focus();
+    setTimeout(() => setFocus(), 1);
   }, []);
 
   useEffect(() => {
@@ -135,7 +152,12 @@ const CreateQueryDialog = observer(() => {
         paper: 'editor-modal__content',
       }}
     >
-      <Modal darkMode={true} className="query-export">
+      <Modal
+        darkMode={
+          !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+        }
+        className="query-export"
+      >
         <ModalHeader title="Create New Query" />
         <ModalBody>
           <PanelLoadingIndicator
@@ -151,6 +173,7 @@ const CreateQueryDialog = observer(() => {
                 spellCheck={false}
                 value={createQueryState.queryName}
                 onChange={changeName}
+                title="New Query Name"
               />
               {isExistingQueryName && (
                 <div
@@ -167,10 +190,11 @@ const CreateQueryDialog = observer(() => {
           <ModalFooterButton
             text="Create Query"
             title="Create new query"
-            disabled={Boolean(
+            disabled={
               createQueryState.editorStore.isPerformingBlockingAction ||
-                isExistingQueryName,
-            )}
+              Boolean(isExistingQueryName) ||
+              isEmptyName
+            }
             onClick={create}
           />
         </ModalFooter>
@@ -188,7 +212,7 @@ const SaveQueryDialog = observer(
     const saveQuery = applicationStore.guardUnhandledError(
       async (): Promise<void> => {
         flowResult(
-          existingEditorStore.updateState.updateQuery(undefined),
+          existingEditorStore.updateState.updateQuery(undefined, undefined),
         ).catch(applicationStore.alertUnhandledError);
       },
     );
@@ -205,7 +229,9 @@ const SaveQueryDialog = observer(
         }}
       >
         <Modal
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
           className={clsx('editor-modal query-builder-text-mode__modal')}
         >
           <ModalHeader>
@@ -237,7 +263,7 @@ const SaveQueryDialog = observer(
               disabled={Boolean(existingEditorStore.isPerformingBlockingAction)}
               onClick={saveQuery}
             />
-            <ModalFooterButton text="Close" onClick={close} />
+            <ModalFooterButton text="Close" onClick={close} type="secondary" />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -245,7 +271,7 @@ const SaveQueryDialog = observer(
   },
 );
 
-const QueryEditorExistingQueryHeader = observer(
+export const QueryEditorExistingQueryHeader = observer(
   (props: {
     queryBuilderState: QueryBuilderState;
     existingEditorStore: ExistingQueryEditorStore;
@@ -265,7 +291,7 @@ const QueryEditorExistingQueryHeader = observer(
     };
     const renameQuery = (val: string): void => {
       if (queryRenameName !== existingEditorStore.lightQuery.name) {
-        flowResult(updateState.updateQuery(val)).catch(
+        flowResult(updateState.updateQuery(val, undefined)).catch(
           applicationStore.alertUnhandledError,
         );
       }
@@ -319,7 +345,10 @@ const QueryEditorExistingQueryHeader = observer(
                   )}
                   onChange={changeQueryName}
                   onKeyDown={(event) => {
-                    if (event.code === 'Enter') {
+                    if (
+                      event.code === 'Enter' ||
+                      event.code === 'NumpadEnter'
+                    ) {
                       event.stopPropagation();
                       updateState.setQueryRenamer(false);
                       existingEditorStore.setExistingQueryName(undefined);
@@ -341,15 +370,46 @@ const QueryEditorExistingQueryHeader = observer(
                   </div>
                 )}
               </div>
+              <div className="query-editor__header__content__title__actions">
+                <button
+                  className="query-editor__header__content__title__actions__action"
+                  tabIndex={-1}
+                  onClick={() => {
+                    updateState.setQueryRenamer(false);
+                    existingEditorStore.setExistingQueryName(undefined);
+                    renameQuery(queryRenameName);
+                  }}
+                >
+                  <CheckIcon />
+                </button>
+                <button
+                  className="query-editor__header__content__title__actions__action"
+                  tabIndex={-1}
+                  onClick={() => {
+                    updateState.setQueryRenamer(false);
+                    existingEditorStore.setExistingQueryName(undefined);
+                  }}
+                >
+                  <TimesIcon />
+                </button>
+              </div>
             </PanelListItem>
           </div>
         ) : (
           <div
             onDoubleClick={enableRename}
-            className="query-editor__header__content__main query-editor__header__content__title query-editor__header__content__title__text"
+            className="query-editor__header__content__main query-editor__header__content__title"
             title="Double-click to rename query"
           >
-            {existingEditorStore.lightQuery.name}
+            <div className="query-editor__header__content__title__text">
+              {existingEditorStore.lightQuery.name}
+            </div>
+            <button
+              className="query-editor__header__conten__title__btn panel__content__form__section__list__item__edit-btn"
+              onClick={enableRename}
+            >
+              <PencilIcon />
+            </button>
           </div>
         )}
         {existingEditorStore.updateState.saveModal && (
@@ -360,273 +420,181 @@ const QueryEditorExistingQueryHeader = observer(
   },
 );
 
-const QueryEditorHeaderContent = observer(
-  (props: { queryBuilderState: QueryBuilderState }) => {
-    const { queryBuilderState } = props;
-    const editorStore = useQueryEditorStore();
-    const applicationStore = useLegendQueryApplicationStore();
-    const isExistingQuery = editorStore instanceof ExistingQueryEditorStore;
-    const renameQuery = (): void => {
-      if (editorStore instanceof ExistingQueryEditorStore) {
-        editorStore.updateState.setQueryRenamer(true);
-      }
-    };
-    // actions
-    const openQueryLoader = (): void => {
-      editorStore.queryLoaderState.setQueryLoaderDialogOpen(true);
-    };
-    const viewProject = (): void => {
-      LegendQueryTelemetryHelper.logEvent_QueryViewProjectLaunched(
-        editorStore.applicationStore.telemetryService,
-      );
-      const { groupId, artifactId, versionId } = editorStore.getProjectInfo();
-      createViewProjectHandler(applicationStore)(
-        groupId,
-        artifactId,
-        versionId,
-        undefined,
-      );
-    };
-    const viewSDLCProject = (): void => {
-      LegendQueryTelemetryHelper.logEvent_QueryViewSdlcProjectLaunched(
-        editorStore.applicationStore.telemetryService,
-      );
-      const { groupId, artifactId } = editorStore.getProjectInfo();
-      createViewSDLCProjectHandler(
-        applicationStore,
-        editorStore.depotServerClient,
-      )(groupId, artifactId, undefined).catch(
-        applicationStore.alertUnhandledError,
-      );
-    };
-    const TEMPORARY__toggleLightDarkMode = (): void => {
-      applicationStore.layoutService.setColorTheme(
-        applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
-          ? LEGEND_APPLICATION_COLOR_THEME.DEFAULT_DARK
-          : LEGEND_APPLICATION_COLOR_THEME.LEGACY_LIGHT,
-        { persist: true },
-      );
-    };
-
-    const openSaveQueryModal = (): void => {
-      if (editorStore instanceof ExistingQueryEditorStore) {
-        editorStore.updateState.showSaveModal();
-      }
-    };
-
-    const toggleAssistant = (): void =>
-      applicationStore.assistantService.toggleAssistant();
-
-    const queryDocEntry = applicationStore.documentationService.getDocEntry(
-      QUERY_DOCUMENTATION_KEY.TUTORIAL_QUERY_BUILDER,
+const QueryEditorExistingQueryInfoModal = observer(
+  (props: { existingEditorStore: ExistingQueryEditorStore; query: Query }) => {
+    const { existingEditorStore, query } = props;
+    const updateState = existingEditorStore.updateState;
+    const applicationStore = existingEditorStore.applicationStore;
+    const versionOptions = [
+      LATEST_VERSION_ALIAS,
+      ...updateState.projectVersions,
+    ]
+      .toSorted((v1, v2) => compareSemVerVersions(v2, v1))
+      .map(buildVersionOption);
+    const executionContext = query.executionContext;
+    const updateQueryVersionId = applicationStore.guardUnhandledError(
+      async (): Promise<void> => {
+        flowResult(
+          existingEditorStore.updateState.updateQuery(
+            undefined,
+            updateState.queryVersionId,
+          ),
+        )
+          .then(() =>
+            updateState.editorStore.applicationStore.navigationService.navigator.goToLocation(
+              generateExistingQueryEditorRoute(query.id),
+            ),
+          )
+          .catch(applicationStore.alertUnhandledError);
+      },
     );
-
-    const openQueryTutorial = (): void => {
-      if (queryDocEntry?.url) {
-        applicationStore.navigationService.navigator.visitAddress(
-          queryDocEntry.url,
-        );
+    const selectedVersionOption = updateState.queryVersionId
+      ? buildVersionOption(updateState.queryVersionId)
+      : buildVersionOption(query.versionId);
+    const onVersionOptionChange = (option: VersionOption | null) => {
+      if (option?.value && option.value !== updateState.queryVersionId) {
+        updateState.setQueryVersionId(option.value);
       }
     };
-
-    const handleQuerySaveAs = (): void => {
-      editorStore.queryCreatorState.open(
-        editorStore instanceof ExistingQueryEditorStore
-          ? editorStore.query
-          : undefined,
-      );
+    const closeModal = (): void => {
+      updateState.setQueryVersionId(query.versionId);
+      updateState.setShowQueryInfo(false);
     };
-
-    const renderQueryTitle = (): React.ReactNode => {
-      if (editorStore instanceof ExistingQueryEditorStore) {
-        return (
-          <QueryEditorExistingQueryHeader
-            queryBuilderState={queryBuilderState}
-            existingEditorStore={editorStore}
-          />
-        );
-      }
-      return (
-        <div className="query-editor__header__content__main query-editor__header__content__title" />
-      );
-    };
-
-    const extraHelpMenuContentItems = applicationStore.pluginManager
-      .getApplicationPlugins()
-      .flatMap(
-        (plugin) =>
-          plugin.getExtraQueryEditorHelpMenuActionConfigurations?.() ?? [],
-      )
-      .map((item) => (
-        <MenuContentItem
-          key={item.key}
-          title={item.title ?? ''}
-          onClick={() => item.onClick(editorStore)}
-        >
-          {item.icon && <MenuContentItemIcon>{item.icon}</MenuContentItemIcon>}
-          <MenuContentItemLabel>{item.label}</MenuContentItemLabel>
-        </MenuContentItem>
-      ));
+    useEffect(() => {
+      flowResult(
+        updateState.fetchProjectVersions(query.groupId, query.artifactId),
+      ).catch(applicationStore.alertUnhandledError);
+    }, [applicationStore, query.artifactId, query.groupId, updateState]);
 
     return (
-      <div
-        className="query-editor__header__content"
-        data-testid={QUERY_EDITOR_TEST_ID.QUERY_EDITOR_ACTIONS}
+      <Dialog
+        open={updateState.showQueryInfo}
+        onClose={closeModal}
+        classes={{ container: 'search-modal__container' }}
+        PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
-        {renderQueryTitle()}
-
-        <div className="query-editor__header__actions">
-          {applicationStore.pluginManager
-            .getApplicationPlugins()
-            .flatMap(
-              (plugin) =>
-                plugin.getExtraQueryEditorActionConfigurations?.(editorStore) ??
-                [],
-            )
-            .map((actionConfig) => (
-              <Fragment key={actionConfig.key}>
-                {actionConfig.renderer(editorStore, queryBuilderState)}
-              </Fragment>
-            ))}
-
-          <Button
-            className="query-editor__header__action btn--dark"
-            disabled={editorStore.isPerformingBlockingAction}
-            onClick={openQueryLoader}
-            title="Load query..."
-          >
-            <ManageSearchIcon className="query-editor__header__action__icon--load" />
-            <div className="query-editor__header__action__label">
-              Load Query
-            </div>
-          </Button>
-
-          <Button
-            className="query-editor__header__action btn--dark"
-            disabled={
-              !isExistingQuery || editorStore.isPerformingBlockingAction
-            }
-            onClick={openSaveQueryModal}
-            title="Save query"
-          >
-            <SaveCurrIcon />
-            <div className="query-editor__header__action__label">Save</div>
-          </Button>
-          <Button
-            className="query-editor__header__action btn--dark"
-            disabled={editorStore.isPerformingBlockingAction}
-            onClick={handleQuerySaveAs}
-            title="Save as new query"
-          >
-            <SaveAsIcon />
-            <div className="query-editor__header__action__label">
-              Save As...
-            </div>
-          </Button>
-          <DropdownMenu
-            className="query-editor__header__action btn--dark"
-            disabled={editorStore.isViewProjectActionDisabled}
-            content={
-              <MenuContent>
-                {extraHelpMenuContentItems}
-                {queryDocEntry && (
-                  <MenuContentItem onClick={openQueryTutorial}>
-                    <MenuContentItemIcon>{null}</MenuContentItemIcon>
-                    <MenuContentItemLabel>
-                      Open Documentation
-                    </MenuContentItemLabel>
-                  </MenuContentItem>
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="search-modal"
+        >
+          <ModalTitle title="Query Info" />
+          <Panel>
+            <PanelFullContent>
+              <div className="query-preview__field">
+                <div className="query-preview__field__label">Project</div>
+                <div className="query-preview__field__value">
+                  {generateGAVCoordinates(
+                    query.groupId,
+                    query.artifactId,
+                    undefined,
+                  )}
+                </div>
+              </div>
+              {executionContext instanceof QueryExplicitExecutionContext && (
+                <>
+                  <div className="query-preview__field">
+                    <div className="query-preview__field__label">Mapping</div>
+                    <div className="query-preview__field__value">
+                      {executionContext.mapping.value.name}
+                    </div>
+                  </div>
+                  <div className="query-preview__field">
+                    <div className="query-preview__field__label">Runtime</div>
+                    <div className="query-preview__field__value">
+                      {executionContext.runtime.value.name}
+                    </div>
+                  </div>
+                </>
+              )}
+              {executionContext instanceof QueryDataSpaceExecutionContext && (
+                <>
+                  <div className="query-preview__field">
+                    <div className="query-preview__field__label">
+                      Data Product
+                    </div>
+                    <div className="query-preview__field__value">
+                      {executionContext.dataSpacePath}
+                    </div>
+                  </div>
+                  {executionContext.executionKey && (
+                    <div className="query-preview__field">
+                      <div className="query-preview__field__label">
+                        Exec Key
+                      </div>
+                      <div className="query-preview__field__value">
+                        {executionContext.executionKey}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              <div className="query-preview__field">
+                <div className="query-preview__field__label">Version</div>
+                <div className="query-preview__field__input">
+                  <CustomSelectorInput
+                    className="query-setup__wizard__selector"
+                    options={versionOptions}
+                    isLoading={
+                      updateState.fetchProjectVersionState.isInProgress
+                    }
+                    onChange={onVersionOptionChange}
+                    value={selectedVersionOption}
+                    placeholder={
+                      updateState.fetchProjectVersionState.isInProgress
+                        ? 'Fetching project versions'
+                        : 'Choose a version'
+                    }
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
+                  />
+                </div>
+              </div>
+              {query.owner && (
+                <div className="query-preview__field">
+                  <div className="query-preview__field__label">Owner</div>
+                  <div className="query-preview__field__value">
+                    {query.owner}
+                  </div>
+                </div>
+              )}
+            </PanelFullContent>
+          </Panel>
+          <div className="query-preview__field__actions">
+            <div className="query-preview__field__warning">
+              {updateState.queryVersionId &&
+                updateState.queryVersionId !== query.versionId && (
+                  <>
+                    <div className="query-preview__field__warning__icon">
+                      <ExclamationTriangleIcon />
+                    </div>
+                    <div className="query-preview__field__warning__label">
+                      Update action will reload query
+                    </div>
+                  </>
                 )}
-
-                <MenuContentItem onClick={toggleAssistant}>
-                  <MenuContentItemIcon>
-                    {!applicationStore.assistantService.isHidden ? (
-                      <CheckIcon />
-                    ) : null}
-                  </MenuContentItemIcon>
-                  <MenuContentItemLabel>
-                    Show Virtual Assistant
-                  </MenuContentItemLabel>
-                </MenuContentItem>
-              </MenuContent>
-            }
-          >
-            <div
-              className="query-editor__header__action__label"
-              title="See more options"
-            >
-              Help...
             </div>
-            <CaretDownIcon className="query-editor__header__action__dropdown-trigger" />
-          </DropdownMenu>
-          {editorStore.queryLoaderState.isQueryLoaderDialogOpen && (
-            <QueryLoaderDialog
-              queryLoaderState={editorStore.queryLoaderState}
-              title="Load query"
-            />
-          )}
-          <button
-            title="Toggle light/dark mode"
-            onClick={TEMPORARY__toggleLightDarkMode}
-            className="query-editor__header__action query-editor__header__action__theme-toggler"
-          >
-            {applicationStore.layoutService
-              .TEMPORARY__isLightColorThemeEnabled ? (
-              <>
-                <LightBulbIcon className="query-editor__header__action__icon--bulb--light" />
-              </>
-            ) : (
-              <>
-                <EmptyLightBulbIcon className="query-editor__header__action__icon--bulb--dark" />
-              </>
-            )}
-          </button>
-
-          <DropdownMenu
-            className="query-editor__header__action btn--medium"
-            disabled={editorStore.isViewProjectActionDisabled}
-            content={
-              <MenuContent>
-                {isExistingQuery && (
-                  <MenuContentItem
-                    className="query-editor__header__action__options"
-                    onClick={renameQuery}
-                    disabled={!isExistingQuery}
-                  >
-                    Rename Query
-                  </MenuContentItem>
-                )}
-                <MenuContentItem
-                  className="query-editor__header__action__options"
-                  disabled={editorStore.isViewProjectActionDisabled}
-                  onClick={viewProject}
-                >
-                  Go to Project
-                </MenuContentItem>
-                <MenuContentItem
-                  className="query-editor__header__action__options"
-                  disabled={editorStore.isViewProjectActionDisabled}
-                  onClick={viewSDLCProject}
-                >
-                  Go to SDLC project
-                </MenuContentItem>
-              </MenuContent>
-            }
-          >
-            <div
-              className="query-editor__header__action__label"
-              title="See more options"
-            >
-              More Actions...
+            <div className="search-modal__actions">
+              <ModalFooterButton
+                text="Update"
+                disabled={
+                  !updateState.queryVersionId ||
+                  updateState.queryVersionId === query.versionId
+                }
+                onClick={updateQueryVersionId}
+              />
+              <ModalFooterButton
+                text="Close"
+                onClick={closeModal}
+                type="secondary"
+              />
             </div>
-            <CaretDownIcon className="query-editor__header__action__dropdown-trigger" />
-          </DropdownMenu>
-
-          {editorStore.queryCreatorState.showCreateModal && (
-            <CreateQueryDialog />
-          )}
-        </div>
-      </div>
+          </div>
+        </Modal>
+      </Dialog>
     );
   },
 );
@@ -635,6 +603,7 @@ export const QueryEditor = observer(() => {
   const applicationStore = useApplicationStore();
   const editorStore = useQueryEditorStore();
   const isLoadingEditor = !editorStore.initState.hasCompleted;
+  const isExistingQuery = editorStore instanceof ExistingQueryEditorStore;
 
   // documentation
   const appDocUrl = applicationStore.documentationService.url;
@@ -663,68 +632,156 @@ export const QueryEditor = observer(() => {
       !engineConfig.useClientRequestPayloadCompression,
     );
 
+  const toggleEnableMinialGraphForDataSpaceLoadingPerformance = (): void => {
+    editorStore.setEnableMinialGraphForDataSpaceLoadingPerformance(
+      !editorStore.enableMinialGraphForDataSpaceLoadingPerformance,
+    );
+  };
+
+  const TEMPORARY__toggleLightDarkMode = (): void => {
+    applicationStore.layoutService.setColorTheme(
+      applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+        ? LEGEND_APPLICATION_COLOR_THEME.DEFAULT_DARK
+        : LEGEND_APPLICATION_COLOR_THEME.LEGACY_LIGHT,
+      { persist: true },
+    );
+  };
+
+  //open legend ai query chat
+  const openQueryChat = (): void => {
+    if (!editorStore.queryBuilderState?.isQueryChatOpened) {
+      LegendQueryTelemetryHelper.logEvent_QueryChatOpened(
+        applicationStore.telemetryService,
+      );
+      editorStore.queryBuilderState?.setIsQueryChatOpened(true);
+    }
+  };
+
   useEffect(() => {
     flowResult(editorStore.initialize()).catch(
       applicationStore.alertUnhandledError,
     );
-  }, [editorStore, applicationStore]);
+    applicationStore.releaseNotesService.updateViewedVersion();
+  }, [
+    editorStore,
+    applicationStore,
+    editorStore.enableMinialGraphForDataSpaceLoadingPerformance,
+  ]);
 
   return (
     <div className="query-editor">
-      <div className="query-editor__header">
-        <div className="query-editor__header__menu">
-          <DropdownMenu
-            className="query-editor__header__menu-item"
-            menuProps={{
-              anchorOrigin: { vertical: 'top', horizontal: 'right' },
-              transformOrigin: { vertical: 'top', horizontal: 'left' },
-              elevation: 7,
-            }}
-            content={
-              <MenuContent>
-                <MenuContentItem onClick={goToQuerySetup}>
-                  Back to query setup
-                </MenuContentItem>
-                <MenuContentItem
-                  disabled={!appDocUrl}
-                  onClick={goToDocumentation}
-                >
-                  Documentation
-                </MenuContentItem>
-                {docLinks?.map((entry) => (
-                  <MenuContentItem
-                    key={entry.key}
-                    onClick={(): void => goToDocLink(entry.url)}
-                  >
-                    {entry.label}
+      <div className="query-editor__logo-header">
+        <div className="query-editor__logo-header__combo">
+          <div className="query-editor__logo-header__combo__menu">
+            <ControlledDropdownMenu
+              className="query-editor__logo-header__combo__menu-item"
+              menuProps={{
+                anchorOrigin: { vertical: 'top', horizontal: 'right' },
+                transformOrigin: { vertical: 'top', horizontal: 'left' },
+                elevation: 7,
+              }}
+              content={
+                <MenuContent>
+                  <MenuContentItem onClick={goToQuerySetup}>
+                    Back to query setup
                   </MenuContentItem>
-                ))}
-                <MenuContentDivider />
-                <MenuContentItem disabled={true}>Settings</MenuContentItem>
-                <MenuContentItem
-                  onClick={toggleEngineClientRequestPayloadCompression}
-                >
-                  <MenuContentItemIcon>
-                    {engineConfig.useClientRequestPayloadCompression ? (
-                      <CheckIcon />
-                    ) : null}
-                  </MenuContentItemIcon>
-                  <MenuContentItemLabel>
-                    Compress request payload
-                  </MenuContentItemLabel>
-                </MenuContentItem>
-              </MenuContent>
-            }
-          >
-            <MenuIcon />
-          </DropdownMenu>
+                  <MenuContentItem
+                    disabled={!appDocUrl}
+                    onClick={goToDocumentation}
+                  >
+                    Documentation
+                  </MenuContentItem>
+                  {docLinks?.map((entry) => (
+                    <MenuContentItem
+                      key={entry.key}
+                      onClick={(): void => goToDocLink(entry.url)}
+                    >
+                      {entry.label}
+                    </MenuContentItem>
+                  ))}
+                  <MenuContentDivider />
+                  <MenuContentItem disabled={true}>Settings</MenuContentItem>
+                  <MenuContentItem
+                    onClick={toggleEngineClientRequestPayloadCompression}
+                  >
+                    <MenuContentItemIcon>
+                      {engineConfig.useClientRequestPayloadCompression ? (
+                        <CheckIcon />
+                      ) : null}
+                    </MenuContentItemIcon>
+                    <MenuContentItemLabel>
+                      Compress request payload
+                    </MenuContentItemLabel>
+                  </MenuContentItem>
+                  <MenuContentItem
+                    onClick={
+                      toggleEnableMinialGraphForDataSpaceLoadingPerformance
+                    }
+                  >
+                    <MenuContentItemIcon>
+                      {editorStore.enableMinialGraphForDataSpaceLoadingPerformance ? (
+                        <CheckIcon />
+                      ) : null}
+                    </MenuContentItemIcon>
+                    <MenuContentItemLabel>
+                      Enable minimal graph
+                    </MenuContentItemLabel>
+                  </MenuContentItem>
+                </MenuContent>
+              }
+            >
+              <MenuIcon />
+            </ControlledDropdownMenu>
+          </div>
+          <div className="query-editor__logo-header__combo__name">
+            Legend Query
+          </div>
         </div>
-        {!isLoadingEditor && editorStore.queryBuilderState && (
-          <QueryEditorHeaderContent
-            queryBuilderState={editorStore.queryBuilderState}
-          />
-        )}
+        <div className="query-editor__header__action__content">
+          {!isLoadingEditor &&
+            !editorStore.queryBuilderState?.config
+              ?.TEMPORARY__disableQueryBuilderChat &&
+            (editorStore.queryBuilderState instanceof
+              DataSpaceQueryBuilderState ||
+              editorStore.queryBuilderState instanceof
+                DataSpaceQuerySetupState) &&
+            editorStore.queryBuilderState.canBuildQuery && (
+              <button
+                title="Open Query Chat."
+                onClick={() => openQueryChat()}
+                className="query-editor__header__action query-editor__header__action__theme-toggler"
+              >
+                <div
+                  className={
+                    applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled
+                      ? 'query-editor__header__action__chat__label--light'
+                      : 'query-editor__header__action__chat__label--dark'
+                  }
+                >
+                  Legend AI
+                </div>
+              </button>
+            )}
+          <button
+            title="Toggle light/dark mode"
+            onClick={TEMPORARY__toggleLightDarkMode}
+            className="query-editor__header__action query-editor__header__action__theme-toggler"
+          >
+            {applicationStore.layoutService
+              .TEMPORARY__isLightColorThemeEnabled ? (
+              <>
+                <SunIcon className="query-editor__header__action__icon--bulb--light" />
+              </>
+            ) : (
+              <>
+                <MoonIcon className="query-editor__header__action__icon--bulb--dark" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
       <div className="query-editor__content">
         <PanelLoadingIndicator isLoading={isLoadingEditor} />
         {!isLoadingEditor && editorStore.queryBuilderState && (
@@ -735,7 +792,7 @@ export const QueryEditor = observer(() => {
             <QueryBuilder queryBuilderState={editorStore.queryBuilderState} />
           </>
         )}
-        {(isLoadingEditor || !editorStore.queryBuilderState) && (
+        {isLoadingEditor && (
           <BlankPanelContent>
             {editorStore.initState.message ??
               editorStore.graphManagerState.systemBuildState.message ??
@@ -744,17 +801,91 @@ export const QueryEditor = observer(() => {
               editorStore.graphManagerState.graphBuildState.message}
           </BlankPanelContent>
         )}
+        {!isLoadingEditor &&
+          !editorStore.queryBuilderState &&
+          editorStore instanceof ExistingQueryEditorStore && (
+            <QueryEditorExistingQueryVersionRevertModal
+              existingEditorStore={editorStore}
+            />
+          )}
       </div>
+      {editorStore.queryLoaderState.isQueryLoaderDialogOpen && (
+        <QueryLoaderDialog
+          queryLoaderState={editorStore.queryLoaderState}
+          title="Select a Query to Load"
+        />
+      )}
+      {editorStore.canPersistToSavedQuery &&
+        editorStore.queryCreatorState.showCreateModal && <CreateQueryDialog />}
+      {editorStore.showAppInfo && (
+        <LegendQueryInfo
+          open={editorStore.showAppInfo}
+          closeModal={() => editorStore.setShowAppInfo(false)}
+        />
+      )}
+      {editorStore.showDataspaceInfo &&
+        editorStore.queryBuilderState instanceof DataSpaceQueryBuilderState && (
+          <QueryEditorDataspaceInfoModal
+            editorStore={editorStore}
+            dataspace={editorStore.queryBuilderState.dataSpace}
+            executionContext={editorStore.queryBuilderState.executionContext}
+            open={editorStore.showDataspaceInfo}
+            closeModal={() => editorStore.setShowDataspaceInfo(false)}
+          />
+        )}
+      {isExistingQuery &&
+        editorStore.updateState.showQueryInfo &&
+        editorStore.query && (
+          <QueryEditorExistingQueryInfoModal
+            existingEditorStore={editorStore}
+            query={editorStore.query}
+          />
+        )}
+      <ReleaseLogManager />
+      <ReleaseNotesManager />
     </div>
   );
 });
 
+const EXISTING_QUERY_PARAM_SUFFIX = 'p:';
+
+const processQueryParams = (
+  urlQuery: Record<string, string | undefined>,
+): Record<string, string> | undefined => {
+  const queryParamEntries = Array.from(Object.entries(urlQuery));
+  if (queryParamEntries.length) {
+    const paramValues: Record<string, string> = {};
+    queryParamEntries.forEach(([key, queryValue]) => {
+      if (queryValue && key.startsWith(EXISTING_QUERY_PARAM_SUFFIX)) {
+        paramValues[key.slice(EXISTING_QUERY_PARAM_SUFFIX.length)] = queryValue;
+      }
+    });
+    return Object.values(paramValues).length === 0 ? undefined : paramValues;
+  }
+
+  return undefined;
+};
+
 export const ExistingQueryEditor = observer(() => {
+  const applicationStore = useApplicationStore();
   const params = useParams<ExistingQueryEditorPathParams>();
-  const queryId = params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.QUERY_ID];
+  const queryId = guaranteeNonNullable(
+    params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.QUERY_ID],
+  );
+  const queryParams =
+    applicationStore.navigationService.navigator.getCurrentLocationParameters();
+  const processed = processQueryParams(queryParams);
+  useEffect(() => {
+    // clear params
+    if (processed && Object.keys(processed).length) {
+      applicationStore.navigationService.navigator.updateCurrentLocation(
+        generateExistingQueryEditorRoute(queryId),
+      );
+    }
+  }, [applicationStore, queryId, processed]);
 
   return (
-    <ExistingQueryEditorStoreProvider queryId={queryId}>
+    <ExistingQueryEditorStoreProvider queryId={queryId} params={processed}>
       <QueryEditor />
     </ExistingQueryEditorStoreProvider>
   );
@@ -763,8 +894,12 @@ export const ExistingQueryEditor = observer(() => {
 export const ServiceQueryCreator = observer(() => {
   const applicationStore = useApplicationStore();
   const parameters = useParams<ServiceQueryCreatorPathParams>();
-  const gav = parameters[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.GAV];
-  const servicePath = parameters[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.SERVICE_PATH];
+  const gav = guaranteeNonNullable(
+    parameters[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.GAV],
+  );
+  const servicePath = guaranteeNonNullable(
+    parameters[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.SERVICE_PATH],
+  );
   const executionKey =
     applicationStore.navigationService.navigator.getCurrentLocationParameterValue(
       LEGEND_QUERY_QUERY_PARAM_TOKEN.SERVICE_EXECUTION_KEY,
@@ -783,9 +918,15 @@ export const ServiceQueryCreator = observer(() => {
 
 export const MappingQueryCreator = observer(() => {
   const params = useParams<MappingQueryCreatorPathParams>();
-  const gav = params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.GAV];
-  const mappingPath = params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.MAPPING_PATH];
-  const runtimePath = params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.RUNTIME_PATH];
+  const gav = guaranteeNonNullable(
+    params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.GAV],
+  );
+  const mappingPath = guaranteeNonNullable(
+    params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.MAPPING_PATH],
+  );
+  const runtimePath = guaranteeNonNullable(
+    params[LEGEND_QUERY_ROUTE_PATTERN_TOKEN.RUNTIME_PATH],
+  );
 
   return (
     <MappingQueryCreatorStoreProvider

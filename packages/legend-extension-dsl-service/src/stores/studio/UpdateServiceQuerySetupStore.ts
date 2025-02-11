@@ -156,7 +156,7 @@ export class UpdateServiceQuerySetupStore {
     this.loadServicesState.inProgress();
     try {
       this.services = (
-        (yield this.depotServerClient.getEntitiesByClassifierPath(
+        (yield this.depotServerClient.DEPRECATED_getEntitiesByClassifierPath(
           CORE_PURE_PATH.SERVICE,
           {
             search: isValidSearchString ? searchText : undefined,
@@ -225,6 +225,7 @@ export class UpdateServiceQuerySetupStore {
       this.currentProjectConfigurationStatus =
         (yield fetchProjectConfigurationStatus(
           project.projectId,
+          undefined,
           this.applicationStore,
           this.sdlcServerClient,
         )) as ProjectConfigurationStatus;
@@ -247,6 +248,7 @@ export class UpdateServiceQuerySetupStore {
       const workspacesInConflictResolutionIds = (
         (yield this.sdlcServerClient.getWorkspacesInConflictResolutionMode(
           project.projectId,
+          undefined,
         )) as Workspace[]
       ).map((workspace) => workspace.workspaceId);
 
@@ -313,6 +315,7 @@ export class UpdateServiceQuerySetupStore {
       const newGroupWorkspace = Workspace.serialization.fromJson(
         (yield this.sdlcServerClient.createWorkspace(
           projectId,
+          undefined,
           workspaceId,
           WorkspaceType.GROUP,
         )) as PlainObject<Workspace>,

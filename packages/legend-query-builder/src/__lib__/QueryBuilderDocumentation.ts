@@ -18,4 +18,8 @@ export enum QUERY_BUILDER_DOCUMENTATION_KEY {
   // questions
   QUESTION_HOW_TO_ADD_PARAMETERS_TO_QUERY = 'question.how-to-add-parameters-to-query',
   QUESTION_HOW_TO_ADD_CONSTANTS_TO_QUERY = 'question.how-to-add-constants-to-query',
+  QUESTION_HOW_TO_USE_LOCAL_GRID_MODE = 'question.how-to-use-local-grid-mode',
+  TUTORIAL_QUERY_BUILDER = 'tutorial.query.builder',
+  FREQUENTLY_ASKED_QUESTIONS = 'frequently.asked.questions',
+  SUPPORT_TICKETS_LINK = 'support.tickets.link',
 }

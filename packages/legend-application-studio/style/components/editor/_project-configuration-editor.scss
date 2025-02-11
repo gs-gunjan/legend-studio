@@ -61,7 +61,7 @@
       height: 100%;
       width: 100%;
       padding: 1rem;
-      overflow: overlay;
+      overflow: auto;
     }
   }
 
@@ -86,7 +86,7 @@
     height: 2.8rem;
     z-index: 1;
     display: flex;
-    overflow-x: overlay;
+    overflow-x: auto;
     overflow-y: hidden;
   }
 
@@ -205,6 +205,23 @@
       border-radius: 0.2rem;
       font-weight: 500;
       color: var(--color-light-grey-50);
+    }
+  }
+
+  &__advanced {
+    &__project-type__info {
+      padding-bottom: 0.5rem;
+    }
+
+    &__caution__btn {
+      @include flexCenter;
+
+      width: 20rem;
+      height: 3.4rem;
+      padding: 0 1rem;
+      background: var(--color-blue-200);
+      color: var(--color-light-grey-50);
+      cursor: pointer;
     }
   }
 }
@@ -416,7 +433,8 @@
   &__toggler__prompt {
     @include flexCenter;
 
-    word-break: break-word;
+    word-break: normal;
+    overflow-wrap: anywhere;
     margin-left: 0.8rem;
     color: var(--color-light-grey-400);
     line-height: 2rem;
@@ -510,7 +528,7 @@
     height: 2.8rem;
     z-index: 1;
     display: flex;
-    overflow-x: overlay;
+    overflow-x: auto;
     overflow-y: hidden;
   }
 
@@ -577,7 +595,7 @@
       height: 100%;
       width: 100%;
       padding: 1rem;
-      overflow: overlay;
+      overflow: auto;
     }
   }
 

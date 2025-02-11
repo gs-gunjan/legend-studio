@@ -18,14 +18,29 @@ export enum QUERY_BUILDER_EVENT {
   RUN_QUERY__LAUNCH = 'query-builder.run-query.launch',
   GENERATE_EXECUTION_PLAN__LAUNCH = 'query-builder.generate-plan.launch',
   DEBUG_EXECUTION_PLAN__LAUNCH = 'query-builder.debug-plan.launch',
+  EXPORT_QUERY_DATA__LAUNCH = 'query-builder.export-query-data.launch',
 
   RUN_QUERY__SUCCESS = 'query-builder.run-query.success',
   GENERATE_EXECUTION_PLAN__SUCCESS = 'query-builder.generate-plan.success',
   DEBUG_EXECUTION_PLAN__SUCCESS = 'query-builder.debug-plan.success',
   BUILD_EXECUTION_PLAN__SUCCESS = 'query-builder.build-plan.success',
+  EXPORT_QUERY_DATA__SUCCESS = 'query-builder.export-query-data.success',
 
   MAPPING_MODEL_COVERAGE_ANALYSYS__LAUNCH = 'query-builder.mapping-model-coverage-analysis.launch',
   MAPPING_MODEL_COVERAGE_ANALYSYS__SUCCESS = 'query-builder.mapping-model-coverage-analysis.success',
+
+  UNSUPPORTED_QUERY_LAUNCH = 'query-builder.unsupported-query.lanuch',
+
+  SHOW_UNMAPPED_PROPERTIES__LAUNCH = 'query-builder.show-unmapped-properties.launch',
+  PROPERTY_EXPLORER_OPTIONS__LAUNCH = 'query-builder.property-explorer-options.launch',
+  PANEL_FUNCTION_EXPLORER__TOGGLE = 'query-builder.panel-function-explorer.toggle',
+  PANEL_FUNCTION_EXPLORER__RENDER = 'query-builder.panel-function-explorer.render',
+  PANEL_FUNCTION_EXPLORER_DEPENDENCY_VIEW__TOGGLE = 'query-builder.panel-function-explorer-dependency-view.toggle',
+
+  PANEL_FETCH_STRUCTURE_TOGGLE = 'query-builder.panel-fetch-structure.toggle',
+  PANEL_GRAPH_FETCH_RENDER = 'query-builder.panel-graph-fetch.render',
+
+  CHANGE_HISTORY_ERROR = 'query-builder.change-history.error',
 }
 
 export enum QUERY_BUILDER_FILTER_EVENT {

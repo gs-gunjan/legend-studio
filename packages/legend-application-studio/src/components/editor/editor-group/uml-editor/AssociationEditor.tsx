@@ -148,13 +148,13 @@ const AssociationPropertyBasicEditor = observer(
     const filterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: PackageableElementOption<Class>): string =>
-        option.value.path,
+      stringify: (option: { data: PackageableElementOption<Class> }): string =>
+        option.data.value.path,
     });
     const selectedPropertyType = {
       value: propertyType,
       label: propertyType.name,
-    };
+    } as PackageableElementOption<Class>;
     const changePropertyType = (val: PackageableElementOption<Class>): void => {
       association_changePropertyType(
         association,
@@ -183,8 +183,8 @@ const AssociationPropertyBasicEditor = observer(
         upper === MULTIPLICITY_INFINITE
           ? undefined
           : typeof upper === 'number'
-          ? upper
-          : parseInt(upper, 10);
+            ? upper
+            : parseInt(upper, 10);
       if (!isNaN(lBound) && (uBound === undefined || !isNaN(uBound))) {
         property_setMultiplicity(
           property,
@@ -451,7 +451,7 @@ export const AssociationEditor = observer(
       },
       [association, isReadOnly],
     );
-    const [{ isTaggedValueDragOver }, dropTaggedValueRef] = useDrop<
+    const [{ isTaggedValueDragOver }, taggedValueDropConnector] = useDrop<
       ElementDragSource,
       void,
       { isTaggedValueDragOver: boolean }
@@ -478,7 +478,7 @@ export const AssociationEditor = observer(
       },
       [association, isReadOnly],
     );
-    const [{ isStereotypeDragOver }, dropStereotypeRef] = useDrop<
+    const [{ isStereotypeDragOver }, stereotypeDropConnector] = useDrop<
       ElementDragSource,
       void,
       { isStereotypeDragOver: boolean }
@@ -585,7 +585,7 @@ export const AssociationEditor = observer(
                 {selectedTab === UML_EDITOR_TAB.TAGGED_VALUES && (
                   <PanelDropZone
                     isDragOver={isTaggedValueDragOver && !isReadOnly}
-                    dropTargetConnector={dropTaggedValueRef}
+                    dropTargetConnector={taggedValueDropConnector}
                   >
                     <PanelContentLists>
                       <TaggedValueDragPreviewLayer />
@@ -604,7 +604,7 @@ export const AssociationEditor = observer(
                 {selectedTab === UML_EDITOR_TAB.STEREOTYPES && (
                   <PanelDropZone
                     isDragOver={isStereotypeDragOver && !isReadOnly}
-                    dropTargetConnector={dropStereotypeRef}
+                    dropTargetConnector={stereotypeDropConnector}
                   >
                     <PanelContentLists>
                       <StereotypeDragPreviewLayer />

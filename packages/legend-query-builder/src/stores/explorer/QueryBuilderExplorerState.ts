@@ -24,6 +24,7 @@ import {
   assertType,
   UnsupportedOperationError,
   StopWatch,
+  at,
 } from '@finos/legend-shared';
 import {
   type AbstractProperty,
@@ -31,6 +32,7 @@ import {
   type MappingModelCoverageAnalysisResult,
   type EnumMappedProperty,
   type MappedEntity,
+  type ExecutionResultWithMetadata,
   AbstractPropertyExpression,
   Class,
   VariableExpression,
@@ -55,7 +57,6 @@ import {
   Association,
   PRIMITIVE_TYPE,
   TDSExecutionResult,
-  type ExecutionResult,
   getAllSubclasses,
   PropertyExplicitReference,
   reportGraphAnalytics,
@@ -72,6 +73,7 @@ import { QueryBuilderPropertySearchState } from './QueryBuilderPropertySearchSta
 import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../graph/QueryBuilderMetaModelConst.js';
 import { propertyExpression_setFunc } from '../shared/ValueSpecificationModifierHelper.js';
 import { QueryBuilderTelemetryHelper } from '../../__lib__/QueryBuilderTelemetryHelper.js';
+import { createRef } from 'react';
 
 export enum QUERY_BUILDER_EXPLORER_TREE_DND_TYPE {
   ROOT = 'ROOT',
@@ -97,6 +99,7 @@ export interface QueryBuilderExplorerTreeDragSource {
 export abstract class QueryBuilderExplorerTreeNodeData implements TreeNodeData {
   isSelected?: boolean | undefined;
   isOpen?: boolean | undefined;
+  isHighlighting?: boolean | undefined;
   id: string;
   label: string;
   dndText: string;
@@ -104,6 +107,7 @@ export abstract class QueryBuilderExplorerTreeNodeData implements TreeNodeData {
   isPartOfDerivedPropertyBranch: boolean;
   type: Type;
   mappingData: QueryBuilderExplorerTreeNodeMappingData;
+  elementRef: React.RefObject<HTMLDivElement | null>;
 
   constructor(
     id: string,
@@ -112,9 +116,14 @@ export abstract class QueryBuilderExplorerTreeNodeData implements TreeNodeData {
     isPartOfDerivedPropertyBranch: boolean,
     type: Type,
     mappingData: QueryBuilderExplorerTreeNodeMappingData,
+    childrenIds?: string[] | undefined,
   ) {
     makeObservable(this, {
+      isHighlighting: observable,
+      isOpen: observable,
       isSelected: observable,
+      setIsHighlighting: action,
+      setIsOpen: action,
       setIsSelected: action,
     });
 
@@ -124,16 +133,30 @@ export abstract class QueryBuilderExplorerTreeNodeData implements TreeNodeData {
     this.isPartOfDerivedPropertyBranch = isPartOfDerivedPropertyBranch;
     this.type = type;
     this.mappingData = mappingData;
+    if (childrenIds) {
+      this.childrenIds = childrenIds;
+    }
+    this.elementRef = createRef();
   }
 
   setIsSelected(val: boolean | undefined): void {
     this.isSelected = val;
+  }
+
+  setIsOpen(val: boolean | undefined): void {
+    this.isOpen = val;
+  }
+
+  setIsHighlighting(val: boolean | undefined): void {
+    this.isHighlighting = val;
   }
 }
 
 export type QueryBuilderExplorerTreeNodeMappingData = {
   mapped: boolean;
   mappedEntity?: MappedEntity | undefined;
+  // used to describe the mapped property
+  entityMappedProperty?: EntityMappedProperty | undefined;
 };
 
 export class QueryBuilderExplorerTreeRootNodeData extends QueryBuilderExplorerTreeNodeData {}
@@ -150,14 +173,17 @@ export class QueryBuilderExplorerTreePropertyNodeData extends QueryBuilderExplor
     parentId: string,
     isPartOfDerivedPropertyBranch: boolean,
     mappingData: QueryBuilderExplorerTreeNodeMappingData,
+    type?: Type | undefined,
+    childrenIds?: string[],
   ) {
     super(
       id,
       label,
       dndText,
       isPartOfDerivedPropertyBranch,
-      property.genericType.value.rawType,
+      type ?? property.genericType.value.rawType,
       mappingData,
+      childrenIds,
     );
     this.property = property;
     this.parentId = parentId;
@@ -178,6 +204,7 @@ export class QueryBuilderExplorerTreeSubTypeNodeData extends QueryBuilderExplore
     isPartOfDerivedPropertyBranch: boolean,
     mappingData: QueryBuilderExplorerTreeNodeMappingData,
     multiplicity: Multiplicity,
+    childrenIds?: string[],
   ) {
     super(
       id,
@@ -186,6 +213,7 @@ export class QueryBuilderExplorerTreeSubTypeNodeData extends QueryBuilderExplore
       isPartOfDerivedPropertyBranch,
       subclass,
       mappingData,
+      childrenIds,
     );
     this.subclass = subclass;
     this.parentId = parentId;
@@ -215,10 +243,11 @@ export const buildPropertyExpressionFromExplorerTreeNodeData = (
   let parentNode =
     treeData.nodes.get(node.parentId) ??
     propertySearchIndexedTreeNodes.find((n) => n.id === node.parentId);
-  let currentNode: QueryBuilderExplorerTreeNodeData = node;
+  let currentNode: QueryBuilderExplorerTreeNodeData | undefined = node;
   while (
-    parentNode instanceof QueryBuilderExplorerTreePropertyNodeData ||
-    parentNode instanceof QueryBuilderExplorerTreeSubTypeNodeData
+    currentNode &&
+    (parentNode instanceof QueryBuilderExplorerTreePropertyNodeData ||
+      parentNode instanceof QueryBuilderExplorerTreeSubTypeNodeData)
   ) {
     // NOTE: here, we deliberately simplify subtypes chain
     // $x.employees->subType(@Person)->subType(@Staff).department will be simplified to $x.employees->subType(@Staff).department
@@ -229,12 +258,31 @@ export const buildPropertyExpressionFromExplorerTreeNodeData = (
       parentNode = treeData.nodes.get(parentNode.parentId);
       continue;
     }
-
     let parentPropertyExpression;
+    let explorerTreePropertyNodeDataWithSubtype = false;
     if (parentNode instanceof QueryBuilderExplorerTreeSubTypeNodeData) {
       parentPropertyExpression = new SimpleFunctionExpression(
         extractElementNameFromPath(QUERY_BUILDER_SUPPORTED_FUNCTIONS.SUBTYPE),
       );
+    } else if (
+      parentNode instanceof QueryBuilderExplorerTreePropertyNodeData &&
+      parentNode.mappingData.entityMappedProperty?.subType
+    ) {
+      parentPropertyExpression = new SimpleFunctionExpression(
+        extractElementNameFromPath(QUERY_BUILDER_SUPPORTED_FUNCTIONS.SUBTYPE),
+      );
+      currentExpression.parametersValues.push(parentPropertyExpression);
+      currentExpression = parentPropertyExpression;
+      parentPropertyExpression = new AbstractPropertyExpression('');
+      propertyExpression_setFunc(
+        parentPropertyExpression,
+        PropertyExplicitReference.create(
+          guaranteeNonNullable(parentNode.property),
+        ),
+      );
+      explorerTreePropertyNodeDataWithSubtype = true;
+      currentNode = parentNode;
+      parentNode = treeData.nodes.get(parentNode.parentId);
     } else {
       parentPropertyExpression = new AbstractPropertyExpression('');
       propertyExpression_setFunc(
@@ -259,8 +307,14 @@ export const buildPropertyExpressionFromExplorerTreeNodeData = (
       currentExpression.parametersValues.push(subclass);
     }
     currentExpression = parentPropertyExpression;
-    currentNode = parentNode;
-    parentNode = treeData.nodes.get(parentNode.parentId);
+    if (!explorerTreePropertyNodeDataWithSubtype) {
+      currentNode = parentNode;
+      parentNode =
+        parentNode instanceof QueryBuilderExplorerTreePropertyNodeData ||
+        parentNode instanceof QueryBuilderExplorerTreeSubTypeNodeData
+          ? treeData.nodes.get(parentNode.parentId)
+          : undefined;
+    }
     if (
       !parentNode &&
       (currentNode instanceof QueryBuilderExplorerTreePropertyNodeData ||
@@ -275,7 +329,7 @@ export const buildPropertyExpressionFromExplorerTreeNodeData = (
     }
   }
   currentExpression.parametersValues.push(projectionColumnLambdaVariable);
-  if (currentExpression instanceof SimpleFunctionExpression) {
+  if (currentNode && currentExpression instanceof SimpleFunctionExpression) {
     const subclass = new InstanceValue(
       Multiplicity.ONE,
       GenericTypeExplicitReference.create(new GenericType(currentNode.type)),
@@ -292,6 +346,7 @@ export const generatePropertyNodeMappingData = (
 ): QueryBuilderExplorerTreeNodeMappingData => {
   // If the property node's parent node does not have a mapped entity,
   // it means the owner class is not mapped, i.e. this property is not mapped.
+
   if (parentMappingData.mappedEntity) {
     const mappedProp = parentMappingData.mappedEntity.__PROPERTIES_INDEX.get(
       property.name,
@@ -308,6 +363,8 @@ export const generatePropertyNodeMappingData = (
               ? mappedProp.entityPath
               : (mappedProp as EnumMappedProperty).enumPath,
           ),
+          entityMappedProperty:
+            mappedProp instanceof EntityMappedProperty ? mappedProp : undefined,
         };
       }
     }
@@ -329,6 +386,7 @@ export const generateSubtypeNodeMappingData = (
   const allCompatibleTypePaths = getAllSubclasses(subclass)
     .concat(subclass)
     .map((_class) => _class.path);
+  const subtype = parentMappingData.entityMappedProperty?.subType;
   // If the subtype node's parent node does not have a mapped entity,
   // it means the superclass is not mapped, i.e. this subtype is not mapped
   if (parentMappingData.mappedEntity) {
@@ -350,7 +408,9 @@ export const generateSubtypeNodeMappingData = (
         ),
       };
     } else if (
-      allCompatibleTypePaths.includes(parentMappingData.mappedEntity.path)
+      allCompatibleTypePaths.includes(parentMappingData.mappedEntity.path) ||
+      // hanlde cases where multi class mappings for same subtype
+      (subtype && allCompatibleTypePaths.includes(subtype))
     ) {
       // This is to handle the case where the property mapping is pointing
       // directly at the class mapping of a subtype of the type of that property
@@ -436,13 +496,32 @@ export const getQueryBuilderPropertyNodeData = (
   ) {
     return undefined;
   }
+  const _subclasses =
+    property.genericType.value.rawType instanceof Class
+      ? getAllSubclasses(property.genericType.value.rawType)
+      : [];
+  const subClass = mappingNodeData.entityMappedProperty?.subType
+    ? _subclasses.find(
+        (c) => c.path === mappingNodeData.entityMappedProperty?.subType,
+      )
+    : undefined;
   const propertyNode = new QueryBuilderExplorerTreePropertyNodeData(
-    generateExplorerTreePropertyNodeID(
-      parentNode instanceof QueryBuilderExplorerTreeRootNodeData
-        ? ''
-        : parentNode.id,
-      property.name,
-    ),
+    subClass
+      ? generateExplorerTreeSubtypeNodeID(
+          generateExplorerTreePropertyNodeID(
+            parentNode instanceof QueryBuilderExplorerTreeRootNodeData
+              ? ''
+              : parentNode.id,
+            property.name,
+          ),
+          subClass.path,
+        )
+      : generateExplorerTreePropertyNodeID(
+          parentNode instanceof QueryBuilderExplorerTreeRootNodeData
+            ? ''
+            : parentNode.id,
+          property.name,
+        ),
     property.name,
     `${
       parentNode instanceof QueryBuilderExplorerTreeRootNodeData
@@ -453,7 +532,33 @@ export const getQueryBuilderPropertyNodeData = (
     parentNode.id,
     isPartOfDerivedPropertyBranch,
     mappingNodeData,
+    // Inorder to cast the properties to the right subType based on what mapping analysis
+    // returns we assign the type of the property node to the mapped subClass
+    subClass,
   );
+
+  // Update parent's childrenIds for this proerty
+  // if subClass is defined, it means current QueryBuilderExplorerTreePropertyNodeData's id will be employees.partyBase@my::Party
+  // However, since parentNode.childrenIds is generated before we visiting this child and it doesn't consider subtype information,
+  // its value would be employees.partyBase. Mismatch will cause mapped-properties not showing up in the explorer tree.
+  if (subClass) {
+    const currentParentChildIDForThisProperty =
+      generateExplorerTreePropertyNodeID(
+        parentNode instanceof QueryBuilderExplorerTreeRootNodeData
+          ? ''
+          : parentNode.id,
+        property.name,
+      );
+    if (parentNode.childrenIds.includes(currentParentChildIDForThisProperty)) {
+      parentNode.childrenIds = [
+        ...parentNode.childrenIds.filter(
+          (id) => id !== currentParentChildIDForThisProperty,
+        ),
+        propertyNode.id,
+      ];
+    }
+  }
+
   if (propertyNode.type instanceof Class) {
     propertyNode.childrenIds =
       generateExplorerTreeClassNodeChildrenIDs(propertyNode);
@@ -496,8 +601,8 @@ export const getQueryBuilderSubTypeNodeData = (
     parentNode instanceof QueryBuilderExplorerTreePropertyNodeData
       ? parentNode.property.multiplicity
       : parentNode instanceof QueryBuilderExplorerTreeSubTypeNodeData
-      ? parentNode.multiplicity
-      : Multiplicity.ONE,
+        ? parentNode.multiplicity
+        : Multiplicity.ONE,
   );
   subTypeNode.childrenIds =
     generateExplorerTreeClassNodeChildrenIDs(subTypeNode);
@@ -556,19 +661,65 @@ const getQueryBuilderTreeData = (
   return { rootIds, nodes };
 };
 
+export const cloneQueryBuilderExplorerTreeNodeData = (
+  node: QueryBuilderExplorerTreeNodeData,
+): QueryBuilderExplorerTreeNodeData => {
+  if (node instanceof QueryBuilderExplorerTreeRootNodeData) {
+    return new QueryBuilderExplorerTreeRootNodeData(
+      node.id,
+      node.label,
+      node.dndText,
+      node.isPartOfDerivedPropertyBranch,
+      node.type,
+      node.mappingData,
+      node.childrenIds,
+    );
+  } else if (node instanceof QueryBuilderExplorerTreePropertyNodeData) {
+    return new QueryBuilderExplorerTreePropertyNodeData(
+      node.id,
+      node.label,
+      node.dndText,
+      node.property,
+      node.parentId,
+      node.isPartOfDerivedPropertyBranch,
+      node.mappingData,
+      node.type,
+      node.childrenIds,
+    );
+  } else if (node instanceof QueryBuilderExplorerTreeSubTypeNodeData) {
+    return new QueryBuilderExplorerTreeSubTypeNodeData(
+      node.id,
+      node.label,
+      node.dndText,
+      node.subclass,
+      node.parentId,
+      node.isPartOfDerivedPropertyBranch,
+      node.mappingData,
+      node.multiplicity,
+      node.childrenIds,
+    );
+  }
+  throw new UnsupportedOperationError(
+    `Unable to clone node of type ${node.constructor.name}`,
+  );
+};
+
 export class QueryBuilderExplorerPreviewDataState {
   isGeneratingPreviewData = false;
   propertyName = '(unknown)';
   previewData?: QueryBuilderPreviewData | undefined;
+  previewDataAbortController?: AbortController | undefined;
 
   constructor() {
     makeObservable(this, {
       previewData: observable.ref,
       isGeneratingPreviewData: observable,
       propertyName: observable,
+      previewDataAbortController: observable,
       setPropertyName: action,
       setIsGeneratingPreviewData: action,
       setPreviewData: action,
+      setPreviewDataAbortController: action,
     });
   }
 
@@ -582,6 +733,10 @@ export class QueryBuilderExplorerPreviewDataState {
 
   setPreviewData(val: QueryBuilderPreviewData | undefined): void {
     this.previewData = val;
+  }
+
+  setPreviewDataAbortController(val: AbortController | undefined): void {
+    this.previewDataAbortController = val;
   }
 }
 
@@ -609,6 +764,7 @@ export class QueryBuilderExplorerState {
       setHumanizePropertyName: action,
       setShowUnmappedProperties: action,
       setHighlightUsedProperties: action,
+      highlightTreeNode: action,
       analyzeMappingModelCoverage: flow,
       previewData: flow,
     });
@@ -652,7 +808,7 @@ export class QueryBuilderExplorerState {
 
   refreshTreeData(): void {
     const _class = this.queryBuilderState.class;
-    const _mapping = this.queryBuilderState.mapping;
+    const _mapping = this.queryBuilderState.executionContextState.mapping;
     this.setTreeData(
       _class && _mapping && this.mappingModelCoverageAnalysisResult
         ? getQueryBuilderTreeData(
@@ -663,13 +819,115 @@ export class QueryBuilderExplorerState {
     );
   }
 
+  generateOpenNodeChildren(node: QueryBuilderExplorerTreeNodeData): void {
+    if (
+      node.isOpen &&
+      (node instanceof QueryBuilderExplorerTreePropertyNodeData ||
+        node instanceof QueryBuilderExplorerTreeSubTypeNodeData) &&
+      node.type instanceof Class
+    ) {
+      (node instanceof QueryBuilderExplorerTreeSubTypeNodeData
+        ? getAllOwnClassProperties(node.type)
+        : getAllClassProperties(node.type).concat(
+            getAllClassDerivedProperties(node.type),
+          )
+      ).forEach((property) => {
+        const propertyTreeNodeData = getQueryBuilderPropertyNodeData(
+          property,
+          node,
+          guaranteeNonNullable(this.mappingModelCoverageAnalysisResult),
+        );
+        if (propertyTreeNodeData) {
+          this.nonNullableTreeData.nodes.set(
+            propertyTreeNodeData.id,
+            propertyTreeNodeData,
+          );
+        }
+      });
+      node.type._subclasses.forEach((subclass) => {
+        const subTypeTreeNodeData = getQueryBuilderSubTypeNodeData(
+          subclass,
+          node,
+          guaranteeNonNullable(this.mappingModelCoverageAnalysisResult),
+        );
+        this.nonNullableTreeData.nodes.set(
+          subTypeTreeNodeData.id,
+          subTypeTreeNodeData,
+        );
+      });
+      this.refreshTree();
+    }
+  }
+
+  highlightTreeNode(nodeId: string): void {
+    // If the node doesn't yet exist in the explorer tree,
+    // we need to open all the parent nodes of the node and
+    // generate their children.
+    if (this.nonNullableTreeData.nodes.get(nodeId) === undefined) {
+      const parentNodeIdElements: string[][] = nodeId
+        .split('@')
+        .map((subpath) => subpath.split('.'));
+      // remove last element of final subpath, as it is the node id and not a parent
+      if (
+        parentNodeIdElements.length > 0 &&
+        parentNodeIdElements[parentNodeIdElements.length - 1] !== undefined
+      ) {
+        at(parentNodeIdElements, parentNodeIdElements.length - 1).pop();
+      }
+
+      let currentNodeId = '';
+
+      parentNodeIdElements.forEach((subpath) => {
+        subpath.forEach((element, index) => {
+          currentNodeId += `${index > 0 ? '.' : ''}${element}`;
+          const currentNode = this.nonNullableTreeData.nodes.get(currentNodeId);
+          if (currentNode) {
+            currentNode.setIsOpen(true);
+            this.generateOpenNodeChildren(currentNode);
+          }
+        });
+        currentNodeId += '@';
+      });
+    }
+
+    // All parent nodes should be created now, so we can get the node to highlight.
+    const nodeToHighlight = this.nonNullableTreeData.nodes.get(nodeId);
+
+    // If we didn't need to open and create the parent nodes above, we will
+    // open the parent nodes here in case they are closed. Then, we will highlight
+    // and scroll to the node.
+    if (
+      nodeToHighlight instanceof QueryBuilderExplorerTreePropertyNodeData ||
+      nodeToHighlight instanceof QueryBuilderExplorerTreeSubTypeNodeData
+    ) {
+      let nodeToOpen: QueryBuilderExplorerTreeNodeData | null =
+        this.nonNullableTreeData.nodes.get(nodeToHighlight.parentId) ?? null;
+      while (nodeToOpen !== null) {
+        if (!nodeToOpen.isOpen) {
+          nodeToOpen.setIsOpen(true);
+        }
+        nodeToOpen =
+          nodeToOpen instanceof QueryBuilderExplorerTreePropertyNodeData ||
+          nodeToOpen instanceof QueryBuilderExplorerTreeSubTypeNodeData
+            ? (this.nonNullableTreeData.nodes.get(nodeToOpen.parentId) ?? null)
+            : null;
+      }
+      nodeToHighlight.setIsHighlighting(true);
+      // scrollIntoView must be called in a setTimeout because it must happen after
+      // the tree nodes are recursively opened and the tree is refreshed.
+      setTimeout(() => {
+        nodeToHighlight.elementRef.current?.scrollIntoView();
+      }, 0);
+    }
+  }
+
   *analyzeMappingModelCoverage(): GeneratorFn<void> {
     // We will only refetch if the analysis result's mapping has changed.
     // This makes the assumption that the mapping has not been edited, which is a valid assumption since query is not for editing mappings
     if (
-      this.queryBuilderState.mapping &&
-      this.queryBuilderState.mapping !==
-        this.mappingModelCoverageAnalysisResult?.mapping
+      this.queryBuilderState.executionContextState.mapping &&
+      this.queryBuilderState.executionContextState.mapping.path !==
+        this.mappingModelCoverageAnalysisResult?.mapping.path
     ) {
       this.mappingModelCoverageAnalysisState.inProgress();
       QueryBuilderTelemetryHelper.logEvent_QueryMappingModelCoverageAnalysisLaunched(
@@ -684,7 +942,7 @@ export class QueryBuilderExplorerState {
       try {
         this.mappingModelCoverageAnalysisResult = (yield flowResult(
           this.queryBuilderState.graphManagerState.graphManager.analyzeMappingModelCoverage(
-            this.queryBuilderState.mapping,
+            this.queryBuilderState.executionContextState.mapping,
             this.queryBuilderState.graphManagerState.graph,
           ),
         )) as MappingModelCoverageAnalysisResult;
@@ -694,9 +952,14 @@ export class QueryBuilderExplorerState {
             stopWatch,
             report.timings,
           );
+        const reportWithState = Object.assign(
+          {},
+          report,
+          this.queryBuilderState.getStateInfo(),
+        );
         QueryBuilderTelemetryHelper.logEvent_QueryMappingModelCoverageAnalysisSucceeded(
           this.queryBuilderState.applicationStore.telemetryService,
-          report,
+          reportWithState,
         );
       } catch (error) {
         assertErrorThrown(error);
@@ -712,7 +975,7 @@ export class QueryBuilderExplorerState {
   *previewData(
     node: QueryBuilderExplorerTreePropertyNodeData,
   ): GeneratorFn<void> {
-    const runtime = this.queryBuilderState.runtimeValue;
+    const runtime = this.queryBuilderState.executionContextState.runtimeValue;
     if (!runtime) {
       this.queryBuilderState.applicationStore.notificationService.notifyWarning(
         `Can't preview data for property '${node.property.name}': runtime is not specified`,
@@ -722,7 +985,7 @@ export class QueryBuilderExplorerState {
     if (
       !node.mappingData.mapped ||
       !this.queryBuilderState.class ||
-      !this.queryBuilderState.mapping
+      !this.queryBuilderState.executionContextState.mapping
     ) {
       return;
     }
@@ -739,22 +1002,28 @@ export class QueryBuilderExplorerState {
       this,
     );
     const propertyType = node.property.genericType.value.rawType;
+    this.previewDataState.setPreviewDataAbortController(new AbortController());
     try {
       switch (propertyType.path) {
         case PRIMITIVE_TYPE.NUMBER:
         case PRIMITIVE_TYPE.INTEGER:
         case PRIMITIVE_TYPE.DECIMAL:
         case PRIMITIVE_TYPE.FLOAT: {
-          const previewResult =
+          const previewResult = (
             (yield this.queryBuilderState.graphManagerState.graphManager.runQuery(
               buildNumericPreviewDataQuery(
                 this.queryBuilderState,
                 propertyExpression,
               ),
-              this.queryBuilderState.mapping,
+              this.queryBuilderState.executionContextState.mapping,
               runtime,
               this.queryBuilderState.graphManagerState.graph,
-            )) as ExecutionResult;
+              {
+                abortController:
+                  this.previewDataState.previewDataAbortController,
+              },
+            )) as ExecutionResultWithMetadata
+          ).executionResult;
           assertType(
             previewResult,
             TDSExecutionResult,
@@ -782,16 +1051,21 @@ export class QueryBuilderExplorerState {
         case PRIMITIVE_TYPE.DATE:
         case PRIMITIVE_TYPE.STRICTDATE:
         case PRIMITIVE_TYPE.DATETIME: {
-          const previewResult =
+          const previewResult = (
             (yield this.queryBuilderState.graphManagerState.graphManager.runQuery(
               buildNonNumericPreviewDataQuery(
                 this.queryBuilderState,
                 propertyExpression,
               ),
-              this.queryBuilderState.mapping,
+              this.queryBuilderState.executionContextState.mapping,
               runtime,
               this.queryBuilderState.graphManagerState.graph,
-            )) as ExecutionResult;
+              {
+                abortController:
+                  this.previewDataState.previewDataAbortController,
+              },
+            )) as ExecutionResultWithMetadata
+          ).executionResult;
           assertType(
             previewResult,
             TDSExecutionResult,
@@ -809,12 +1083,16 @@ export class QueryBuilderExplorerState {
       }
     } catch (error) {
       assertErrorThrown(error);
+      if (error.name === 'AbortError') {
+        return;
+      }
       this.queryBuilderState.applicationStore.notificationService.notifyWarning(
         `Can't preview data for property '${node.property.name}'. Error: ${error.message}`,
       );
       this.previewDataState.setPreviewData(undefined);
     } finally {
       this.previewDataState.setIsGeneratingPreviewData(false);
+      this.previewDataState.setPreviewDataAbortController(undefined);
     }
   }
 }

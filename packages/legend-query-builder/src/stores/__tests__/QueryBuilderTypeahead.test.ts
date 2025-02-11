@@ -17,19 +17,32 @@
 import { expect, test, describe } from '@jest/globals';
 import { guaranteeNonNullable, guaranteeType } from '@finos/legend-shared';
 import { integrationTest } from '@finos/legend-shared/test';
-import TEST_DATA__PostFilterModel from './TEST_DATA__QueryBuilder_Model_PostFilter.json';
-import TEST_DATA__COVIDDataSimpleModel from './TEST_DATA__QueryBuilder_Model_COVID.json';
+import TEST_DATA__PostFilterModel from './TEST_DATA__QueryBuilder_Model_PostFilter.json' with { type: 'json' };
+import TEST_DATA__COVIDDataSimpleModel from './TEST_DATA__QueryBuilder_Model_COVID.json' with { type: 'json' };
+import TEST_DATA__MilestoningSimpleModel from './TEST_DATA__QueryBuilder_Model_SimpleMilestoning.json' with { type: 'json' };
 import { RawLambda } from '@finos/legend-graph';
-import { TEST_DATA__lambda_simpleSingleConditionFilter } from './TEST_DATA__QueryBuilder_Roundtrip_TestFilterQueries.js';
+import {
+  TEST_DATA__lambda_simpleSingleConditionFilter,
+  TEST_DATA__simpleSingleConditionMilestoningFilter,
+} from './TEST_DATA__QueryBuilder_Roundtrip_TestFilterQueries.js';
 import { TEST_DATA__lambda_derivationPostFilter } from './TEST_DATA__QueryBuilder_Roundtrip_TestPostFilterQueries.js';
-import { QueryBuilderFilterTreeConditionNodeData } from '../filter/QueryBuilderFilterState.js';
-import { QueryBuilderPostFilterTreeConditionNodeData } from '../fetch-structure/tds/post-filter/QueryBuilderPostFilterState.js';
+import {
+  FilterValueSpecConditionValueState,
+  QueryBuilderFilterTreeConditionNodeData,
+} from '../filter/QueryBuilderFilterState.js';
+import {
+  PostFilterValueSpecConditionValueState,
+  QueryBuilderPostFilterTreeConditionNodeData,
+} from '../fetch-structure/tds/post-filter/QueryBuilderPostFilterState.js';
 import type { Entity } from '@finos/legend-storage';
 import {
   TEST_DATA__lambda_expected_typeahead_filter,
+  TEST_DATA__lambda_expected_typeahead_filter_milestoning,
   TEST_DATA__lambda_expected_typeahead_postFilter,
+  TEST_DATA__lambda_expected_typeahead_postFilter_milestoning,
   TEST_DATA__lambda_expected_typeahead_postFilter_with_derivation,
   TEST_DATA__lambda_typeahead_simple_postFilter,
+  TEST_DATA__lambda_typeahead_simple_postFilter_milestoning,
 } from './TEST_DATA__QueryBuilder_TestTypeaheadSearch.js';
 import { TEST__setUpQueryBuilderState } from '../__test-utils__/QueryBuilderStateTestUtils.js';
 import { QueryBuilderProjectionColumnState } from '../fetch-structure/tds/projection/QueryBuilderProjectionColumnState.js';
@@ -58,9 +71,17 @@ const FILTER_CASES: TypeaheadTestCase[] = [
     TEST_DATA__lambda_simpleSingleConditionFilter,
     TEST_DATA__lambda_expected_typeahead_filter,
   ],
+  [
+    'Simple typeahead search on filter with milestoned field',
+    {
+      entities: TEST_DATA__MilestoningSimpleModel,
+    },
+    TEST_DATA__simpleSingleConditionMilestoningFilter,
+    TEST_DATA__lambda_expected_typeahead_filter_milestoning,
+  ],
 ];
 
-describe(integrationTest('Query builder type ahead: post-filter'), () => {
+describe(integrationTest('Query builder type ahead: filter'), () => {
   test.each(FILTER_CASES)(
     '%s',
     async (
@@ -78,15 +99,25 @@ describe(integrationTest('Query builder type ahead: post-filter'), () => {
         queryBuilderState.filterState.getRootNode(),
         QueryBuilderFilterTreeConditionNodeData,
       );
+      const filterNodeRightConditionValue = guaranteeType(
+        filterNode.condition.rightConditionValue,
+        FilterValueSpecConditionValueState,
+      );
       const jsonQuery =
         queryBuilderState.graphManagerState.graphManager.serializeRawValueSpecification(
           buildPropertyTypeaheadQuery(
             queryBuilderState,
             filterNode.condition.propertyExpressionState.propertyExpression,
-            filterNode.condition.value,
+            filterNodeRightConditionValue.value,
           ),
         );
       expect(expectedTypeaheadLambda).toEqual(jsonQuery);
+      // Check that we haven't modified actual lambda in the process of building lambda for typeahead search
+      expect(lambda).toEqual(
+        queryBuilderState.graphManagerState.graphManager.serializeRawValueSpecification(
+          queryBuilderState.buildQuery(),
+        ),
+      );
     },
   );
 });
@@ -108,9 +139,17 @@ const POST_FILTER_CASES: TypeaheadTestCase[] = [
     TEST_DATA__lambda_derivationPostFilter,
     TEST_DATA__lambda_expected_typeahead_postFilter_with_derivation,
   ],
+  [
+    'Simple typeahead search on post-filter with milestoned field',
+    {
+      entities: TEST_DATA__MilestoningSimpleModel,
+    },
+    TEST_DATA__lambda_typeahead_simple_postFilter_milestoning,
+    TEST_DATA__lambda_expected_typeahead_postFilter_milestoning,
+  ],
 ];
 
-describe(integrationTest('Query builder type ahead: filter'), () => {
+describe(integrationTest('Query builder type ahead: post-filter'), () => {
   test.each(POST_FILTER_CASES)(
     '%s',
     async (
@@ -134,21 +173,30 @@ describe(integrationTest('Query builder type ahead: filter'), () => {
         QueryBuilderPostFilterTreeConditionNodeData,
       );
       const columnState =
-        postFilterNode.condition.columnState instanceof
+        postFilterNode.condition.leftConditionValue instanceof
           QueryBuilderProjectionColumnState ||
-        postFilterNode.condition.columnState instanceof
+        postFilterNode.condition.leftConditionValue instanceof
           QueryBuilderAggregateColumnState
-          ? postFilterNode.condition.columnState
+          ? postFilterNode.condition.leftConditionValue
           : undefined;
       const jsonQuery =
         queryBuilderState.graphManagerState.graphManager.serializeRawValueSpecification(
           buildProjectionColumnTypeaheadQuery(
             queryBuilderState,
             guaranteeNonNullable(columnState),
-            postFilterNode.condition.value,
+            guaranteeType(
+              postFilterNode.condition.rightConditionValue,
+              PostFilterValueSpecConditionValueState,
+            ).value,
           ),
         );
       expect(expectedTypeaheadLambda).toEqual(jsonQuery);
+      // Check that we haven't modified actual lambda in the process of building lambda for typeahead search
+      expect(lambda).toEqual(
+        queryBuilderState.graphManagerState.graphManager.serializeRawValueSpecification(
+          queryBuilderState.buildQuery(),
+        ),
+      );
     },
   );
 });

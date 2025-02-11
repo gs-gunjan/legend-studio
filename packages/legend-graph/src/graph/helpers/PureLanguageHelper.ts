@@ -26,6 +26,9 @@ import type { Type } from '../metamodel/pure/packageableElements/domain/Type.js'
 import { PrimitiveType } from '../metamodel/pure/packageableElements/domain/PrimitiveType.js';
 import { Enumeration } from '../metamodel/pure/packageableElements/domain/Enumeration.js';
 import { formatDate } from '@finos/legend-shared';
+import type { PureModel } from '../PureModel.js';
+import type { FunctionAnalysisInfo } from './FunctionAnalysis.js';
+import type { GenericType } from '../metamodel/pure/packageableElements/domain/GenericType.js';
 
 export enum PURE_ELEMENT_NAME {
   PROFILE = 'Profile',
@@ -136,26 +139,67 @@ export const generateFunctionCallString = (
   return `${element.package?.path}${ELEMENT_PATH_DELIMITER}${element.functionName}(${lambdaString})`;
 };
 
+export const generateFunctionCallStringFromFunctionAnalysisInfo = (
+  graph: PureModel,
+  functionInfo: FunctionAnalysisInfo,
+): string => {
+  let lambdaString = '';
+  const parameterLength = functionInfo.parameterInfoList.length;
+  if (parameterLength > 0) {
+    for (let i = 0; i < parameterLength; i++) {
+      const info = functionInfo.parameterInfoList[i];
+      let paramType;
+      if (info !== undefined) {
+        try {
+          paramType = graph.getType(info.type);
+        } catch {
+          // graph might not contain classes used as type, do nothing here
+        }
+      }
+      const separator = i !== parameterLength - 1 ? ', ' : '';
+      lambdaString =
+        lambdaString +
+        generateDefaultParameterValueForType(paramType, i) +
+        separator;
+    }
+  }
+  return `${functionInfo.packagePath}${ELEMENT_PATH_DELIMITER}${functionInfo.functionName}(${lambdaString})`;
+};
+
+export const generateGenericTypeString = (type: GenericType): string => {
+  return (
+    type.rawType.name +
+    (type.typeArguments?.length
+      ? `<${type.typeArguments.map((t) => generateGenericTypeString(t.value)).join(', ')}>`
+      : '')
+  );
+};
+
 export const generateFunctionPrettyName = (
   element: ConcreteFunctionDefinition,
   options?: {
     fullPath?: boolean;
     spacing?: boolean;
+    notIncludeParamName?: boolean;
   },
 ): string =>
   `${
     options?.fullPath ? `${element.package?.path}${ELEMENT_PATH_DELIMITER}` : ''
   }${element.functionName}(${element.parameters
-    .map(
-      (p) =>
-        `${p.name}: ${p.type.value.name}[${generateMultiplicityString(
-          p.multiplicity.lowerBound,
-          p.multiplicity.upperBound,
-        )}]`,
+    .map((p) =>
+      !options?.notIncludeParamName
+        ? `${p.name}: ${p.type.value.name}[${generateMultiplicityString(
+            p.multiplicity.lowerBound,
+            p.multiplicity.upperBound,
+          )}]`
+        : `${p.type.value.name}[${generateMultiplicityString(
+            p.multiplicity.lowerBound,
+            p.multiplicity.upperBound,
+          )}]`,
     )
-    .join(', ')}): ${
-    element.returnType.value.name
-  }[${generateMultiplicityString(
+    .join(', ')}): ${generateGenericTypeString(
+    element.returnType.value,
+  )}[${generateMultiplicityString(
     element.returnMultiplicity.lowerBound,
     element.returnMultiplicity.upperBound,
   )}]`.replaceAll(/\s*/gu, (val) => {

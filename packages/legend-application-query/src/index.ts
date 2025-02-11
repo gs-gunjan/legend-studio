@@ -36,16 +36,22 @@ export type { LegendQueryApplicationStore } from './stores/LegendQueryBaseStore.
 export * from './stores/LegendQueryApplicationPlugin.js';
 export { BaseQuerySetupStore } from './stores/QuerySetupStore.js';
 export {
-  createViewProjectHandler,
-  createViewSDLCProjectHandler,
+  type QueryPersistConfiguration,
   QueryEditorStore,
   ExistingQueryEditorStore,
-  type QueryPersistConfiguration,
+  QueryBuilderActionConfig_QueryApplication,
 } from './stores/QueryEditorStore.js';
-export { QUERY_EDITOR_TEST_ID } from './__lib__/LegendQueryTesting.js';
+export {
+  createViewProjectHandler,
+  createViewSDLCProjectHandler,
+} from './stores/data-space/DataSpaceQueryBuilderHelper.js';
+export { DataSpaceQuerySetupState } from './stores/data-space/DataSpaceQuerySetupState.js';
+
 // components
 export {
   QueryEditorStoreContext,
   useQueryEditorStore,
 } from './components/QueryEditorStoreProvider.js';
 export { QueryEditor } from './components/QueryEditor.js';
+
+export * from './components/__test-utils__/QueryEditorComponentTestUtils.js';

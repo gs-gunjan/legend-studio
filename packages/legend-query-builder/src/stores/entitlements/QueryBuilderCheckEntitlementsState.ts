@@ -23,7 +23,6 @@ import {
   type GraphManagerState,
   type RawLambda,
   RuntimePointer,
-  InMemoryGraphData,
   buildRawLambdaFromLambdaFunction,
 } from '@finos/legend-graph';
 import {
@@ -53,25 +52,25 @@ export class QueryBuilderCheckEntitlementsState implements Hashable {
 
     this.dataAccessState = undefined;
     if (
-      this.queryBuilderState.mapping &&
-      this.queryBuilderState.runtimeValue instanceof RuntimePointer
+      this.queryBuilderState.executionContextState.mapping &&
+      this.queryBuilderState.executionContextState.runtimeValue instanceof
+        RuntimePointer
     ) {
       this.dataAccessState = new DataAccessState(
         this.queryBuilderState.applicationStore,
         this.queryBuilderState.graphManagerState,
         {
-          mapping: this.queryBuilderState.mapping.path,
+          mapping: this.queryBuilderState.executionContextState.mapping.path,
           runtime:
-            this.queryBuilderState.runtimeValue.packageableRuntime.value.path,
+            this.queryBuilderState.executionContextState.runtimeValue
+              .packageableRuntime.value.path,
           getQuery: async () =>
             this.createExecutableQuery(
               this.queryBuilderState.buildQuery(),
               this.queryBuilderState.parametersState.parameterStates,
               this.queryBuilderState.graphManagerState,
             ),
-          graphData: new InMemoryGraphData(
-            this.queryBuilderState.graphManagerState.graph,
-          ),
+          graphData: this.queryBuilderState.getGraphData(),
         },
       );
     }

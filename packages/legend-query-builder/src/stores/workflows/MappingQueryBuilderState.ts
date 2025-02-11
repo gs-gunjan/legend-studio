@@ -24,9 +24,13 @@ import {
   PackageableElementExplicitReference,
   getMappingCompatibleClasses,
 } from '@finos/legend-graph';
-import { getNullableFirstEntry } from '@finos/legend-shared';
 import { renderMappingQueryBuilderSetupPanelContent } from '../../components/workflows/MappingQueryBuilder.js';
 import { QueryBuilderState } from '../QueryBuilderState.js';
+import type { QueryBuilderConfig } from '../../graph-manager/QueryBuilderConfig.js';
+import type {
+  QueryBuilderActionConfig,
+  QueryBuilderWorkflowState,
+} from '../query-workflow/QueryBuilderWorkFlowState.js';
 
 export class MappingQueryBuilderState extends QueryBuilderState {
   readonly onMappingChange?: ((val: Mapping) => void) | undefined;
@@ -38,13 +42,25 @@ export class MappingQueryBuilderState extends QueryBuilderState {
   constructor(
     applicationStore: GenericLegendApplicationStore,
     graphManagerState: GraphManagerState,
+    workflowState: QueryBuilderWorkflowState,
+    actionConfig: QueryBuilderActionConfig,
     onMappingChange?: ((val: Mapping) => void) | undefined,
     onRuntimeChange?: ((val: Runtime) => void) | undefined,
+    config?: QueryBuilderConfig | undefined,
+    sourceInfo?: object | undefined,
   ) {
-    super(applicationStore, graphManagerState);
+    super(
+      applicationStore,
+      graphManagerState,
+      workflowState,
+
+      config,
+      sourceInfo,
+    );
 
     this.onMappingChange = onMappingChange;
     this.onRuntimeChange = onRuntimeChange;
+    this.workflowState.updateActionConfig(actionConfig);
   }
 
   /**
@@ -61,7 +77,7 @@ export class MappingQueryBuilderState extends QueryBuilderState {
       mapping,
       this.graphManagerState.usableRuntimes,
     );
-    const possibleNewRuntime = getNullableFirstEntry(compatibleRuntimes);
+    const possibleNewRuntime = compatibleRuntimes[0];
     if (possibleNewRuntime) {
       this.changeRuntime(
         new RuntimePointer(
@@ -77,7 +93,7 @@ export class MappingQueryBuilderState extends QueryBuilderState {
     // if there is no chosen class or the chosen one is not compatible
     // with the mapping then pick a compatible class if possible
     if (!this.class || !compatibleClasses.includes(this.class)) {
-      const possibleNewClass = getNullableFirstEntry(compatibleClasses);
+      const possibleNewClass = compatibleClasses[0];
       if (possibleNewClass) {
         this.changeClass(possibleNewClass);
       }

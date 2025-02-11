@@ -32,7 +32,12 @@ export const TEST_DATA__RuntimeRoundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -73,6 +78,7 @@ export const TEST_DATA__RuntimeRoundtrip = [
       package: 'test',
       runtimeValue: {
         _type: 'engineRuntime',
+        connectionStores: [],
         connections: [
           {
             store: {

@@ -17,19 +17,26 @@
 @use 'mixins' as *;
 
 .data-access-overview {
-  &__chart {
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    font-weight: 500;
+    height: 4rem;
+    width: 20rem;
+    background: var(--color-navy-300);
+    opacity: 0.9;
+    border: 0.1rem solid var(--color-navy-300);
+    border-radius: 1rem;
+  }
+
+  &__actions {
     @include flexCenter;
 
-    height: 36rem;
-    width: 100%;
-    padding: 3rem;
-    position: relative;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
 
     &__warning {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
       padding: 0.5rem 1rem;
       border-radius: 0.2rem;
       background: var(--color-yellow-300);
@@ -41,24 +48,27 @@
       box-shadow: var(--color-dark-shade-280) 0 0 0.5rem 0;
     }
 
-    &__actions {
-      position: absolute;
-      top: 0;
-      right: 0;
-      z-index: 1;
+    &__refresh-btn {
+      @include flexCenter;
 
-      &__refresh-btn {
-        @include flexCenter;
+      height: 2.8rem;
+      width: 2.8rem;
+      border-radius: 50%;
+      margin-left: auto;
 
-        height: 2.8rem;
-        width: 2.8rem;
-        border-radius: 50%;
-
-        svg {
-          font-size: 2rem;
-        }
+      svg {
+        font-size: 2rem;
       }
     }
+  }
+
+  &__chart {
+    @include flexCenter;
+
+    height: 36rem;
+    width: 100%;
+    padding: 3rem;
+    position: relative;
 
     &__container {
       @include flexCenter;
@@ -144,10 +154,6 @@
       font-weight: 700;
     }
 
-    .ag-cell-value {
-      word-break: break-word;
-    }
-
     .ag-center-cols-viewport {
       // stripped background for remaining height of the grid when there are not enough rows
       // See https://css-tricks.com/stripes-css/
@@ -158,6 +164,11 @@
         var(--color-dark-grey-80) 0.5rem,
         var(--color-dark-grey-80) 1rem
       );
+    }
+
+    .ag-cell-value {
+      word-break: normal;
+      overflow-wrap: anywhere;
     }
 
     ::-webkit-scrollbar-track-piece {

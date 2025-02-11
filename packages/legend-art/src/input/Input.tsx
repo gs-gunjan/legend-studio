@@ -15,15 +15,25 @@
  */
 
 import { clsx } from 'clsx';
-import { ExclamationCircleIcon, TimesCircleIcon } from '../icon/Icon.js';
+import {
+  ExclamationCircleIcon,
+  PencilIcon,
+  TimesCircleIcon,
+} from '../icon/Icon.js';
+import { forwardRef } from 'react';
 
-export const InputWithInlineValidation: React.FC<
+type InputWithInlineValidationProps =
   React.InputHTMLAttributes<HTMLInputElement> & {
     error?: string | undefined;
     warning?: string | undefined;
-  }
-> = (props) => {
-  const { error, warning, className, ...inputProps } = props;
+    showEditableIcon?: boolean | undefined;
+  };
+
+export const InputWithInlineValidation = forwardRef<
+  HTMLInputElement,
+  InputWithInlineValidationProps
+>(function InputWithInlineValidation(props, ref) {
+  const { error, warning, showEditableIcon, className, ...inputProps } = props;
 
   const showCautionMessage = Boolean(warning) && !error;
 
@@ -35,7 +45,13 @@ export const InputWithInlineValidation: React.FC<
           'input--with-validation--error': Boolean(error),
         })}
         {...inputProps}
+        ref={ref}
       />
+      {showEditableIcon && !error && (
+        <div className="input--with-validation__editable" title={error}>
+          <PencilIcon className="input--with-validation__editable__indicator" />
+        </div>
+      )}
       {error && (
         <div className="input--with-validation__error" title={error}>
           <TimesCircleIcon className="input--with-validation__error__indicator" />
@@ -48,4 +64,4 @@ export const InputWithInlineValidation: React.FC<
       )}
     </div>
   );
-};
+});

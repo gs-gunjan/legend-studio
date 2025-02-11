@@ -20,6 +20,7 @@ import {
   type MappingTestSuite,
   type Store,
   type DataElement,
+  type EmbeddedData,
   ModelStore,
   Database,
   getMappingCompatibleClasses,
@@ -28,6 +29,10 @@ import {
   MappingTest,
   PackageableElementExplicitReference,
   DataElementReference,
+  RelationalCSVData,
+  ModelStoreData,
+  ExternalFormatData,
+  ModelEmbeddedData,
 } from '@finos/legend-graph';
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import {
@@ -37,7 +42,7 @@ import {
   compareLabelFn,
   CustomSelectorInput,
   Dialog,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentItem,
   Modal,
@@ -82,14 +87,13 @@ import {
 } from '@finos/legend-application';
 import { flowResult } from 'mobx';
 import {
+  ExecutionPlanViewer,
   QueryBuilderTextEditorMode,
   type QueryBuilderState,
 } from '@finos/legend-query-builder';
 import { MappingExecutionQueryBuilderState } from '../../../../stores/editor/editor-state/element-editor-state/mapping/MappingExecutionQueryBuilderState.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 import { atomicTest_setDoc } from '../../../../stores/graph-modifier/Testable_GraphModifierHelper.js';
 import {
   RenameModal,
@@ -117,6 +121,11 @@ import {
   type PackageableElementOption,
 } from '@finos/legend-lego/graph-editor';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../../__lib__/LegendStudioApplicationNavigationContext.js';
+import {
+  TestExecutionPlanDebugState,
+  TestUnknownDebugState,
+  type TestableDebugTestResultState,
+} from '../../../../stores/editor/editor-state/element-editor-state/testable/TestableEditorState.js';
 
 interface ClassSelectOption {
   label: string;
@@ -130,6 +139,7 @@ const CreateTestSuiteModal = observer(
     const mappingEditorState = mappingTestableState.mappingEditorState;
     const mapping = mappingEditorState.mapping;
     const editorStore = mappingEditorState.editorStore;
+    const applicationStore = editorStore.applicationStore;
     // Class mapping selector
     const compatibleClasses = getMappingCompatibleClasses(
       mapping,
@@ -187,7 +197,11 @@ const CreateTestSuiteModal = observer(
         classes={{ container: 'search-modal__container' }}
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
-        <Modal darkMode={true}>
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+        >
           <ModalHeader>
             <ModalTitle title="Create Mapping Test Suite" />
           </ModalHeader>
@@ -208,6 +222,7 @@ const CreateTestSuiteModal = observer(
               name="Test Suite Name"
               prompt="Unique Identifier for Test suite i.e Person_suite"
               value={suiteName}
+              placeholder="Suite Name"
               update={(value: string | undefined): void =>
                 setSuiteName(value ?? '')
               }
@@ -216,6 +231,7 @@ const CreateTestSuiteModal = observer(
             <PanelFormTextField
               name="Test Name"
               prompt="Unique Identifier for first test in suite"
+              placeholder="Test Name"
               value={testName}
               update={(value: string | undefined): void =>
                 setTestName(value ?? '')
@@ -234,7 +250,10 @@ const CreateTestSuiteModal = observer(
                 onChange={changeClassOption}
                 value={selectedClassOption}
                 formatOptionLabel={getPackageableElementOptionFormatter({})}
-                darkMode={true}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 placeholder="Choose a class..."
                 isClearable={true}
               />
@@ -245,11 +264,15 @@ const CreateTestSuiteModal = observer(
               disabled={
                 !isValid || creatorState.isCreatingSuiteState.isInProgress
               }
-              title={'Create Test'}
+              title={
+                !isValid
+                  ? 'Suite Name and Test Name Required'
+                  : 'Create Test Suite'
+              }
               onClick={create}
               text="Create"
             />
-            <ModalFooterButton onClick={close} text="Close" />
+            <ModalFooterButton onClick={close} text="Close" type="secondary" />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -265,6 +288,7 @@ const CreateTestModal = observer(
     const testData = suite.tests.filter(filterByType(MappingTest))[0]
       ?.storeTestData[0];
     const editorStore = mappingSuiteState.editorStore;
+    const applicationStore = editorStore.applicationStore;
     // test name
     const [id, setId] = useState<string | undefined>(undefined);
     const isValid = id && !id.includes(' ');
@@ -316,7 +340,11 @@ const CreateTestModal = observer(
         classes={{ container: 'search-modal__container' }}
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
-        <Modal darkMode={true}>
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+        >
           <ModalHeader>
             <ModalTitle title="Create Mapping Test" />
           </ModalHeader>
@@ -337,11 +365,14 @@ const CreateTestModal = observer(
                   Mapped Class for which you would like to build test suite for
                 </div>
                 <CustomSelectorInput
-                  ref={mappedClassSelectorRef}
+                  inputRef={mappedClassSelectorRef}
                   options={mappedClassOptions}
                   onChange={changeClassOption}
                   value={selectedClassOption}
-                  darkMode={true}
+                  darkMode={
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled
+                  }
                   placeholder="Choose a class..."
                   isClearable={true}
                 />
@@ -354,7 +385,7 @@ const CreateTestModal = observer(
               onClick={create}
               text="Create"
             />
-            <ModalFooterButton onClick={close} text="Close" />
+            <ModalFooterButton onClick={close} text="Close" type="secondary" />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -372,6 +403,7 @@ const CreateStoreTestDataModal = observer(
     const { mappingTestState } = props;
     const mappingTestableDataState = mappingTestState.dataState;
     const editorStore = mappingTestableDataState.editorStore;
+    const applicationStore = editorStore.applicationStore;
     const mapping = mappingTestableDataState.mappingTestableState.mapping;
     const isReadOnly =
       mappingTestableDataState.mappingTestableState.mappingEditorState
@@ -491,7 +523,12 @@ const CreateStoreTestDataModal = observer(
         classes={{ container: 'search-modal__container' }}
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
-        <Modal darkMode={true} className="search-modal">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="search-modal"
+        >
           <ModalTitle title="Create Store Test Data" />
           <ModalBody>
             <div className="panel__content__form__section">
@@ -499,12 +536,15 @@ const CreateStoreTestDataModal = observer(
                 Store to add test data
               </div>
               <CustomSelectorInput
-                ref={mappedStoreRef}
+                inputRef={mappedStoreRef}
                 options={selectedStoreOptions}
                 onChange={changeStoreOption}
                 formatOptionLabel={getPackageableElementOptionFormatter({})}
                 value={selectedStoreOption}
-                darkMode={true}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 placeholder="Choose a store..."
                 isClearable={true}
               />
@@ -524,7 +564,10 @@ const CreateStoreTestDataModal = observer(
                   onChange={onEmbeddedTypeChange}
                   value={embeddedDataTypeOption}
                   isClearable={false}
-                  darkMode={true}
+                  darkMode={
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled
+                  }
                 />
               </div>
             </div>
@@ -540,7 +583,10 @@ const CreateStoreTestDataModal = observer(
                     options={dataElementOptions}
                     onChange={onDataElementChange}
                     value={selectedDataElement}
-                    darkMode={true}
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
                   />
                 </div>
               </div>
@@ -552,7 +598,7 @@ const CreateStoreTestDataModal = observer(
               onClick={create}
               text="Create"
             />
-            <ModalFooterButton onClick={close} text="Close" />
+            <ModalFooterButton onClick={close} text="Close" type="secondary" />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -578,11 +624,13 @@ const MappingTestSuiteQueryEditor = observer(
         const embeddedQueryBuilderState = editorStore.embeddedQueryBuilderState;
         await flowResult(
           embeddedQueryBuilderState.setEmbeddedQueryBuilderConfiguration({
-            setupQueryBuilderState: (): QueryBuilderState => {
+            setupQueryBuilderState: async (): Promise<QueryBuilderState> => {
               const queryBuilderState = new MappingExecutionQueryBuilderState(
                 embeddedQueryBuilderState.editorStore.applicationStore,
                 embeddedQueryBuilderState.editorStore.graphManagerState,
                 mapping,
+                editorStore.applicationStore.config.options.queryBuilderConfig,
+                editorStore.editorMode.getSourceInfo(),
               );
               queryBuilderState.initializeWithQuery(testableQueryState.query);
               if (openInTextMode) {
@@ -641,37 +689,99 @@ const MappingTestSuiteQueryEditor = observer(
       flowResult(testableQueryState.updateLamba(stub_RawLambda())),
     );
 
+    // debug
+    const disableDebug = !testSuiteState.selectTestState;
+    const debugQuery = (): void => {
+      flowResult(testSuiteState.debug()).catch(
+        testSuiteState.editorStore.applicationStore.alertUnhandledError,
+      );
+    };
+    const debugState = testSuiteState.selectTestState?.debugTestResultState;
+    const renderDebug = (
+      val: TestableDebugTestResultState,
+    ): React.ReactNode => {
+      const closeDebug = (): void =>
+        testSuiteState.selectTestState?.setDebugState(undefined);
+      if (val instanceof TestExecutionPlanDebugState) {
+        return (
+          <ExecutionPlanViewer executionPlanState={val.executionPlanState} />
+        );
+      }
+      if (val instanceof TestUnknownDebugState) {
+        return (
+          <Dialog
+            open={Boolean(debugState)}
+            onClose={closeDebug}
+            classes={{
+              root: 'editor-modal__root-container',
+              container: 'editor-modal__container',
+              paper: 'editor-modal__content',
+            }}
+          >
+            <Modal
+              className={clsx('editor-modal query-builder-text-mode__modal')}
+            >
+              <ModalHeader>
+                <div className="modal__title">{`Debug`}</div>
+              </ModalHeader>
+              <ModalBody>
+                <div
+                  className={clsx('query-builder-text-mode__modal__content')}
+                >
+                  <CodeEditor
+                    language={CODE_EDITOR_LANGUAGE.JSON}
+                    inputValue={JSON.stringify(val.testDebug.value)}
+                    isReadOnly={true}
+                  />
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <ModalFooterButton onClick={closeDebug} type="primary">
+                  Close
+                </ModalFooterButton>
+              </ModalFooter>
+            </Modal>
+          </Dialog>
+        );
+      }
+      return null;
+    };
     return (
       <div className="panel mapping-test-editor__query-panel">
+        <PanelLoadingIndicator
+          isLoading={Boolean(
+            testSuiteState.selectTestState?.debuggingTestAction.isInProgress,
+          )}
+        />
         <div className="panel__header">
           <div className="panel__header__title">
             <div className="panel__header__title__label">query</div>
           </div>
           <div className="panel__header__actions">
-            <div className="mapping-test-editor__action-btn">
+            <div className="btn__dropdown-combo">
               <button
-                className="mapping-test-editor__action-btn__label"
+                className="btn__dropdown-combo__label"
                 onClick={editWithQueryBuilder()}
                 title="Edit Query"
                 tabIndex={-1}
               >
-                <PencilIcon className="mapping-test-editor__action-btn__label__icon" />
-                <div className="mapping-test-editor__action-btn__label__title">
+                <PencilIcon className="btn__dropdown-combo__label__icon" />
+                <div className="btn__dropdown-combo__label__title">
                   Edit Query
                 </div>
               </button>
-              <DropdownMenu
-                className="mapping-test-editor__action-btn__dropdown-btn"
+              <ControlledDropdownMenu
+                className="btn__dropdown-combo__dropdown-btn"
                 content={
                   <MenuContent>
                     <MenuContentItem
-                      className="mapping-test-editor__action-btn__option"
+                      className="btn__dropdown-combo__option"
                       onClick={editWithQueryBuilder(true)}
                     >
                       Text Mode
                     </MenuContentItem>
                     <MenuContentItem
-                      className="mapping-test-editor__action-btn__option"
+                      className="btn__dropdown-combo__option"
                       onClick={clearQuery}
                     >
                       Clear Query
@@ -684,7 +794,19 @@ const MappingTestSuiteQueryEditor = observer(
                 }}
               >
                 <CaretDownIcon />
-              </DropdownMenu>
+              </ControlledDropdownMenu>
+            </div>
+            <div className="btn__dropdown-combo btn__dropdown-combo--primary">
+              <button
+                className="btn__dropdown-combo__label"
+                onClick={debugQuery}
+                title="Debug Test With Exec Plan"
+                disabled={disableDebug}
+                tabIndex={-1}
+              >
+                <PlayIcon className="btn__dropdown-combo__label__icon" />
+                <div className="btn__dropdown-combo__label__title">Debug</div>
+              </button>
             </div>
           </div>
         </div>
@@ -700,6 +822,7 @@ const MappingTestSuiteQueryEditor = observer(
             </div>
           </PanelContent>
         )}
+        {debugState && renderDebug(debugState)}
       </div>
     );
   },
@@ -715,15 +838,17 @@ const StoreTestDataEditor = observer(
       mappingTestState.mappingTestableState.mappingEditorState.isReadOnly;
     const dataElements =
       storeTestDataState.editorStore.graphManagerState.graph.dataElements;
-    const data = storeTestDataState.storeTestData.data;
-    const isUsingReference = data instanceof DataElementReference;
+    const currentData = storeTestDataState.storeTestData.data;
+    const isUsingReference = currentData instanceof DataElementReference;
     const open = (): void => storeTestDataState.setDataElementModal(true);
     const close = (): void => storeTestDataState.setDataElementModal(false);
     const changeToUseMyOwn = (): void => {
       if (isUsingReference) {
         const newBare = returnUndefOnError(() =>
-          data.accept_EmbeddedDataVisitor(
-            new EmbeddedDataCreatorFromEmbeddedData(),
+          currentData.accept_EmbeddedDataVisitor(
+            new EmbeddedDataCreatorFromEmbeddedData(
+              mappingTestState.editorStore,
+            ),
           ),
         );
         if (newBare) {
@@ -732,10 +857,49 @@ const StoreTestDataEditor = observer(
       }
     };
 
-    const handler = (val: DataElement): void => {
-      const value = new DataElementReference();
-      value.dataElement = PackageableElementExplicitReference.create(val);
-      storeTestDataState.changeEmbeddedData(value);
+    const sharedDataHandler = (val: DataElement): void => {
+      const dataRef = new DataElementReference();
+      dataRef.dataElement = PackageableElementExplicitReference.create(val);
+      const dataElementValue = val.data;
+      let embeddedData: EmbeddedData = dataRef;
+      if (
+        currentData instanceof ModelStoreData &&
+        dataElementValue instanceof ExternalFormatData
+      ) {
+        const modelStoreVal = currentData.modelData?.[0];
+        if (modelStoreVal instanceof ModelEmbeddedData) {
+          const newModelEmbeddedData = new ModelEmbeddedData();
+          newModelEmbeddedData.model =
+            PackageableElementExplicitReference.create(
+              modelStoreVal.model.value,
+            );
+
+          newModelEmbeddedData.data = dataRef;
+          const modelStoreData = new ModelStoreData();
+          modelStoreData.modelData = [newModelEmbeddedData];
+          embeddedData = modelStoreData;
+        }
+      }
+      storeTestDataState.changeEmbeddedData(embeddedData);
+    };
+    const filter = (val: DataElement): boolean => {
+      const dataElementData = val.data;
+      if (currentData instanceof RelationalCSVData) {
+        if (dataElementData instanceof RelationalCSVData) {
+          return true;
+        }
+        return false;
+      } else if (currentData instanceof ModelStoreData) {
+        if (
+          dataElementData instanceof ExternalFormatData ||
+          dataElementData instanceof ModelStoreData
+        ) {
+          return true;
+        }
+        return false;
+      }
+      // TODO add extensions
+      return true;
     };
     return (
       <div className="service-test-data-editor">
@@ -783,7 +947,8 @@ const StoreTestDataEditor = observer(
             isReadOnly={false}
             editorStore={storeTestDataState.editorStore}
             close={close}
-            handler={handler}
+            filterBy={filter}
+            handler={sharedDataHandler}
           />
         )}
         <EmbeddedDataEditor
@@ -819,9 +984,12 @@ const MappingTestEditor = observer(
                       <textarea
                         className="panel__content__form__section__textarea mapping-testable-editor__doc__textarea"
                         spellCheck={false}
-                        value={mappingTest.doc}
+                        value={mappingTest.doc ?? ''}
                         onChange={(event) => {
-                          atomicTest_setDoc(mappingTest, event.target.value);
+                          atomicTest_setDoc(
+                            mappingTest,
+                            event.target.value ? event.target.value : undefined,
+                          );
                         }}
                       />
                     </div>
@@ -1241,7 +1409,7 @@ export const MappingTestableEditor = observer(
     };
 
     useApplicationNavigationContext(
-      LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY.MAPPING_TEST_EDITOR,
+      LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY.MAPPING_EDITOR_TEST,
     );
     return (
       <div className="service-test-suite-editor panel">

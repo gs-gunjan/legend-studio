@@ -25,11 +25,12 @@ export {
   generateViewProjectRoute,
 } from './__lib__/LegendStudioNavigation.js';
 export * from './__lib__/LegendStudioTesting.js';
+export * from './__lib__/LegendStudioApplicationNavigationContext.js';
 export {
   useLegendStudioApplicationStore,
   useLegendStudioBaseStore,
 } from './components/LegendStudioFrameworkProvider.js';
-export type { LegendStudioApplicationStore } from './stores/LegendStudioBaseStore.js';
+export { type LegendStudioApplicationStore } from './stores/LegendStudioBaseStore.js';
 
 // stores
 export * from './stores/LegendStudioApplicationPlugin.js';
@@ -39,6 +40,7 @@ export * from './stores/editor/EditorConfig.js';
 export * from './stores/editor/editor-state/ModelImporterState.js';
 export * from './stores/workspace-setup/ProjectConfigurationStatus.js';
 export { ClassEditorState } from './stores/editor/editor-state/element-editor-state/ClassEditorState.js';
+export { ConstraintState } from './stores/editor/editor-state/element-editor-state/ClassState.js';
 export { ElementEditorState } from './stores/editor/editor-state/element-editor-state/ElementEditorState.js';
 export { UnsupportedElementEditorState } from './stores/editor/editor-state/UnsupportedElementEditorState.js';
 export {
@@ -58,6 +60,7 @@ export * from './stores/graph-modifier/GraphModifierHelper.js';
 export * from './stores/graph-modifier/DomainGraphModifierHelper.js';
 export * from './stores/graph-modifier/DSL_Generation_GraphModifierHelper.js';
 export * from './stores/graph-modifier/DSL_Service_GraphModifierHelper.js';
+export * from './stores/graph-modifier/RawValueSpecificationGraphModifierHelper.js';
 export * from './stores/extensions/DSL_Mapping_LegendStudioApplicationPlugin_Extension.js';
 export * from './stores/extensions/DSL_Service_LegendStudioApplicationPlugin_Extension.js';
 export * from './stores/extensions/DSL_Data_LegendStudioApplicationPlugin_Extension.js';
@@ -74,7 +77,7 @@ export * from './stores/editor/sidebar-state/testable/GlobalTestRunnerState.js';
 
 export { PostProcessorEditorState } from './stores/editor/editor-state/element-editor-state/connection/PostProcessorEditorState.js';
 export { MappingExecutionState } from './stores/editor/editor-state/element-editor-state/mapping/MappingExecutionState.js';
-export { DEPRECATED__MappingTestState } from './stores/editor/editor-state/element-editor-state/mapping/DEPRECATED__MappingTestState.js';
+export { DEPRECATED__MappingTestState } from './stores/editor/editor-state/element-editor-state/mapping/legacy/DEPRECATED__MappingTestState.js';
 export {
   ConnectionValueState,
   RelationalDatabaseConnectionValueState,
@@ -98,6 +101,7 @@ export { generateServiceManagementUrl } from './stores/editor/editor-state/eleme
 export { ServicePureExecutionState } from './stores/editor/editor-state/element-editor-state/service/ServiceExecutionState.js';
 export { NewServiceModal } from './components/editor/editor-group/service-editor/NewServiceModal.js';
 export { FileSystem_File as GenerationFile } from './stores/editor/utils/FileSystemTreeUtils.js';
+export { PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY } from './stores/editor/utils/ModelClassifierUtils.js';
 export {
   FileGenerationState,
   GeneratedFileStructureState,
@@ -112,3 +116,6 @@ export {
   EmbeddedDataState,
 } from './stores/editor/editor-state/element-editor-state/data/EmbeddedDataState.js';
 export type { EmbeddedDataTypeOption } from './stores/editor/editor-state/element-editor-state/data/DataEditorState.js';
+
+export { SnowflakeAppFunctionActivatorEdtiorState } from './stores/editor/editor-state/element-editor-state/function-activator/SnowflakeAppFunctionActivatorEditorState.js';
+export { SnowflakeAppFunctionActivatorEditor } from './components/editor/editor-group/function-activator/SnowflakeAppFunctionActivatorEditor.js';

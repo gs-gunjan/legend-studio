@@ -26,44 +26,57 @@ import {
 } from '@finos/legend-shared';
 import type { QueryBuilderState } from './QueryBuilderState.js';
 import {
+  AbstractPropertyExpression,
   type EnumValueInstanceValue,
   type FunctionExpression,
   type GraphFetchTreeInstanceValue,
   type ValueSpecificationVisitor,
-  type InstanceValue,
-  type INTERNAL__UnknownValueSpecification,
   type LambdaFunction,
   type KeyExpressionInstanceValue,
+  type INTERNAL__PropagatedValue,
+  type ValueSpecification,
+  type CollectionInstanceValue,
+  LambdaFunctionInstanceValue,
+  type ColSpecArrayInstance,
+  InstanceValue,
+  INTERNAL__UnknownValueSpecification,
   matchFunctionName,
   Class,
-  type CollectionInstanceValue,
-  type LambdaFunctionInstanceValue,
   PrimitiveInstanceValue,
   SimpleFunctionExpression,
   VariableExpression,
-  type AbstractPropertyExpression,
   getMilestoneTemporalStereotype,
-  type INTERNAL__PropagatedValue,
-  type ValueSpecification,
   SUPPORTED_FUNCTIONS,
   isSuperType,
+  PackageableElementReference,
+  Mapping,
+  PackageableRuntime,
+  RuntimePointer,
+  PackageableElementExplicitReference,
+  MILESTONING_STEREOTYPE,
+  type ColSpecInstanceValue,
 } from '@finos/legend-graph';
 import { processTDSPostFilterExpression } from './fetch-structure/tds/post-filter/QueryBuilderPostFilterStateBuilder.js';
 import { processFilterExpression } from './filter/QueryBuilderFilterStateBuilder.js';
 import {
   processTDSAggregateExpression,
   processTDSGroupByExpression,
+  processWAVGRowMapperExpression,
 } from './fetch-structure/tds/aggregation/QueryBuilderAggregationStateBuilder.js';
 import {
   processGraphFetchExpression,
   processGraphFetchExternalizeExpression,
   processGraphFetchSerializeExpression,
+  processInternalizeExpression,
 } from './fetch-structure/graph-fetch/QueryBuilderGraphFetchTreeStateBuilder.js';
 import {
+  processRelationSortDirectionExpression,
+  processTDSColExpression,
   processTDSDistinctExpression,
   processTDSProjectExpression,
   processTDSProjectionColumnPropertyExpression,
   processTDSProjectionDerivationExpression,
+  processTDSSliceExpression,
   processTDSSortDirectionExpression,
   processTDSSortExpression,
   processTDSTakeExpression,
@@ -71,13 +84,23 @@ import {
 import {
   QUERY_BUILDER_SUPPORTED_FUNCTIONS,
   QUERY_BUILDER_SUPPORTED_CALENDAR_AGGREGATION_FUNCTIONS,
+  QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS,
 } from '../graph/QueryBuilderMetaModelConst.js';
 import { LambdaParameterState } from './shared/LambdaParameterState.js';
 import { processTDS_OLAPGroupByExpression } from './fetch-structure/tds/window/QueryBuilderWindowStateBuilder.js';
 import { processWatermarkExpression } from './watermark/QueryBuilderWatermarkStateBuilder.js';
-import { QueryBuilderConstantExpressionState } from './QueryBuilderConstantsState.js';
+import {
+  type QueryBuilderConstantExpressionState,
+  QueryBuilderCalculatedConstantExpressionState,
+  QueryBuilderSimpleConstantExpressionState,
+} from './QueryBuilderConstantsState.js';
 import { checkIfEquivalent } from './milestoning/QueryBuilderMilestoningHelper.js';
 import type { QueryBuilderParameterValue } from './QueryBuilderParametersState.js';
+import { QueryBuilderEmbeddedFromExecutionContextState } from './QueryBuilderExecutionContextState.js';
+import {
+  isTypedProjectionExpression,
+  processTypedTDSProjectExpression,
+} from './fetch-structure/tds/projection/QueryBuilderTypedProjectionStateBuilder.js';
 
 const processGetAllExpression = (
   expression: SimpleFunctionExpression,
@@ -111,6 +134,114 @@ const processGetAllExpression = (
   }
 };
 
+const processGetAllVersionsExpression = (
+  expression: SimpleFunctionExpression,
+  queryBuilderState: QueryBuilderState,
+): void => {
+  const _class = expression.genericType?.value.rawType;
+  assertType(
+    _class,
+    Class,
+    `Can't process getAllVersions() expression: getAllVersions() return type is missing`,
+  );
+  queryBuilderState.setClass(_class);
+  queryBuilderState.milestoningState.clearMilestoningDates();
+  queryBuilderState.explorerState.refreshTreeData();
+
+  // check parameters (milestoning) and build state
+  const acceptedNoOfParameters = 1;
+  const stereotype = getMilestoneTemporalStereotype(
+    _class,
+    queryBuilderState.graphManagerState.graph,
+  );
+  assertNonNullable(
+    stereotype,
+    `Can't process getAllVersions() expression: getAllVersions() expects source class to be milestoned`,
+  );
+
+  assertTrue(
+    expression.parametersValues.length === acceptedNoOfParameters,
+    `Can't process getAllVersions() expression: getAllVersions() expects no arguments`,
+  );
+  queryBuilderState.setGetAllFunction(
+    QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS,
+  );
+};
+
+const processGetAllVersionsInRangeExpression = (
+  expression: SimpleFunctionExpression,
+  queryBuilderState: QueryBuilderState,
+): void => {
+  const _class = expression.genericType?.value.rawType;
+  assertType(
+    _class,
+    Class,
+    `Can't process getAllVersionsInRange() expression: getAllVersionsInRange() return type is missing`,
+  );
+  queryBuilderState.setClass(_class);
+  queryBuilderState.milestoningState.clearMilestoningDates();
+  queryBuilderState.explorerState.refreshTreeData();
+
+  // check parameters (milestoning) and build state
+  const acceptedNoOfParameters = 3;
+  const stereotype = getMilestoneTemporalStereotype(
+    _class,
+    queryBuilderState.graphManagerState.graph,
+  );
+  assertTrue(
+    stereotype !== undefined &&
+      stereotype !== MILESTONING_STEREOTYPE.BITEMPORAL,
+    `Can't process getAllVersionsInRange() expression: getAllVersionInRange() expects source class to be processing temporal or business temporal milestoned`,
+  );
+
+  assertTrue(
+    expression.parametersValues.length === acceptedNoOfParameters,
+    `Can't process getAllVersionsInRange() expression: getAllVersionsInRange() expects start and end date`,
+  );
+  queryBuilderState.setGetAllFunction(
+    QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS_IN_RANGE,
+  );
+  queryBuilderState.milestoningState.setStartDate(
+    guaranteeNonNullable(
+      expression.parametersValues[1],
+      `Can't process getAllVersionsInRange() expression: getAllVersionsInRange() expects start date to be defined`,
+    ),
+  );
+  queryBuilderState.milestoningState.setEndDate(
+    guaranteeNonNullable(
+      expression.parametersValues[2],
+      `Can't process getAllVersionsInRange() expression: getAllVersionsInRange() expects end date to be defined`,
+    ),
+  );
+};
+
+// a recursive function to check if there are some date functions
+// unsupported in the custom date picker dropdown.
+// For now, it's just QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_YEAR and QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_MONTH.
+export const isUsedDateFunctionSupportedInFormMode = (
+  valueSpec: ValueSpecification,
+): boolean => {
+  if (valueSpec instanceof SimpleFunctionExpression) {
+    if (
+      matchFunctionName(
+        valueSpec.functionName,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_YEAR,
+      ) ||
+      matchFunctionName(
+        valueSpec.functionName,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_MONTH,
+      )
+    ) {
+      return false;
+    }
+    return !valueSpec.parametersValues
+      .map((value) => isUsedDateFunctionSupportedInFormMode(value))
+      .includes(false);
+  } else {
+    return true;
+  }
+};
+
 const processLetExpression = (
   expression: SimpleFunctionExpression,
   queryBuilderState: QueryBuilderState,
@@ -136,14 +267,81 @@ const processLetExpression = (
   );
   // process right side (value)
   const rightSide = guaranteeNonNullable(parameters[1]);
-  // final
-  const constantExpression = new QueryBuilderConstantExpressionState(
-    queryBuilderState,
-    varExp,
-    rightSide,
-  );
+  let constantExpression: QueryBuilderConstantExpressionState;
+  if (rightSide instanceof INTERNAL__UnknownValueSpecification) {
+    constantExpression = new QueryBuilderCalculatedConstantExpressionState(
+      queryBuilderState,
+      varExp,
+      rightSide.content,
+    );
+  } else {
+    // Even if a valueSpecification is successfully built, it might contain some date functions
+    // unsupported in the custom date picker dropdown, e.g., QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_YEAR
+    // or QUERY_BUILDER_SUPPORTED_FUNCTIONS.FIRST_DAY_OF_MONTH.
+    // If it doesn't contain any unsupported date functions, a QueryBuilderSimpleConstantExpressionState should be created.
+    // Otherwise, a QueryBuilderCalculatedConstantExpressionState should be created.
+    if (isUsedDateFunctionSupportedInFormMode(rightSide)) {
+      constantExpression = new QueryBuilderSimpleConstantExpressionState(
+        queryBuilderState,
+        varExp,
+        rightSide,
+      );
+    } else {
+      constantExpression = new QueryBuilderCalculatedConstantExpressionState(
+        queryBuilderState,
+        varExp,
+        queryBuilderState.graphManagerState.graphManager.serializeValueSpecification(
+          rightSide,
+        ),
+      );
+    }
+  }
   queryBuilderState.constantState.setShowConstantPanel(true);
   queryBuilderState.constantState.addConstant(constantExpression);
+};
+
+const processFromFunction = (
+  expression: SimpleFunctionExpression,
+  queryBuilderState: QueryBuilderState,
+): void => {
+  // mapping
+  const mappingInstanceExpression = guaranteeType(
+    expression.parametersValues[1],
+    InstanceValue,
+    `Can't process from() expression: only support from() with 1st parameter as instance value`,
+  );
+  const mapping = guaranteeType(
+    guaranteeType(
+      mappingInstanceExpression.values[0],
+      PackageableElementReference,
+      `Can't process from() expression: only support from() with 1st parameter as packagableElement value`,
+    ).value,
+    Mapping,
+    `Can't process from() expression: only support from() with 1st parameter as mapping value`,
+  );
+  // runtime
+  const runtimeInstanceExpression = guaranteeType(
+    expression.parametersValues[2],
+    InstanceValue,
+    `Can't process from() expression: only support from() with 2nd parameter as instance value`,
+  );
+  const runtimeVal = guaranteeType(
+    guaranteeType(
+      runtimeInstanceExpression.values[0],
+      PackageableElementReference,
+      `Can't process from() expression: only support from() with 2nd parameter as packagableElement value`,
+    ).value,
+    PackageableRuntime,
+    `Can't process from() expression: only support from() with 2nd parameter as runtime value`,
+  );
+  const fromContext = new QueryBuilderEmbeddedFromExecutionContextState(
+    queryBuilderState,
+  );
+  fromContext.setMapping(mapping);
+  fromContext.setRuntimeValue(
+    new RuntimePointer(PackageableElementExplicitReference.create(runtimeVal)),
+  );
+  queryBuilderState.setExecutionContextState(fromContext);
 };
 
 /**
@@ -291,6 +489,7 @@ export class QueryBuilderValueSpecificationProcessor
     ) {
       processTDSProjectionDerivationExpression(
         valueSpecification,
+        undefined,
         this.parentExpression,
         this.queryBuilderState,
       );
@@ -317,9 +516,46 @@ export class QueryBuilderValueSpecificationProcessor
   ): void {
     const functionName = valueSpecification.functionName;
     if (
-      matchFunctionName(functionName, QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_ALL)
+      matchFunctionName(
+        functionName,
+        QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL,
+      )
     ) {
       processGetAllExpression(valueSpecification, this.queryBuilderState);
+      return;
+    } else if (
+      matchFunctionName(
+        functionName,
+        QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS,
+      )
+    ) {
+      processGetAllVersionsExpression(
+        valueSpecification,
+        this.queryBuilderState,
+      );
+      return;
+    } else if (
+      matchFunctionName(
+        functionName,
+        QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS_IN_RANGE,
+      )
+    ) {
+      processGetAllVersionsInRangeExpression(
+        valueSpecification,
+        this.queryBuilderState,
+      );
+      return;
+    } else if (
+      matchFunctionName(
+        functionName,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.INTERNALIZE,
+      )
+    ) {
+      processInternalizeExpression(
+        valueSpecification,
+        this.queryBuilderState,
+        this.parentLambda,
+      );
       return;
     } else if (
       matchFunctionName(functionName, [
@@ -351,10 +587,11 @@ export class QueryBuilderValueSpecificationProcessor
       );
 
       if (
-        matchFunctionName(
-          precedingExpression.functionName,
-          QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_ALL,
-        )
+        matchFunctionName(precedingExpression.functionName, [
+          QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL,
+          QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS,
+          QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS_IN_RANGE,
+        ])
       ) {
         assertTrue(
           matchFunctionName(
@@ -409,22 +646,35 @@ export class QueryBuilderValueSpecificationProcessor
       );
       return;
     } else if (
-      matchFunctionName(
-        functionName,
+      matchFunctionName(functionName, [
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_PROJECT,
-      )
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.RELATION_PROJECT,
+      ])
     ) {
-      processTDSProjectExpression(
-        valueSpecification,
-        this.queryBuilderState,
-        this.parentLambda,
-      );
+      if (isTypedProjectionExpression(valueSpecification)) {
+        processTypedTDSProjectExpression(
+          valueSpecification,
+          this.queryBuilderState,
+          this.parentLambda,
+        );
+      } else {
+        processTDSProjectExpression(
+          valueSpecification,
+          this.queryBuilderState,
+          this.parentLambda,
+        );
+      }
       return;
     } else if (
-      matchFunctionName(
-        functionName,
+      matchFunctionName(functionName, QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_COL)
+    ) {
+      processTDSColExpression(valueSpecification, this.queryBuilderState);
+      return;
+    } else if (
+      matchFunctionName(functionName, [
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_TAKE,
-      )
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.RELATION_LIMIT,
+      ])
     ) {
       processTDSTakeExpression(
         valueSpecification,
@@ -457,12 +707,33 @@ export class QueryBuilderValueSpecificationProcessor
       );
       return;
     } else if (
+      matchFunctionName(functionName, QUERY_BUILDER_SUPPORTED_FUNCTIONS.SLICE)
+    ) {
+      processTDSSliceExpression(
+        valueSpecification,
+        this.queryBuilderState,
+        this.parentLambda,
+      );
+      return;
+    } else if (
       matchFunctionName(functionName, [
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_ASC,
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_DESC,
       ])
     ) {
       processTDSSortDirectionExpression(
+        valueSpecification,
+        this.parentExpression,
+        this.queryBuilderState,
+      );
+      return;
+    } else if (
+      matchFunctionName(functionName, [
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.RELATION_ASC,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.RELATION_DESC,
+      ])
+    ) {
+      processRelationSortDirectionExpression(
         valueSpecification,
         this.parentExpression,
         this.queryBuilderState,
@@ -545,6 +816,20 @@ export class QueryBuilderValueSpecificationProcessor
         this.parentLambda,
       );
       return;
+    } else if (matchFunctionName(functionName, [SUPPORTED_FUNCTIONS.FROM])) {
+      const parameters = valueSpecification.parametersValues;
+      assertTrue(
+        parameters.length === 3,
+        'From function expects 2 parameters (mapping and runtime)',
+      );
+      processFromFunction(valueSpecification, this.queryBuilderState);
+      QueryBuilderValueSpecificationProcessor.processChild(
+        guaranteeNonNullable(parameters[0]),
+        valueSpecification,
+        this.parentLambda,
+        this.queryBuilderState,
+      );
+      return;
     } else if (
       matchFunctionName(
         functionName,
@@ -561,6 +846,19 @@ export class QueryBuilderValueSpecificationProcessor
         valueSpecification,
         this.parentLambda,
         this.queryBuilderState,
+      );
+      return;
+    } else if (
+      matchFunctionName(
+        functionName,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.WAVG_ROW_MAPPER,
+      )
+    ) {
+      processWAVGRowMapperExpression(
+        valueSpecification,
+        this.parentExpression,
+        this.queryBuilderState,
+        this.parentLambda,
       );
       return;
     }
@@ -580,12 +878,13 @@ export class QueryBuilderValueSpecificationProcessor
       this.parentExpression,
       `Can't process property expression: parent expression cannot be retrieved`,
     );
-
     if (
       matchFunctionName(this.parentExpression.functionName, [
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_PROJECT,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.RELATION_PROJECT,
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_GROUP_BY,
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_AGG,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.WAVG_ROW_MAPPER,
         ...Object.values(
           QUERY_BUILDER_SUPPORTED_CALENDAR_AGGREGATION_FUNCTIONS,
         ),
@@ -593,6 +892,7 @@ export class QueryBuilderValueSpecificationProcessor
     ) {
       processTDSProjectionColumnPropertyExpression(
         valueSpecification,
+        undefined,
         this.queryBuilderState,
       );
       return;
@@ -651,6 +951,66 @@ export class QueryBuilderValueSpecificationProcessor
     valueSpecification: GraphFetchTreeInstanceValue,
   ): void {
     throw new UnsupportedOperationError();
+  }
+
+  visit_ColSpecArrayInstance(valueSpecification: ColSpecArrayInstance): void {
+    assertNonNullable(
+      this.parentExpression,
+      `Can't process col spec aray instance: parent expression cannot be retrieved`,
+    );
+
+    if (
+      matchFunctionName(this.parentExpression.functionName, [
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.RELATION_PROJECT,
+      ])
+    ) {
+      const spec = valueSpecification.values;
+      assertTrue(
+        spec.length === 1,
+        `Can't process col spec array instance: value expected to be of size 1`,
+      );
+      guaranteeNonNullable(spec[0]).colSpecs.forEach((col) => {
+        const _function1 = guaranteeType(
+          col.function1,
+          LambdaFunctionInstanceValue,
+          `Can't process col spec: function1 not a lambda function instance value`,
+        );
+        assertTrue(_function1.values.length === 1);
+        const lambdaVal = guaranteeNonNullable(_function1.values[0]);
+        assertTrue(lambdaVal.expressionSequence.length === 1);
+        const expression = guaranteeNonNullable(
+          lambdaVal.expressionSequence[0],
+        );
+
+        if (expression instanceof AbstractPropertyExpression) {
+          processTDSProjectionColumnPropertyExpression(
+            expression,
+            col.name,
+            this.queryBuilderState,
+          );
+        } else if (expression instanceof INTERNAL__UnknownValueSpecification) {
+          assertNonNullable(
+            this.parentExpression,
+            `Can't process unknown value: parent expression cannot be retrieved`,
+          );
+          processTDSProjectionDerivationExpression(
+            expression,
+            col.name,
+            this.parentExpression,
+            this.queryBuilderState,
+          );
+        }
+      });
+
+      return;
+    }
+    throw new UnsupportedOperationError(
+      `Can't process col spec array expression with parent expression of function ${this.parentExpression.functionName}()`,
+    );
+  }
+
+  visit_ColSpecInstance(valueSpeciciation: ColSpecInstanceValue): void {
+    throw new Error('Method not implemented.');
   }
 }
 

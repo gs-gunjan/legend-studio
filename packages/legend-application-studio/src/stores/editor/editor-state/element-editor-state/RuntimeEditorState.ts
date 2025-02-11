@@ -75,6 +75,7 @@ import {
   runtime_deleteIdentifiedConnection,
   runtime_deleteMapping,
 } from '../../../graph-modifier/DSL_Mapping_GraphModifierHelper.js';
+import { CUSTOM_LABEL } from '../../NewElementState.js';
 
 export const getClassMappingStore = (
   setImplementation: SetImplementation,
@@ -208,7 +209,7 @@ export const isConnectionForStore = (
   if (connectionValue instanceof PureModelConnection) {
     return store instanceof ModelStore;
   }
-  return connectionValue.store.value === store;
+  return connectionValue.store?.value === store;
 };
 
 export const isConnectionForModelStoreWithClass = (
@@ -276,7 +277,7 @@ export const getRuntimeExplorerTreeData = (
     label:
       runtime instanceof RuntimePointer
         ? runtime.packageableRuntime.value.name
-        : '(custom)',
+        : CUSTOM_LABEL,
     isOpen: true,
     childrenIds: [] as string[],
   };
@@ -294,7 +295,7 @@ export const getRuntimeExplorerTreeData = (
           getAllIdentifiedConnections(runtimeValue)
             .filter(
               (identifiedConnection) =>
-                identifiedConnection.connection.store.value instanceof
+                identifiedConnection.connection.store?.value instanceof
                 ModelStore,
             )
             .map((identifiedConnection) => {
@@ -730,12 +731,15 @@ export class RuntimeEditorState {
         ? identifiedConnection.connection.packageableConnection.value
             .connectionValue
         : identifiedConnection.connection;
-    this.openTabFor(
+    const el =
       connectionValue instanceof JsonModelConnection ||
-        connectionValue instanceof XmlModelConnection
+      connectionValue instanceof XmlModelConnection
         ? connectionValue.class.value
-        : connectionValue.store.value,
-    );
+        : connectionValue.store?.value;
+
+    if (el) {
+      this.openTabFor(el);
+    }
     if (this.currentTabState instanceof IdentifiedConnectionsEditorTabState) {
       this.currentTabState.openIdentifiedConnection(identifiedConnection);
     }
@@ -884,7 +888,7 @@ export class RuntimeEditorState {
             connectionValue.class.value !== this.currentTabState.class) ||
           (this.currentTabState instanceof
             IdentifiedConnectionsPerStoreEditorTabState &&
-            this.currentTabState.store !== connectionValue?.store.value)
+            this.currentTabState.store !== connectionValue?.store?.value)
         ) {
           this.openTabFor(this.runtimeValue);
         }

@@ -35,6 +35,8 @@ import {
 } from '@finos/legend-graph';
 import {
   type QueryBuilderState,
+  type QueryBuilderWorkflowState,
+  type QueryBuilderActionConfig,
   ServiceQueryBuilderState,
 } from '@finos/legend-query-builder';
 import {
@@ -157,7 +159,10 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
 
   abstract fetchServiceInformation(): Promise<ProjectServiceCoordinates>;
 
-  *initializeWithServiceQuery(): GeneratorFn<void> {
+  *initializeWithServiceQuery(
+    workflow: QueryBuilderWorkflowState,
+    actionConfig: QueryBuilderActionConfig,
+  ): GeneratorFn<void> {
     try {
       const serviceInfo =
         (yield this.fetchServiceInformation()) as ProjectServiceCoordinates;
@@ -165,6 +170,7 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
       yield flowResult(
         this.initialize(
           serviceInfo.projectId,
+          undefined,
           serviceInfo.groupWorkspaceId,
           WorkspaceType.GROUP,
         ),
@@ -184,9 +190,14 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
       const queryBuilderState = new ServiceQueryBuilderState(
         this.applicationStore,
         this.graphManagerState,
+        workflow,
+        actionConfig,
         this.service,
         undefined,
         undefined,
+        undefined,
+        undefined,
+        this.applicationStore.config.options.queryBuilderConfig,
       );
 
       // leverage initialization of query builder state to ensure we handle unsupported queries
@@ -300,6 +311,7 @@ export abstract class ServiceQueryEditorStore extends EditorStore {
       );
       yield this.sdlcServerClient.createWorkspace(
         this.sdlcState.activeProject.projectId,
+        this.sdlcState.activePatch?.patchReleaseVersionId.id,
         this.sdlcState.activeWorkspace.workspaceId,
         this.sdlcState.activeWorkspace.workspaceType,
       );

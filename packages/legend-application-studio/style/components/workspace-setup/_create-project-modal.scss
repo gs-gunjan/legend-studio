@@ -35,6 +35,25 @@
     &__workspace {
       flex-direction: column;
     }
+
+    &__workspace--source {
+      padding: 1rem;
+      width: 100%;
+
+      &__label {
+        @include flexVCenter;
+
+        font-weight: 500;
+        color: var(--color-light-grey-50);
+        margin-bottom: 0.5rem;
+        line-height: 2rem;
+        cursor: default;
+      }
+
+      &__selector {
+        width: 100%;
+      }
+    }
   }
 }
 
@@ -69,7 +88,7 @@
       height: 2.8rem;
       z-index: 1;
       display: flex;
-      overflow-x: overlay;
+      overflow-x: auto;
       overflow-y: hidden;
       background: var(--color-dark-grey-80);
     }
@@ -142,6 +161,36 @@
         padding-right: 0.3rem;
         color: var(--color-dark-grey-50);
       }
+    }
+  }
+
+  &__form {
+    display: flex;
+    padding: 0.5rem 0 1rem;
+    flex-direction: column;
+
+    &__unsupported {
+      @include flexHCenter;
+
+      font-weight: 500;
+      color: var(--color-dark-grey-400);
+    }
+  }
+}
+
+.sandbox-project-modal {
+  width: 75rem;
+  border: 0.1rem solid var(--color-blue-200);
+  padding: 0;
+  overflow: auto;
+
+  &__header {
+    display: flex;
+    margin: 1.5rem 2rem;
+
+    &__label {
+      font-size: 2rem;
+      font-weight: bold;
     }
   }
 

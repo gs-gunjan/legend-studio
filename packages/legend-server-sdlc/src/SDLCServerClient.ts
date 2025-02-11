@@ -54,11 +54,19 @@ import type { WorkflowJob } from './models/workflow/WorkflowJob.js';
 import type { SDLCServerFeaturesConfiguration } from './models/server/SDLCServerFeaturesConfiguration.js';
 import type { Platform } from './models/configuration/Platform.js';
 import type { ProjectConfigurationStatusReport } from './models/project/ProjectConfigurationStatus.js';
+import type {
+  AuthorizableProjectAction,
+  ProjectAccessRole,
+} from './models/project/ProjectAccess.js';
+import type { Patch } from './models/patch/Patch.js';
+import type { Comparison } from './models/comparison/Comparison.js';
+import type { ReviewApproval } from './models/review/ReviewApproval.js';
 
 enum SDLC_ACTIVITY_TRACE {
   IMPORT_PROJECT = 'import project',
   CREATE_PROJECT = 'create project',
   UPDATE_PROJECT = 'update project',
+  CREATE_PATCH = 'create patch',
   CREATE_WORKSPACE = 'create workspace',
   UPDATE_WORKSPACE = 'update workspace',
   DELETE_WORKSPACE = 'delete workspace',
@@ -67,7 +75,29 @@ enum SDLC_ACTIVITY_TRACE {
   PERFORM_ENTITY_CHANGES = 'perform entity changes',
   UPDATE_ENTITIES = 'update entities',
   CREATE_REVIEW = 'create review',
-  COMMIT_REVIEW = 'update entities',
+  COMMIT_REVIEW = 'commit review',
+}
+
+export interface ReviewSeachOptions {
+  assignedToMe?: boolean | undefined;
+  authoredByMe?: boolean | undefined;
+  labels?: string[] | undefined;
+  workspaceIdRegex?: string | undefined;
+  workspaceTypes?: WorkspaceType[] | undefined;
+  state?: ReviewState | undefined;
+  since?: Date | undefined;
+  until?: Date | undefined;
+  limit?: number | undefined;
+}
+
+export interface ProjectReviewSeachOptions {
+  state?: ReviewState | undefined;
+  revisionIds?: string[] | undefined;
+  workspaceIdRegex?: string | undefined;
+  workspaceTypes?: WorkspaceType[] | undefined;
+  since?: Date | undefined;
+  until?: Date | undefined;
+  limit?: number | undefined;
 }
 
 export interface SDLCServerClientConfig {
@@ -221,23 +251,99 @@ export class SDLCServerClient extends AbstractServerClient {
       command,
     );
 
+  // ------------------------------------------- Project Access -------------------------------------------
+  private _authorizedActionProject = (projectId: string): string =>
+    `${this._project(projectId)}/authorizedActions`;
+  getAutorizedActions = (
+    projectId: string,
+  ): Promise<AuthorizableProjectAction[]> =>
+    this.get(this._authorizedActionProject(projectId));
+
+  private _acessRole = (projectId: string): string =>
+    `${this._project(projectId)}/userAccessRole/currentUser`;
+  getAccessRole = (
+    projectId: string,
+  ): Promise<PlainObject<ProjectAccessRole>> =>
+    this.get(this._acessRole(projectId));
+
+  // ------------------------------------------- Patch -------------------------------------------
+
+  private _patches = (projectId: string): string =>
+    `${this._project(projectId)}/patches`;
+  private _patch = (projectId: string, patchReleaseVersionId: string): string =>
+    `${this._project(projectId)}/patches/${encodeURIComponent(
+      patchReleaseVersionId,
+    )}`;
+  private _releasePatch = (
+    projectId: string,
+    patchReleaseVersionId: string,
+  ): string => `${this._patch(projectId, patchReleaseVersionId)}/release`;
+
+  getPatches = (projectId: string): Promise<PlainObject<Patch>[]> =>
+    this.get(this._patches(projectId));
+
+  createPatch = (
+    projectId: string,
+    sourceVersion: string,
+  ): Promise<PlainObject<Workspace>> =>
+    this.postWithTracing(
+      this.getTraceData(SDLC_ACTIVITY_TRACE.CREATE_PATCH),
+      this._patches(projectId),
+      sourceVersion,
+    );
+  getPatch = (
+    projectId: string,
+    patchReleaseVersionId: string,
+  ): Promise<PlainObject<Patch>> =>
+    this.get(this._patch(projectId, patchReleaseVersionId));
+  releasePatch = (
+    projectId: string,
+    patchReleaseVersionId: string,
+  ): Promise<PlainObject<Version>> =>
+    this.postWithTracing(
+      this.getTraceData(SDLC_ACTIVITY_TRACE.CREATE_VERSION),
+      this._releasePatch(projectId, patchReleaseVersionId),
+    );
+
   // ------------------------------------------- Workspace -------------------------------------------
 
-  private _workspaces = (projectId: string): string =>
-    `${this._project(projectId)}/workspaces`;
-  private _groupWorkspaces = (projectId: string): string =>
-    `${this._project(projectId)}/groupWorkspaces`;
+  private _workspaces = (
+    projectId: string,
+    patchReleaseVersionId?: string | undefined,
+  ): string =>
+    `${this._project(projectId)}/${
+      patchReleaseVersionId
+        ? `patches/${encodeURIComponent(patchReleaseVersionId)}/`
+        : ''
+    }workspaces`;
+  private _groupWorkspaces = (
+    projectId: string,
+    patchReleaseVersionId?: string | undefined,
+  ): string =>
+    `${this._project(projectId)}/${
+      patchReleaseVersionId
+        ? `patches/${encodeURIComponent(patchReleaseVersionId)}/`
+        : ''
+    }groupWorkspaces`;
   private _workspaceByType = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     workspaceId: string,
     workspaceType: WorkspaceType,
   ): string =>
     workspaceType === WorkspaceType.GROUP
-      ? `${this._groupWorkspaces(projectId)}/${encodeURIComponent(workspaceId)}`
-      : `${this._workspaces(projectId)}/${encodeURIComponent(workspaceId)}`;
+      ? `${this._groupWorkspaces(
+          projectId,
+          patchReleaseVersionId,
+        )}/${encodeURIComponent(workspaceId)}`
+      : `${this._workspaces(
+          projectId,
+          patchReleaseVersionId,
+        )}/${encodeURIComponent(workspaceId)}`;
   private _workspace = (projectId: string, workspace: Workspace): string =>
     this._workspaceByType(
       projectId,
+      workspace.source,
       workspace.workspaceId,
       workspace.workspaceType,
     );
@@ -254,21 +360,35 @@ export class SDLCServerClient extends AbstractServerClient {
       ? this._workspace(projectId, workspace)
       : this._project(projectId);
 
-  getWorkspaces = (projectId: string): Promise<PlainObject<Workspace>[]> =>
+  getWorkspaces = (
+    projectId: string,
+    patchReleaseVersionId?: string | undefined,
+  ): Promise<PlainObject<Workspace>[]> =>
     Promise.all([
-      this.get(this._workspaces(projectId)),
-      this.get(this._groupWorkspaces(projectId)),
+      this.get(this._workspaces(projectId, patchReleaseVersionId)),
+      this.get(this._groupWorkspaces(projectId, patchReleaseVersionId)),
     ]).then((workspaces) => workspaces.flat()) as Promise<
       PlainObject<Workspace>[]
     >;
-  getGroupWorkspaces = (projectId: string): Promise<PlainObject<Workspace>[]> =>
-    this.get(this._groupWorkspaces(projectId));
+  getGroupWorkspaces = (
+    projectId: string,
+    patchReleaseVersionId?: string | undefined,
+  ): Promise<PlainObject<Workspace>[]> =>
+    this.get(this._groupWorkspaces(projectId, patchReleaseVersionId));
   getWorkspace = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     workspaceId: string,
     workspaceType: WorkspaceType,
   ): Promise<PlainObject<Workspace>> =>
-    this.get(this._workspaceByType(projectId, workspaceId, workspaceType));
+    this.get(
+      this._workspaceByType(
+        projectId,
+        patchReleaseVersionId,
+        workspaceId,
+        workspaceType,
+      ),
+    );
   isWorkspaceOutdated = (
     projectId: string,
     workspace: Workspace,
@@ -283,12 +403,18 @@ export class SDLCServerClient extends AbstractServerClient {
     );
   createWorkspace = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     workspaceId: string,
     workspaceType: WorkspaceType,
   ): Promise<PlainObject<Workspace>> =>
     this.postWithTracing(
       this.getTraceData(SDLC_ACTIVITY_TRACE.CREATE_WORKSPACE),
-      this._workspaceByType(projectId, workspaceId, workspaceType),
+      this._workspaceByType(
+        projectId,
+        patchReleaseVersionId,
+        workspaceId,
+        workspaceType,
+      ),
     );
   updateWorkspace = (
     projectId: string,
@@ -741,82 +867,207 @@ export class SDLCServerClient extends AbstractServerClient {
 
   // ------------------------------------------- Review -------------------------------------------
 
-  private _reviews = (projectId: string): string =>
-    `${this._project(projectId)}/reviews`;
-  private _review = (projectId: string, reviewId: string): string =>
-    `${this._reviews(projectId)}/${encodeURIComponent(reviewId)}`;
+  private _reviews = (
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
+  ): string =>
+    `${this._project(projectId)}/${
+      patchReleaseVersionId
+        ? `patches/${encodeURIComponent(patchReleaseVersionId)}/`
+        : ''
+    }reviews`;
+  private _allReviews = (): string => `${this.baseUrl}/reviews`;
+  private _review = (
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
+    reviewId: string,
+  ): string =>
+    `${this._reviews(projectId, patchReleaseVersionId)}/${encodeURIComponent(
+      reviewId,
+    )}`;
 
   getReviews = (
     projectId: string,
-    state: ReviewState | undefined,
-    revisionIds: string[] | undefined,
-    since: Date | undefined,
-    until: Date | undefined,
-    limit: number | undefined,
+    patchReleaseVersionId: string | undefined,
+    options?: ProjectReviewSeachOptions | undefined,
   ): Promise<PlainObject<Review>[]> =>
-    this.get(this._reviews(projectId), undefined, undefined, {
-      state,
-      revisionIds,
-      since: since?.toISOString(),
-      until: until?.toISOString(),
-      limit,
+    this.get(
+      this._reviews(projectId, patchReleaseVersionId),
+      undefined,
+      undefined,
+      {
+        ...options,
+        since: options?.since?.toISOString(),
+        until: options?.until?.toISOString(),
+      },
+    );
+  getAllReviews = (
+    options?: ReviewSeachOptions | undefined,
+  ): Promise<PlainObject<Review>[]> =>
+    this.get(this._allReviews(), undefined, undefined, {
+      ...options,
+      since: options?.since?.toISOString(),
+      until: options?.until?.toISOString(),
     });
   getReview = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
+    reviewId: string,
+  ): Promise<PlainObject<ReviewApproval>> =>
+    this.get(this._review(projectId, patchReleaseVersionId, reviewId));
+  getReviewApprovals = (
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
     reviewId: string,
   ): Promise<PlainObject<Review>> =>
-    this.get(this._review(projectId, reviewId));
+    this.get(
+      `${this._review(projectId, patchReleaseVersionId, reviewId)}/approval`,
+    );
   createReview = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     command: PlainObject<CreateReviewCommand>,
   ): Promise<PlainObject<Review>> =>
     this.postWithTracing(
       this.getTraceData(SDLC_ACTIVITY_TRACE.CREATE_REVIEW),
-      this._reviews(projectId),
+      this._reviews(projectId, patchReleaseVersionId),
       command,
     );
   approveReview = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     reviewId: string,
   ): Promise<PlainObject<Review>> =>
-    this.post(`${this._review(projectId, reviewId)}/approve`);
+    this.post(
+      `${this._review(projectId, patchReleaseVersionId, reviewId)}/approve`,
+    );
   rejectReview = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     reviewId: string,
   ): Promise<PlainObject<Review>> =>
-    this.post(`${this._review(projectId, reviewId)}/reject`);
+    this.post(
+      `${this._review(projectId, patchReleaseVersionId, reviewId)}/reject`,
+    );
   closeReview = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     reviewId: string,
   ): Promise<PlainObject<Review>> =>
-    this.post(`${this._review(projectId, reviewId)}/close`);
+    this.post(
+      `${this._review(projectId, patchReleaseVersionId, reviewId)}/close`,
+    );
   reopenReview = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     reviewId: string,
   ): Promise<PlainObject<Review>> =>
-    this.post(`${this._review(projectId, reviewId)}/reopen`);
+    this.post(
+      `${this._review(projectId, patchReleaseVersionId, reviewId)}/reopen`,
+    );
   commitReview = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     reviewId: string,
     command: PlainObject<CommitReviewCommand>,
   ): Promise<PlainObject<Review>> =>
-    this.post(`${this._review(projectId, reviewId)}/commit`, command);
+    this.post(
+      `${this._review(projectId, patchReleaseVersionId, reviewId)}/commit`,
+      command,
+    );
 
   // ------------------------------------------- Comparison -------------------------------------------
 
-  private _reviewComparison = (projectId: string, reviewId: string): string =>
-    `${this._review(projectId, reviewId)}/comparison`;
+  private _reviewComparison = (
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
+    reviewId: string,
+  ): string =>
+    `${this._review(projectId, patchReleaseVersionId, reviewId)}/comparison`;
 
+  getReviewComparision = (
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
+    reviewId: string,
+  ): Promise<PlainObject<Comparison>> =>
+    this.get(
+      `${this._reviewComparison(projectId, patchReleaseVersionId, reviewId)}`,
+    );
+  getReviewFromConfiguration = (
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
+    reviewId: string,
+  ): Promise<PlainObject<ProjectConfiguration>> =>
+    this.get(
+      `${this._reviewComparison(
+        projectId,
+        patchReleaseVersionId,
+        reviewId,
+      )}/from/configuration`,
+    );
+
+  getReviewToConfiguration = (
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
+    reviewId: string,
+  ): Promise<PlainObject<ProjectConfiguration>> =>
+    this.get(
+      `${this._reviewComparison(
+        projectId,
+        patchReleaseVersionId,
+        reviewId,
+      )}/to/configuration`,
+    );
   getReviewFromEntities = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     reviewId: string,
-  ): Promise<PlainObject<Entity>[]> =>
-    this.get(`${this._reviewComparison(projectId, reviewId)}/from/entities`);
+  ): Promise<Entity> =>
+    this.get(
+      `${this._reviewComparison(
+        projectId,
+        patchReleaseVersionId,
+        reviewId,
+      )}/from/entities`,
+    );
+  getReviewFromEntity = (
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
+    reviewId: string,
+    entityPath: string,
+  ): Promise<Entity> =>
+    this.get(
+      `${this._reviewComparison(
+        projectId,
+        patchReleaseVersionId,
+        reviewId,
+      )}/from/entities/${entityPath}`,
+    );
   getReviewToEntities = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     reviewId: string,
-  ): Promise<PlainObject<Entity>[]> =>
-    this.get(`${this._reviewComparison(projectId, reviewId)}/to/entities`);
+  ): Promise<Entity[]> =>
+    this.get(
+      `${this._reviewComparison(
+        projectId,
+        patchReleaseVersionId,
+        reviewId,
+      )}/to/entities`,
+    );
+  getReviewToEntity = (
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
+    reviewId: string,
+    entityPath: string,
+  ): Promise<Entity> =>
+    this.get(
+      `${this._reviewComparison(
+        projectId,
+        patchReleaseVersionId,
+        reviewId,
+      )}/to/entities/${entityPath}`,
+    );
 
   // ------------------------------------------- Conflict Resolution -------------------------------------------
 
@@ -828,6 +1079,7 @@ export class SDLCServerClient extends AbstractServerClient {
 
   getWorkspacesInConflictResolutionMode = (
     projectId: string,
+    patchReleaseVersionId: string | undefined,
   ): Promise<PlainObject<Workspace>[]> =>
     this.get(this._conflictResolution(projectId, undefined));
   abortConflictResolution = (

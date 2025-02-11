@@ -23,23 +23,39 @@ import {
   custom,
   alias,
   optional,
+  SKIP,
 } from 'serializr';
 import {
   type PlainObject,
   usingConstantValueSchema,
   UnsupportedOperationError,
   usingModelSchema,
+  customList,
+  optionalCustomList,
+  optionalCustomListWithSchema,
+  isString,
 } from '@finos/legend-shared';
 import { V1_RawLambda } from '../../../model/rawValueSpecification/V1_RawLambda.js';
 import type {
   V1_RawValueSpecification,
   V1_RawValueSpecificationVisitor,
 } from '../../../model/rawValueSpecification/V1_RawValueSpecification.js';
-import { V1_RawVariable } from '../../../model/rawValueSpecification/V1_RawVariable.js';
+import {
+  V1_RawGenericType,
+  V1_RawRawType,
+  V1_RawVariable,
+} from '../../../model/rawValueSpecification/V1_RawVariable.js';
 import { V1_multiplicityModelSchema } from '../../../transformation/pureProtocol/serializationHelpers/V1_CoreSerializationHelper.js';
 import { V1_RawBaseExecutionContext } from '../../../model/rawValueSpecification/V1_RawExecutionContext.js';
 import { V1_RawPrimitiveInstanceValue } from '../../../model/rawValueSpecification/V1_RawPrimitiveInstanceValue.js';
-import { PRIMITIVE_TYPE } from '../../../../../../../graph/MetaModelConst.js';
+import {
+  CORE_PURE_PATH,
+  PRIMITIVE_TYPE,
+} from '../../../../../../../graph/MetaModelConst.js';
+import { V1_Type_Type } from './V1_TypeSerializationHelper.js';
+import { V1_Multiplicity } from '../../../model/packageableElements/domain/V1_Multiplicity.js';
+import type { V1_GenericType } from '../../../model/packageableElements/type/V1_GenericType.js';
+import { matchFunctionName } from '../../../../../../../graph/MetaModelUtils.js';
 
 enum V1_RawExecutionContextType {
   BASE_EXECUTION_CONTEXT = 'BaseExecutionContext',
@@ -58,7 +74,97 @@ export enum V1_RawValueSpecificationType {
   CSTRICTDATE = 'strictDate',
   CSTRICTTIME = 'strictTime',
   CLATESTDATE = 'latestDate',
+  CDATE = 'date',
 }
+
+const rawRawTypeSchemaModel = createModelSchema(V1_RawRawType, {
+  _type: usingConstantValueSchema(V1_Type_Type.PACKAGEABLE_TYPE),
+  fullPath: primitive(),
+});
+
+const V1_RawGenericTypeSchemaModelInner = createModelSchema(V1_RawGenericType, {
+  multiplicityArguments: customList(
+    (val: V1_Multiplicity) => serialize(V1_multiplicityModelSchema, val),
+    (val) => deserialize(V1_multiplicityModelSchema, val),
+    {
+      INTERNAL__forceReturnEmptyInTest: true,
+    },
+  ),
+  rawType: usingConstantValueSchema(rawRawTypeSchemaModel),
+  typeArguments: optionalCustomList(
+    // To avoid circular dependency, we need to use V1_RawGenericType object model schema
+    // instead of the static V1_RawGenericType model schema
+    (value) => serialize(V1_RawGenericType, value),
+    (value) => deserialize(V1_RawGenericType, value),
+    {
+      INTERNAL__forceReturnEmptyInTest: true,
+    },
+  ),
+  typeVariableValues: optionalCustomList(
+    // TODO
+    (value) => SKIP,
+    (value) => SKIP,
+    {
+      INTERNAL__forceReturnEmptyInTest: true,
+    },
+  ),
+});
+
+const V1_RawGenericTypeSchemaModel = createModelSchema(V1_RawGenericType, {
+  multiplicityArguments: customList(
+    (val: V1_Multiplicity) => serialize(V1_multiplicityModelSchema, val),
+    (val) => deserialize(V1_multiplicityModelSchema, val),
+    {
+      INTERNAL__forceReturnEmptyInTest: true,
+    },
+  ),
+  rawType: usingModelSchema(rawRawTypeSchemaModel),
+  typeArguments: optionalCustomListWithSchema(
+    V1_RawGenericTypeSchemaModelInner,
+    {
+      INTERNAL__forceReturnEmptyInTest: true,
+    },
+  ),
+  typeVariableValues: optionalCustomList(
+    // TODO
+    (value) => SKIP,
+    (value) => SKIP,
+    {
+      INTERNAL__forceReturnEmptyInTest: true,
+    },
+  ),
+});
+
+const V1_deserializeRawGenericType = (
+  val: PlainObject<V1_GenericType> | string,
+): V1_RawGenericType => {
+  let genericType: V1_RawGenericType;
+  /** @backwardCompatibility */
+  if (isString(val)) {
+    genericType = new V1_RawGenericType();
+    const packageableType = new V1_RawRawType();
+    packageableType.fullPath = val;
+    genericType.rawType = packageableType;
+  } else {
+    genericType = deserialize(V1_RawGenericTypeSchemaModel, val);
+  }
+  if (
+    matchFunctionName(
+      genericType.rawType.fullPath,
+      CORE_PURE_PATH.TABULAR_RESULT,
+    ) &&
+    !genericType.multiplicityArguments.length &&
+    !genericType.typeArguments.length
+  ) {
+    genericType.multiplicityArguments = [new V1_Multiplicity(1, undefined)];
+    const _anytype = new V1_RawRawType();
+    _anytype.fullPath = CORE_PURE_PATH.ANY;
+    const arGenType = new V1_RawGenericType();
+    arGenType.rawType = _anytype;
+    genericType.typeArguments = [arGenType];
+  }
+  return genericType;
+};
 
 export const V1_rawBaseExecutionContextModelSchema = createModelSchema(
   V1_RawBaseExecutionContext,
@@ -79,12 +185,28 @@ export const V1_rawLambdaModelSchema = createModelSchema(V1_RawLambda, {
 
 export const V1_rawVariableModelSchema = createModelSchema(V1_RawVariable, {
   _type: usingConstantValueSchema(V1_RawValueSpecificationType.VARIABLE),
-  class: primitive(),
+  genericType: custom(
+    (val) => serialize(V1_RawGenericTypeSchemaModel, val),
+    (val) => V1_deserializeRawGenericType(val),
+    {
+      beforeDeserialize: function (callback, jsonValue, jsonParentValue) {
+        /** @backwardCompatibility */
+        if (
+          jsonParentValue.class !== undefined &&
+          jsonParentValue.genericType === undefined
+        ) {
+          callback(null, jsonParentValue.class);
+        } else {
+          callback(null, jsonValue);
+        }
+      },
+    },
+  ),
   multiplicity: usingModelSchema(V1_multiplicityModelSchema),
   name: primitive(),
 });
 
-const V1_rawPrimitiveInstanceValueSchema = createModelSchema(
+export const V1_rawPrimitiveInstanceValueSchema = createModelSchema(
   V1_RawPrimitiveInstanceValue,
   {
     type: alias(
@@ -148,9 +270,7 @@ const V1_rawPrimitiveInstanceValueSchema = createModelSchema(
   },
 );
 
-/**
- * @backwardCompatibility
- */
+/** @backwardCompatibility */
 const deserializePrimitiveInstanceValue = (
   json: PlainObject<V1_RawValueSpecification>,
 ): V1_RawValueSpecification =>
@@ -215,6 +335,34 @@ export function V1_deserializeRawValueSpecification(
     default:
       throw new UnsupportedOperationError(
         `Can't deserialize raw value specification of type '${json._type}'`,
+      );
+  }
+}
+
+export function V1_deserializeRawValueSpecificationType(type: string): string {
+  switch (type) {
+    case PRIMITIVE_TYPE.INTEGER:
+      return V1_RawValueSpecificationType.CINTEGER;
+    case PRIMITIVE_TYPE.DECIMAL:
+      return V1_RawValueSpecificationType.CDECIMAL;
+    case PRIMITIVE_TYPE.STRING:
+      return V1_RawValueSpecificationType.CSTRING;
+    case PRIMITIVE_TYPE.BOOLEAN:
+      return V1_RawValueSpecificationType.CBOOLEAN;
+    case PRIMITIVE_TYPE.FLOAT:
+      return V1_RawValueSpecificationType.CFLOAT;
+    case PRIMITIVE_TYPE.DATE:
+    case PRIMITIVE_TYPE.DATETIME:
+      return V1_RawValueSpecificationType.CDATETIME;
+    case PRIMITIVE_TYPE.STRICTDATE:
+      return V1_RawValueSpecificationType.CSTRICTDATE;
+    case PRIMITIVE_TYPE.STRICTTIME:
+      return V1_RawValueSpecificationType.CSTRICTTIME;
+    case PRIMITIVE_TYPE.LATESTDATE:
+      return V1_RawValueSpecificationType.CLATESTDATE;
+    default:
+      throw new UnsupportedOperationError(
+        `Can't serialize raw instance value type '${type}'`,
       );
   }
 }

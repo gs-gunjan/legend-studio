@@ -23,25 +23,34 @@ import {
   LogEvent,
   ActionState,
   IllegalStateError,
+  UnsupportedOperationError,
+  guaranteeNonNullable,
+  guaranteeType,
+  exactSearch,
 } from '@finos/legend-shared';
 import { generateSetupRoute } from '../../__lib__/LegendStudioNavigation.js';
 import {
   type SDLCServerClient,
+  SANDBOX_SDLC_TAG,
   WorkspaceType,
   ImportReport,
   Project,
   Review,
   Workspace,
+  Patch,
+  isProjectSandbox,
 } from '@finos/legend-server-sdlc';
 import type { LegendStudioApplicationStore } from '../LegendStudioBaseStore.js';
 import {
+  DEFAULT_TAB_SIZE,
   DEFAULT_TYPEAHEAD_SEARCH_LIMIT,
   DEFAULT_TYPEAHEAD_SEARCH_MINIMUM_SEARCH_LENGTH,
 } from '@finos/legend-application';
 import {
   fetchProjectConfigurationStatus,
-  type ProjectConfigurationStatus,
+  ProjectConfigurationStatus,
 } from './ProjectConfigurationStatus.js';
+import { GraphManagerState } from '@finos/legend-graph';
 
 interface ImportProjectSuccessReport {
   projectId: string;
@@ -63,11 +72,25 @@ export class WorkspaceSetupStore {
   importProjectSuccessReport?: ImportProjectSuccessReport | undefined;
   showCreateProjectModal = false;
 
+  engineInitializeState = ActionState.create();
+  enginePromise: Promise<void> | undefined;
+  createSandboxProjectState = ActionState.create();
+  sandboxProject: Project | boolean = false;
+  hasSandboxAccess: boolean | undefined;
+  sandboxModal = false;
+  loadSandboxState = ActionState.create();
+
+  patches: Patch[] = [];
+  loadPatchesState = ActionState.create();
+
   workspaces: Workspace[] = [];
   currentWorkspace?: Workspace | undefined;
   loadWorkspacesState = ActionState.create();
   createWorkspaceState = ActionState.create();
   showCreateWorkspaceModal = false;
+  showAdvancedWorkspaceFilterOptions = false;
+
+  graphManagerState: GraphManagerState;
 
   constructor(
     applicationStore: LegendStudioApplicationStore,
@@ -81,23 +104,50 @@ export class WorkspaceSetupStore {
       showCreateProjectModal: observable,
       workspaces: observable,
       currentWorkspace: observable,
+      showAdvancedWorkspaceFilterOptions: observable,
+      loadSandboxState: observable,
       showCreateWorkspaceModal: observable,
+      sandboxProject: observable,
+      createSandboxProjectState: observable,
+      engineInitializeState: observable,
+      enginePromise: observable,
+      sandboxModal: observable,
+      hasSandboxAccess: observable,
       setShowCreateProjectModal: action,
       setShowCreateWorkspaceModal: action,
+      setShowAdvancedWorkspaceFilterOptions: action,
       setImportProjectSuccessReport: action,
+      setSandboxModal: action,
       changeWorkspace: action,
       resetProject: action,
       resetWorkspace: action,
       initialize: flow,
       loadProjects: flow,
+      loadSandboxProject: flow,
       changeProject: flow,
       createProject: flow,
       importProject: flow,
+      createSandboxProject: flow,
       createWorkspace: flow,
+      initializeEngine: flow,
     });
 
     this.applicationStore = applicationStore;
     this.sdlcServerClient = sdlcServerClient;
+    this.graphManagerState = new GraphManagerState(
+      applicationStore.pluginManager,
+      applicationStore.logService,
+    );
+    if (this.supportsCreatingSandboxProject) {
+      flowResult(this.initializeEngine()).catch(
+        applicationStore.alertUnhandledError,
+      );
+    }
+  }
+
+  get supportsCreatingSandboxProject(): boolean {
+    return this.applicationStore.config.options
+      .TEMPORARY__enableCreationOfSandboxProjects;
   }
 
   setShowCreateProjectModal(val: boolean): void {
@@ -108,6 +158,10 @@ export class WorkspaceSetupStore {
     this.showCreateWorkspaceModal = val;
   }
 
+  setShowAdvancedWorkspaceFilterOptions(val: boolean): void {
+    this.showAdvancedWorkspaceFilterOptions = val;
+  }
+
   setImportProjectSuccessReport(
     importProjectSuccessReport: ImportProjectSuccessReport | undefined,
   ): void {
@@ -116,10 +170,11 @@ export class WorkspaceSetupStore {
 
   resetProject(): void {
     this.currentProject = undefined;
+    this.patches = [];
     this.workspaces = [];
     this.currentWorkspace = undefined;
     this.applicationStore.navigationService.navigator.updateCurrentLocation(
-      generateSetupRoute(undefined, undefined, undefined),
+      generateSetupRoute(undefined, undefined, undefined, undefined),
     );
     this.currentProjectConfigurationStatus = undefined;
   }
@@ -128,8 +183,74 @@ export class WorkspaceSetupStore {
     this.currentWorkspace = undefined;
     if (this.currentProject) {
       this.applicationStore.navigationService.navigator.updateCurrentLocation(
-        generateSetupRoute(this.currentProject.projectId, undefined, undefined),
+        generateSetupRoute(
+          this.currentProject.projectId,
+          undefined,
+          undefined,
+          undefined,
+        ),
       );
+    }
+  }
+
+  setSandboxModal(val: boolean): void {
+    this.sandboxModal = val;
+  }
+
+  *createSandboxProject(): GeneratorFn<void> {
+    try {
+      if (!this.hasSandboxAccess) {
+        this.setSandboxModal(true);
+        return;
+      }
+      // create sandbox project and pilot workspace
+      this.applicationStore.alertService.setBlockingAlert({
+        message: 'Creating sandbox project...',
+        showLoading: true,
+      });
+      const sandboxProject =
+        (yield this.graphManagerState.graphManager.createSandboxProject()) as {
+          projectId: string;
+          webUrl: string | undefined;
+          owner: string;
+        };
+      this.applicationStore.alertService.setBlockingAlert({
+        message: `Sandbox project ${sandboxProject.projectId} created. Creating default workspace...`,
+        showLoading: true,
+      });
+      yield flowResult(this.loadSandboxProject());
+      const sandbox = guaranteeType(
+        this.sandboxProject,
+        Project,
+        'Error retrieving sandbox project',
+      );
+      const initialWorkspace = Workspace.serialization.fromJson(
+        (yield this.sdlcServerClient.createWorkspace(
+          sandbox.projectId,
+          undefined,
+          'myWorkspace',
+          WorkspaceType.GROUP,
+        )) as PlainObject<Workspace>,
+      );
+      yield flowResult(
+        this.changeProject(sandbox, {
+          workspaceId: initialWorkspace.workspaceId,
+          workspaceType: WorkspaceType.GROUP,
+        }),
+      );
+      this.applicationStore.alertService.setBlockingAlert(undefined);
+      this.applicationStore.notificationService.notifySuccess(
+        `Sandbox project with workspace created`,
+      );
+    } catch (error) {
+      assertErrorThrown(error);
+      this.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.ENGINE_MANAGER_FAILURE),
+        error,
+      );
+      this.applicationStore.notificationService.notifyError(error);
+    } finally {
+      this.applicationStore.alertService.setBlockingAlert(undefined);
     }
   }
 
@@ -157,7 +278,7 @@ export class WorkspaceSetupStore {
           );
         } catch {
           this.applicationStore.navigationService.navigator.updateCurrentLocation(
-            generateSetupRoute(undefined),
+            generateSetupRoute(undefined, undefined),
           );
           this.initState.pass();
           return;
@@ -168,11 +289,11 @@ export class WorkspaceSetupStore {
             workspaceId
               ? { workspaceId: workspaceId, workspaceType: WorkspaceType.USER }
               : groupWorkspaceId
-              ? {
-                  workspaceId: groupWorkspaceId,
-                  workspaceType: WorkspaceType.GROUP,
-                }
-              : undefined,
+                ? {
+                    workspaceId: groupWorkspaceId,
+                    workspaceType: WorkspaceType.GROUP,
+                  }
+                : undefined,
           ),
         );
       }
@@ -181,11 +302,41 @@ export class WorkspaceSetupStore {
     } catch (error) {
       assertErrorThrown(error);
       this.applicationStore.logService.error(
-        LogEvent.create(LEGEND_STUDIO_APP_EVENT.DEPOT_MANAGER_FAILURE),
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
         error,
       );
       this.applicationStore.notificationService.notifyError(error);
       this.initState.fail();
+    }
+  }
+
+  *initializeEngine(): GeneratorFn<void> {
+    this.engineInitializeState.inProgress();
+    try {
+      const initPromise = this.graphManagerState.graphManager.initialize(
+        {
+          env: this.applicationStore.config.env,
+          tabSize: DEFAULT_TAB_SIZE,
+          clientConfig: {
+            baseUrl: this.applicationStore.config.engineServerUrl,
+          },
+        },
+        {
+          tracerService: this.applicationStore.tracerService,
+          disableGraphConfiguration: true,
+        },
+      );
+      this.enginePromise = initPromise;
+      yield initPromise;
+      this.enginePromise = undefined;
+      this.engineInitializeState.complete();
+    } catch (error) {
+      assertErrorThrown(error);
+      this.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.ENGINE_MANAGER_FAILURE),
+        error,
+      );
+      this.engineInitializeState.complete();
     }
   }
 
@@ -197,7 +348,9 @@ export class WorkspaceSetupStore {
       this.projects = (
         (yield this.sdlcServerClient.getProjects(
           undefined,
-          isValidSearchString ? searchText : undefined,
+          // We apply an exact search on the input text because we show exact searches with
+          // custom selector. This avoids losing some results with the additional filtering.
+          isValidSearchString ? exactSearch(searchText) : undefined,
           undefined,
           DEFAULT_TYPEAHEAD_SEARCH_LIMIT,
         )) as PlainObject<Project>[]
@@ -207,6 +360,52 @@ export class WorkspaceSetupStore {
       assertErrorThrown(error);
       this.applicationStore.notificationService.notifyError(error);
       this.loadProjectsState.fail();
+    }
+  }
+
+  *loadSandboxProject(): GeneratorFn<void> {
+    if (!this.supportsCreatingSandboxProject) {
+      return;
+    }
+    this.sandboxProject = false;
+    try {
+      this.loadSandboxState.inProgress();
+      if (this.enginePromise) {
+        yield this.enginePromise;
+      }
+      const sandboxProject = (
+        (yield this.sdlcServerClient.getProjects(
+          undefined,
+          this.sdlcServerClient.currentUser?.userId,
+          [SANDBOX_SDLC_TAG],
+          1,
+        )) as PlainObject<Project>[]
+      ).map((v) => Project.serialization.fromJson(v));
+      if (this.hasSandboxAccess === undefined) {
+        this.hasSandboxAccess =
+          (yield this.graphManagerState.graphManager.userHasPrototypeProjectAccess(
+            this.sdlcServerClient.currentUser?.userId ?? '',
+          )) as boolean;
+      }
+      this.sandboxProject = true;
+      if (sandboxProject.length > 1) {
+        throw new UnsupportedOperationError(
+          'Only one sandbox project is supported per user.',
+        );
+      } else if (sandboxProject.length === 1) {
+        this.sandboxProject = guaranteeNonNullable(sandboxProject[0]);
+      }
+      this.loadSandboxState.pass();
+    } catch (error) {
+      this.sandboxProject = true;
+      assertErrorThrown(error);
+      this.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.WORKSPACE_SETUP_FAILURE),
+        error,
+      );
+      this.loadSandboxState.fail();
+    } finally {
+      this.loadSandboxState.complete();
     }
   }
 
@@ -221,21 +420,52 @@ export class WorkspaceSetupStore {
   ): GeneratorFn<void> {
     this.currentProject = project;
     this.currentProjectConfigurationStatus = undefined;
-    this.loadWorkspacesState.inProgress();
-
+    this.loadPatchesState.inProgress();
     try {
-      this.currentProjectConfigurationStatus =
-        (yield fetchProjectConfigurationStatus(
-          project.projectId,
-          this.applicationStore,
-          this.sdlcServerClient,
-        )) as ProjectConfigurationStatus;
+      if (isProjectSandbox(project)) {
+        this.patches = [];
+      } else {
+        this.patches = (
+          (yield this.sdlcServerClient.getPatches(
+            project.projectId,
+          )) as PlainObject<Patch>[]
+        ).map((v) => Patch.serialization.fromJson(v));
+      }
+      this.loadPatchesState.pass();
+    } catch (error) {
+      assertErrorThrown(error);
+      this.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.DEPOT_MANAGER_FAILURE),
+        error,
+      );
+      this.applicationStore.notificationService.notifyError(error);
+      this.loadPatchesState.fail();
+    }
 
-      const workspacesInConflictResolutionIds = (
-        (yield this.sdlcServerClient.getWorkspacesInConflictResolutionMode(
-          project.projectId,
-        )) as Workspace[]
-      ).map((workspace) => workspace.workspaceId);
+    this.loadWorkspacesState.inProgress();
+    try {
+      if (isProjectSandbox(project)) {
+        const result = new ProjectConfigurationStatus();
+        result.projectId = project.projectId;
+        result.isConfigured = true;
+        this.currentProjectConfigurationStatus = result;
+      } else {
+        this.currentProjectConfigurationStatus =
+          (yield fetchProjectConfigurationStatus(
+            project.projectId,
+            undefined,
+            this.applicationStore,
+            this.sdlcServerClient,
+          )) as ProjectConfigurationStatus;
+      }
+      const workspacesInConflictResolutionIds = isProjectSandbox(project)
+        ? []
+        : (
+            (yield this.sdlcServerClient.getWorkspacesInConflictResolutionMode(
+              project.projectId,
+              undefined,
+            )) as Workspace[]
+          ).map((workspace) => workspace.workspaceId);
 
       this.workspaces = (
         (yield this.sdlcServerClient.getWorkspaces(
@@ -250,6 +480,30 @@ export class WorkspaceSetupStore {
             !workspacesInConflictResolutionIds.includes(workspace.workspaceId),
         );
 
+      for (const patch of this.patches) {
+        this.workspaces = this.workspaces.concat(
+          (
+            (yield this.sdlcServerClient.getWorkspaces(
+              project.projectId,
+              patch.patchReleaseVersionId.id,
+            )) as PlainObject<Workspace>[]
+          )
+            .map((v) => {
+              const w = Workspace.serialization.fromJson(v);
+              w.source = patch.patchReleaseVersionId.id;
+              return w;
+            })
+            .filter(
+              // NOTE we don't handle workspaces that only have conflict resolution but no standard workspace
+              // since that indicates bad state of the SDLC server
+              (workspace) =>
+                !workspacesInConflictResolutionIds.includes(
+                  workspace.workspaceId,
+                ),
+            ),
+        );
+      }
+
       if (workspaceInfo) {
         const matchingWorkspace = this.workspaces.find(
           (workspace) =>
@@ -260,16 +514,15 @@ export class WorkspaceSetupStore {
           this.changeWorkspace(matchingWorkspace);
         } else {
           this.applicationStore.navigationService.navigator.updateCurrentLocation(
-            generateSetupRoute(project.projectId),
+            generateSetupRoute(project.projectId, undefined),
           );
         }
       } else {
         this.currentWorkspace = undefined;
         this.applicationStore.navigationService.navigator.updateCurrentLocation(
-          generateSetupRoute(project.projectId),
+          generateSetupRoute(project.projectId, undefined),
         );
       }
-
       this.loadWorkspacesState.pass();
     } catch (error) {
       assertErrorThrown(error);
@@ -292,6 +545,7 @@ export class WorkspaceSetupStore {
     this.applicationStore.navigationService.navigator.updateCurrentLocation(
       generateSetupRoute(
         this.currentProject.projectId,
+        workspace.source,
         workspace.workspaceId,
         workspace.workspaceType,
       ),
@@ -348,6 +602,7 @@ export class WorkspaceSetupStore {
       const importReview = Review.serialization.fromJson(
         (yield this.sdlcServerClient.getReview(
           report.project.projectId,
+          undefined,
           report.reviewId,
         )) as PlainObject<Review>,
       );
@@ -368,6 +623,7 @@ export class WorkspaceSetupStore {
 
   *createWorkspace(
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     workspaceId: string,
     workspaceType: WorkspaceType,
   ): GeneratorFn<void> {
@@ -376,10 +632,12 @@ export class WorkspaceSetupStore {
       const newWorkspace = Workspace.serialization.fromJson(
         (yield this.sdlcServerClient.createWorkspace(
           projectId,
+          patchReleaseVersionId,
           workspaceId,
           workspaceType,
         )) as PlainObject<Workspace>,
       );
+      newWorkspace.source = patchReleaseVersionId;
 
       this.applicationStore.notificationService.notifySuccess(
         `Workspace '${newWorkspace.workspaceId}' is succesfully created`,

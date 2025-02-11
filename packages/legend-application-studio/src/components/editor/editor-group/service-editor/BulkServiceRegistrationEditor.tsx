@@ -84,7 +84,7 @@ export const BulkServiceRegistrationEditor = observer(() => {
       }
     : null;
   const onServiceTypeSelectionChange = (
-    val: { label: ServiceExecutionMode; value: ServiceExecutionMode } | null,
+    val: { label: string; value: ServiceExecutionMode } | null,
   ): void => {
     globalBulkServiceRegistrationState.serviceConfigState.updateType(
       val?.value,
@@ -119,9 +119,9 @@ export const BulkServiceRegistrationEditor = observer(() => {
           ServiceExecutionMode.SEMI_INTERACTIVE,
         )} and ${prettyCONSTName(ServiceExecutionMode.PROD)} service types`
       : !globalBulkServiceRegistrationState.serviceConfigState.versionOptions
-          .length
-      ? 'Project has no versions'
-      : undefined;
+            .length
+        ? 'Project has no versions'
+        : undefined;
 
   // activate
   const toggleActivatePostRegistration = (): void => {
@@ -213,7 +213,10 @@ export const BulkServiceRegistrationEditor = observer(() => {
               options={envOptions}
               onChange={onServerEnvChange}
               value={selectedEnvOption}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
           <div className="panel__content__form__section">
@@ -228,7 +231,10 @@ export const BulkServiceRegistrationEditor = observer(() => {
               options={serviceTypesOptions}
               onChange={onServiceTypeSelectionChange}
               value={selectedServiceType}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
           {globalBulkServiceRegistrationState.serviceConfigState
@@ -294,7 +300,10 @@ export const BulkServiceRegistrationEditor = observer(() => {
               }
               onChange={onVersionSelectionChange}
               value={selectedVersion}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
               disabled={
                 globalBulkServiceRegistrationState.serviceConfigState
                   .versionOptions === undefined

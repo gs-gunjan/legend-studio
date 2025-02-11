@@ -28,7 +28,12 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
             upperBound: 1,
           },
           name: 'legalName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -48,7 +53,12 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
             upperBound: 1,
           },
           name: 'firstName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -56,7 +66,12 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
             upperBound: 1,
           },
           name: 'lastName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -64,7 +79,12 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
             upperBound: 1,
           },
           name: 'manager',
-          type: 'joinChain::model::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'joinChain::model::Person',
+            },
+          },
         },
         {
           multiplicity: {
@@ -72,7 +92,12 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
             upperBound: 1,
           },
           name: 'managerFirm',
-          type: 'joinChain::model::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'joinChain::model::Firm',
+            },
+          },
         },
         {
           multiplicity: {
@@ -80,7 +105,12 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
             upperBound: 1,
           },
           name: 'managerManagerFirm',
-          type: 'joinChain::model::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'joinChain::model::Firm',
+            },
+          },
         },
         {
           multiplicity: {
@@ -88,7 +118,12 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
             upperBound: 1,
           },
           name: 'managerManagerFirmDup1',
-          type: 'joinChain::model::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'joinChain::model::Firm',
+            },
+          },
         },
         {
           multiplicity: {
@@ -96,7 +131,12 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
             upperBound: 1,
           },
           name: 'managerManagerFirmDup2',
-          type: 'joinChain::model::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'joinChain::model::Firm',
+            },
+          },
         },
       ],
     },
@@ -107,7 +147,6 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
     content: {
       _type: 'relational',
       filters: [],
-      includedStores: [],
       joins: [
         {
           name: 'manager1',
@@ -237,7 +276,6 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
     content: {
       _type: 'binding',
       contentType: 'application/json',
-      includedStores: [],
       modelUnit: {
         packageableElementExcludes: [],
         packageableElementIncludes: ['joinChain::model::Firm'],
@@ -245,7 +283,7 @@ export const TEST_DATA__JsonRelationalTypeRoundtrip = [
       name: 'FirmBinding',
       package: 'joinChain::store',
     },
-    classifierPath: 'meta::external::shared::format::binding::Binding',
+    classifierPath: 'meta::external::format::shared::binding::Binding',
   },
   {
     path: 'joinChain::mapping::SnowflakeMapping',

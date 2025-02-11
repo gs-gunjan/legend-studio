@@ -15,7 +15,7 @@
  */
 
 import { test, expect, beforeAll } from '@jest/globals';
-import TEST_DATA__completeGraphEntities from './TEST_DATA__MockDataGeneration.json';
+import TEST_DATA__completeGraphEntities from './TEST_DATA__MockDataGeneration.json' with { type: 'json' };
 import { createMockClassInstance } from '../MockDataUtils.js';
 import { type PlainObject } from '@finos/legend-shared';
 import {
@@ -131,4 +131,19 @@ test(unitTest('Test mock data with classes cycle'), () => {
   ]);
   // should not continue on to next depth
   expect(secondApplicantInstance).not.toContain('previousApplication');
+});
+
+test(unitTest('Class with miestoning'), () => {
+  const vehicleOwner = editorStore.graphManagerState.graph.getClass(
+    'myPackage::test::shared::dest::VehicleOwner',
+  );
+  const vehicleOwner_Instance = createMockClassInstance(vehicleOwner, true, 2);
+  const vehicleOwner_properties = [
+    'name',
+    'businessDate',
+    'vehicleAllVersions',
+  ];
+  (expect(vehicleOwner_Instance) as TEMPORARY__JestMatcher).toContainAllKeys(
+    vehicleOwner_properties,
+  );
 });

@@ -48,6 +48,7 @@ import {
   RelationalOperationElementWithJoin,
   extractLine,
 } from '../../../../../../../graph/metamodel/pure/packageableElements/store/relational/model/RelationalOperationElement.js';
+import { PackageableElementPointerType } from '../../../../../../../graph/MetaModelConst.js';
 import type { Table } from '../../../../../../../graph/metamodel/pure/packageableElements/store/relational/model/Table.js';
 import type { Column } from '../../../../../../../graph/metamodel/pure/packageableElements/store/relational/model/Column.js';
 import type { Filter } from '../../../../../../../graph/metamodel/pure/packageableElements/store/relational/model/Filter.js';
@@ -105,6 +106,11 @@ import { V1_transformMilestoning } from './V1_MilestoningTransformer.js';
 import type { V1_GraphTransformerContext } from './V1_GraphTransformerContext.js';
 import { V1_FilterMapping } from '../../../model/packageableElements/store/relational/mapping/V1_FilterMapping.js';
 import { V1_FilterPointer } from '../../../model/packageableElements/store/relational/mapping/V1_FilterPointer.js';
+import type { TablePtr } from '../../../../../../../graph/metamodel/pure/packageableElements/service/TablePtr.js';
+import { V1_transformStereotype } from './V1_DomainTransformer.js';
+import { V1_PackageableElementPointer } from '../../../model/packageableElements/V1_PackageableElement.js';
+import type { TabularFunction } from '../../../../../../../graph/metamodel/pure/packageableElements/store/relational/model/TabularFunction.js';
+import { V1_TabularFunction } from '../../../model/packageableElements/store/relational/model/V1_TabularFunction.js';
 
 const transformRelationalDataType = (
   type: RelationalDataType,
@@ -168,6 +174,15 @@ const transformRelationalDataType = (
   );
 };
 
+export const V1_transformTablePointer = (ptr: TablePtr): V1_TablePtr => {
+  const tablePtr = new V1_TablePtr();
+  tablePtr.database = ptr.database;
+  tablePtr.mainTableDb = ptr.mainTableDb;
+  tablePtr.schema = ptr.schema;
+  tablePtr.table = ptr.table;
+  return tablePtr;
+};
+
 export const V1_transformTableAliasToTablePointer = (
   tableAlias: TableAlias,
   options?: {
@@ -178,7 +193,7 @@ export const V1_transformTableAliasToTablePointer = (
   const tablePtr = new V1_TablePtr();
   tablePtr.database = options?.TEMPORARY__resolveToFullPath
     ? tableAlias.relation.ownerReference.value.path
-    : tableAlias.relation.ownerReference.valueForSerialization ?? '';
+    : (tableAlias.relation.ownerReference.valueForSerialization ?? '');
   // NOTE: Sometimes, we interpret this, so to maintain roundtrip stability, we need to handle this differrently
   // See https://github.com/finos/legend-studio/issues/295
   tablePtr.mainTableDb = tablePtr.database;
@@ -263,7 +278,7 @@ export const V1_transformRelationalOperationElement = (
           const joinPtr = new V1_JoinPointer();
           joinPtr.db = options?.TEMPORARY__resolveToFullPath
             ? node.join.ownerReference.value.path
-            : node.join.ownerReference.valueForSerialization ?? '';
+            : (node.join.ownerReference.valueForSerialization ?? '');
           joinPtr.joinType = node.joinType;
           joinPtr.name = node.join.value.name;
           return joinPtr;
@@ -329,6 +344,18 @@ const transformTable = (
     );
   }
   return table;
+};
+
+const transformTabularFunction = (
+  element: TabularFunction,
+  context: V1_GraphTransformerContext,
+): V1_TabularFunction => {
+  const tabularFunction = new V1_TabularFunction();
+  tabularFunction.columns = element.columns.map((val) =>
+    transformColumn(val as Column),
+  );
+  tabularFunction.name = element.name;
+  return tabularFunction;
 };
 
 const transformJoin = (
@@ -398,6 +425,9 @@ const transformSchema = (
   schema.name = element.name;
   schema.tables = element.tables.map((table) => transformTable(table, context));
   schema.views = element.views.map((view) => transformView(view, context));
+  schema.tabularFunctions = element.tabularFunctions.map((tabularFunction) =>
+    transformTabularFunction(tabularFunction, context),
+  );
   return schema;
 };
 
@@ -414,8 +444,15 @@ export const V1_transformDatabase = (
   database.schemas = element.schemas.map((schema) =>
     transformSchema(schema, context),
   );
+  database.stereotypes = element.stereotypes.map((stereotype) =>
+    V1_transformStereotype(stereotype),
+  );
   database.includedStores = element.includes.map(
-    (store) => store.valueForSerialization ?? '',
+    (store) =>
+      new V1_PackageableElementPointer(
+        PackageableElementPointerType.STORE,
+        store.valueForSerialization ?? '',
+      ),
   );
   return database;
 };

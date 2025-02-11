@@ -54,10 +54,8 @@ import {
 } from '@finos/legend-graph';
 import { generateServiceManagementUrl } from '../../../stores/editor/editor-state/element-editor-state/service/ServiceRegistrationState.js';
 import { useApplicationStore } from '@finos/legend-application';
-import {
-  CodeEditor,
-  CODE_EDITOR_LANGUAGE,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 
 export const getRegistrationStatusIcon = (
   isSelected: boolean,
@@ -162,6 +160,8 @@ const ServiceFailViewer = observer(
     failure: ServiceRegistrationResult | undefined;
   }) => {
     const { globalBulkServiceRegistrationState, failure } = props;
+    const applicationStore =
+      globalBulkServiceRegistrationState.editorStore.applicationStore;
     const closeLogViewer = (): void =>
       globalBulkServiceRegistrationState.setFailingView(undefined);
     return (
@@ -174,7 +174,12 @@ const ServiceFailViewer = observer(
           paper: 'editor-modal__content',
         }}
       >
-        <Modal darkMode={true} className="editor-modal">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="editor-modal"
+        >
           <ModalHeader title={guaranteeNonNullable(failure?.service).path} />
           <ModalBody>
             {failure instanceof ServiceRegistrationFail && (
@@ -186,7 +191,11 @@ const ServiceFailViewer = observer(
             )}
           </ModalBody>
           <ModalFooter>
-            <ModalFooterButton text="Close" onClick={closeLogViewer} />
+            <ModalFooterButton
+              text="Close"
+              onClick={closeLogViewer}
+              type="secondary"
+            />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -199,16 +208,12 @@ export const RegisterService = observer(
     globalBulkServiceRegistrationState: GlobalBulkServiceRegistrationState;
   }) => {
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const services = editorStore.graphManagerState.graph.ownServices;
     const toggleSelectAllServices = (): void => {
-      editorStore.globalBulkServiceRegistrationState.selectAllServices
-        ? editorStore.globalBulkServiceRegistrationState.toggleSelectAllServices(
-            false,
-          )
-        : editorStore.globalBulkServiceRegistrationState.toggleSelectAllServices(
-            true,
-          );
-
+      editorStore.globalBulkServiceRegistrationState.toggleSelectAllServices(
+        !editorStore.globalBulkServiceRegistrationState.selectAllServices,
+      );
       editorStore.globalBulkServiceRegistrationState.setSelectAll(
         editorStore.globalBulkServiceRegistrationState.selectAllServices,
       );
@@ -218,18 +223,13 @@ export const RegisterService = observer(
       serviceState: BulkServiceRegistrationState,
     ): void => {
       serviceState.toggleIsSelected();
-
-      editorStore.globalBulkServiceRegistrationState.bulkServiceRegistrationStates.filter(
-        (bulkServiceState) => bulkServiceState.isSelected,
-      ).length ===
-      editorStore.globalBulkServiceRegistrationState
-        .bulkServiceRegistrationStates.length
-        ? editorStore.globalBulkServiceRegistrationState.toggleSelectAllServices(
-            true,
-          )
-        : editorStore.globalBulkServiceRegistrationState.toggleSelectAllServices(
-            false,
-          );
+      editorStore.globalBulkServiceRegistrationState.toggleSelectAllServices(
+        editorStore.globalBulkServiceRegistrationState.bulkServiceRegistrationStates.filter(
+          (bulkServiceState) => bulkServiceState.isSelected,
+        ).length ===
+          editorStore.globalBulkServiceRegistrationState
+            .bulkServiceRegistrationStates.length,
+      );
     };
 
     useEffect(() => {
@@ -279,9 +279,9 @@ export const RegisterService = observer(
                 <button
                   type="button"
                   className={clsx(
-                    'bulk-service-registration__section__toggler__btn ',
+                    'bulk-service-registration__section__toggler__btn',
                     {
-                      'bulk-service-registration__section__toggler__btn--toggled ':
+                      'bulk-service-registration__section__toggler__btn--toggled':
                         serviceState.isSelected,
                     },
                   )}
@@ -334,7 +334,10 @@ export const RegisterService = observer(
             }
           >
             <Modal
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
               className={clsx(
                 'editor-modal bulk-service-registration__service__editor',
               )}
@@ -368,9 +371,9 @@ export const RegisterService = observer(
           <button
             type="button"
             className={clsx(
-              'panel__header__action bulk-service-registration__section__toggler__btn ',
+              'panel__header__action bulk-service-registration__section__toggler__btn',
               {
-                'panel__header__action bulk-service-registration__section__toggler__btn--toggled ':
+                'panel__header__action bulk-service-registration__section__toggler__btn--toggled':
                   editorStore.globalBulkServiceRegistrationState
                     .selectAllServices,
               },

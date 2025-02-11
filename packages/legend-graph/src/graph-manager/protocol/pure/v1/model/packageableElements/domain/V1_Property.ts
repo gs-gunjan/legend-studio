@@ -19,12 +19,16 @@ import { CORE_HASH_STRUCTURE } from '../../../../../../../graph/Core_HashUtils.j
 import type { V1_Multiplicity } from './V1_Multiplicity.js';
 import type { V1_StereotypePtr } from '../../../model/packageableElements/domain/V1_StereotypePtr.js';
 import type { V1_TaggedValue } from '../../../model/packageableElements/domain/V1_TaggedValue.js';
+import type { V1_DefaultValue } from './V1_DefaultValue.js';
+import type { V1_GenericType } from '../type/V1_GenericType.js';
+import { V1_PackageableType } from '../type/V1_PackageableType.js';
 
 export class V1_Property implements Hashable {
   name!: string;
-  type!: string;
+  genericType!: V1_GenericType;
   multiplicity!: V1_Multiplicity;
   aggregation?: string | undefined;
+  defaultValue: V1_DefaultValue | undefined;
   stereotypes: V1_StereotypePtr[] = [];
   taggedValues: V1_TaggedValue[] = [];
 
@@ -33,8 +37,11 @@ export class V1_Property implements Hashable {
       CORE_HASH_STRUCTURE.PROPERTY,
       this.name,
       this.multiplicity,
-      this.type,
+      this.genericType.rawType instanceof V1_PackageableType
+        ? this.genericType.rawType.fullPath
+        : '',
       this.aggregation ?? '',
+      this.defaultValue ?? '',
       hashArray(this.stereotypes),
       hashArray(this.taggedValues),
     ]);

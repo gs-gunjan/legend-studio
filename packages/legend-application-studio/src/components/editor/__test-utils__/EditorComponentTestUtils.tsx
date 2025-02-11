@@ -27,6 +27,7 @@ import { EditorStore } from '../../../stores/editor/EditorStore.js';
 import { Editor } from '../Editor.js';
 import {
   generateEditorRoute,
+  generateViewProjectRoute,
   LEGEND_STUDIO_ROUTE_PATTERN,
 } from '../../../__lib__/LegendStudioNavigation.js';
 import { type PlainObject } from '@finos/legend-shared';
@@ -61,13 +62,11 @@ import {
   ApplicationStoreProvider,
   ApplicationStore,
 } from '@finos/legend-application';
-import {
-  createMemoryHistory,
-  TEST__BrowserEnvironmentProvider,
-} from '@finos/legend-application/test';
-import type { LegendStudioApplicationStore } from '../../../stores/LegendStudioBaseStore.js';
+import { TEST__BrowserEnvironmentProvider } from '@finos/legend-application/test';
+import { type LegendStudioApplicationStore } from '../../../stores/LegendStudioBaseStore.js';
 import { TEST__getLegendStudioApplicationConfig } from '../../../stores/__test-utils__/LegendStudioApplicationTestUtils.js';
-import { Route } from '@finos/legend-application/browser';
+import { Route, Routes } from '@finos/legend-application/browser';
+import { ProjectViewer } from '../../project-view/ProjectViewer.js';
 
 export const TEST_DATA__DefaultSDLCInfo = {
   project: {
@@ -153,13 +152,13 @@ export const TEST__provideMockedEditorStore = (customization?: {
       new SDLCServerClient({
         env: applicationStore.config.env,
         serverUrl: applicationStore.config.sdlcServerUrl,
-        baseHeaders: applicationStore.config.SDLCServerBaseHeaders,
+        baseHeaders: applicationStore.config.sdlcServerBaseHeaders,
       }),
       new DepotServerClient({
         serverUrl: applicationStore.config.depotServerUrl,
       }),
     );
-  const MOCK__EditorStoreProvider = require('../EditorStoreProvider.js'); // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+  const MOCK__EditorStoreProvider = require('../EditorStoreProvider.js'); // eslint-disable-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-require-imports
   MOCK__EditorStoreProvider.useEditorStore = createMock();
   MOCK__EditorStoreProvider.useEditorStore.mockReturnValue(value);
   return value;
@@ -221,11 +220,11 @@ export const TEST__setUpEditor = async (
     latestProjectStructureVersion: PlainObject<ProjectStructureVersion>;
     availableGenerationDescriptions: GenerationConfigurationDescription[];
     projects: PlainObject<StoreProjectData>[];
-    projectData: PlainObject<StoreProjectData>[];
     projectDependency: PlainObject<ProjectVersionEntities>[];
     projectDependencyVersions: string[];
     projectDependencyReport: PlainObject<RawProjectDependencyReport>;
   },
+  viewerMode?: boolean,
 ): Promise<RenderResult> => {
   const {
     project,
@@ -236,7 +235,6 @@ export const TEST__setUpEditor = async (
     entities,
     latestProjectStructureVersion,
     availableGenerationDescriptions,
-    projectData,
     projects,
     projectDependency,
     projectDependencyVersions,
@@ -267,6 +265,7 @@ export const TEST__setUpEditor = async (
     MOCK__editorStore.sdlcServerClient,
     'isWorkspaceOutdated',
   ).mockResolvedValue(false);
+
   createSpy(
     MOCK__editorStore.sdlcServerClient,
     'getEntities',
@@ -295,10 +294,6 @@ export const TEST__setUpEditor = async (
     MOCK__editorStore.depotServerClient,
     'getVersions',
   ).mockResolvedValue(projectDependencyVersions);
-  createSpy(
-    MOCK__editorStore.depotServerClient,
-    'getProjectById',
-  ).mockResolvedValue(projectData);
   createSpy(
     MOCK__editorStore.depotServerClient,
     'collectDependencyEntities',
@@ -334,23 +329,49 @@ export const TEST__setUpEditor = async (
   MOCK__editorStore.workspaceUpdaterState.fetchLatestCommittedReviews =
     createMock();
 
-  const history = createMemoryHistory({
-    initialEntries: [
-      generateEditorRoute(
-        (workspace as unknown as Workspace).projectId,
-        (workspace as unknown as Workspace).workspaceId,
-        WorkspaceType.USER,
-      ),
-    ],
-  });
+  if (viewerMode) {
+    createSpy(
+      MOCK__editorStore.sdlcServerClient,
+      'getLatestVersion',
+    ).mockResolvedValue(undefined);
+    MOCK__editorStore.sdlcServerClient.setTracerService(
+      MOCK__editorStore.applicationStore.tracerService,
+    );
+    MOCK__editorStore.depotServerClient.setTracerService(
+      MOCK__editorStore.applicationStore.tracerService,
+    );
+  }
 
   const renderResult = render(
     <ApplicationStoreProvider store={MOCK__editorStore.applicationStore}>
-      <TEST__BrowserEnvironmentProvider historyAPI={history}>
+      <TEST__BrowserEnvironmentProvider
+        initialEntries={[
+          viewerMode
+            ? generateViewProjectRoute(
+                (workspace as unknown as Workspace).projectId,
+              )
+            : generateEditorRoute(
+                (workspace as unknown as Workspace).projectId,
+                undefined,
+                (workspace as unknown as Workspace).workspaceId,
+                WorkspaceType.USER,
+              ),
+        ]}
+      >
         <LegendStudioFrameworkProvider>
-          <Route path={[LEGEND_STUDIO_ROUTE_PATTERN.EDIT_WORKSPACE]}>
-            <Editor />
-          </Route>
+          <Routes>
+            {viewerMode ? (
+              <Route
+                path={LEGEND_STUDIO_ROUTE_PATTERN.VIEW}
+                element={<ProjectViewer />}
+              />
+            ) : (
+              <Route
+                path={LEGEND_STUDIO_ROUTE_PATTERN.EDIT_WORKSPACE}
+                element={<Editor />}
+              />
+            )}
+          </Routes>
         </LegendStudioFrameworkProvider>
       </TEST__BrowserEnvironmentProvider>
     </ApplicationStoreProvider>,
@@ -402,24 +423,28 @@ export const TEST__setUpEditorWithDefaultSDLCData = (
     projectDependencyVersions?: string[];
     projectDependencyReport?: PlainObject<RawProjectDependencyReport>;
   },
+  viewerMode?: boolean,
 ): Promise<RenderResult> =>
-  TEST__setUpEditor(MOCK__editorStore, {
-    project: TEST_DATA__DefaultSDLCInfo.project,
-    workspace: TEST_DATA__DefaultSDLCInfo.workspace,
-    curentRevision: TEST_DATA__DefaultSDLCInfo.currentRevision,
-    projectVersions: [],
-    entities: [],
-    projectConfiguration: TEST_DATA__DefaultSDLCInfo.projectConfig,
-    latestProjectStructureVersion:
-      TEST_DATA__DefaultSDLCInfo.latestProjectStructureVersion,
-    availableGenerationDescriptions: [
-      ...TEST_DATA__DefaultSDLCInfo.availableSchemaGenerations,
-      ...TEST_DATA__DefaultSDLCInfo.availableCodeGenerations,
-    ],
-    projects: [],
-    projectData: [],
-    projectDependency: [],
-    projectDependencyVersions: [],
-    projectDependencyReport: TEST_DATA__DefaultDepotReport.dependencyReport,
-    ...overrides,
-  });
+  TEST__setUpEditor(
+    MOCK__editorStore,
+    {
+      project: TEST_DATA__DefaultSDLCInfo.project,
+      workspace: TEST_DATA__DefaultSDLCInfo.workspace,
+      curentRevision: TEST_DATA__DefaultSDLCInfo.currentRevision,
+      projectVersions: [],
+      entities: [],
+      projectConfiguration: TEST_DATA__DefaultSDLCInfo.projectConfig,
+      latestProjectStructureVersion:
+        TEST_DATA__DefaultSDLCInfo.latestProjectStructureVersion,
+      availableGenerationDescriptions: [
+        ...TEST_DATA__DefaultSDLCInfo.availableSchemaGenerations,
+        ...TEST_DATA__DefaultSDLCInfo.availableCodeGenerations,
+      ],
+      projects: [],
+      projectDependency: [],
+      projectDependencyVersions: [],
+      projectDependencyReport: TEST_DATA__DefaultDepotReport.dependencyReport,
+      ...overrides,
+    },
+    viewerMode,
+  );

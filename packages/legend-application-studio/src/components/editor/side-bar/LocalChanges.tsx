@@ -35,6 +35,7 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
+  ModalFooterButton,
 } from '@finos/legend-art';
 import { EntityDiffViewState } from '../../../stores/editor/editor-state/entity-diff-editor-state/EntityDiffViewState.js';
 import { EntityDiffSideBarItem } from '../editor-group/diff-editor/EntityDiffView.js';
@@ -56,6 +57,7 @@ import { GRAPH_EDITOR_MODE } from '../../../stores/editor/EditorConfig.js';
 
 const PatchLoader = observer(() => {
   const editorStore = useEditorStore();
+  const applicationStore = editorStore.applicationStore;
   const localChangesState = editorStore.localChangesState;
   const patchState = localChangesState.patchLoaderState;
   const onClose = (): void => patchState.closeModal();
@@ -72,7 +74,12 @@ const PatchLoader = observer(() => {
     patchState.deleteChange(change);
   return (
     <Dialog onClose={onClose} open={patchState.showModal}>
-      <Modal darkMode={true} className="modal--scrollable patch-loader">
+      <Modal
+        darkMode={
+          !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+        }
+        className="modal--scrollable patch-loader"
+      >
         <ModalHeader title="Patch Loader" />
         <ModalBody>
           <PanelLoadingIndicator isLoading={patchState.isLoadingChanges} />
@@ -115,13 +122,12 @@ const PatchLoader = observer(() => {
           )}
         </ModalBody>
         <ModalFooter>
-          <button
-            className="btn btn--dark blocking-alert__action--standard"
+          <ModalFooterButton
+            className="blocking-alert__action--standard"
+            text="Apply Patch"
             onClick={upload}
             disabled={!patchState.changes?.length || !patchState.isValidPatch}
-          >
-            Apply Patch
-          </button>
+          />
         </ModalFooter>
       </Modal>
     </Dialog>
@@ -322,17 +328,14 @@ export const LocalChanges = observer(() => {
                 </div>
               </div>
               <PanelContent>
-                {changes
-                  .slice()
-                  .sort(entityDiffSorter)
-                  .map((diff) => (
-                    <EntityDiffSideBarItem
-                      key={diff.key}
-                      diff={diff}
-                      isSelected={isSelectedDiff(diff)}
-                      openDiff={openChange(diff)}
-                    />
-                  ))}
+                {changes.toSorted(entityDiffSorter).map((diff) => (
+                  <EntityDiffSideBarItem
+                    key={diff.key}
+                    diff={diff}
+                    isSelected={isSelectedDiff(diff)}
+                    openDiff={openChange(diff)}
+                  />
+                ))}
               </PanelContent>
             </div>
           </ResizablePanel>
@@ -405,8 +408,7 @@ export const LocalChanges = observer(() => {
               </div>
               <PanelContent>
                 {conflicts
-                  .slice()
-                  .sort((a, b) => a.entityName.localeCompare(b.entityName))
+                  .toSorted((a, b) => a.entityName.localeCompare(b.entityName))
                   .map((conflict) => (
                     <EntityChangeConflictSideBarItem
                       key={`conflict-${conflict.entityPath}`}
@@ -420,8 +422,7 @@ export const LocalChanges = observer(() => {
                     <div className="diff-panel__item-section-separator" />
                   )}
                 {changesWithoutConflicts
-                  .slice()
-                  .sort(entityDiffSorter)
+                  .toSorted(entityDiffSorter)
                   .map((diff) => (
                     <EntityDiffSideBarItem
                       key={diff.key}

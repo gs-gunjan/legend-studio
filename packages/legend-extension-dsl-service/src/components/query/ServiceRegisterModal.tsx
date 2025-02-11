@@ -37,9 +37,9 @@ import {
   Modal,
   ModalTitle,
   Panel,
+  PanelDivider,
   PanelFullContent,
   PanelLoadingIndicator,
-  RocketIcon,
   SquareIcon,
 } from '@finos/legend-art';
 import {
@@ -71,10 +71,10 @@ export const generateServiceURL = (
   return `${urlPrefix ?? `/${uuid()}`}${paramSuffix}`;
 };
 
-const ServiceRegisterModal = observer(
+export const ServiceRegisterModal = observer(
   (props: {
     editorStore: QueryEditorStore;
-    onClose(): void;
+    onClose: () => void;
     queryBuilderState: QueryBuilderState;
   }) => {
     const { editorStore, onClose, queryBuilderState } = props;
@@ -136,15 +136,24 @@ const ServiceRegisterModal = observer(
     const toggleActivateService = (): void =>
       setActivateService(!activateService);
 
+    const darkMode =
+      !editorStore.applicationStore.layoutService
+        .TEMPORARY__isLightColorThemeEnabled;
+
     const registerService = editorStore.applicationStore.guardUnhandledError(
       async (): Promise<void> => {
+        const projectInfo = editorStore.getProjectInfo();
         if (
           registrationState.isInProgress ||
           !servicePattern ||
           !isServiceUrlPatternValid ||
           !selectedEnvOption ||
-          !queryBuilderState.mapping ||
-          !(queryBuilderState.runtimeValue instanceof RuntimePointer)
+          !projectInfo ||
+          !queryBuilderState.executionContextState.mapping ||
+          !(
+            queryBuilderState.executionContextState.runtimeValue instanceof
+            RuntimePointer
+          )
         ) {
           return;
         }
@@ -159,13 +168,13 @@ const ServiceRegisterModal = observer(
             servicePattern,
             owners.map((o) => o.value),
             queryBuilderState.buildQuery(),
-            queryBuilderState.mapping.path,
-            queryBuilderState.runtimeValue.packageableRuntime.value.path,
+            queryBuilderState.executionContextState.mapping.path,
+            queryBuilderState.executionContextState.runtimeValue
+              .packageableRuntime.value.path,
             editorStore.graphManagerState,
           );
 
-          const { groupId, artifactId, versionId } =
-            editorStore.getProjectInfo();
+          const { groupId, artifactId, versionId } = projectInfo;
 
           const serviceRegistrationResult =
             await editorStore.graphManagerState.graphManager.registerService(
@@ -239,7 +248,7 @@ const ServiceRegisterModal = observer(
         classes={{ container: 'search-modal__container' }}
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
-        <Modal darkMode={true} className="search-modal">
+        <Modal darkMode={darkMode} className="search-modal">
           <ModalTitle title="Register Service Semi-interactively..." />
           <Panel>
             <PanelLoadingIndicator isLoading={registrationState.isInProgress} />
@@ -276,9 +285,8 @@ const ServiceRegisterModal = observer(
                     <CustomSelectorInput
                       className="service-register-modal__input__service-owner__selector"
                       placeholder="Enter an owner..."
-                      spellCheck={false}
                       inputValue={text}
-                      darkMode={true}
+                      darkMode={darkMode}
                       onInputChange={onTextChange}
                       onChange={onUserOptionChange}
                       isMulti={true}
@@ -296,7 +304,7 @@ const ServiceRegisterModal = observer(
                       options={envOptions}
                       onChange={onServerEnvChange}
                       value={selectedEnvOption}
-                      darkMode={true}
+                      darkMode={darkMode}
                     />
                   </div>
                 </div>
@@ -323,10 +331,20 @@ const ServiceRegisterModal = observer(
                   </div>
                 </div>
               </div>
+              <PanelDivider />
             </PanelFullContent>
           </Panel>
           <div className="search-modal__actions">
-            <button className="btn btn--dark" onClick={registerService}>
+            <button
+              className="btn btn--dark"
+              onClick={registerService}
+              disabled={!queryBuilderState.canBuildQuery}
+              title={
+                !queryBuilderState.canBuildQuery
+                  ? 'Please fix query errors before registering query as service'
+                  : undefined
+              }
+            >
               Register Service
             </button>
             <button className="btn btn--dark" onClick={onClose}>
@@ -335,44 +353,6 @@ const ServiceRegisterModal = observer(
           </div>
         </Modal>
       </Dialog>
-    );
-  },
-);
-
-export const ServiceRegisterAction = observer(
-  (props: {
-    editorStore: QueryEditorStore;
-    queryBuilderState: QueryBuilderState;
-  }) => {
-    const { editorStore, queryBuilderState } = props;
-
-    const [showRegisterServiceModal, setShowRegisterServiceModal] =
-      useState(false);
-    const registerCurrentQuery = (): void => {
-      setShowRegisterServiceModal(true);
-    };
-    const onClose = (): void => setShowRegisterServiceModal(false);
-    return (
-      <>
-        <button
-          className="query-editor__header__action btn--dark"
-          tabIndex={-1}
-          onClick={registerCurrentQuery}
-          title="Register query as service"
-        >
-          <RocketIcon className="query-editor__header__action__icon--service" />
-          <div className="query-editor__header__action__label">
-            Register DEV Service
-          </div>
-        </button>
-        {showRegisterServiceModal && (
-          <ServiceRegisterModal
-            editorStore={editorStore}
-            onClose={onClose}
-            queryBuilderState={queryBuilderState}
-          />
-        )}
-      </>
     );
   },
 );

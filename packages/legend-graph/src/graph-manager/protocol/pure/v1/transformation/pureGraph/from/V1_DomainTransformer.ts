@@ -29,10 +29,15 @@ import type { Class } from '../../../../../../../graph/metamodel/pure/packageabl
 import type { Association } from '../../../../../../../graph/metamodel/pure/packageableElements/domain/Association.js';
 import type { ConcreteFunctionDefinition } from '../../../../../../../graph/metamodel/pure/packageableElements/function/ConcreteFunctionDefinition.js';
 import type { Property } from '../../../../../../../graph/metamodel/pure/packageableElements/domain/Property.js';
-import { V1_Profile } from '../../../model/packageableElements/domain/V1_Profile.js';
+import {
+  V1_Profile,
+  V1_ProfileStereotype,
+  V1_ProfileTag,
+} from '../../../model/packageableElements/domain/V1_Profile.js';
 import { V1_StereotypePtr } from '../../../model/packageableElements/domain/V1_StereotypePtr.js';
 import {
   V1_initPackageableElement,
+  V1_transformElementReferencePointer,
   V1_transformMultiplicity,
 } from './V1_CoreTransformerHelper.js';
 import { V1_TaggedValue } from '../../../model/packageableElements/domain/V1_TaggedValue.js';
@@ -51,15 +56,61 @@ import type { V1_RawLambda } from '../../../model/rawValueSpecification/V1_RawLa
 import { V1_Constraint } from '../../../model/packageableElements/domain/V1_Constraint.js';
 import { V1_Property } from '../../../model/packageableElements/domain/V1_Property.js';
 import { V1_DerivedProperty } from '../../../model/packageableElements/domain/V1_DerivedProperty.js';
-import type { V1_RawVariable } from '../../../model/rawValueSpecification/V1_RawVariable.js';
+import {
+  V1_RawGenericType,
+  V1_RawRawType,
+  type V1_RawVariable,
+} from '../../../model/rawValueSpecification/V1_RawVariable.js';
 import type { V1_GraphTransformerContext } from './V1_GraphTransformerContext.js';
 import { isStubbed_RawLambda } from '../../../../../../../graph/helpers/creator/RawValueSpecificationCreatorHelper.js';
+import type { FunctionTestSuite } from '../../../../../../../graph/metamodel/pure/packageableElements/function/test/FunctionTestSuite.js';
+import { V1_FunctionTestSuite } from '../../../model/packageableElements/function/test/V1_FunctionTestSuite.js';
+import { FunctionTest } from '../../../../../../../graph/metamodel/pure/packageableElements/function/test/FunctionTest.js';
+import {
+  V1_FunctionParameterValue,
+  V1_FunctionTest,
+} from '../../../model/packageableElements/function/test/V1_FunctionTest.js';
+import { UnsupportedOperationError } from '@finos/legend-shared';
+import { V1_FunctionStoreTestData } from '../../../model/packageableElements/function/test/V1_FunctionStoreTestData.js';
+import { V1_transformEmbeddedData } from './V1_DataElementTransformer.js';
+import { V1_transformTestAssertion } from './V1_TestTransformer.js';
+import { V1_DefaultValue } from '../../../model/packageableElements/domain/V1_DefaultValue.js';
+import { PackageableElementPointerType } from '../../../../../../../graph/MetaModelConst.js';
+import { V1_createGenericTypeWithElementPath } from '../../../helpers/V1_DomainHelper.js';
+import { V1_PackageableElementPointer } from '../../../model/packageableElements/V1_PackageableElement.js';
+import type { GenericType } from '../../../../../../../graph/metamodel/pure/packageableElements/domain/GenericType.js';
+import type { V1_GenericType } from '../../../model/packageableElements/type/V1_GenericType.js';
+
+export const V1_createGenericType = (
+  genericType: GenericType,
+): V1_GenericType => {
+  const protocolGenType = V1_createGenericTypeWithElementPath(
+    genericType.rawType.path,
+  );
+  const typeArguments = genericType.typeArguments ?? [];
+  protocolGenType.typeArguments = typeArguments.map((t) =>
+    V1_createGenericType(t.value),
+  );
+  return protocolGenType;
+};
+
+export const V1_createRawGenericTypeWithElementPath = (
+  path: string,
+): V1_RawGenericType => {
+  const genType = new V1_RawGenericType();
+  const pType = new V1_RawRawType();
+  pType.fullPath = path;
+  genType.rawType = pType;
+  return genType;
+};
 
 export const V1_transformProfile = (element: Profile): V1_Profile => {
   const profile = new V1_Profile();
   V1_initPackageableElement(profile, element);
-  profile.stereotypes = element.p_stereotypes.map((s) => s.value);
-  profile.tags = element.p_tags.map((t) => t.value);
+  profile.stereotypes = element.p_stereotypes.map(
+    (s) => new V1_ProfileStereotype(s.value),
+  );
+  profile.tags = element.p_tags.map((t) => new V1_ProfileTag(t.value));
   return profile;
 };
 
@@ -162,9 +213,15 @@ const transformProperty = (element: Property): V1_Property => {
   property.multiplicity = V1_transformMultiplicity(element.multiplicity);
   property.stereotypes = element.stereotypes.map(V1_transformStereotype);
   property.taggedValues = element.taggedValues.map(V1_transformTaggedValue);
-  property.type =
-    element.genericType.ownerReference.valueForSerialization ?? '';
+  property.genericType = V1_createGenericTypeWithElementPath(
+    element.genericType.ownerReference.valueForSerialization ?? '',
+  );
   property.aggregation = element.aggregation;
+  if (element.defaultValue) {
+    const defaultVal = new V1_DefaultValue();
+    defaultVal.value = element.defaultValue.value;
+    property.defaultValue = defaultVal;
+  }
   return property;
 };
 
@@ -179,8 +236,10 @@ const transformDerivedProperty = (
   derivedProperty.returnMultiplicity = V1_transformMultiplicity(
     element.multiplicity,
   );
-  derivedProperty.returnType =
-    element.genericType.ownerReference.valueForSerialization ?? '';
+  derivedProperty.returnGenericType = V1_createGenericTypeWithElementPath(
+    element.genericType.ownerReference.valueForSerialization ?? '',
+  );
+
   derivedProperty.stereotypes = element.stereotypes.map(V1_transformStereotype);
   derivedProperty.taggedValues = element.taggedValues.map(
     V1_transformTaggedValue,
@@ -201,7 +260,11 @@ export const V1_transformClass = (
   _class.stereotypes = element.stereotypes.map(V1_transformStereotype);
   _class.taggedValues = element.taggedValues.map(V1_transformTaggedValue);
   _class.superTypes = element.generalizations.map(
-    (e) => e.ownerReference.valueForSerialization ?? '',
+    (e) =>
+      new V1_PackageableElementPointer(
+        PackageableElementPointerType.CLASS,
+        e.ownerReference.valueForSerialization ?? '',
+      ),
   );
   _class.derivedProperties = element.derivedProperties.map((dp) =>
     transformDerivedProperty(dp, context),
@@ -224,6 +287,52 @@ export const V1_transformAssociation = (
   return association;
 };
 
+const V1_transformFunctionTest = (element: FunctionTest): V1_FunctionTest => {
+  const functionTest = new V1_FunctionTest();
+  functionTest.id = element.id;
+  functionTest.doc = element.doc;
+  functionTest.assertions = element.assertions.map((assertion) =>
+    V1_transformTestAssertion(assertion),
+  );
+  functionTest.parameters = element.parameters?.map((p) => {
+    const parameterValue = new V1_FunctionParameterValue();
+    parameterValue.name = p.name;
+    parameterValue.value = p.value;
+    return parameterValue;
+  });
+  return functionTest;
+};
+
+const V1_transformFunctionSuite = (
+  element: FunctionTestSuite,
+  context: V1_GraphTransformerContext,
+): V1_FunctionTestSuite => {
+  const testSuite = new V1_FunctionTestSuite();
+  testSuite.id = element.id;
+  testSuite.doc = element.doc;
+  if (element.testData?.length) {
+    testSuite.testData = element.testData.map((elementData) => {
+      const pTestData = new V1_FunctionStoreTestData();
+      pTestData.doc = elementData.doc;
+      pTestData.store = V1_transformElementReferencePointer(
+        PackageableElementPointerType.STORE,
+        elementData.store,
+      );
+      pTestData.data = V1_transformEmbeddedData(elementData.data, context);
+      return pTestData;
+    });
+  }
+  testSuite.tests = element.tests.map((el) => {
+    if (el instanceof FunctionTest) {
+      return V1_transformFunctionTest(el);
+    }
+    throw new UnsupportedOperationError(
+      'Unsupported function test to transform',
+    );
+  });
+  return testSuite;
+};
+
 export const V1_transformFunction = (
   element: ConcreteFunctionDefinition,
   context: V1_GraphTransformerContext,
@@ -237,11 +346,16 @@ export const V1_transformFunction = (
         new V1_RawValueSpecificationTransformer(context),
       ) as V1_RawVariable,
   );
-  _function.returnType = element.returnType.valueForSerialization ?? '';
+  _function.returnGenericType = V1_createGenericType(element.returnType.value);
   _function.stereotypes = element.stereotypes.map(V1_transformStereotype);
   _function.taggedValues = element.taggedValues.map(V1_transformTaggedValue);
   _function.returnMultiplicity = V1_transformMultiplicity(
     element.returnMultiplicity,
   );
+  if (element.tests.length) {
+    _function.tests = element.tests.map((suite) =>
+      V1_transformFunctionSuite(suite, context),
+    );
+  }
   return _function;
 };

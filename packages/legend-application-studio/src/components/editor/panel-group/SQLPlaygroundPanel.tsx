@@ -29,9 +29,11 @@ import {
   PlayIcon,
   PanelLoadingIndicator,
   BlankPanelContent,
-  TrashIcon,
   PURE_DatabaseIcon,
   SyncIcon,
+  clsx,
+  CheckSquareIcon,
+  SquareIcon,
 } from '@finos/legend-art';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -44,7 +46,7 @@ import {
   CODE_EDITOR_LANGUAGE,
   CODE_EDITOR_THEME,
   getBaseCodeEditorOptions,
-} from '@finos/legend-lego/code-editor';
+} from '@finos/legend-code-editor';
 import {
   editor as monacoEditorAPI,
   languages as monacoLanguagesAPI,
@@ -54,7 +56,6 @@ import {
 import {
   PackageableConnection,
   RelationalDatabaseConnection,
-  guaranteeRelationalDatabaseConnection,
 } from '@finos/legend-graph';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../__lib__/LegendStudioApplicationNavigationContext.js';
 import { type SQLPlaygroundPanelState } from '../../../stores/editor/panel-group/SQLPlaygroundPanelState.js';
@@ -65,14 +66,22 @@ import {
   CORE_DND_TYPE,
   type ElementDragSource,
 } from '../../../stores/editor/utils/DnDUtils.js';
-import { DataGrid } from '@finos/legend-lego/data-grid';
 import {
-  getNonNullableEntry,
-  getNullableEntry,
-  getNullableLastEntry,
+  DataGrid,
+  type DataGridCellRendererParams,
+  type DataGridColumnDefinition,
+  type DataGridDefaultMenuItem,
+  type DataGridGetContextMenuItemsParams,
+  type DataGridMenuItemDef,
+} from '@finos/legend-lego/data-grid';
+import {
+  at,
   isNonNullable,
+  isNumber,
   isString,
+  isValidURL,
   parseCSVString,
+  prettyDuration,
   uniqBy,
 } from '@finos/legend-shared';
 import {
@@ -81,6 +90,10 @@ import {
   type DatabaseSchemaExplorerTreeNodeContainerProps,
 } from '../editor-group/connection-editor/DatabaseSchemaExplorer.js';
 import { DatabaseSchemaExplorerTreeTableNodeData } from '../../../stores/editor/editor-state/element-editor-state/connection/DatabaseBuilderState.js';
+import {
+  buildRelationalDatabaseConnectionOption,
+  type RelationalDatabaseConnectionOption,
+} from '../editor-group/connection-editor/RelationalDatabaseConnectionEditor.js';
 
 const DATABASE_NODE_DND_TYPE = 'DATABASE_NODE_DND_TYPE';
 type DatabaseNodeDragType = { text: string };
@@ -88,8 +101,9 @@ type DatabaseNodeDragType = { text: string };
 const SQLPlaygroundDatabaseSchemaExplorerTreeNodeContainer = observer(
   (props: DatabaseSchemaExplorerTreeNodeContainerProps) => {
     const { node } = props;
+    const ref = useRef(null);
 
-    const [, nodeDragRef] = useDrag<DatabaseNodeDragType>(
+    const [, dragConnector] = useDrag<DatabaseNodeDragType>(
       () => ({
         type: DATABASE_NODE_DND_TYPE,
         item: {
@@ -101,38 +115,11 @@ const SQLPlaygroundDatabaseSchemaExplorerTreeNodeContainer = observer(
       }),
       [node],
     );
+    dragConnector(ref);
 
-    return (
-      <DatabaseSchemaExplorerTreeNodeContainer {...props} ref={nodeDragRef} />
-    );
+    return <DatabaseSchemaExplorerTreeNodeContainer {...props} ref={ref} />;
   },
 );
-
-type RelationalDatabaseConnectionOption = {
-  label: React.ReactNode;
-  value: PackageableConnection;
-};
-const buildRelationalDatabaseConnectionOption = (
-  connection: PackageableConnection,
-): RelationalDatabaseConnectionOption => {
-  const connectionValue = guaranteeRelationalDatabaseConnection(connection);
-  return {
-    value: connection,
-    label: (
-      <div className="sql-playground__config__connection-selector__option">
-        <div className="sql-playground__config__connection-selector__option__label">
-          {connection.name}
-        </div>
-        <div className="sql-playground__config__connection-selector__option__type">
-          {connectionValue.type}
-        </div>
-        <div className="sql-playground__config__connection-selector__option__path">
-          {connection.path}
-        </div>
-      </div>
-    ),
-  };
-};
 
 // List of most popular SQL keywords
 // See https://www.w3schools.com/sql/sql_ref_keywords.asp
@@ -186,7 +173,7 @@ const getKeywordSuggestions = async (
         insertTextRules:
           monacoLanguagesAPI.CompletionItemInsertTextRule.InsertAsSnippet,
         insertText: `${keyword} `,
-      } as monacoLanguagesAPI.CompletionItem),
+      }) as monacoLanguagesAPI.CompletionItem,
   );
 
 const getDatabaseSchemaEntities = async (
@@ -206,7 +193,7 @@ const getDatabaseSchemaEntities = async (
             insertTextRules:
               monacoLanguagesAPI.CompletionItemInsertTextRule.InsertAsSnippet,
             insertText: `${value.label} `,
-          } as monacoLanguagesAPI.CompletionItem),
+          }) as monacoLanguagesAPI.CompletionItem,
       ),
       (val) => val.label,
     );
@@ -225,15 +212,6 @@ const PlaygroundSQLCodeEditor = observer(() => {
   const sqlIdentifierSuggestionProviderDisposer = useRef<
     IDisposable | undefined
   >(undefined);
-
-  const executeRawSQL = (): void => {
-    flowResult(playgroundState.executeRawSQL()).catch(
-      applicationStore.alertUnhandledError,
-    );
-  };
-  const reset = (): void => {
-    playgroundState.resetSQL();
-  };
 
   useEffect(() => {
     if (!editor && codeEditorRef.current) {
@@ -324,7 +302,7 @@ const PlaygroundSQLCodeEditor = observer(() => {
           const lines = currentValue.split('\n');
           const position = playgroundState.sqlEditor.getPosition() ?? {
             lineNumber: lines.length,
-            column: getNullableLastEntry(lines)?.length ?? 0,
+            column: lines.at(-1)?.length ?? 0,
           };
           playgroundState.sqlEditor.executeEdits('', [
             {
@@ -363,28 +341,6 @@ const PlaygroundSQLCodeEditor = observer(() => {
 
   return (
     <div className="sql-playground__code-editor">
-      <PanelLoadingIndicator isLoading={playgroundState.isExecutingRawSQL} />
-      <div className="sql-playground__code-editor__header">
-        <div className="sql-playground__code-editor__header__actions">
-          <button
-            className="sql-playground__code-editor__header__action"
-            tabIndex={-1}
-            onClick={executeRawSQL}
-            disabled={playgroundState.isExecutingRawSQL}
-            title="Execute (Ctrl + Enter)"
-          >
-            <PlayIcon />
-          </button>
-          <button
-            className="sql-playground__code-editor__header__action"
-            tabIndex={-1}
-            onClick={reset}
-            title="Reset"
-          >
-            <TrashIcon />
-          </button>
-        </div>
-      </div>
       <PanelDropZone
         className="sql-playground__code-editor__content"
         isDragOver={isDatabaseNodeDragOver}
@@ -403,7 +359,7 @@ const parseExecutionResultData = (
 ): { rowData: Record<string, string>[]; columns: string[] } | undefined => {
   const lines = data.split('\n').filter((line) => line.trim().length);
   if (lines.length) {
-    const columns = parseCSVString(getNonNullableEntry(lines, 0)) ?? [];
+    const columns = parseCSVString(at(lines, 0)) ?? [];
     const rowData = lines
       .slice(1)
       .map((item) => {
@@ -413,7 +369,7 @@ const parseExecutionResultData = (
         }
         const row: Record<string, string> = {};
         columns.forEach((column, idx) => {
-          row[column] = getNullableEntry(rowItems, idx) ?? '';
+          row[column] = rowItems[idx] ?? '';
         });
         return row;
       })
@@ -423,18 +379,167 @@ const parseExecutionResultData = (
   return undefined;
 };
 
+const TDSResultCellRenderer = observer((params: DataGridCellRendererParams) => {
+  const cellValue = params.value as string;
+  const formattedCellValue = (): string => {
+    if (isNumber(cellValue)) {
+      return Intl.NumberFormat('en-US', {
+        maximumFractionDigits: 4,
+      }).format(Number(cellValue));
+    }
+    return cellValue;
+  };
+  const cellValueUrlLink =
+    isString(cellValue) && isValidURL(cellValue) ? cellValue : undefined;
+
+  return (
+    <div className={clsx('query-builder__result__values__table__cell')}>
+      {cellValueUrlLink ? (
+        <a href={cellValueUrlLink} target="_blank" rel="noreferrer">
+          {cellValueUrlLink}
+        </a>
+      ) : (
+        <span>{formattedCellValue()}</span>
+      )}
+    </div>
+  );
+});
+
 const PlayGroundSQLExecutionResultGrid = observer(
-  (props: { result: string }) => {
-    const { result } = props;
+  (props: {
+    result: string;
+    useAdvancedGrid?: boolean;
+    useLocalMode?: boolean;
+  }) => {
+    const { result, useAdvancedGrid, useLocalMode } = props;
     const data = parseExecutionResultData(result);
+    const applicationStore = useApplicationStore();
+    const darkMode =
+      !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled;
 
     if (!data) {
       return (
         <BlankPanelContent>{`Can't parse result, displaying raw form:\n${result}`}</BlankPanelContent>
       );
     }
+    if (useAdvancedGrid) {
+      if (useLocalMode) {
+        const localcolDefs = data.columns.map(
+          (colName) =>
+            ({
+              minWidth: 50,
+              sortable: true,
+              resizable: true,
+              field: colName,
+              flex: 1,
+              enablePivot: true,
+              enableRowGroup: true,
+              enableValue: true,
+              allowedAggFuncs: ['count'],
+            }) as DataGridColumnDefinition,
+        );
+
+        return (
+          <div
+            className={clsx('sql-playground__result__grid', {
+              'ag-theme-balham': !darkMode,
+              'ag-theme-balham-dark': darkMode,
+            })}
+          >
+            <DataGrid
+              rowData={data.rowData}
+              gridOptions={{
+                suppressScrollOnNewData: true,
+                rowSelection: {
+                  mode: 'multiRow',
+                  checkboxes: false,
+                  headerCheckbox: false,
+                },
+                pivotPanelShow: 'always',
+                rowGroupPanelShow: 'always',
+                cellSelection: true,
+              }}
+              // NOTE: when column definition changed, we need to force refresh the cell to make sure the cell renderer is updated
+              // See https://stackoverflow.com/questions/56341073/how-to-refresh-an-ag-grid-when-a-change-occurs-inside-a-custom-cell-renderer-com
+              onRowDataUpdated={(params) => {
+                params.api.refreshCells({ force: true });
+              }}
+              suppressFieldDotNotation={true}
+              suppressContextMenu={false}
+              columnDefs={localcolDefs}
+              sideBar={['columns', 'filters']}
+            />
+          </div>
+        );
+      }
+      const colDefs = data.columns.map(
+        (colName) =>
+          ({
+            minWidth: 50,
+            sortable: true,
+            resizable: true,
+            field: colName,
+            flex: 1,
+            cellRenderer: TDSResultCellRenderer,
+            filter: true,
+          }) as DataGridColumnDefinition,
+      );
+      const getContextMenuItems = useCallback(
+        (
+          params: DataGridGetContextMenuItemsParams<{
+            [key: string]: string;
+          }>,
+        ): (DataGridDefaultMenuItem | DataGridMenuItemDef)[] => [
+          'copy',
+          'copyWithHeaders',
+          {
+            name: 'Copy Row Value',
+            action: () => {
+              params.api.copySelectedRowsToClipboard();
+            },
+          },
+        ],
+        [],
+      );
+      return (
+        <div
+          className={clsx('sql-playground__result__grid', {
+            'ag-theme-balham': !darkMode,
+            'ag-theme-balham-dark': darkMode,
+          })}
+        >
+          <DataGrid
+            rowData={data.rowData}
+            overlayNoRowsTemplate={`<div class="sql-playground__result__grid--empty">No results</div>`}
+            gridOptions={{
+              suppressScrollOnNewData: true,
+              rowSelection: {
+                mode: 'multiRow',
+                checkboxes: false,
+                headerCheckbox: false,
+              },
+              cellSelection: true,
+            }}
+            onRowDataUpdated={(params) => {
+              params.api.refreshCells({ force: true });
+            }}
+            suppressFieldDotNotation={true}
+            suppressClipboardPaste={false}
+            suppressContextMenu={false}
+            columnDefs={colDefs}
+            getContextMenuItems={(params) => getContextMenuItems(params)}
+          />
+        </div>
+      );
+    }
+
     return (
-      <div className="sql-playground__result__grid ag-theme-balham-dark">
+      <div
+        className={clsx('sql-playground__result__grid', {
+          'ag-theme-balham': !darkMode,
+          'ag-theme-balham-dark': darkMode,
+        })}
+      >
         <DataGrid
           rowData={data.rowData}
           overlayNoRowsTemplate={`<div class="sql-playground__result__grid--empty">No results</div>`}
@@ -466,8 +571,8 @@ export const SQLPlaygroundPanel = observer(() => {
   const connectionFilterOption = createFilter({
     ignoreCase: true,
     ignoreAccents: false,
-    stringify: (option: RelationalDatabaseConnectionOption): string =>
-      option.value.path,
+    stringify: (option: { data: RelationalDatabaseConnectionOption }): string =>
+      option.data.value.path,
   });
   const connectionOptions = editorStore.graphManagerState.usableConnections
     .filter(
@@ -535,6 +640,26 @@ export const SQLPlaygroundPanel = observer(() => {
     }
   };
 
+  const executeRawSQL = (): void => {
+    flowResult(playgroundState.executeRawSQL()).catch(
+      applicationStore.alertUnhandledError,
+    );
+  };
+  const advancedMode = Boolean(
+    editorStore.applicationStore.config.options.queryBuilderConfig
+      ?.TEMPORARY__enableGridEnterpriseMode,
+  );
+  const resultDescription = playgroundState.sqlExecutionResult
+    ? `query ran in ${prettyDuration(
+        playgroundState.sqlExecutionResult.sqlDuration,
+        {
+          ms: true,
+        },
+      )}`
+    : undefined;
+  const toggleocalMode = (): void => {
+    playgroundState.toggleIsLocalModeEnabled();
+  };
   useEffect(() => {
     if (playgroundState.schemaExplorerState) {
       flowResult(
@@ -547,7 +672,6 @@ export const SQLPlaygroundPanel = observer(() => {
     LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY.SQL_PLAYGROUND,
     editorStore.activePanelMode === PANEL_MODE.SQL_PLAYGROUND,
   );
-
   return (
     <PanelDropZone
       isDragOver={isConnectionDragOver}
@@ -564,12 +688,15 @@ export const SQLPlaygroundPanel = observer(() => {
                       <PURE_ConnectionIcon />
                     </div>
                     <CustomSelectorInput
-                      ref={connectionSelectorRef}
+                      inputRef={connectionSelectorRef}
                       className="sql-playground__config__connection-selector__input"
                       options={connectionOptions}
                       onChange={changeConnection}
                       value={selectedConnectionOption}
-                      darkMode={true}
+                      darkMode={
+                        !applicationStore.layoutService
+                          .TEMPORARY__isLightColorThemeEnabled
+                      }
                       placeholder="Choose a connection..."
                       filterOption={connectionFilterOption}
                     />
@@ -579,22 +706,21 @@ export const SQLPlaygroundPanel = observer(() => {
                       <PURE_DatabaseIcon />
                     </div>
                     <CustomSelectorInput
-                      ref={connectionSelectorRef}
+                      inputRef={connectionSelectorRef}
                       className="sql-playground__config__database-selector__input"
                       options={connectionOptions}
                       onChange={changeConnection}
                       value={selectedConnectionOption}
-                      darkMode={true}
+                      darkMode={
+                        !applicationStore.layoutService
+                          .TEMPORARY__isLightColorThemeEnabled
+                      }
                       placeholder="Choose a connection..."
                       filterOption={connectionFilterOption}
                     />
                     <button
                       className="sql-playground__config__database-selector__update-btn btn--sm btn--dark"
-                      disabled={
-                        !playgroundState.database ||
-                        playgroundState.isBuildingDatabase ||
-                        playgroundState.isUpdatingDatabase
-                      }
+                      disabled={!playgroundState.database}
                       onClick={updateDatabase}
                       title="Update database"
                     >
@@ -603,6 +729,11 @@ export const SQLPlaygroundPanel = observer(() => {
                   </div>
                 </div>
                 <div className="sql-playground__config__schema-explorer">
+                  <PanelLoadingIndicator
+                    isLoading={Boolean(
+                      playgroundState.schemaExplorerState?.isGeneratingDatabase,
+                    )}
+                  />
                   {playgroundState.schemaExplorerState?.treeData && (
                     <DatabaseSchemaExplorer
                       treeData={playgroundState.schemaExplorerState.treeData}
@@ -626,9 +757,70 @@ export const SQLPlaygroundPanel = observer(() => {
                     <ResizablePanelSplitterLine color="var(--color-dark-grey-250)" />
                   </ResizablePanelSplitter>
                   <ResizablePanel size={300}>
+                    <div className="panel__header">
+                      <div className="panel__header__title">
+                        <div className="panel__header__title__label">
+                          result
+                        </div>
+
+                        {playgroundState.executeRawSQLState.isInProgress && (
+                          <div className="panel__header__title__label__status">
+                            Running SQL...
+                          </div>
+                        )}
+
+                        <div className="query-builder__result__analytics">
+                          {resultDescription ?? ''}
+                        </div>
+                      </div>
+                      <div className="panel__header__actions query-builder__result__header__actions">
+                        {advancedMode && (
+                          <div className="query-builder__result__advanced__mode">
+                            <div className="query-builder__result__advanced__mode__label">
+                              Local Mode
+                            </div>
+                            <button
+                              className={clsx(
+                                'query-builder__result__advanced__mode__toggler__btn',
+                                {
+                                  'query-builder__result__advanced__mode__toggler__btn--toggled':
+                                    playgroundState.isLocalModeEnabled,
+                                },
+                              )}
+                              onClick={toggleocalMode}
+                              tabIndex={-1}
+                            >
+                              {playgroundState.isLocalModeEnabled ? (
+                                <CheckSquareIcon />
+                              ) : (
+                                <SquareIcon />
+                              )}
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="query-builder__result__execute-btn btn__dropdown-combo btn__dropdown-combo--primary">
+                          <button
+                            className="btn__dropdown-combo__label"
+                            onClick={executeRawSQL}
+                            disabled={
+                              playgroundState.executeRawSQLState.isInProgress
+                            }
+                            tabIndex={-1}
+                          >
+                            <PlayIcon className="btn__dropdown-combo__label__icon" />
+                            <div className="btn__dropdown-combo__label__title">
+                              Run Query
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                     {playgroundState.sqlExecutionResult !== undefined && (
                       <PlayGroundSQLExecutionResultGrid
-                        result={playgroundState.sqlExecutionResult}
+                        result={playgroundState.sqlExecutionResult.value}
+                        useAdvancedGrid={advancedMode}
+                        useLocalMode={playgroundState.isLocalModeEnabled}
                       />
                     )}
                     {playgroundState.sqlExecutionResult === undefined && (

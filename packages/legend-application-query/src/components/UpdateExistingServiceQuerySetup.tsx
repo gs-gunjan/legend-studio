@@ -131,7 +131,7 @@ const UpdateExistingServiceQuerySetupContent = observer(() => {
             <SearchIcon />
           </div>
           <CustomSelectorInput
-            ref={serviceSearchRef}
+            inputRef={serviceSearchRef}
             className="query-setup__wizard__selector"
             options={serviceOptions}
             isLoading={setupStore.loadServicesState.isInProgress}
@@ -139,7 +139,10 @@ const UpdateExistingServiceQuerySetupContent = observer(() => {
             inputValue={searchText}
             onChange={onServiceOptionChange}
             placeholder="Search for service..."
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
             formatOptionLabel={formatServiceOptionLabel}
           />
         </div>

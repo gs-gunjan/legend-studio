@@ -29,7 +29,12 @@ export const TEST_DATA__MissingSuperType = [
             upperBound: 1,
           },
           name: 'legs',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -37,7 +42,12 @@ export const TEST_DATA__MissingSuperType = [
             upperBound: 1,
           },
           name: 'arms',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
       superTypes: ['ui::test1::Organism'],
@@ -60,7 +70,12 @@ export const TEST_DATA__MissingProfile = [
             upperBound: 1,
           },
           name: 'legs',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -68,7 +83,12 @@ export const TEST_DATA__MissingProfile = [
             upperBound: 1,
           },
           name: 'arms',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
       superTypes: [],
@@ -100,7 +120,12 @@ export const TEST_DATA__MissingStereoType = [
             upperBound: 1,
           },
           name: 'id',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -155,7 +180,12 @@ export const TEST_DATA__MissingTagValue = [
             upperBound: 1,
           },
           name: 'id',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -238,7 +268,12 @@ export const TEST_DATA__MissingProperty = [
             upperBound: 1,
           },
           name: 'legs',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -491,7 +526,12 @@ export const TEST_DATA__MissingClassMappingWithTargetId = [
           name: 'employees',
           stereotypes: [],
           taggedValues: [],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
       qualifiedProperties: [],
@@ -852,5 +892,26 @@ export const TEST_DATA__InvalidAssociationProperty = [
       ],
     },
     classifierPath: 'meta::pure::metamodel::relationship::Association',
+  },
+];
+
+export const TEST_DATA__UnknownElement = [
+  {
+    path: 'unknownElement::3bbdf0a0_b0d5_11ee_84b2_efcc77532342',
+    content: {
+      config: {
+        createdBy: 'someone',
+        createdDate: '2024-01-12T23:01:02.250Z',
+        data: null,
+        updatedBy: 'someone',
+        updatedDate: '2024-01-12T23:02:43.045Z',
+      },
+      datasourceName: 'datasourceName',
+      datasourceType: 'someType',
+      id: '3bbdf0a0-b0d5-11ee-84b2-efcc77532342',
+      name: '3bbdf0a0_b0d5_11ee_84b2_efcc77532342',
+      package: 'unknownElement',
+    },
+    classifierPath: 'meta::unknownElement',
   },
 ];

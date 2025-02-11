@@ -29,12 +29,10 @@ import { QueryBuilderAggregateOperator_StdDev_Sample } from './fetch-structure/t
 import { QueryBuilderAggregateOperator_Sum } from './fetch-structure/tds/aggregation/operators/QueryBuilderAggregateOperator_Sum.js';
 import { QueryBuilderSimpleProjectionColumnState } from './fetch-structure/tds/projection/QueryBuilderProjectionColumnState.js';
 import type { QueryBuilderState } from './QueryBuilderState.js';
-import {
-  COLUMN_SORT_TYPE,
-  SortColumnState,
-} from './fetch-structure/tds/QueryResultSetModifierState.js';
+import { SortColumnState } from './fetch-structure/tds/QueryResultSetModifierState.js';
 import type { QueryBuilderAggregateOperator } from './fetch-structure/tds/aggregation/QueryBuilderAggregateOperator.js';
 import { QueryBuilderTDSState } from './fetch-structure/tds/QueryBuilderTDSState.js';
+import { COLUMN_SORT_TYPE } from '../graph/QueryBuilderMetaModelConst.js';
 
 const PREVIEW_DATA_TAKE_LIMIT = 10;
 const PREVIEW_DATA_NON_NUMERIC_VALUE_COLUMN_NAME = 'Value';
@@ -138,7 +136,7 @@ export const buildNumericPreviewDataQuery = (
     const valAggOp = guaranteeNonNullable(
       aggregationState.operators.find((t) => t instanceof val[1]),
     );
-    aggregationState.changeColumnAggregateOperator(valAggOp, colState);
+    aggregationState.changeColumnAggregateOperator(valAggOp, colState, true);
   });
 
   return builderState.resultState.buildExecutionRawLambda({
@@ -191,6 +189,7 @@ export const buildNonNumericPreviewDataQuery = (
   tdsState.aggregationState.changeColumnAggregateOperator(
     distinctCountOp,
     valueCountProjectionState,
+    true,
   );
   // result set
   tdsState.resultSetModifierState.limit = PREVIEW_DATA_TAKE_LIMIT;

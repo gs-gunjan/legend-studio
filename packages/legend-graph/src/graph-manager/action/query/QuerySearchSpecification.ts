@@ -21,12 +21,42 @@ export class QueryProjectCoordinates {
   artifactId!: string;
 }
 
+export class QuerySearchTermSpecification {
+  searchTerm: string;
+  exactMatchName: boolean | undefined;
+  includeOwner: boolean | undefined;
+
+  constructor(searchTerm: string) {
+    this.searchTerm = searchTerm;
+  }
+}
+
+export enum QuerySearchSortBy {
+  SORT_BY_CREATE = 'SORT_BY_CREATE',
+  SORT_BY_VIEW = 'SORT_BY_VIEW',
+  SORT_BY_UPDATE = 'SORT_BY_UPDATE',
+}
+
 export class QuerySearchSpecification {
-  searchTerm?: string | undefined;
+  searchTermSpecification: QuerySearchTermSpecification | undefined;
   projectCoordinates?: QueryProjectCoordinates[] | undefined;
   taggedValues?: QueryTaggedValue[] | undefined;
   stereotypes?: QueryStereotype[] | undefined;
   limit?: number | undefined;
   showCurrentUserQueriesOnly?: boolean | undefined;
-  exactMatchName?: boolean | undefined;
+  combineTaggedValuesCondition?: boolean | undefined;
+  sortByOption?: QuerySearchSortBy;
+
+  static createDefault(
+    searchTerm: string | undefined,
+  ): QuerySearchSpecification {
+    const spec = new QuerySearchSpecification();
+    if (searchTerm) {
+      const term = new QuerySearchTermSpecification(searchTerm);
+      term.includeOwner = true;
+      term.exactMatchName = false;
+      spec.searchTermSpecification = term;
+    }
+    return spec;
+  }
 }

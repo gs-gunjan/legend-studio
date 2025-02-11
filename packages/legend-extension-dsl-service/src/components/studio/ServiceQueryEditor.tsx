@@ -57,6 +57,8 @@ import {
 } from './ServiceQueryEditorStoreProvider.js';
 import {
   QueryBuilder,
+  QueryBuilderActionConfig,
+  QueryBuilderAdvancedWorkflowState,
   QueryBuilderNavigationBlocker,
 } from '@finos/legend-query-builder';
 import {
@@ -69,7 +71,11 @@ import {
   generateEditorRoute,
   useLegendStudioApplicationStore,
 } from '@finos/legend-application-studio';
-import { guaranteeNonEmptyString, uuid } from '@finos/legend-shared';
+import {
+  guaranteeNonEmptyString,
+  guaranteeNonNullable,
+  uuid,
+} from '@finos/legend-shared';
 import { WorkspaceType } from '@finos/legend-server-sdlc';
 import { ServiceQueryEditorReviewAction } from './ServiceQueryEditorReviewAction.js';
 import { ServiceQueryEditorWorkspaceStatus } from './ServiceQueryEditorWorkspaceStatus.js';
@@ -312,11 +318,14 @@ const RegisterServiceModal = observer(() => {
                 Environment
               </div>
               <CustomSelectorInput
-                ref={envConfigSelectorRef}
+                inputRef={envConfigSelectorRef}
                 options={envConfigOptions}
                 onChange={onEnvConfigChange}
                 value={selectedEnvConfigOption}
-                darkMode={true}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 isClearable={true}
                 escapeClearsValue={true}
                 placeholder="Choose a registration environment"
@@ -393,6 +402,7 @@ const ServiceQueryEditorHeaderContent = observer(() => {
       applicationStore.navigationService.navigator.generateAddress(
         generateEditorRoute(
           editorStore.sdlcState.activeProject.projectId,
+          editorStore.sdlcState.activePatch?.patchReleaseVersionId.id,
           editorStore.sdlcState.activeWorkspace.workspaceId,
           WorkspaceType.GROUP,
         ),
@@ -491,9 +501,12 @@ export const ServiceQueryEditor = observer(() => {
   const editorStore = useServiceQueryEditorStore();
 
   useEffect(() => {
-    flowResult(editorStore.initializeWithServiceQuery()).catch(
-      applicationStore.alertUnhandledError,
-    );
+    flowResult(
+      editorStore.initializeWithServiceQuery(
+        QueryBuilderAdvancedWorkflowState.INSTANCE,
+        QueryBuilderActionConfig.INSTANCE,
+      ),
+    ).catch(applicationStore.alertUnhandledError);
   }, [editorStore, applicationStore]);
 
   return (
@@ -529,10 +542,12 @@ export const ServiceQueryEditor = observer(() => {
 
 export const ServiceQueryUpdater = observer(() => {
   const params = useParams<ServiceQueryUpdaterPathParams>();
-  const serviceCoordinates =
-    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.SERVICE_COORDINATES];
-  const groupWorkspaceId =
-    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID];
+  const serviceCoordinates = guaranteeNonNullable(
+    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.SERVICE_COORDINATES],
+  );
+  const groupWorkspaceId = guaranteeNonNullable(
+    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID],
+  );
 
   return (
     <ServiceQueryUpdaterStoreProvider
@@ -546,10 +561,15 @@ export const ServiceQueryUpdater = observer(() => {
 
 export const ProjectServiceQueryUpdater = observer(() => {
   const params = useParams<ProjectServiceQueryUpdaterPathParams>();
-  const projectId = params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.PROJECT_ID];
-  const groupWorkspaceId =
-    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID];
-  const servicePath = params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.SERVICE_PATH];
+  const projectId = guaranteeNonNullable(
+    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.PROJECT_ID],
+  );
+  const groupWorkspaceId = guaranteeNonNullable(
+    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID],
+  );
+  const servicePath = guaranteeNonNullable(
+    params[DSL_SERVICE_ROUTE_PATTERN_TOKEN.SERVICE_PATH],
+  );
 
   return (
     <ProjectServiceQueryUpdaterStoreProvider

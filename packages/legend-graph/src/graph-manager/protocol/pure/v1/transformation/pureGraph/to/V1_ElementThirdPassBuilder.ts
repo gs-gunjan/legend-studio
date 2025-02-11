@@ -63,6 +63,9 @@ import type { V1_ExecutionEnvironmentInstance } from '../../../model/packageable
 import type { V1_INTERNAL__UnknownPackageableElement } from '../../../model/packageableElements/V1_INTERNAL__UnknownPackageableElement.js';
 import type { V1_INTERNAL__UnknownFunctionActivator } from '../../../model/packageableElements/function/V1_INTERNAL__UnknownFunctionActivator.js';
 import type { V1_INTERNAL__UnknownStore } from '../../../model/packageableElements/store/V1_INTERNAL__UnknownStore.js';
+import type { V1_SnowflakeApp } from '../../../model/packageableElements/function/V1_SnowflakeApp.js';
+import type { V1_INTERNAL__UnknownElement } from '../../../model/packageableElements/V1_INTERNAL__UnknownElement.js';
+import type { V1_HostedService } from '../../../model/packageableElements/function/V1_HostedService.js';
 
 export class V1_ElementThirdPassBuilder
   implements V1_PackageableElementVisitor<void>
@@ -77,6 +80,10 @@ export class V1_ElementThirdPassBuilder
     this.context.extensions
       .getExtraBuilderOrThrow(element)
       .runThirdPass(element, this.context);
+  }
+
+  visit_INTERNAL__UnknownElement(element: V1_INTERNAL__UnknownElement): void {
+    throw new UnsupportedOperationError();
   }
 
   visit_INTERNAL__UnknownPackageableElement(
@@ -107,6 +114,14 @@ export class V1_ElementThirdPassBuilder
     throw new UnsupportedOperationError();
   }
 
+  visit_SnowflakeApp(element: V1_SnowflakeApp): void {
+    throw new UnsupportedOperationError();
+  }
+
+  visit_HostedService(element: V1_HostedService): void {
+    throw new UnsupportedOperationError();
+  }
+
   visit_ExecutionEnvironmentInstance(
     element: V1_ExecutionEnvironmentInstance,
   ): void {
@@ -117,15 +132,16 @@ export class V1_ElementThirdPassBuilder
     const _class = this.context.currentSubGraph.getOwnClass(
       V1_buildFullPath(element.package, element.name),
     );
-    element.superTypes.forEach((type) => {
+    element.superTypes.forEach((pointer) => {
+      const type = pointer.path;
       // supertype `Any` will not be processed
       if (type !== CORE_PURE_PATH.ANY) {
         try {
-          const genricTypeReference = this.context.resolveGenericType(type);
-          addUniqueEntry(_class.generalizations, genricTypeReference);
-          if (genricTypeReference.ownerReference.value instanceof Class) {
+          const genericTypeReference = this.context.resolveGenericType(type);
+          addUniqueEntry(_class.generalizations, genericTypeReference);
+          if (genericTypeReference.ownerReference.value instanceof Class) {
             addUniqueEntry(
-              genricTypeReference.ownerReference.value._subclasses,
+              genericTypeReference.ownerReference.value._subclasses,
               _class,
             );
           }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../package.json';
+import packageJson from '../../../package.json' with { type: 'json' };
 import { BufferIcon, SitemapIcon } from '@finos/legend-art';
 import { SchemaSetEditor } from '../editor/editor-group/external-format-editor/DSL_ExternalFormat_SchemaSetElementEditor.js';
 import {
@@ -34,7 +34,11 @@ import {
   NewExternalFormatConnectionDriver,
 } from '../editor/editor-group/external-format-editor/DSL_ExternalFormat_ExternalFormatConnectionEditor.js';
 import { BindingEditor } from '../editor/editor-group/external-format-editor/DSL_ExternalFormat_BindingElementEditor.js';
-import { guaranteeNonNullable, prettyCONSTName } from '@finos/legend-shared';
+import {
+  guaranteeNonNullable,
+  prettyCONSTName,
+  type DocumentationEntry,
+} from '@finos/legend-shared';
 import type { ReactNode } from 'react';
 import {
   type ElementEditorRenderer,
@@ -71,7 +75,6 @@ import {
   externalFormat_Binding_setContentType,
   externalFormat_urlStream_setUrl,
 } from '../../stores/graph-modifier/DSL_ExternalFormat_GraphModifierHelper.js';
-import type { DocumentationEntry } from '@finos/legend-application';
 import { DSL_EXTERNAL_FORMAT_LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../__lib__/DSL_ExternalFormat_LegendStudioDocumentation.js';
 import {
   BASIC_BINDING_SNIPPET,
@@ -89,7 +92,8 @@ import type {
   NewElementDriver,
   NewElementState,
 } from '../../stores/editor/NewElementState.js';
-import type { PureGrammarTextSuggestion } from '@finos/legend-lego/code-editor';
+import type { PureGrammarTextSuggestion } from '@finos/legend-code-editor';
+import { PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY } from '../../stores/editor/utils/ModelClassifierUtils.js';
 
 const SCHEMA_SET_ELEMENT_TYPE = 'SCHEMASET';
 const SCHEMA_SET_ELEMENT_PROJECT_EXPLORER_DND_TYPE =
@@ -146,6 +150,15 @@ export class DSL_ExternalFormat_LegendStudioApplicationPlugin
 
   getExtraSupportedElementTypes(): string[] {
     return [SCHEMA_SET_ELEMENT_TYPE, BINDING_ELEMENT_TYPE];
+  }
+
+  getExtraSupportedElementTypesWithCategory?(): Map<string, string[]> {
+    const elementTypesWithCategoryMap = new Map<string, string[]>();
+    elementTypesWithCategoryMap.set(
+      PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.EXTERNAL_FORMAT,
+      [SCHEMA_SET_ELEMENT_TYPE, BINDING_ELEMENT_TYPE],
+    );
+    return elementTypesWithCategoryMap;
   }
 
   getExtraElementClassifiers(): ElementClassifier[] {

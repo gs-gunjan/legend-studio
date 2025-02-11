@@ -21,7 +21,7 @@ import {
   CaretDownIcon,
   clsx,
   CustomSelectorInput,
-  DropdownMenu,
+  ControlledDropdownMenu,
   LockIcon,
   LongArrowRightIcon,
   MenuContent,
@@ -51,7 +51,7 @@ import {
 } from '../../../../stores/editor/editor-state/element-editor-state/data/EmbeddedDataState.js';
 import {
   PackageableElementExplicitReference,
-  type Class,
+  type Type,
   type DataElement,
 } from '@finos/legend-graph';
 import {
@@ -122,7 +122,7 @@ export const ExternalFormatDataEditor = observer(
             >
               <WrenchIcon />
             </button>
-            <DropdownMenu
+            <ControlledDropdownMenu
               className="external-format-data-editor__type"
               disabled={isReadOnly}
               content={
@@ -149,7 +149,7 @@ export const ExternalFormatDataEditor = observer(
               <div className="external-format-data-editor__type__icon">
                 <CaretDownIcon />
               </div>
-            </DropdownMenu>
+            </ControlledDropdownMenu>
           </div>
         </div>
         <PanelContent className="model-loader__editor">
@@ -174,14 +174,16 @@ export const DataElementReferenceDataEditor = observer(
     const dataElement =
       dataElementReferenceState.embeddedData.dataElement.value;
     const editorStore = dataElementReferenceState.editorStore;
+    const applicationStore = editorStore.applicationStore;
     const options =
       editorStore.graphManagerState.usableDataElements.map(buildElementOption);
-    const selectedOption = buildElementOption(dataElement);
-    const onDataElementChange = (val: {
-      label: string;
-      value?: DataElement;
-    }): void => {
-      if (val.value !== selectedOption.value && val.value) {
+    const selectedOption = buildElementOption(
+      dataElement,
+    ) as PackageableElementOption<DataElement>;
+    const onDataElementChange = (
+      val: PackageableElementOption<DataElement>,
+    ): void => {
+      if (val.value !== selectedOption.value) {
         dataElementReferenceState.setDataElement(val.value);
       }
     };
@@ -215,7 +217,10 @@ export const DataElementReferenceDataEditor = observer(
               options={options}
               onChange={onDataElementChange}
               value={selectedOption}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
             <button
               className="btn--dark btn--sm data-element-reference-editor__value-btn"
@@ -251,10 +256,11 @@ export const ModelEmbeddedDataEditor = observer(
     const elementFilterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: PackageableElementOption<Class>): string =>
-        option.value.path,
+      stringify: (option: { data: PackageableElementOption<Type> }): string =>
+        option.data.value.path,
     });
     const editorStore = modelStoreDataState.editorStore;
+    const applicationStore = editorStore.applicationStore;
     const _class = modelData.model.value;
     const classOptions = editorStore.graphManagerState.usableClasses.map(
       (_cl) => ({
@@ -268,7 +274,7 @@ export const ModelEmbeddedDataEditor = observer(
       label: _class.name,
     };
 
-    const changeClass = (val: PackageableElementOption<Class> | null): void => {
+    const changeClass = (val: PackageableElementOption<Type> | null): void => {
       if (val?.value) {
         modelStoreData_setDataModelModel(
           modelData,
@@ -288,15 +294,20 @@ export const ModelEmbeddedDataEditor = observer(
               <PURE_ClassIcon />
             </div>
             <CustomSelectorInput
-              ref={classSelectorRef}
+              inputRef={classSelectorRef}
               className="sample-data-generator__controller__class-selector"
               options={classOptions}
               onChange={changeClass}
               value={selectedClassOption}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
               filterOption={elementFilterOption}
               formatOptionLabel={getPackageableElementOptionFormatter({
-                darkMode: true,
+                darkMode:
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled,
               })}
             />
           </div>

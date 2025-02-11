@@ -31,7 +31,7 @@ import {
   FlaskIcon,
   ResizablePanelSplitterLine,
   compareLabelFn,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentItem,
   CaretDownIcon,
@@ -96,10 +96,8 @@ import {
   ExecutionPlanViewer,
   type QueryBuilderState,
 } from '@finos/legend-query-builder';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 
 interface ClassMappingSelectOption {
   label: string;
@@ -122,17 +120,15 @@ export const ClassMappingSelectorModal = observer(
       classMappingFilterFn,
     } = props;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
 
-    const darkMappingMode =
-      editorStore.applicationStore.config.options
-        .TEMPORARY__enableMappingTestableEditor;
     // Class mapping selector
     const classMappingSelectorRef = useRef<SelectComponent>(null);
     const filterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: ClassMappingSelectOption): string =>
-        getMappingElementLabel(option.value, editorStore).value,
+      stringify: (option: { data: ClassMappingSelectOption }): string =>
+        getMappingElementLabel(option.data.value, editorStore).value,
     });
     const classMappingOptions = uniq(
       getAllClassMappings(mappingEditorState.mapping)
@@ -163,19 +159,22 @@ export const ClassMappingSelectorModal = observer(
       >
         <Modal
           className={clsx('search-modal', {
-            'modal--dark': darkMappingMode,
+            'modal--dark': true,
           })}
         >
           <ModalTitle title="Choose a class mapping" />
           <CustomSelectorInput
-            ref={classMappingSelectorRef}
+            inputRef={classMappingSelectorRef}
             options={classMappingOptions}
             onChange={changeClassMappingOption}
             value={null}
             placeholder="Choose a class mapping..."
             filterOption={filterOption}
             isClearable={true}
-            darkMode={darkMappingMode}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
           />
         </Modal>
       </Dialog>
@@ -208,11 +207,13 @@ const MappingExecutionQueryEditor = observer(
         const embeddedQueryBuilderState = editorStore.embeddedQueryBuilderState;
         await flowResult(
           embeddedQueryBuilderState.setEmbeddedQueryBuilderConfiguration({
-            setupQueryBuilderState: (): QueryBuilderState => {
+            setupQueryBuilderState: async (): Promise<QueryBuilderState> => {
               const queryBuilderState = new MappingExecutionQueryBuilderState(
                 embeddedQueryBuilderState.editorStore.applicationStore,
                 embeddedQueryBuilderState.editorStore.graphManagerState,
                 executionState.mappingEditorState.mapping,
+                editorStore.applicationStore.config.options.queryBuilderConfig,
+                editorStore.editorMode.getSourceInfo(),
               );
               queryBuilderState.initializeWithQuery(
                 executionState.queryState.query,
@@ -355,7 +356,7 @@ const MappingExecutionQueryEditor = observer(
       },
       [changeClassMapping],
     );
-    const [{ isDragOver, canDrop }, dropRef] = useDrop<
+    const [{ isDragOver, canDrop }, dropConnector] = useDrop<
       MappingElementDragSource,
       void,
       { isDragOver: boolean; canDrop: boolean }
@@ -405,7 +406,7 @@ const MappingExecutionQueryEditor = observer(
         {isStubbed_RawLambda(queryState.query) && (
           <PanelContent>
             <PanelDropZone
-              dropTargetConnector={dropRef}
+              dropTargetConnector={dropConnector}
               isDragOver={isDragOver}
             >
               <BlankPanelPlaceholder
@@ -514,7 +515,7 @@ export const MappingExecutionEmptyInputDataBuilder = observer(
       },
       [changeClassMapping],
     );
-    const [{ isDragOver, canDrop }, dropRef] = useDrop<
+    const [{ isDragOver, canDrop }, dropConnector] = useDrop<
       MappingElementDragSource,
       void,
       { isDragOver: boolean; canDrop: boolean }
@@ -532,7 +533,10 @@ export const MappingExecutionEmptyInputDataBuilder = observer(
 
     return (
       <PanelContent>
-        <PanelDropZone dropTargetConnector={dropRef} isDragOver={isDragOver}>
+        <PanelDropZone
+          dropTargetConnector={dropConnector}
+          isDragOver={isDragOver}
+        >
           <BlankPanelPlaceholder
             text="Choose a class mapping"
             onClick={showClassMappingSelectorModal}
@@ -557,7 +561,7 @@ const RelationalMappingExecutionInputDataTypeSelector = observer(
       };
 
     return (
-      <DropdownMenu
+      <ControlledDropdownMenu
         className="mapping-execution-builder__input-data-panel__type-selector"
         title="Choose input data type..."
         content={
@@ -580,7 +584,7 @@ const RelationalMappingExecutionInputDataTypeSelector = observer(
           </div>
           <CaretDownIcon />
         </div>
-      </DropdownMenu>
+      </ControlledDropdownMenu>
     );
   },
 );
@@ -816,7 +820,7 @@ export const MappingExecutionBuilder = observer(
                       Run Query
                     </div>
                   </button>
-                  <DropdownMenu
+                  <ControlledDropdownMenu
                     className="btn__dropdown-combo__dropdown-btn"
                     disabled={
                       isStubbed_RawLambda(queryState.query) ||
@@ -846,7 +850,7 @@ export const MappingExecutionBuilder = observer(
                     }}
                   >
                     <CaretDownIcon />
-                  </DropdownMenu>
+                  </ControlledDropdownMenu>
                 </>
               )}
             </div>

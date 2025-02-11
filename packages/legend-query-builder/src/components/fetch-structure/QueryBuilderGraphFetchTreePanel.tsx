@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useDrop } from 'react-dnd';
 import {
@@ -47,6 +47,7 @@ import {
   BufferIcon,
   CustomSelectorInput,
   FolderIcon,
+  PURE_UnknownElementTypeIcon,
 } from '@finos/legend-art';
 import { QUERY_BUILDER_TEST_ID } from '../../__lib__/QueryBuilderTesting.js';
 import {
@@ -79,7 +80,9 @@ import {
   type PackageableElement,
   Binding,
   Package,
-  getDescendantsOfPackage,
+  getAllDescendantsOfPackage,
+  PropertyGraphFetchTree,
+  RootGraphFetchTree,
 } from '@finos/legend-graph';
 import {
   ActionAlertActionType,
@@ -90,6 +93,7 @@ import {
   getClassPropertyIcon,
   type PackageableElementOption,
 } from '@finos/legend-lego/graph-editor';
+import { QueryBuilderTelemetryHelper } from '../../__lib__/QueryBuilderTelemetryHelper.js';
 
 const getBindingFormatter = (props: {
   darkMode?: boolean;
@@ -115,20 +119,26 @@ const getBindingFormatter = (props: {
     );
   };
 
-const QueryBuilderGraphFetchTreeNodeContainer: React.FC<
+export const QueryBuilderGraphFetchTreeNodeContainer: React.FC<
   TreeNodeContainerProps<
     QueryBuilderGraphFetchTreeNodeData,
     {
       isReadOnly: boolean;
-      removeNode: (node: QueryBuilderGraphFetchTreeNodeData) => void;
+      removeNode?: (node: QueryBuilderGraphFetchTreeNodeData) => void;
     }
   >
 > = (props) => {
   const { node, level, stepPaddingInRem, onNodeSelect, innerProps } = props;
-  const { removeNode } = innerProps;
-  const property = node.tree.property.value;
-  const type = property.genericType.value.rawType;
-  const subType = node.tree.subType?.value;
+  const { isReadOnly, removeNode } = innerProps;
+  let property, type, subType;
+  if (node.tree instanceof PropertyGraphFetchTree) {
+    property = node.tree.property.value;
+    type = property.genericType.value.rawType;
+    subType = node.tree.subType?.value;
+  } else if (node.tree instanceof RootGraphFetchTree) {
+    type = node.tree.class.value;
+  }
+
   const isExpandable = Boolean(node.childrenIds.length);
   const nodeExpandIcon = isExpandable ? (
     node.isOpen ? (
@@ -139,9 +149,13 @@ const QueryBuilderGraphFetchTreeNodeContainer: React.FC<
   ) : (
     <div />
   );
-  const nodeTypeIcon = getClassPropertyIcon(type);
+  const nodeTypeIcon = type ? (
+    getClassPropertyIcon(type)
+  ) : (
+    <PURE_UnknownElementTypeIcon />
+  );
   const toggleExpandNode = (): void => onNodeSelect?.(node);
-  const deleteNode = (): void => removeNode(node);
+  const deleteNode = (): void => removeNode?.(node);
 
   return (
     <div
@@ -184,7 +198,7 @@ const QueryBuilderGraphFetchTreeNodeContainer: React.FC<
           {
             <div className="query-builder-graph-fetch-tree__node__type">
               <div className="query-builder-graph-fetch-tree__node__type__label">
-                {type.name}
+                {type?.name}
               </div>
             </div>
           }
@@ -196,6 +210,7 @@ const QueryBuilderGraphFetchTreeNodeContainer: React.FC<
           title="Remove"
           tabIndex={-1}
           onClick={deleteNode}
+          disabled={isReadOnly}
         >
           <TimesIcon />
         </button>
@@ -332,12 +347,13 @@ const PureSerializationConfigModal = observer(
                 onClick={removeConfig}
               />
             )}
-            <button
-              className="btn modal__footer__close-btn btn--dark"
+            <ModalFooterButton
+              className="modal__footer__close-btn"
               onClick={handleAction}
+              type={toAdd ? 'primary' : 'secondary'}
             >
               {toAdd ? 'Add Config' : 'Close'}
-            </button>
+            </ModalFooterButton>
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -365,6 +381,7 @@ export const QueryBuilderGraphFetchExternalConfig = observer(
       value: serializationState.targetBinding,
       label: serializationState.targetBinding.name,
     };
+    const applicationStore = graphFetchState.queryBuilderState.applicationStore;
     const onBindingChange = (
       val: PackageableElementOption<Binding> | null,
     ): void => {
@@ -409,9 +426,14 @@ export const QueryBuilderGraphFetchExternalConfig = observer(
               onChange={onBindingChange}
               value={selectedBinding}
               formatOptionLabel={getBindingFormatter({
-                darkMode: true,
+                darkMode:
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled,
               })}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
           <div className="service-execution-editor__configuration__item">
@@ -464,7 +486,14 @@ export const QueryBuilderGraphFetchTreeExplorer = observer(
           );
           return elements
             .filter(filterByType(Package))
-            .map((p) => Array.from(getDescendantsOfPackage(p)))
+            .map((p) =>
+              Array.from(
+                getAllDescendantsOfPackage(
+                  p,
+                  graphFetchState.queryBuilderState.graphManagerState.graph,
+                ),
+              ),
+            )
             .flat()
             .concat(elements.filter((e) => !(e instanceof Package)))
             .includes(treeData.tree.class.value);
@@ -495,8 +524,7 @@ export const QueryBuilderGraphFetchTreeExplorer = observer(
       if (
         serializationState instanceof
           GraphFetchExternalFormatSerializationState &&
-        serializationState.treeData &&
-        serializationState.treeData.nodes.get(node.id)
+        serializationState.treeData?.nodes.get(node.id)
       ) {
         removeNodeRecursively(
           serializationState.treeData,
@@ -744,7 +772,7 @@ const QueryBuilderGraphFetchTreePanel = observer(
       },
       [graphFetchTreeState, serializationState],
     );
-    const [{ isDragOver }, dropTargetConnector] = useDrop<
+    const [{ isDragOver }, dropConnector] = useDrop<
       QueryBuilderExplorerTreeDragSource,
       void,
       { isDragOver: boolean }
@@ -766,6 +794,18 @@ const QueryBuilderGraphFetchTreePanel = observer(
       [handleDrop],
     );
 
+    useEffect(() => {
+      QueryBuilderTelemetryHelper.logEvent_RenderGraphFetchPanel(
+        graphFetchTreeState.queryBuilderState.applicationStore.telemetryService,
+        {
+          serializationType: serializationState.getLabel(),
+        },
+      );
+    }, [
+      graphFetchTreeState.queryBuilderState.applicationStore,
+      serializationState,
+    ]);
+
     return (
       <div
         data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_GRAPH_FETCH}
@@ -773,7 +813,8 @@ const QueryBuilderGraphFetchTreePanel = observer(
       >
         <PanelDropZone
           isDragOver={isDragOver}
-          dropTargetConnector={dropTargetConnector}
+          dropTargetConnector={dropConnector}
+          contentClassName="query-builder-graph-fetch-panel"
         >
           {(!treeData || isGraphFetchTreeDataEmpty(treeData)) && (
             <BlankPanelPlaceholder
@@ -816,10 +857,7 @@ export const QueryBuilderGraphFetchPanel = observer(
       );
     }
     return (
-      <div
-        data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_GRAPH_FETCH}
-        className="panel__content"
-      >
+      <div data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_GRAPH_FETCH}>
         <BlankPanelContent>
           <div className="unsupported-element-editor__main">
             <div className="unsupported-element-editor__summary">

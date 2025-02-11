@@ -91,6 +91,10 @@ import {
   V1_profileModelSchema,
   V1_PROFILE_ELEMENT_PROTOCOL_TYPE,
   V1_INTERNAL__UnknownFunctionActivatorModelSchema,
+  V1_snowflakeAppModelSchema,
+  V1_SNOWFLAKE_APP_TYPE,
+  V1_HostedServiceModelSchema,
+  V1_HOSTED_SERVICE_TYPE,
 } from './serializationHelpers/V1_DomainSerializationHelper.js';
 import type {
   PureProtocolProcessorPlugin,
@@ -109,8 +113,14 @@ import {
 import type { V1_ExecutionEnvironmentInstance } from '../../model/packageableElements/service/V1_ExecutionEnvironmentInstance.js';
 import { V1_INTERNAL__UnknownPackageableElement } from '../../model/packageableElements/V1_INTERNAL__UnknownPackageableElement.js';
 import type { V1_INTERNAL__UnknownFunctionActivator } from '../../model/packageableElements/function/V1_INTERNAL__UnknownFunctionActivator.js';
-import type { SubtypeInfo } from '../../../../../action/protocol/ProtocolInfo.js';
+import type {
+  ClassifierPathMappingMap,
+  SubtypeInfo,
+} from '../../../../../action/protocol/ProtocolInfo.js';
 import { V1_INTERNAL__UnknownStore } from '../../model/packageableElements/store/V1_INTERNAL__UnknownStore.js';
+import type { V1_SnowflakeApp } from '../../model/packageableElements/function/V1_SnowflakeApp.js';
+import { V1_INTERNAL__UnknownElement } from '../../model/packageableElements/V1_INTERNAL__UnknownElement.js';
+import type { V1_HostedService } from '../../model/packageableElements/function/V1_HostedService.js';
 
 class V1_PackageableElementSerializer
   implements V1_PackageableElementVisitor<PlainObject<V1_PackageableElement>>
@@ -139,6 +149,12 @@ class V1_PackageableElementSerializer
     );
   }
 
+  visit_INTERNAL__UnknownElement(
+    element: V1_INTERNAL__UnknownElement,
+  ): PlainObject<V1_PackageableElement> {
+    return element.content;
+  }
+
   visit_INTERNAL__UnknownPackageableElement(
     element: V1_INTERNAL__UnknownPackageableElement,
   ): PlainObject<V1_PackageableElement> {
@@ -149,6 +165,18 @@ class V1_PackageableElementSerializer
     element: V1_INTERNAL__UnknownFunctionActivator,
   ): PlainObject<V1_PackageableElement> {
     return element.content;
+  }
+
+  visit_SnowflakeApp(
+    element: V1_SnowflakeApp,
+  ): PlainObject<V1_PackageableElement> {
+    return serialize(V1_snowflakeAppModelSchema, element);
+  }
+
+  visit_HostedService(
+    element: V1_HostedService,
+  ): PlainObject<V1_PackageableElement> {
+    return serialize(V1_HostedServiceModelSchema, element);
   }
 
   visit_INTERNAL__UnknownStore(
@@ -184,7 +212,7 @@ class V1_PackageableElementSerializer
   visit_ConcreteFunctionDefinition(
     element: V1_ConcreteFunctionDefinition,
   ): PlainObject<V1_PackageableElement> {
-    return serialize(V1_functionModelSchema, element);
+    return serialize(V1_functionModelSchema(this.plugins), element);
   }
 
   visit_FlatData(element: V1_FlatData): PlainObject<V1_PackageableElement> {
@@ -268,6 +296,8 @@ export const V1_deserializePackageableElement = (
   json: PlainObject<V1_PackageableElement>,
   plugins: PureProtocolProcessorPlugin[],
   subtypeInfo?: SubtypeInfo | undefined,
+  classifierPathMappingMap?: ClassifierPathMappingMap | undefined,
+  classifierPath?: string | undefined,
 ): V1_PackageableElement => {
   const packagePath = guaranteeIsString(
     json.package,
@@ -295,7 +325,7 @@ export const V1_deserializePackageableElement = (
       case V1_ASSOCIATION_ELEMENT_PROTOCOL_TYPE:
         return deserialize(V1_associationModelSchema, json);
       case V1_FUNCTION_ELEMENT_PROTOCOL_TYPE:
-        return deserialize(V1_functionModelSchema, json);
+        return deserialize(V1_functionModelSchema(plugins), json);
       case V1_FLAT_DATA_ELEMENT_PROTOCOL_TYPE:
         return deserialize(V1_flatDataModelSchema, json);
       case V1_DATABASE_ELEMENT_PROTOCOL_TYPE:
@@ -318,6 +348,10 @@ export const V1_deserializePackageableElement = (
         return deserialize(V1_sectionIndexModelSchema, json);
       case V1_DATA_ELEMENT_PROTOCOL_TYPE:
         return deserialize(V1_dataElementModelSchema(plugins), json);
+      case V1_SNOWFLAKE_APP_TYPE:
+        return deserialize(V1_snowflakeAppModelSchema, json);
+      case V1_HOSTED_SERVICE_TYPE:
+        return deserialize(V1_HostedServiceModelSchema, json);
       default: {
         for (const deserializer of extraElementProtocolDeserializers) {
           const protocol = deserializer(json, plugins);
@@ -344,11 +378,23 @@ export const V1_deserializePackageableElement = (
           }
         }
 
-        // Fall back to create unknown stub if not supported
-        const protocol = new V1_INTERNAL__UnknownPackageableElement();
+        if (classifierPathMappingMap && isString(json._type)) {
+          if (classifierPathMappingMap.has(json._type)) {
+            // Fall back to create unknown stub if supported in engine but not studio
+            const protocol = new V1_INTERNAL__UnknownPackageableElement();
+            protocol.name = name;
+            protocol.package = packagePath;
+            protocol.content = json;
+            return protocol;
+          }
+        }
+
+        // Fall back to create unknown stub if not supported in engine
+        const protocol = new V1_INTERNAL__UnknownElement();
         protocol.name = name;
         protocol.package = packagePath;
         protocol.content = json;
+        protocol.classifierPath = classifierPath ?? '';
         return protocol;
       }
     }

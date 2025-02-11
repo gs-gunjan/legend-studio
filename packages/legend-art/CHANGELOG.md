@@ -1,5 +1,291 @@
 # @finos/legend-art
 
+## 7.1.81
+
+## 7.1.80
+
+## 7.1.79
+
+## 7.1.78
+
+## 7.1.77
+
+## 7.1.76
+
+## 7.1.75
+
+### Patch Changes
+
+- [#3797](https://github.com/finos/legend-studio/pull/3797) [`35d973a`](https://github.com/finos/legend-studio/commit/35d973a46645959bcdd3cdef975b60075c77b0d0) ([@travisstebbins](https://github.com/travisstebbins)) - Export new BoxArrowUpRightIcon
+
+## 7.1.74
+
+## 7.1.73
+
+## 7.1.72
+
+## 7.1.71
+
+## 7.1.70
+
+## 7.1.69
+
+## 7.1.68
+
+## 7.1.67
+
+## 7.1.66
+
+### Patch Changes
+
+- [#3649](https://github.com/finos/legend-studio/pull/3649) [`eb47276`](https://github.com/finos/legend-studio/commit/eb47276e446c5291fe94a5fff8f0e7cdfbf0533a) ([@travisstebbins](https://github.com/travisstebbins)) - Fix project setup view button
+
+## 7.1.65
+
+## 7.1.64
+
+## 7.1.63
+
+### Patch Changes
+
+- [#3614](https://github.com/finos/legend-studio/pull/3614) [`b475c57`](https://github.com/finos/legend-studio/commit/b475c57fc4737d127d43d73aa93163da0b1fdc8e) ([@kelly-thai](https://github.com/kelly-thai)) - Added a new tab for Lambdas in function editor that displays all the lambdas for that function as well as navigation to those lambdas.
+
+## 7.1.62
+
+## 7.1.61
+
+## 7.1.60
+
+## 7.1.59
+
+## 7.1.58
+
+### Patch Changes
+
+- [#3536](https://github.com/finos/legend-studio/pull/3536) [`1d2f4a9`](https://github.com/finos/legend-studio/commit/1d2f4a96018d9432307ad123c450f23044a005ba) ([@pragyasri-gs](https://github.com/pragyasri-gs)) - Add LikeIcon and DislikeIcon.
+
+## 7.1.57
+
+## 7.1.56
+
+## 7.1.55
+
+### Patch Changes
+
+- [#3498](https://github.com/finos/legend-studio/pull/3498) [`a28e377`](https://github.com/finos/legend-studio/commit/a28e377905c62014ee8101949e5d464f4ba3b57d) ([@kelly-thai](https://github.com/kelly-thai)) - Adding a sidebar on the right hand side of studio to display showcases, with resizable and button functionality as well as saving the state of it in local storage so that users can refresh the page and it will remain opened/closed.
+
+## 7.1.54
+
+## 7.1.53
+
+## 7.1.52
+
+## 7.1.51
+
+## 7.1.50
+
+### Patch Changes
+
+- [#3404](https://github.com/finos/legend-studio/pull/3404) [`9a191d7`](https://github.com/finos/legend-studio/commit/9a191d7c2b6cfac9820792650aef6ad36c7c2459) ([@travisstebbins](https://github.com/travisstebbins)) - Allow setting custom placeholder container class name in PanelDnDEntry
+
+- [#3389](https://github.com/finos/legend-studio/pull/3389) [`496be89`](https://github.com/finos/legend-studio/commit/496be891d1716f3e016c09012e07fa116fd9e0ae) ([@travisstebbins](https://github.com/travisstebbins)) - Add checked class to BaseRadioGroup
+
+## 7.1.49
+
+## 7.1.48
+
+## 7.1.47
+
+## 7.1.46
+
+## 7.1.45
+
+## 7.1.44
+
+## 7.1.43
+
+## 7.1.42
+
+## 7.1.41
+
+## 7.1.40
+
+## 7.1.39
+
+### Patch Changes
+
+- [#3285](https://github.com/finos/legend-studio/pull/3285) [`2dd80ef`](https://github.com/finos/legend-studio/commit/2dd80efd96c6cdaf8e3923c1d7587f1cabfbffaf) ([@travisstebbins](https://github.com/travisstebbins)) - Allow passing custom name to CustomSelectorInput input component
+
+## 7.1.38
+
+## 7.1.37
+
+### Patch Changes
+
+- [#3264](https://github.com/finos/legend-studio/pull/3264) [`c6cb21e`](https://github.com/finos/legend-studio/commit/c6cb21ef2f04250dcafb915ca521ea46923f35f8) ([@travisstebbins](https://github.com/travisstebbins)) - Allow PanelEntryDropZonePlaceholder to show children instead of label when dragged/dropped over
+
+## 7.1.36
+
+## 7.1.35
+
+## 7.1.34
+
+### Patch Changes
+
+- [#3198](https://github.com/finos/legend-studio/pull/3198) [`b60c5cf`](https://github.com/finos/legend-studio/commit/b60c5cf844d34d26e9d5f5421020907afaf061bc) ([@travisstebbins](https://github.com/travisstebbins)) - Pass additional props to CustomInput component
+
+## 7.1.33
+
+## 7.1.32
+
+### Patch Changes
+
+- [#3191](https://github.com/finos/legend-studio/pull/3191) [`1a59aa9`](https://github.com/finos/legend-studio/commit/1a59aa9ce3654fce91aa97fc2ca8f26d6ca32985) ([@travisstebbins](https://github.com/travisstebbins)) - Add --color-dnd\_\_overlay-light scss variable
+
+## 7.1.31
+
+### Patch Changes
+
+- [#3173](https://github.com/finos/legend-studio/pull/3173) [`052f22e`](https://github.com/finos/legend-studio/commit/052f22e4c6b91a1f57ea48cad4b5a15111a3f453) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add CubesLoadingIndicator and CubesLoadingIndicatorIcon components.
+
+## 7.1.30
+
+## 7.1.29
+
+### Patch Changes
+
+- [#3094](https://github.com/finos/legend-studio/pull/3094) [`1289579`](https://github.com/finos/legend-studio/commit/12895798774e0123463a96d94799bc676020ec1f) ([@travisstebbins](https://github.com/travisstebbins)) - Update color of selector input with error
+
+## 7.1.28
+
+## 7.1.27
+
+### Patch Changes
+
+- [#3085](https://github.com/finos/legend-studio/pull/3085) [`c9a32ba36`](https://github.com/finos/legend-studio/commit/c9a32ba366d5c84d63ee2612222effd0005064fd) ([@travisstebbins](https://github.com/travisstebbins)) - Add onBlur prop to PanelFormValidatedTextField
+
+## 7.1.26
+
+### Patch Changes
+
+- [#3041](https://github.com/finos/legend-studio/pull/3041) [`c8c79fdb4`](https://github.com/finos/legend-studio/commit/c8c79fdb4c20208c910d025454aa3c529d060d59) ([@travisstebbins](https://github.com/travisstebbins)) - Allow generateSimpleDIVComponent return component to take data-testid prop
+
+## 7.1.25
+
+### Patch Changes
+
+- [#3019](https://github.com/finos/legend-studio/pull/3019) [`13bd7ad50`](https://github.com/finos/legend-studio/commit/13bd7ad500a6133b136c5b6ae0ef98e95f16d7da) ([@travisstebbins](https://github.com/travisstebbins)) - Fix query light mode inconsistencies
+
+## 7.1.24
+
+## 7.1.23
+
+## 7.1.22
+
+### Patch Changes
+
+- [#2986](https://github.com/finos/legend-studio/pull/2986) [`fb5c22df0`](https://github.com/finos/legend-studio/commit/fb5c22df043ca7a7bf000893a01fb84351c67135) ([@travisstebbins](https://github.com/travisstebbins)) - Add secondary property to ModalFooterButton
+
+## 7.1.21
+
+## 7.1.20
+
+### Patch Changes
+
+- [#2969](https://github.com/finos/legend-studio/pull/2969) [`e7b7de17f`](https://github.com/finos/legend-studio/commit/e7b7de17fb3d2639f948e96c93d06d7aa131ded9) ([@travisstebbins](https://github.com/travisstebbins)) - Clean up fetch structure panel
+
+## 7.1.19
+
+## 7.1.18
+
+## 7.1.17
+
+### Patch Changes
+
+- [#2910](https://github.com/finos/legend-studio/pull/2910) [`8fff150fe`](https://github.com/finos/legend-studio/commit/8fff150fe24c98bf94afb383ae8c81bd1d26fc17) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Reduce the bundle size of react-icons by importing icons from react-icons/../index.js
+
+## 7.1.16
+
+### Patch Changes
+
+- [#2905](https://github.com/finos/legend-studio/pull/2905) [`2b4482334`](https://github.com/finos/legend-studio/commit/2b44823344d0a6a7e06240eee60641f208bcdd5e) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Switch to use `@react-icons/all-files` from `react-icons` for most of icons to reduce bundle size
+
+## 7.1.15
+
+## 7.1.14
+
+## 7.1.13
+
+## 7.1.12
+
+## 7.1.11
+
+## 7.1.10
+
+## 7.1.9
+
+## 7.1.8
+
+## 7.1.7
+
+## 7.1.6
+
+## 7.1.5
+
+## 7.1.4
+
+## 7.1.3
+
+## 7.1.2
+
+## 7.1.1
+
+## 7.1.0
+
+### Minor Changes
+
+- [#2679](https://github.com/finos/legend-studio/pull/2679) [`f63ddd7f0`](https://github.com/finos/legend-studio/commit/f63ddd7f07dcda6166d96eea811f5faa33872830) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Introduce Muistepper component
+
+## 7.0.45
+
+## 7.0.44
+
+## 7.0.43
+
+## 7.0.42
+
+## 7.0.41
+
+## 7.0.40
+
+## 7.0.39
+
+## 7.0.38
+
+## 7.0.37
+
+## 7.0.36
+
+## 7.0.35
+
+## 7.0.34
+
+## 7.0.33
+
+## 7.0.32
+
+## 7.0.31
+
+## 7.0.30
+
+## 7.0.29
+
+## 7.0.28
+
+## 7.0.27
+
+## 7.0.26
+
 ## 7.0.25
 
 ## 7.0.24

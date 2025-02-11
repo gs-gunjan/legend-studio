@@ -74,6 +74,85 @@ export const TEST_DATA__lambda_simpleSingleConditionFilter = {
   parameters: [],
 };
 
+export const TEST_DATA__simpleSingleConditionMilestoningFilter = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'my::Firm',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'equal',
+              parameters: [
+                {
+                  _type: 'property',
+                  parameters: [
+                    {
+                      _type: 'property',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                        {
+                          _type: 'var',
+                          name: 'businessDate',
+                        },
+                      ],
+                      property: 'employees',
+                    },
+                  ],
+                  property: 'firstName',
+                },
+                {
+                  _type: 'string',
+                  value: 'john',
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'businessDate',
+    },
+  ],
+};
+
 export const TEST_DATA_lambda_negativeIntegerFilter = {
   _type: 'lambda',
   body: [
@@ -1081,7 +1160,12 @@ export const TEST_DATA__lambda_simpleSingleConditionFilterWithParameter = {
   parameters: [
     {
       _type: 'var',
-      class: 'String',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'String',
+        },
+      },
       name: 'case',
       multiplicity: {
         lowerBound: 1,
@@ -1207,6 +1291,289 @@ export const TEST_DATA_lambda_dateTimeCapabilityFilterWithYesterday = {
             {
               _type: 'string',
               value: 'Age',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__lambda_isOperatorFilterForDate = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'test::Employee',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'in',
+              parameters: [
+                {
+                  _type: 'property',
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                  property: 'hireDate',
+                },
+                {
+                  _type: 'collection',
+                  multiplicity: {
+                    lowerBound: 2,
+                    upperBound: 2,
+                  },
+                  values: [
+                    {
+                      _type: 'strictDate',
+                      value: '2021-11-12',
+                    },
+                    {
+                      _type: 'strictDate',
+                      value: '2021-11-10',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__simpleFilterWithSubType = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'model::Person',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'equal',
+              parameters: [
+                {
+                  _type: 'property',
+                  parameters: [
+                    {
+                      _type: 'func',
+                      function: 'subType',
+                      parameters: [
+                        {
+                          _type: 'property',
+                          parameters: [
+                            {
+                              _type: 'var',
+                              name: 'x',
+                            },
+                          ],
+                          property: 'address',
+                        },
+                        {
+                          _type: 'genericTypeInstance',
+                          genericType: {
+                            rawType: {
+                              _type: 'packageableType',
+                              fullPath: 'model::Colony',
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                  property: 'id',
+                },
+                {
+                  _type: 'string',
+                  value: 'test',
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__nestedFilterWithSubType = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'model::Person',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'equal',
+              parameters: [
+                {
+                  _type: 'property',
+                  parameters: [
+                    {
+                      _type: 'func',
+                      function: 'subType',
+                      parameters: [
+                        {
+                          _type: 'property',
+                          parameters: [
+                            {
+                              _type: 'var',
+                              name: 'x',
+                            },
+                          ],
+                          property: 'address',
+                        },
+                        {
+                          _type: 'genericTypeInstance',
+                          genericType: {
+                            rawType: {
+                              _type: 'packageableType',
+                              fullPath: 'model::AddressType1',
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                  property: 'zipcode',
+                },
+                {
+                  _type: 'integer',
+                  value: 0,
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__lambda_filterWithRightSidePropertyExpression = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'domain::COVIDData',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'equal',
+              parameters: [
+                {
+                  _type: 'property',
+                  property: 'state',
+                  parameters: [
+                    {
+                      _type: 'property',
+                      property: 'demographics',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  _type: 'property',
+                  property: 'fips',
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
             },
           ],
         },

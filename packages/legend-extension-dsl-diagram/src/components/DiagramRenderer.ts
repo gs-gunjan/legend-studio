@@ -17,7 +17,6 @@
 import {
   uuid,
   noop,
-  getNullableFirstEntry,
   UnsupportedOperationError,
   IllegalStateError,
   guaranteeNonNullable,
@@ -808,9 +807,9 @@ export class DiagramRenderer {
         break;
       }
       case DIAGRAM_ALIGNER_OPERATOR.SPACE_HORIZONTALLY: {
-        const sorted = this.selectedClasses
-          .slice()
-          .sort((a, b) => a.position.x - b.position.x);
+        const sorted = this.selectedClasses.toSorted(
+          (a, b) => a.position.x - b.position.x,
+        );
         // NOTE: handle special case where there are only 2 views, make them adjacent
         if (sorted.length === 2) {
           const previousView = sorted[0] as ClassView;
@@ -852,9 +851,9 @@ export class DiagramRenderer {
         break;
       }
       case DIAGRAM_ALIGNER_OPERATOR.SPACE_VERTICALLY: {
-        const sorted = this.selectedClasses
-          .slice()
-          .sort((a, b) => a.position.y - b.position.y);
+        const sorted = this.selectedClasses.toSorted(
+          (a, b) => a.position.y - b.position.y,
+        );
         // NOTE: handle special case where there are only 2 views, make them adjacent
         if (sorted.length === 2) {
           const previousView = sorted[0] as ClassView;
@@ -1886,8 +1885,8 @@ export class DiagramRenderer {
             property instanceof DerivedProperty
               ? this.classViewDerivedPropertyTextColor
               : property.genericType.value.rawType instanceof PrimitiveType
-              ? this.classViewPrimitivePropertyTextColor
-              : this.classViewPropertyTextColor;
+                ? this.classViewPrimitivePropertyTextColor
+                : this.classViewPropertyTextColor;
           const propX =
             (startX +
               this.screenOffset.x +
@@ -2441,7 +2440,7 @@ export class DiagramRenderer {
 
   recenter(): void {
     if (this.selectedClasses.length !== 0) {
-      const firstClass = getNullableFirstEntry(this.selectedClasses);
+      const firstClass = this.selectedClasses[0];
       if (firstClass) {
         this.center(
           firstClass.position.x + firstClass.rectangle.width / 2,

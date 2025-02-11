@@ -26,6 +26,15 @@ import {
   generateViewProjectByGAVRoute,
 } from '../../__lib__/LegendStudioNavigation.js';
 import { EditorMode } from './EditorMode.js';
+import type { QuerySDLC } from '@finos/legend-query-builder';
+
+export interface WorkspaceProjectQuerySDLC extends QuerySDLC {
+  projectId: string;
+  workspaceId: string;
+  WorkspaceType: string;
+  userId?: string;
+  source?: string;
+}
 
 export class StandardEditorMode extends EditorMode {
   editorStore: EditorStore;
@@ -38,6 +47,7 @@ export class StandardEditorMode extends EditorMode {
   generateElementLink(elementPath: string): string {
     return generateEditorRoute(
       this.editorStore.sdlcState.activeProject.projectId,
+      this.editorStore.sdlcState.activePatch?.patchReleaseVersionId.id,
       this.editorStore.sdlcState.activeWorkspace.workspaceId,
       this.editorStore.sdlcState.activeWorkspace.workspaceType,
       elementPath,
@@ -56,5 +66,29 @@ export class StandardEditorMode extends EditorMode {
         : dependencyProject.versionId,
       elementPath,
     );
+  }
+
+  override get isInitialized(): boolean {
+    return Boolean(
+      this.editorStore.sdlcState.currentProject &&
+        this.editorStore.sdlcState.currentWorkspace,
+    );
+  }
+
+  getSourceInfo(): QuerySDLC | undefined {
+    if (this.isInitialized) {
+      const workspace = guaranteeNonNullable(
+        this.editorStore.sdlcState.currentWorkspace,
+      );
+      return {
+        projectId: this.editorStore.sdlcState.activeProject.projectId,
+        workspaceId: workspace.workspaceId,
+        WorkspaceType: workspace.workspaceType,
+        userId: workspace.userId,
+        source: workspace.source,
+      } as WorkspaceProjectQuerySDLC;
+    } else {
+      return undefined;
+    }
   }
 }

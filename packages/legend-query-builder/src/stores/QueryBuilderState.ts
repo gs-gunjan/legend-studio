@@ -32,6 +32,7 @@ import {
   ActionState,
   hashArray,
   assertTrue,
+  assertNonNullable,
 } from '@finos/legend-shared';
 import { QueryBuilderFilterState } from './filter/QueryBuilderFilterState.js';
 import { QueryBuilderFetchStructureState } from './fetch-structure/QueryBuilderFetchStructureState.js';
@@ -51,6 +52,12 @@ import {
   type Mapping,
   type Runtime,
   type GraphManagerState,
+  type ValueSpecification,
+  type Type,
+  type QueryGridConfig,
+  type QueryExecutionContext,
+  type FunctionAnalysisInfo,
+  type GraphData,
   GRAPH_MANAGER_EVENT,
   CompilationError,
   extractSourceInformationCoordinates,
@@ -62,16 +69,12 @@ import {
   isStubbed_RawLambda,
   buildLambdaVariableExpressions,
   buildRawLambdaFromLambdaFunction,
-  type ValueSpecification,
   PrimitiveType,
-  type Type,
-  SimpleFunctionExpression,
-  extractElementNameFromPath,
-  SUPPORTED_FUNCTIONS,
-  PackageableElementExplicitReference,
-  InstanceValue,
-  Multiplicity,
   RuntimePointer,
+  QueryExplicitExecutionContext,
+  attachFromQuery,
+  PackageableElementExplicitReference,
+  InMemoryGraphData,
 } from '@finos/legend-graph';
 import { buildLambdaFunction } from './QueryBuilderValueSpecificationBuilder.js';
 import type {
@@ -93,7 +96,43 @@ import { QueryBuilderWatermarkState } from './watermark/QueryBuilderWatermarkSta
 import { QueryBuilderConstantsState } from './QueryBuilderConstantsState.js';
 import { QueryBuilderCheckEntitlementsState } from './entitlements/QueryBuilderCheckEntitlementsState.js';
 import { QueryBuilderTDSState } from './fetch-structure/tds/QueryBuilderTDSState.js';
-import { QUERY_BUILDER_PURE_PATH } from '../graph/QueryBuilderMetaModelConst.js';
+import {
+  QUERY_BUILDER_PURE_PATH,
+  QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS,
+} from '../graph/QueryBuilderMetaModelConst.js';
+import type { QueryBuilderInternalizeState } from './QueryBuilderInternalizeState.js';
+import {
+  QueryBuilderExternalExecutionContextState,
+  type QueryBuilderExecutionContextState,
+} from './QueryBuilderExecutionContextState.js';
+import type { QueryBuilderConfig } from '../graph-manager/QueryBuilderConfig.js';
+import { QUERY_BUILDER_EVENT } from '../__lib__/QueryBuilderEvent.js';
+import { QUERY_BUILDER_SETTING_KEY } from '../__lib__/QueryBuilderSetting.js';
+import { QueryBuilderChangeHistoryState } from './QueryBuilderChangeHistoryState.js';
+import { type QueryBuilderWorkflowState } from './query-workflow/QueryBuilderWorkFlowState.js';
+import { type QueryChatState } from './QueryChatState.js';
+import type { QueryBuilder_LegendApplicationPlugin_Extension } from './QueryBuilder_LegendApplicationPlugin_Extension.js';
+import { createDataCubeViewerStateFromQueryBuilder } from './data-cube/QueryBuilderDataCubeHelper.js';
+import type { QueryBuilderDataCubeViewerState } from './data-cube/QueryBuilderDataCubeViewerState.js';
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface QueryableSourceInfo {}
+
+export type QueryableClassMappingRuntimeInfo = QueryableSourceInfo & {
+  class: string;
+  mapping: string;
+  runtime: string;
+};
+
+export type QueryBuilderExtraFunctionAnalysisInfo = {
+  functionInfoMap: Map<string, FunctionAnalysisInfo>;
+  dependencyFunctionInfoMap: Map<string, FunctionAnalysisInfo>;
+};
+
+export enum QUERY_BUILDER_LAMBDA_WRITER_MODE {
+  STANDARD = 'STANDARD',
+  TYPED_FETCH_STRUCTURE = 'TYPED_FETCH_STRUCTURE',
+}
 
 export abstract class QueryBuilderState implements CommandRegistrar {
   readonly applicationStore: GenericLegendApplicationStore;
@@ -102,6 +141,8 @@ export abstract class QueryBuilderState implements CommandRegistrar {
   readonly changeDetectionState: QueryBuilderChangeDetectionState;
   readonly queryCompileState = ActionState.create();
   readonly observerContext: ObserverContext;
+  readonly config: QueryBuilderConfig | undefined;
+  readonly workflowState: QueryBuilderWorkflowState;
 
   explorerState: QueryBuilderExplorerState;
   functionsExplorerState: QueryFunctionsExplorerState;
@@ -117,15 +158,30 @@ export abstract class QueryBuilderState implements CommandRegistrar {
   resultState: QueryBuilderResultState;
   textEditorState: QueryBuilderTextEditorState;
   unsupportedQueryState: QueryBuilderUnsupportedQueryState;
+  changeHistoryState: QueryBuilderChangeHistoryState;
+  isQueryChatOpened: boolean;
   showFunctionsExplorerPanel = false;
   showParametersPanel = false;
   isEditingWatermark = false;
   isCheckingEntitlments = false;
   isCalendarEnabled = false;
+  isLocalModeEnabled = false;
+  dataCubeViewerState: QueryBuilderDataCubeViewerState | undefined;
+  INTERNAL__enableInitializingDefaultSimpleExpressionValue = false;
+
+  lambdaWriteMode = QUERY_BUILDER_LAMBDA_WRITER_MODE.STANDARD;
 
   class?: Class | undefined;
-  mapping?: Mapping | undefined;
-  runtimeValue?: Runtime | undefined;
+  getAllFunction: QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS =
+    QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL;
+  executionContextState: QueryBuilderExecutionContextState;
+  internalizeState?: QueryBuilderInternalizeState | undefined;
+  queryChatState?: QueryChatState | undefined;
+
+  // NOTE: This property contains information about workflow used
+  // to create this state. This should only be used to add additional
+  // information to query builder analytics.
+  sourceInfo?: QueryableSourceInfo | undefined;
 
   // NOTE: this makes it so that we need to import components in stores code,
   // we probably want to refactor to an extension mechanism
@@ -134,6 +190,9 @@ export abstract class QueryBuilderState implements CommandRegistrar {
   constructor(
     applicationStore: GenericLegendApplicationStore,
     graphManagerState: GraphManagerState,
+    workflowState: QueryBuilderWorkflowState,
+    config: QueryBuilderConfig | undefined,
+    sourceInfo?: QueryableSourceInfo | undefined,
   ) {
     makeObservable(this, {
       explorerState: observable,
@@ -143,6 +202,7 @@ export abstract class QueryBuilderState implements CommandRegistrar {
       fetchStructureState: observable,
       filterState: observable,
       watermarkState: observable,
+      milestoningState: observable,
       checkEntitlementsState: observable,
       resultState: observable,
       textEditorState: observable,
@@ -153,27 +213,42 @@ export abstract class QueryBuilderState implements CommandRegistrar {
       isCheckingEntitlments: observable,
       isCalendarEnabled: observable,
       changeDetectionState: observable,
+      changeHistoryState: observable,
+      executionContextState: observable,
       class: observable,
-      mapping: observable,
-      runtimeValue: observable,
+      queryChatState: observable,
+      isQueryChatOpened: observable,
+      isLocalModeEnabled: observable,
+      dataCubeViewerState: observable,
+      getAllFunction: observable,
+      lambdaWriteMode: observable,
+      INTERNAL__enableInitializingDefaultSimpleExpressionValue: observable,
 
       sideBarClassName: computed,
       isQuerySupported: computed,
       allValidationIssues: computed,
+      canBuildQuery: computed,
 
       setShowFunctionsExplorerPanel: action,
       setShowParametersPanel: action,
       setIsEditingWatermark: action,
       setIsCalendarEnabled: action,
+      setDataCubeViewerState: action,
+      openDataCubeEngine: action,
       setIsCheckingEntitlments: action,
       setClass: action,
-      setMapping: action,
-      setRuntimeValue: action,
+      setIsQueryChatOpened: action,
+      setIsLocalModeEnabled: action,
+      setGetAllFunction: action,
+      setLambdaWriteMode: action,
+      setINTERNAL__enableInitializingDefaultSimpleExpressionValue: action,
 
       resetQueryResult: action,
       resetQueryContent: action,
       changeClass: action,
       changeMapping: action,
+      setExecutionContextState: action,
+      setQueryChatState: action,
 
       rebuildWithQuery: action,
       compileQuery: flow,
@@ -182,7 +257,9 @@ export abstract class QueryBuilderState implements CommandRegistrar {
 
     this.applicationStore = applicationStore;
     this.graphManagerState = graphManagerState;
-
+    this.executionContextState = new QueryBuilderExternalExecutionContextState(
+      this,
+    );
     this.milestoningState = new QueryBuilderMilestoningState(this);
     this.explorerState = new QueryBuilderExplorerState(this);
     this.parametersState = new QueryBuilderParametersState(this);
@@ -199,6 +276,17 @@ export abstract class QueryBuilderState implements CommandRegistrar {
       this.graphManagerState.pluginManager.getPureGraphManagerPlugins(),
     );
     this.changeDetectionState = new QueryBuilderChangeDetectionState(this);
+    this.changeHistoryState = new QueryBuilderChangeHistoryState(this);
+    this.config = config;
+
+    this.workflowState = workflowState;
+    this.sourceInfo = sourceInfo;
+    this.isQueryChatOpened =
+      (!this.config?.TEMPORARY__disableQueryBuilderChat &&
+        this.applicationStore.settingService.getBooleanValue(
+          QUERY_BUILDER_SETTING_KEY.SHOW_QUERY_CHAT_PANEL,
+        )) ??
+      false;
   }
 
   get isMappingReadOnly(): boolean {
@@ -243,6 +331,106 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     return this.allVariables.map((e) => e.name);
   }
 
+  get isFetchStructureTyped(): boolean {
+    return (
+      this.lambdaWriteMode ===
+      QUERY_BUILDER_LAMBDA_WRITER_MODE.TYPED_FETCH_STRUCTURE
+    );
+  }
+
+  setLambdaWriteMode(val: QUERY_BUILDER_LAMBDA_WRITER_MODE): void {
+    this.lambdaWriteMode = val;
+  }
+
+  getQueryExecutionContext(): QueryExecutionContext {
+    const queryExeContext = new QueryExplicitExecutionContext();
+    const runtimeValue = guaranteeType(
+      this.executionContextState.runtimeValue,
+      RuntimePointer,
+      'Query runtime must be of type runtime pointer',
+    );
+    assertNonNullable(
+      this.executionContextState.mapping,
+      'Query required mapping to update',
+    );
+    queryExeContext.mapping = PackageableElementExplicitReference.create(
+      this.executionContextState.mapping,
+    );
+    queryExeContext.runtime = runtimeValue.packageableRuntime;
+    return queryExeContext;
+  }
+
+  async propagateExecutionContextChange(
+    isGraphBuildingNotRequired?: boolean,
+  ): Promise<void> {
+    const propagateFuncHelpers = this.applicationStore.pluginManager
+      .getApplicationPlugins()
+      .flatMap(
+        (plugin) =>
+          (
+            plugin as QueryBuilder_LegendApplicationPlugin_Extension
+          ).getExtraQueryBuilderPropagateExecutionContextChangeHelper?.() ?? [],
+      );
+    for (const helper of propagateFuncHelpers) {
+      const propagateFuncHelper = helper(this, isGraphBuildingNotRequired);
+      if (propagateFuncHelper) {
+        await propagateFuncHelper();
+        return;
+      }
+    }
+  }
+
+  /**
+   * Gets information about the current queryBuilderState.
+   * This information can be used as a part of analytics
+   */
+  getStateInfo(): QueryableClassMappingRuntimeInfo | undefined {
+    if (this.sourceInfo) {
+      const classPath = this.class?.path;
+      const mappingPath = this.executionContextState.mapping?.path;
+      const runtimePath =
+        this.executionContextState.runtimeValue instanceof RuntimePointer
+          ? this.executionContextState.runtimeValue.packageableRuntime.value
+              .path
+          : undefined;
+      if (classPath && mappingPath && runtimePath) {
+        const contextInfo = {
+          class: classPath,
+          mapping: mappingPath,
+          runtime: runtimePath,
+        };
+        return Object.assign({}, this.sourceInfo, contextInfo);
+      }
+    }
+    return undefined;
+  }
+
+  setIsQueryChatOpened(val: boolean): void {
+    this.isQueryChatOpened = val;
+    this.applicationStore.settingService.persistValue(
+      QUERY_BUILDER_SETTING_KEY.SHOW_QUERY_CHAT_PANEL,
+      val,
+    );
+  }
+
+  setIsLocalModeEnabled(val: boolean): void {
+    this.isLocalModeEnabled = val;
+  }
+
+  setDataCubeViewerState(
+    val: QueryBuilderDataCubeViewerState | undefined,
+  ): void {
+    this.dataCubeViewerState = val;
+  }
+
+  setInternalize(val: QueryBuilderInternalizeState | undefined): void {
+    this.internalizeState = val;
+  }
+
+  setQueryChatState(val: QueryChatState | undefined): void {
+    this.queryChatState = val;
+  }
+
   setShowFunctionsExplorerPanel(val: boolean): void {
     this.showFunctionsExplorerPanel = val;
   }
@@ -267,16 +455,35 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     this.class = val;
   }
 
-  setMapping(val: Mapping | undefined): void {
-    this.mapping = val;
+  setExecutionContextState(val: QueryBuilderExecutionContextState): void {
+    this.executionContextState = val;
   }
 
-  setRuntimeValue(val: Runtime | undefined): void {
-    this.runtimeValue = val;
+  setGetAllFunction(val: QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS): void {
+    this.getAllFunction = val;
+  }
+
+  setINTERNAL__enableInitializingDefaultSimpleExpressionValue(
+    val: boolean,
+  ): void {
+    this.INTERNAL__enableInitializingDefaultSimpleExpressionValue = val;
   }
 
   get isQuerySupported(): boolean {
     return !this.unsupportedQueryState.rawLambda;
+  }
+
+  async openDataCubeEngine() {
+    try {
+      this.setDataCubeViewerState(
+        await createDataCubeViewerStateFromQueryBuilder(this),
+      );
+    } catch (error) {
+      assertErrorThrown(error);
+      this.applicationStore.notificationService.notifyError(
+        `Unable to open data cube in query builder`,
+      );
+    }
   }
 
   registerCommands(): void {
@@ -292,13 +499,19 @@ export abstract class QueryBuilderState implements CommandRegistrar {
 
   // Used to determine if variable is used within query
   // For places where we don't know, we will assume the variable is not used (i.e projection derivation column)
-  isVariableUsed(variable: VariableExpression): boolean {
-    return (
-      this.milestoningState.isVariableUsed(variable) ||
+  isVariableUsed(
+    variable: VariableExpression,
+    options?: {
+      exculdeMilestoningState: boolean;
+    },
+  ): boolean {
+    const isVariableUsedInBody =
       this.filterState.isVariableUsed(variable) ||
       this.watermarkState.isVariableUsed(variable) ||
-      this.fetchStructureState.implementation.isVariableUsed(variable)
-    );
+      this.fetchStructureState.implementation.isVariableUsed(variable);
+    return options?.exculdeMilestoningState
+      ? isVariableUsedInBody
+      : this.milestoningState.isVariableUsed(variable) || isVariableUsedInBody;
   }
 
   deregisterCommands(): void {
@@ -307,13 +520,20 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     );
   }
 
-  resetQueryResult(options?: { preserveResult?: boolean | undefined }): void {
+  resetQueryResult(options?: {
+    preserveResult?: boolean | undefined;
+    gridConfig?: QueryGridConfig | undefined;
+  }): void {
     const resultState = new QueryBuilderResultState(this);
     resultState.setPreviewLimit(this.resultState.previewLimit);
     if (options?.preserveResult) {
       resultState.setExecutionResult(this.resultState.executionResult);
       resultState.setExecutionDuration(this.resultState.executionDuration);
       resultState.latestRunHashCode = this.resultState.latestRunHashCode;
+    }
+    if (options?.gridConfig) {
+      this.isLocalModeEnabled = true;
+      resultState.handlePreConfiguredGridConfig(options.gridConfig);
     }
     this.resultState = resultState;
   }
@@ -354,24 +574,27 @@ export abstract class QueryBuilderState implements CommandRegistrar {
   changeClass(val: Class): void {
     this.resetQueryResult();
     this.resetQueryContent();
+    this.setGetAllFunction(QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL);
     this.setClass(val);
     this.explorerState.refreshTreeData();
     this.fetchStructureState.implementation.onClassChange(val);
     this.milestoningState.updateMilestoningConfiguration();
+    this.changeHistoryState.cacheNewQuery(this.buildQuery());
   }
 
   changeMapping(val: Mapping, options?: { keepQueryContent?: boolean }): void {
     this.resetQueryResult();
     if (!options?.keepQueryContent) {
       this.resetQueryContent();
+      this.setGetAllFunction(QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL);
       this.milestoningState.updateMilestoningConfiguration();
     }
-    this.setMapping(val);
+    this.executionContextState.setMapping(val);
   }
 
   changeRuntime(val: Runtime): void {
     this.resetQueryResult();
-    this.setRuntimeValue(val);
+    this.executionContextState.setRuntimeValue(val);
   }
 
   getCurrentParameterValues(): Map<string, ValueSpecification> | undefined {
@@ -384,6 +607,14 @@ export abstract class QueryBuilderState implements CommandRegistrar {
         }
       });
       return result;
+    }
+    return undefined;
+  }
+
+  getGridConfig(): QueryGridConfig | undefined {
+    // for now we will only save in local mode
+    if (this.isLocalModeEnabled && this.resultState.gridConfig) {
+      return this.resultState.getQueryGridConfig();
     }
     return undefined;
   }
@@ -403,6 +634,7 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     return buildRawLambdaFromLambdaFunction(
       buildLambdaFunction(this, {
         keepSourceInformation: Boolean(options?.keepSourceInformation),
+        useTypedRelationFunctions: this.isFetchStructureTyped,
       }),
       this.graphManagerState,
     );
@@ -414,11 +646,11 @@ export abstract class QueryBuilderState implements CommandRegistrar {
       'Query must be supported to build from function',
     );
     const mapping = guaranteeNonNullable(
-      this.mapping,
+      this.executionContextState.mapping,
       'Mapping required to build from() function',
     );
     const runtime = guaranteeNonNullable(
-      this.runtimeValue,
+      this.executionContextState.runtimeValue,
       'Runtime required to build from query',
     );
     const runtimePointer = guaranteeType(
@@ -426,28 +658,12 @@ export abstract class QueryBuilderState implements CommandRegistrar {
       RuntimePointer,
     ).packageableRuntime;
     const lambdaFunc = buildLambdaFunction(this);
-    const currentExpression = guaranteeNonNullable(
-      lambdaFunc.expressionSequence[0],
+    const fromQuery = attachFromQuery(
+      lambdaFunc,
+      mapping,
+      runtimePointer.value,
     );
-    const _func = new SimpleFunctionExpression(
-      extractElementNameFromPath(SUPPORTED_FUNCTIONS.FROM),
-    );
-
-    const mappingInstance = new InstanceValue(Multiplicity.ONE, undefined);
-    mappingInstance.values = [
-      PackageableElementExplicitReference.create(mapping),
-    ];
-    const runtimeInstance = new InstanceValue(Multiplicity.ONE, undefined);
-    runtimeInstance.values = [
-      PackageableElementExplicitReference.create(runtimePointer.value),
-    ];
-    _func.parametersValues = [
-      currentExpression,
-      mappingInstance,
-      runtimeInstance,
-    ];
-    lambdaFunc.expressionSequence = [_func];
-    return buildRawLambdaFromLambdaFunction(lambdaFunc, this.graphManagerState);
+    return buildRawLambdaFromLambdaFunction(fromQuery, this.graphManagerState);
   }
 
   getQueryReturnType(): Type {
@@ -464,12 +680,14 @@ export abstract class QueryBuilderState implements CommandRegistrar {
   initializeWithQuery(
     query: RawLambda,
     defaultParameterValues?: Map<string, ValueSpecification>,
+    gridConfig?: QueryGridConfig,
   ): void {
     this.rebuildWithQuery(query, {
       defaultParameterValues,
     });
-    this.resetQueryResult();
+    this.resetQueryResult({ gridConfig });
     this.changeDetectionState.initialize(query);
+    this.changeHistoryState.initialize(query);
   }
 
   /**
@@ -509,7 +727,6 @@ export abstract class QueryBuilderState implements CommandRegistrar {
       }
       this.resetQueryResult({ preserveResult: options?.preserveResult });
       this.resetQueryContent();
-
       if (!isStubbed_RawLambda(query)) {
         const valueSpec = observe_ValueSpecification(
           this.graphManagerState.graphManager.buildValueSpecification(
@@ -533,11 +750,21 @@ export abstract class QueryBuilderState implements CommandRegistrar {
           },
         );
       }
-      if (this.parametersState.parameterStates.length > 0) {
+      if (
+        this.parametersState.parameterStates.filter(
+          (paramState) =>
+            !this.milestoningState.isMilestoningParameter(paramState.parameter),
+        ).length > 0
+      ) {
         this.setShowParametersPanel(true);
       }
+      this.fetchStructureState.initializeWithQuery();
     } catch (error) {
       assertErrorThrown(error);
+      this.applicationStore.logService.error(
+        LogEvent.create(QUERY_BUILDER_EVENT.UNSUPPORTED_QUERY_LAUNCH),
+        error,
+      );
       this.resetQueryResult({ preserveResult: options?.preserveResult });
       this.resetQueryContent();
       this.unsupportedQueryState.setLambdaError(error);
@@ -644,7 +871,29 @@ export abstract class QueryBuilderState implements CommandRegistrar {
   }
 
   get allValidationIssues(): string[] {
-    return this.fetchStructureState.implementation.allValidationIssues;
+    return this.fetchStructureState.implementation.allValidationIssues.concat(
+      this.filterState.allValidationIssues,
+    );
+  }
+
+  get canBuildQuery(): boolean {
+    return (
+      !this.filterState.hasInvalidFilterValues &&
+      !this.filterState.hasInvalidDerivedPropertyParameters &&
+      !this.fetchStructureState.implementation.hasInvalidFilterValues &&
+      !this.fetchStructureState.implementation
+        .hasInvalidDerivedPropertyParameters
+    );
+  }
+
+  buildFunctionAnalysisInfo():
+    | QueryBuilderExtraFunctionAnalysisInfo
+    | undefined {
+    return undefined;
+  }
+
+  getGraphData(): GraphData {
+    return new InMemoryGraphData(this.graphManagerState.graph);
   }
 
   /**
@@ -657,10 +906,14 @@ export abstract class QueryBuilderState implements CommandRegistrar {
     const basicState = new INTERNAL__BasicQueryBuilderState(
       this.applicationStore,
       this.graphManagerState,
+      this.workflowState,
+      undefined,
     );
     basicState.class = this.class;
-    basicState.mapping = this.mapping;
-    basicState.runtimeValue = this.runtimeValue;
+    basicState.executionContextState.mapping =
+      this.executionContextState.mapping;
+    basicState.executionContextState.runtimeValue =
+      this.executionContextState.runtimeValue;
     return basicState;
   }
 

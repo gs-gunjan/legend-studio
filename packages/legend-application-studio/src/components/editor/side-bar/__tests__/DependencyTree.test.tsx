@@ -22,7 +22,7 @@ import {
   getByText,
   findByText,
 } from '@testing-library/react';
-import { integrationTest } from '@finos/legend-shared/test';
+import { createMock, integrationTest } from '@finos/legend-shared/test';
 import {
   TEST__provideMockedEditorStore,
   TEST__setUpEditorWithDefaultSDLCData,
@@ -41,7 +41,7 @@ const TEST_DATA__ProjectConfiguration = {
   artifactId: 'dependency-test',
   projectDependencies: [
     {
-      projectId: 'PROD-1',
+      projectId: 'org.finos.legend:prod-1',
       versionId: '2.0.0',
     },
     {
@@ -51,17 +51,6 @@ const TEST_DATA__ProjectConfiguration = {
   ],
   metamodelDependencies: [],
 };
-
-const TEST_DATA__ProjectData = [
-  {
-    id: 'PROD-1',
-    projectId: 'PROD-1',
-    groupId: 'org.finos.legend',
-    artifactId: 'prod-1',
-    versions: ['1.0.0', '2.0.0'],
-    latestVersion: '2.0.0',
-  },
-];
 
 const TEST_DATA__Projects = [
   {
@@ -110,7 +99,12 @@ const TEST_DATA__DependencyEntities = [
                 upperBound: 1,
               },
               name: 'prop1',
-              type: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
             },
           ],
         },
@@ -137,7 +131,12 @@ const TEST_DATA__DependencyEntities = [
                 upperBound: 1,
               },
               name: 'prop',
-              type: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
             },
           ],
         },
@@ -157,13 +156,13 @@ beforeEach(async () => {
     projectConfiguration: TEST_DATA__ProjectConfiguration,
     latestProjectStructureVersion: TEST_DATA__latestProjectStructure,
     projects: TEST_DATA__Projects,
-    projectData: TEST_DATA__ProjectData,
     projectDependency: TEST_DATA__DependencyEntities,
     projectDependencyReport: TEST_DATA__ProjectDependencyReport,
   });
 });
 
 test(integrationTest('Test navigation of dependency tree'), async () => {
+  window.open = createMock();
   const explorerTree = renderResult.getByTestId(
     LEGEND_STUDIO_TEST_ID.EXPLORER_TREES,
   );
@@ -197,4 +196,22 @@ test(integrationTest('Test navigation of dependency tree'), async () => {
   expect(
     dependencyTreeDataKeys.includes('@dependency__org.finos.legend:prod-2'),
   ).toBe(true);
+
+  fireEvent.contextMenu(
+    await findByText(explorerTree, 'org.finos.legend:prod-1'),
+  );
+
+  const explorerContextMenu = renderResult.getByTestId(
+    LEGEND_STUDIO_TEST_ID.EXPLORER_CONTEXT_MENU,
+  );
+
+  const viewProject = await waitFor(() =>
+    getByText(explorerContextMenu, 'View Project'),
+  );
+  fireEvent.click(viewProject);
+  expect(window.open).toHaveBeenCalledWith(
+    'http://localhost/test/view/archive/org.finos.legend:prod-1:2.0.0',
+    '_blank',
+  );
+  fireEvent.click(viewProject);
 });

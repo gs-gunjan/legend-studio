@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { forwardRef, useState } from 'react';
+import { forwardRef, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   type ConceptTreeNode,
@@ -104,12 +104,33 @@ const ConceptExplorerContextMenu = observer(
             <MenuContentItem onClick={copyPath}>Copy Path</MenuContentItem>
           )}
         {nodeType === ConceptType.PACKAGE && (
-          <MenuContentItem onClick={runTests}>Run Tests</MenuContentItem>
+          <>
+            <MenuContentItem onClick={runTests}>Run Tests</MenuContentItem>
+            <MenuContentItem
+              onClick={() => ideStore.setPCTRunPath(node.data.li_attr.pureId)}
+            >
+              Run PCTs
+            </MenuContentItem>
+          </>
         )}
         {nodeType === ConceptType.FUNCTION && (
-          <MenuContentItem onClick={serviceJSON}>
-            Service (JSON)
-          </MenuContentItem>
+          <>
+            <MenuContentItem onClick={serviceJSON}>
+              Service (JSON)
+            </MenuContentItem>
+            <MenuContentItem
+              onClick={() => {
+                if (node.data.pct) {
+                  ideStore.setPCTRunPath(node.data.li_attr.pureId);
+                } else {
+                  runTests();
+                }
+              }}
+              disabled={!node.data.test}
+            >
+              Run Test
+            </MenuContentItem>
+          </>
         )}
         {(nodeAttribute instanceof PropertyConceptAttribute ||
           nodeAttribute instanceof ElementConceptAttribute) && (
@@ -209,7 +230,7 @@ const ConceptTreeNodeContainer: React.FC<
     onNodeSelect?.(node);
     onNodeOpen(node);
   };
-  const [, dragRef] = useDrag(
+  const [, dragConnector] = useDrag(
     () => ({
       type:
         node.data.li_attr.pureType === 'Class'
@@ -219,6 +240,8 @@ const ConceptTreeNodeContainer: React.FC<
     }),
     [node],
   );
+  const ref = useRef<HTMLDivElement>(null);
+  dragConnector(ref);
 
   return (
     <ContextMenu
@@ -233,6 +256,7 @@ const ConceptTreeNodeContainer: React.FC<
       onClose={onContextMenuClose}
     >
       <div
+        id={node.id}
         className={clsx(
           'tree-view__node__container explorer__package-tree__node__container',
           {
@@ -245,7 +269,7 @@ const ConceptTreeNodeContainer: React.FC<
           },
         )}
         onClick={selectNode}
-        ref={dragRef}
+        ref={ref}
         onDoubleClick={onDoubleClick}
         style={{
           paddingLeft: `${level * (stepPaddingInRem ?? 1)}rem`,

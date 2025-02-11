@@ -15,7 +15,7 @@
  */
 
 import { DISPLAY_ANSI_ESCAPE } from '@finos/legend-application';
-import { assertErrorThrown, getNullableFirstEntry } from '@finos/legend-shared';
+import { assertErrorThrown } from '@finos/legend-shared';
 import { flowResult } from 'mobx';
 import { deserialize } from 'serializr';
 import {
@@ -87,7 +87,7 @@ export const setupTerminal = (ideStore: PureIDEStore): void => {
         description: 'Run the test suite (by path if specified)',
         usage: 'test [/some/path]',
         handler: async (args: string[]): Promise<void> => {
-          const path = getNullableFirstEntry(args);
+          const path = args[0];
           if (path) {
             if (!path.match(PACKAGE_PATH_PATTERN)) {
               ideStore.applicationStore.terminalService.terminal.fail(
@@ -108,7 +108,7 @@ export const setupTerminal = (ideStore: PureIDEStore): void => {
         description: 'Remove a file or directory',
         usage: 'rm /some/path',
         handler: async (args: string[]): Promise<void> => {
-          const path = getNullableFirstEntry(args);
+          const path = args[0];
           if (!path?.match(FILE_PATH_PATTERN)) {
             ideStore.applicationStore.terminalService.terminal.fail(
               `rm command requires a valid file/directory path`,
@@ -218,7 +218,7 @@ export const setupTerminal = (ideStore: PureIDEStore): void => {
           const path = args[0];
           if (
             !path ||
-            !(path.match(FILE_PATH_PATTERN) || path.match(PACKAGE_PATH_PATTERN))
+            !(path.match(FILE_PATH_PATTERN) ?? path.match(PACKAGE_PATH_PATTERN))
           ) {
             ideStore.applicationStore.terminalService.terminal.fail(
               `command requires a valid directory or concept path`,
@@ -260,8 +260,8 @@ export const setupTerminal = (ideStore: PureIDEStore): void => {
           if (
             !path ||
             !(
-              path.match(FILE_PATH_PATTERN) ||
-              path.match(PACKAGE_PATH_PATTERN) ||
+              path.match(FILE_PATH_PATTERN) ??
+              path.match(PACKAGE_PATH_PATTERN) ??
               [HOME_DIRECTORY_PATH, ROOT_PACKAGE_PATH].includes(path)
             )
           ) {
@@ -341,6 +341,18 @@ export const setupTerminal = (ideStore: PureIDEStore): void => {
         handler: async (args: string[]): Promise<void> => {
           ideStore.applicationStore.terminalService.terminal.showCommonANSIEscapeSequences();
           return Promise.resolve();
+        },
+      },
+      {
+        command: LEGEND_PURE_IDE_TERMINAL_COMMAND.DEBUG,
+        description:
+          'Introspect debug state. When passing no parameters, will display summary of available variables',
+        usage: 'debug [summary | abort | <expression to evaluate> ]',
+        aliases: [],
+        handler: async (args: string[]): Promise<void> => {
+          flowResult(ideStore.runDebugger({ args })).catch(
+            ideStore.applicationStore.alertUnhandledError,
+          );
         },
       },
       {

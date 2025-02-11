@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  uuid,
-  guaranteeNonNullable,
-  type Hashable,
-} from '@finos/legend-shared';
+import { uuid, type Hashable } from '@finos/legend-shared';
 import type {
   AbstractPropertyExpression,
   PureModel,
@@ -39,6 +35,8 @@ export abstract class QueryBuilderAggregateOperator implements Hashable {
 
   constructor() {
     makeObservable(this, {
+      getOperator: computed,
+      allValidationIssues: computed,
       hashCode: computed,
     });
   }
@@ -82,10 +80,18 @@ export abstract class QueryBuilderAggregateOperator implements Hashable {
    * Returns the expected return type of the operator.
    * defaults to using the return type of the projection column state which is being aggregated.
    */
-  getReturnType(aggregateColumnState: QueryBuilderAggregateColumnState): Type {
-    return guaranteeNonNullable(
-      aggregateColumnState.projectionColumnState.getColumnType(),
-    );
+  getReturnType(
+    aggregateColumnState: QueryBuilderAggregateColumnState,
+  ): Type | undefined {
+    return aggregateColumnState.projectionColumnState.getColumnType();
+  }
+
+  get getOperator(): QueryBuilderAggregateOperator {
+    return this;
+  }
+
+  get allValidationIssues(): string[] {
+    return [];
   }
 
   abstract get hashCode(): string;

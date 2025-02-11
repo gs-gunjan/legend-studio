@@ -24,14 +24,9 @@ import {
   setErrorMarkers,
   type CodeEditorPosition,
   CODE_EDITOR_LANGUAGE,
-} from '@finos/legend-lego/code-editor';
+} from '@finos/legend-code-editor';
 import { DIRECTORY_PATH_DELIMITER } from '@finos/legend-graph';
-import {
-  assertErrorThrown,
-  getNullableLastEntry,
-  guaranteeNonNullable,
-  type GeneratorFn,
-} from '@finos/legend-shared';
+import { at, assertErrorThrown, type GeneratorFn } from '@finos/legend-shared';
 import {
   action,
   computed,
@@ -42,6 +37,7 @@ import {
 } from 'mobx';
 import {
   editor as monacoEditorAPI,
+  Uri,
   type Position,
   type Selection,
 } from 'monaco-editor';
@@ -62,7 +58,7 @@ import { LEGEND_PURE_IDE_PURE_FILE_EDITOR_COMMAND_KEY } from '../__lib__/LegendP
 import type { TabState } from '@finos/legend-lego/application';
 
 const getFileEditorLanguage = (filePath: string): string => {
-  const extension = getNullableLastEntry(filePath.split('.'));
+  const extension = filePath.split('.').at(-1);
   switch (extension) {
     case 'pure':
       return CODE_EDITOR_LANGUAGE.PURE;
@@ -115,8 +111,9 @@ class FileTextEditorState {
 
     this.language = getFileEditorLanguage(fileEditorState.filePath);
     this.model = monacoEditorAPI.createModel(
-      fileEditorState.uuid,
+      '',
       this.language,
+      Uri.file(`/${fileEditorState.uuid}.pure`),
     );
     this.model.setValue(fileEditorState.file.content);
   }
@@ -133,6 +130,7 @@ class FileTextEditorState {
         selection: Selection | undefined;
       }
     | undefined {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     this._dummyCursorObservable; // manually trigger cursor observer
     return this.editor
       ? {
@@ -207,6 +205,7 @@ export class FileEditorState
       setFile: action,
       setShowGoToLinePrompt: action,
       setConceptToRenameState: flow,
+      runTest: flow,
     });
 
     this.file = file;
@@ -226,9 +225,7 @@ export class FileEditorState
   }
 
   get fileName(): string {
-    return guaranteeNonNullable(
-      getNullableLastEntry(this.filePath.split(DIRECTORY_PATH_DELIMITER)),
-    );
+    return at(this.filePath.split(DIRECTORY_PATH_DELIMITER), -1);
   }
 
   override match(tab: TabState): boolean {
@@ -277,6 +274,38 @@ export class FileEditorState
     this.renameConceptState = concept
       ? new FileEditorRenameConceptState(this, concept, coordinate)
       : undefined;
+  }
+
+  *runTest(coordinate: FileCoordinate | undefined): GeneratorFn<void> {
+    if (!coordinate) {
+      return;
+    }
+    if (this.hasChanged) {
+      this.ideStore.applicationStore.notificationService.notifyWarning(
+        `Can't run test: source is not compiled`,
+      );
+      return;
+    }
+    const concept = (yield this.ideStore.getConceptInfo(coordinate)) as
+      | ConceptInfo
+      | undefined;
+    if (concept?.pureType === ConceptType.FUNCTION) {
+      if (concept.pct) {
+        this.ideStore.setPCTRunPath(concept.path);
+      } else if (concept.test) {
+        flowResult(this.ideStore.executeTests(concept.path, false)).catch(
+          this.ideStore.applicationStore.alertUnhandledError,
+        );
+      } else {
+        this.ideStore.applicationStore.notificationService.notifyWarning(
+          `Can't run test: function not marked as test`,
+        );
+      }
+    } else {
+      this.ideStore.applicationStore.notificationService.notifyWarning(
+        `Can't run test: not a function`,
+      );
+    }
   }
 
   showError(coordinate: FileErrorCoordinate): void {
@@ -481,9 +510,9 @@ export class FileEditorState
         concept.pureType === ConceptType.ENUM_VALUE
           ? FIND_USAGE_FUNCTION_PATH.ENUM
           : concept.pureType === ConceptType.PROPERTY ||
-            concept.pureType === ConceptType.QUALIFIED_PROPERTY
-          ? FIND_USAGE_FUNCTION_PATH.PROPERTY
-          : FIND_USAGE_FUNCTION_PATH.ELEMENT,
+              concept.pureType === ConceptType.QUALIFIED_PROPERTY
+            ? FIND_USAGE_FUNCTION_PATH.PROPERTY
+            : FIND_USAGE_FUNCTION_PATH.ELEMENT,
         (concept.owner ? [`'${concept.owner}'`] : []).concat(
           `'${concept.path}'`,
         ),
@@ -522,6 +551,7 @@ export class FileEditorState
     }
     [
       LEGEND_PURE_IDE_PURE_FILE_EDITOR_COMMAND_KEY.GO_TO_LINE,
+      LEGEND_PURE_IDE_PURE_FILE_EDITOR_COMMAND_KEY.DELETE_LINE,
       LEGEND_PURE_IDE_PURE_FILE_EDITOR_COMMAND_KEY.TOGGLE_TEXT_WRAP,
     ].forEach((key) =>
       this.ideStore.applicationStore.commandService.deregisterCommand(key),

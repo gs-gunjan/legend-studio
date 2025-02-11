@@ -20,13 +20,21 @@ import {
   guaranteeNonNullable,
   SerializationFactory,
   type PlainObject,
+  usingModelSchema,
 } from '@finos/legend-shared';
 import {
   LegendApplicationConfig,
   type LegendApplicationConfigurationInput,
   type LegendApplicationConfigurationData,
 } from '@finos/legend-application';
-import { createModelSchema, primitive, list, object } from 'serializr';
+import {
+  createModelSchema,
+  primitive,
+  list,
+  object,
+  optional,
+} from 'serializr';
+import { QueryBuilderConfig } from '@finos/legend-query-builder';
 
 export class ServiceRegistrationEnvironmentConfig {
   env!: string;
@@ -57,11 +65,22 @@ class LegendQueryApplicationCoreOptions {
   TEMPORARY__serviceRegistrationConfig: ServiceRegistrationEnvironmentConfig[] =
     [];
 
+  TEMPORARY__enableMinimalGraph = false;
+
+  /**
+   * Config specific to query builder
+   */
+  queryBuilderConfig: QueryBuilderConfig | undefined;
+
   private static readonly serialization = new SerializationFactory(
     createModelSchema(LegendQueryApplicationCoreOptions, {
       TEMPORARY__serviceRegistrationConfig: list(
         object(ServiceRegistrationEnvironmentConfig),
       ),
+      queryBuilderConfig: optional(
+        usingModelSchema(QueryBuilderConfig.serialization.schema),
+      ),
+      TEMPORARY__enableMinimalGraph: optional(primitive()),
     }),
   );
 
@@ -87,6 +106,12 @@ export interface LegendQueryApplicationConfigurationData
     url: string;
     instances: LegendStudioApplicationInstanceConfigurationData[];
   };
+  taxonomy?: {
+    url: string;
+  };
+  dataCube?: {
+    url: string;
+  };
 }
 
 export class LegendQueryApplicationConfig extends LegendApplicationConfig {
@@ -96,6 +121,8 @@ export class LegendQueryApplicationConfig extends LegendApplicationConfig {
   readonly engineQueryServerUrl?: string | undefined;
   readonly depotServerUrl: string;
   readonly studioApplicationUrl: string;
+  readonly taxonomyApplicationUrl?: string;
+  readonly dataCubeApplicationUrl?: string;
   readonly studioInstances: LegendStudioApplicationInstanceConfigurationData[] =
     [];
 
@@ -148,6 +175,20 @@ export class LegendQueryApplicationConfig extends LegendApplicationConfig {
       input.configData.studio.instances,
       `Can't configure application: 'studio.instances' field is missing`,
     );
+
+    // taxonomy
+    if (input.configData.taxonomy?.url) {
+      this.taxonomyApplicationUrl = LegendApplicationConfig.resolveAbsoluteUrl(
+        input.configData.taxonomy.url,
+      );
+    }
+
+    // datacube
+    if (input.configData.dataCube?.url) {
+      this.dataCubeApplicationUrl = LegendApplicationConfig.resolveAbsoluteUrl(
+        input.configData.dataCube.url,
+      );
+    }
 
     // options
     this.options = LegendQueryApplicationCoreOptions.create(

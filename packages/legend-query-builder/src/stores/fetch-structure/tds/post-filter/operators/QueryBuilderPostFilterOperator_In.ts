@@ -19,6 +19,7 @@ import {
   type ValueSpecification,
   type SimpleFunctionExpression,
   type FunctionExpression,
+  type LambdaFunction,
   CollectionInstanceValue,
   Enumeration,
   PRIMITIVE_TYPE,
@@ -34,11 +35,12 @@ import {
 } from '@finos/legend-shared';
 import { QueryBuilderPostFilterOperator } from '../QueryBuilderPostFilterOperator.js';
 import { buildPostFilterConditionState } from '../QueryBuilderPostFilterStateBuilder.js';
-import type {
-  PostFilterConditionState,
-  QueryBuilderPostFilterState,
+import {
+  PostFilterValueSpecConditionValueState,
+  type PostFilterConditionState,
+  type QueryBuilderPostFilterState,
 } from '../QueryBuilderPostFilterState.js';
-import { buildPostFilterConditionExpression } from './QueryBuilderPostFilterOperatorValueSpecificationBuilder.js';
+import { buildPostFilterConditionExpressionHelper } from './QueryBuilderPostFilterOperatorValueSpecificationBuilder.js';
 import {
   buildNotExpression,
   getCollectionValueSpecificationType,
@@ -52,7 +54,7 @@ export class QueryBuilderPostFilterOperator_In
   implements Hashable
 {
   getLabel(): string {
-    return 'is in';
+    return 'is in list of';
   }
 
   isCompatibleWithType(type: Type): boolean {
@@ -75,47 +77,51 @@ export class QueryBuilderPostFilterOperator_In
     postFilterConditionState: PostFilterConditionState,
   ): boolean {
     const propertyType = guaranteeNonNullable(
-      postFilterConditionState.columnState.getColumnType(),
+      postFilterConditionState.leftConditionValue.getColumnType(),
     );
-    const valueSpec = postFilterConditionState.value;
-    if (valueSpec instanceof CollectionInstanceValue) {
-      if (valueSpec.values.length === 0) {
-        return true;
+    const rightSide = postFilterConditionState.rightConditionValue;
+    // `in`/`not in` does not support right hand value being column state as the multipliticy for columns are [0..1]
+    if (rightSide instanceof PostFilterValueSpecConditionValueState) {
+      const valueSpec = rightSide.value;
+      if (valueSpec instanceof CollectionInstanceValue) {
+        if (valueSpec.values.length === 0) {
+          return true;
+        }
+        const collectionType = getCollectionValueSpecificationType(
+          postFilterConditionState.postFilterState.tdsState.queryBuilderState
+            .graphManagerState.graph,
+          valueSpec.values,
+        );
+        if (!collectionType) {
+          return false;
+        }
+        if (
+          (
+            [
+              PRIMITIVE_TYPE.NUMBER,
+              PRIMITIVE_TYPE.INTEGER,
+              PRIMITIVE_TYPE.DECIMAL,
+              PRIMITIVE_TYPE.FLOAT,
+            ] as string[]
+          ).includes(propertyType.path)
+        ) {
+          return (
+            [
+              PRIMITIVE_TYPE.NUMBER,
+              PRIMITIVE_TYPE.INTEGER,
+              PRIMITIVE_TYPE.DECIMAL,
+              PRIMITIVE_TYPE.FLOAT,
+            ] as string[]
+          ).includes(collectionType.path);
+        }
+        return collectionType === propertyType;
+      } else if (valueSpec instanceof VariableExpression) {
+        // check if not a single value
+        if (valueSpec.multiplicity.upperBound === 1) {
+          return false;
+        }
+        return propertyType === valueSpec.genericType?.value.rawType;
       }
-      const collectionType = getCollectionValueSpecificationType(
-        postFilterConditionState.postFilterState.tdsState.queryBuilderState
-          .graphManagerState.graph,
-        valueSpec.values,
-      );
-      if (!collectionType) {
-        return false;
-      }
-      if (
-        (
-          [
-            PRIMITIVE_TYPE.NUMBER,
-            PRIMITIVE_TYPE.INTEGER,
-            PRIMITIVE_TYPE.DECIMAL,
-            PRIMITIVE_TYPE.FLOAT,
-          ] as string[]
-        ).includes(propertyType.path)
-      ) {
-        return (
-          [
-            PRIMITIVE_TYPE.NUMBER,
-            PRIMITIVE_TYPE.INTEGER,
-            PRIMITIVE_TYPE.DECIMAL,
-            PRIMITIVE_TYPE.FLOAT,
-          ] as string[]
-        ).includes(collectionType.path);
-      }
-      return collectionType === propertyType;
-    } else if (valueSpec instanceof VariableExpression) {
-      // check if not a single value
-      if (valueSpec.multiplicity.upperBound === 1) {
-        return false;
-      }
-      return propertyType === valueSpec.genericType?.value.rawType;
     }
     return false;
   }
@@ -124,7 +130,7 @@ export class QueryBuilderPostFilterOperator_In
     postFilterConditionState: PostFilterConditionState,
   ): ValueSpecification {
     const propertyType = guaranteeNonNullable(
-      postFilterConditionState.columnState.getColumnType(),
+      postFilterConditionState.leftConditionValue.getColumnType(),
     );
     return new CollectionInstanceValue(
       Multiplicity.ONE,
@@ -134,11 +140,13 @@ export class QueryBuilderPostFilterOperator_In
 
   buildPostFilterConditionExpression(
     postFilterConditionState: PostFilterConditionState,
+    parentExpression: LambdaFunction | undefined,
   ): ValueSpecification | undefined {
-    return buildPostFilterConditionExpression(
+    return buildPostFilterConditionExpressionHelper(
       postFilterConditionState,
       this,
       QUERY_BUILDER_SUPPORTED_FUNCTIONS.IN,
+      parentExpression,
     );
   }
 
@@ -163,14 +171,16 @@ export class QueryBuilderPostFilterOperator_In
 
 export class QueryBuilderPostFilterOperator_NotIn extends QueryBuilderPostFilterOperator_In {
   override getLabel(): string {
-    return `is not in`;
+    return `is not in list of`;
   }
 
   override buildPostFilterConditionExpression(
     postFilterConditionState: PostFilterConditionState,
+    parentExpression: LambdaFunction | undefined,
   ): ValueSpecification | undefined {
     const expression = super.buildPostFilterConditionExpression(
       postFilterConditionState,
+      parentExpression,
     );
     return expression ? buildNotExpression(expression) : undefined;
   }

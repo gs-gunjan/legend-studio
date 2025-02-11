@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../../package.json';
+import packageJson from '../../../../package.json' with { type: 'json' };
 import { V1_ServiceStore } from './v1/model/packageableElements/store/serviceStore/model/V1_STO_ServiceStore_ServiceStore.js';
 import {
   type PlainObject,
@@ -364,15 +364,15 @@ export class STO_ServiceStore_PureProtocolProcessorPlugin
                 context,
               )
             : connection.store
-            ? V1_resolveServiceStore(connection.store, context)
-            : ((): PackageableElementReference<ServiceStore> => {
-                assertType(
-                  store.value,
-                  ServiceStore,
-                  'ServiceStore connection must have a ServiceStore as its store',
-                );
-                return store as PackageableElementReference<ServiceStore>;
-              })();
+              ? V1_resolveServiceStore(connection.store, context)
+              : ((): PackageableElementReference<ServiceStore> => {
+                  assertType(
+                    store.value,
+                    ServiceStore,
+                    'ServiceStore connection must have a ServiceStore as its store',
+                  );
+                  return store as PackageableElementReference<ServiceStore>;
+                })();
           const serviceStoreConnection = new ServiceStoreConnection(Store);
           serviceStoreConnection.baseUrl = connection.baseUrl;
           return serviceStoreConnection;

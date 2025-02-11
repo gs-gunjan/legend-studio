@@ -33,6 +33,7 @@ import {
   guaranteeNonNullable,
   assertTrue,
   ActionState,
+  prettyCONSTName,
 } from '@finos/legend-shared';
 import { EDITOR_MODE, ACTIVITY_MODE } from './EditorConfig.js';
 import { type Entity, extractEntityNameFromPath } from '@finos/legend-storage';
@@ -46,6 +47,9 @@ import {
   Version,
   Workspace,
   WorkspaceAccessType,
+  Patch,
+  AuthorizableProjectAction,
+  isProjectSandbox,
 } from '@finos/legend-server-sdlc';
 import { LEGEND_STUDIO_APP_EVENT } from '../../__lib__/LegendStudioEvent.js';
 
@@ -65,16 +69,19 @@ export class EditorSDLCState {
   isFetchingProject = false;
 
   currentProject?: Project | undefined;
+  currentPatch?: Patch | undefined;
   currentWorkspace?: Workspace | undefined;
   remoteWorkspaceRevision?: Revision | undefined;
   currentRevision?: Revision | undefined;
   workspaceWorkflows: Workflow[] = [];
   projectVersions: Version[] = [];
   projectPublishedVersions: string[] = [];
+  authorizedActions: AuthorizableProjectAction[] | undefined;
 
   constructor(editorStore: EditorStore) {
     makeObservable(this, {
       currentProject: observable,
+      currentPatch: observable,
       currentWorkspace: observable,
       remoteWorkspaceRevision: observable,
       currentRevision: observable,
@@ -85,12 +92,18 @@ export class EditorSDLCState {
       isFetchingProjectVersions: observable,
       isFetchingProject: observable,
       projectPublishedVersions: observable,
+      authorizedActions: observable,
       activeProject: computed,
       activeWorkspace: computed,
       activeRevision: computed,
+      activePatch: computed,
       activeRemoteWorkspaceRevision: computed,
+      canCreateWorkspace: computed,
+      canCreateVersion: computed,
       isWorkspaceOutOfSync: computed,
+      isActiveProjectSandbox: computed,
       setCurrentProject: action,
+      setCurrentPatch: action,
       setCurrentWorkspace: action,
       setCurrentRevision: action,
       setWorkspaceLatestRevision: action,
@@ -100,12 +113,14 @@ export class EditorSDLCState {
       checkIfCurrentWorkspaceIsInConflictResolutionMode: flow,
       fetchRemoteWorkspaceRevision: flow,
       fetchCurrentRevision: flow,
+      fetchCurrentPatch: flow,
       checkIfWorkspaceIsOutdated: flow,
       buildWorkspaceLatestRevisionEntityHashesIndex: flow,
       buildWorkspaceBaseRevisionEntityHashesIndex: flow,
       buildProjectLatestRevisionEntityHashesIndex: flow,
       fetchWorkspaceWorkflows: flow,
       fetchPublishedProjectVersions: flow,
+      fetchAuthorizedActions: flow,
     });
 
     this.editorStore = editorStore;
@@ -117,12 +132,21 @@ export class EditorSDLCState {
       `Active project has not been properly set`,
     );
   }
+  get isActiveProjectSandbox(): boolean {
+    return Boolean(
+      this.currentProject && isProjectSandbox(this.currentProject),
+    );
+  }
 
   get activeWorkspace(): Workspace {
     return guaranteeNonNullable(
       this.currentWorkspace,
       `Active workspace has not been properly set`,
     );
+  }
+
+  get activePatch(): Patch | undefined {
+    return this.currentPatch;
   }
 
   get activeRevision(): Revision {
@@ -143,8 +167,35 @@ export class EditorSDLCState {
     return this.activeRemoteWorkspaceRevision.id !== this.activeRevision.id;
   }
 
+  get canCreateWorkspace(): boolean {
+    return this.userCanPerformAction(
+      AuthorizableProjectAction.CREATE_WORKSPACE,
+    );
+  }
+
+  get canCreateVersion(): boolean {
+    return this.userCanPerformAction(AuthorizableProjectAction.CREATE_VERSION);
+  }
+
+  unAuthorizedActionMessage(_action: AuthorizableProjectAction): string {
+    return `Your are not entitled to perform the action: ${prettyCONSTName(
+      _action,
+    )}`;
+  }
+
+  userCanPerformAction(authorizedAction: AuthorizableProjectAction): boolean {
+    return Boolean(
+      this.authorizedActions === undefined ||
+        this.authorizedActions.includes(authorizedAction),
+    );
+  }
+
   setCurrentProject(val: Project): void {
     this.currentProject = val;
+  }
+
+  setCurrentPatch(val: Patch): void {
+    this.currentPatch = val;
   }
 
   setCurrentWorkspace(val: Workspace): void {
@@ -204,8 +255,37 @@ export class EditorSDLCState {
     }
   }
 
+  *fetchCurrentPatch(
+    projectId: string,
+    patchReleaseVersionId: string | undefined,
+    options?: { suppressNotification?: boolean },
+  ): GeneratorFn<void> {
+    if (patchReleaseVersionId) {
+      try {
+        this.currentPatch = Patch.serialization.fromJson(
+          (yield this.editorStore.sdlcServerClient.getPatch(
+            projectId,
+            patchReleaseVersionId,
+          )) as PlainObject<Patch>,
+        );
+      } catch (error) {
+        assertErrorThrown(error);
+        this.editorStore.applicationStore.logService.error(
+          LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
+          error,
+        );
+        if (!options?.suppressNotification) {
+          this.editorStore.applicationStore.notificationService.notifyError(
+            error,
+          );
+        }
+      }
+    }
+  }
+
   *fetchCurrentWorkspace(
     projectId: string,
+    patchReleaseVersionId: string | undefined,
     workspaceId: string,
     workspaceType: WorkspaceType,
     options?: { suppressNotification?: boolean },
@@ -214,10 +294,12 @@ export class EditorSDLCState {
       this.currentWorkspace = Workspace.serialization.fromJson(
         (yield this.editorStore.sdlcServerClient.getWorkspace(
           projectId,
+          patchReleaseVersionId,
           workspaceId,
           workspaceType,
         )) as PlainObject<Workspace>,
       );
+      this.currentWorkspace.source = patchReleaseVersionId;
       const isInConflictResolutionMode = (yield flowResult(
         this.checkIfCurrentWorkspaceIsInConflictResolutionMode(),
       )) as boolean;
@@ -482,6 +564,24 @@ export class EditorSDLCState {
         error,
       );
       this.editorStore.applicationStore.notificationService.notifyError(error);
+    }
+  }
+
+  *fetchAuthorizedActions(): GeneratorFn<void> {
+    try {
+      const authorizedActions =
+        (yield this.editorStore.sdlcServerClient.getAutorizedActions(
+          this.activeProject.projectId,
+        )) as AuthorizableProjectAction[];
+      this.authorizedActions = authorizedActions;
+    } catch (error) {
+      assertErrorThrown(error);
+      // if there is an error fetching authorized actions we should set undefined
+      this.authorizedActions = undefined;
+      this.editorStore.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
+        error,
+      );
     }
   }
 

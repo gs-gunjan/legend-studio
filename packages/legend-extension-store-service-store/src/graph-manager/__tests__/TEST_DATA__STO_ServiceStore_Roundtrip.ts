@@ -28,7 +28,12 @@ export const roundtripTestData = [
             upperBound: 1,
           },
           name: 'z',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -54,14 +59,13 @@ export const roundtripTestData = [
         },
       ],
     },
-    classifierPath: 'meta::external::shared::format::metamodel::SchemaSet',
+    classifierPath: 'meta::external::format::shared::metamodel::SchemaSet',
   },
   {
     path: 'anything::binding1',
     content: {
       _type: 'binding',
       contentType: 'application/json',
-      includedStores: [],
       modelUnit: {
         packageableElementExcludes: [],
         packageableElementIncludes: [],
@@ -70,7 +74,7 @@ export const roundtripTestData = [
       package: 'anything',
       schemaSet: 'anything::schemaSet1',
     },
-    classifierPath: 'meta::external::shared::format::binding::Binding',
+    classifierPath: 'meta::external::format::shared::binding::Binding',
   },
   {
     path: 'anything::ServiceStore1',

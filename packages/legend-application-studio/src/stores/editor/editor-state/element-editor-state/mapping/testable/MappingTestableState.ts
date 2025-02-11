@@ -38,7 +38,14 @@ import {
   RunTestsTestableInput,
   UniqueTestId,
 } from '@finos/legend-graph';
-import { action, flow, flowResult, makeObservable, observable } from 'mobx';
+import {
+  action,
+  computed,
+  flow,
+  flowResult,
+  makeObservable,
+  observable,
+} from 'mobx';
 import {
   ActionState,
   assertErrorThrown,
@@ -48,6 +55,7 @@ import {
   LogEvent,
   uuid,
   filterByType,
+  guaranteeNonNullable,
 } from '@finos/legend-shared';
 import { LambdaEditorState } from '@finos/legend-query-builder';
 import { type MappingEditorState } from '../MappingEditorState.js';
@@ -57,30 +65,26 @@ import {
   mappingTestable_setEmbeddedData,
   mappingTestable_setQuery,
   mapping_addTestSuite,
-  mapping_deleteTestSuite,
 } from '../../../../../graph-modifier/DSL_Mapping_GraphModifierHelper.js';
 import {
   EmbeddedDataCreatorFromEmbeddedData,
   createBareExternalFormat,
-  isTestPassing,
 } from '../../../../utils/TestableUtils.js';
 import {
   TESTABLE_TEST_TAB,
+  TestablePackageableElementEditorState,
   TestableTestEditorState,
   TestableTestSuiteEditorState,
 } from '../../testable/TestableEditorState.js';
 import { EmbeddedDataEditorState } from '../../data/DataEditorState.js';
-import {
-  testSuite_addTest,
-  testSuite_deleteTest,
-  testable_setId,
-} from '../../../../../graph-modifier/Testable_GraphModifierHelper.js';
+import { testSuite_addTest } from '../../../../../graph-modifier/Testable_GraphModifierHelper.js';
 import { EmbeddedDataType } from '../../../ExternalFormatState.js';
 import type { EditorStore } from '../../../../EditorStore.js';
 import {
   createBareMappingTest,
   createGraphFetchQueryFromMappingAnalysis,
   generateStoreTestDataFromSetImpl,
+  isRelationalMappingTestSuite,
 } from './MappingTestingHelper.js';
 import { LEGEND_STUDIO_APP_EVENT } from '../../../../../../__lib__/LegendStudioEvent.js';
 
@@ -233,11 +237,15 @@ export class MappingTestState extends TestableTestEditorState {
       testResultState: observable,
       runningTestAction: observable,
       dataState: observable,
+      debugTestResultState: observable,
       addAssertion: action,
       setAssertionToRename: action,
       handleTestResult: action,
+      buildTestDebugState: action,
+      setDebugState: action,
       setSelectedTab: action,
       runTest: flow,
+      debugTest: flow,
     });
     this.parentState = parentSuiteState;
     this.mappingTestableState = parentSuiteState.mappingTestableState;
@@ -291,10 +299,12 @@ export class MappingTestSuiteQueryState extends LambdaEditorState {
   *updateLamba(val: RawLambda): GeneratorFn<void> {
     this.query = val;
     mappingTestable_setQuery(this.parent, val);
-    yield flowResult(this.convertLambdaObjectToGrammarString(true));
+    yield flowResult(this.convertLambdaObjectToGrammarString({ pretty: true }));
   }
 
-  *convertLambdaObjectToGrammarString(pretty?: boolean): GeneratorFn<void> {
+  *convertLambdaObjectToGrammarString(options?: {
+    pretty?: boolean | undefined;
+  }): GeneratorFn<void> {
     if (!isStubbed_RawLambda(this.query)) {
       try {
         const lambdas = new Map<string, RawLambda>();
@@ -302,7 +312,7 @@ export class MappingTestSuiteQueryState extends LambdaEditorState {
         const isolatedLambdas =
           (yield this.editorStore.graphManagerState.graphManager.lambdasToPureCode(
             lambdas,
-            pretty,
+            options?.pretty,
           )) as Map<string, string>;
         const grammarText = isolatedLambdas.get(this.lambdaId);
         this.setLambdaString(
@@ -363,6 +373,7 @@ export class MappingTestSuiteState extends TestableTestSuiteEditorState {
       createStoreTestData: action,
       runSuite: flow,
       runFailingTests: flow,
+      debug: flow,
     });
     this.mappingTestableState = mappingTestableState;
     this.suite = suite;
@@ -407,7 +418,7 @@ export class MappingTestSuiteState extends TestableTestSuiteEditorState {
         firstData.store.value,
       );
       storeTestData.data = firstData.data.accept_EmbeddedDataVisitor(
-        new EmbeddedDataCreatorFromEmbeddedData(),
+        new EmbeddedDataCreatorFromEmbeddedData(this.editorStore),
       );
       return storeTestData;
     } else if (targetClass) {
@@ -426,6 +437,7 @@ export class MappingTestSuiteState extends TestableTestSuiteEditorState {
     const test = createBareMappingTest(
       id,
       this.createStoreTestData(_class),
+      this.editorStore.changeDetectionState.observerContext,
       this.suite,
     );
     testSuite_addTest(
@@ -445,24 +457,18 @@ export class MappingTestSuiteState extends TestableTestSuiteEditorState {
     this.showCreateModal = val;
   }
 
-  changeTest(val: MappingTest): void {
-    if (this.selectTestState?.test !== val) {
-      this.selectTestState = this.testStates.find(
-        (testState) => testState.test === val,
+  *debug(): GeneratorFn<void> {
+    try {
+      const testState = guaranteeNonNullable(
+        this.selectTestState,
+        'Test Required to be selected to run debug',
       );
+      flowResult(testState.debugTest()).catch(
+        this.editorStore.applicationStore.alertUnhandledError,
+      );
+    } catch (error) {
+      assertErrorThrown(error);
     }
-  }
-
-  deleteTest(val: MappingTest): void {
-    testSuite_deleteTest(this.suite, val);
-    this.removeTestState(val);
-    if (this.selectTestState?.test === val) {
-      this.selectTestState = this.testStates[0];
-    }
-  }
-
-  removeTestState(val: MappingTest): void {
-    this.testStates = this.testStates.filter((e) => e.test !== val);
   }
 }
 
@@ -519,7 +525,12 @@ export class CreateSuiteState {
         ? generateStoreTestDataFromSetImpl(rootSetImpl, this.editorStore)
         : undefined;
 
-      createBareMappingTest(testName, storeTestData, mappingTestSuite);
+      createBareMappingTest(
+        testName,
+        storeTestData,
+        this.editorStore.changeDetectionState.observerContext,
+        mappingTestSuite,
+      );
       // set test suite
       mapping_addTestSuite(
         this.mappingTestableState.mapping,
@@ -540,28 +551,20 @@ export class CreateSuiteState {
   }
 }
 
-export class MappingTestableState {
-  readonly editorStore: EditorStore;
+export class MappingTestableState extends TestablePackageableElementEditorState {
   readonly mappingEditorState: MappingEditorState;
   mappingModelCoverageAnalysisState = ActionState.create();
   mappingModelCoverageAnalysisResult:
     | MappingModelCoverageAnalysisResult
     | undefined;
 
-  testableComponentToRename: MappingTestSuite | MappingTest | undefined;
   createSuiteState: CreateSuiteState | undefined;
 
-  isRunningTestableSuitesState = ActionState.create();
-  isRunningFailingSuitesState = ActionState.create();
+  declare selectedTestSuite: MappingTestSuiteState | undefined;
+  declare runningSuite: MappingTestSuite | undefined;
 
-  selectedTestSuite: MappingTestSuiteState | undefined;
-  testableResults: TestResult[] | undefined;
-  runningSuite: MappingTestSuite | undefined;
-
-  constructor(
-    editorStore: EditorStore,
-    mappingEditorState: MappingEditorState,
-  ) {
+  constructor(mappingEditorState: MappingEditorState) {
+    super(mappingEditorState, mappingEditorState.mapping);
     makeObservable(this, {
       mappingModelCoverageAnalysisResult: observable,
       mappingModelCoverageAnalysisState: observable,
@@ -570,6 +573,7 @@ export class MappingTestableState {
       renameTestableComponent: observable,
       testableResults: observable,
       createSuiteState: observable,
+      suiteCount: computed,
       changeSuite: action,
       closeCreateModal: action,
       openCreateModal: action,
@@ -582,7 +586,6 @@ export class MappingTestableState {
       runSuite: flow,
       runAllFailingSuites: flow,
     });
-    this.editorStore = editorStore;
     this.mappingEditorState = mappingEditorState;
     this.init();
   }
@@ -591,63 +594,13 @@ export class MappingTestableState {
     return this.mappingEditorState.mapping;
   }
 
-  get suiteCount(): number {
-    return this.mapping.tests.length;
-  }
-
-  get passingSuites(): MappingTestSuite[] {
-    const results = this.testableResults;
-    if (results?.length) {
-      return this.mapping.tests.filter((suite) =>
-        results
-          .filter((res) => res.parentSuite?.id === suite.id)
-          .every((e) => isTestPassing(e)),
-      );
+  override init(): void {
+    if (!this.selectedTestSuite) {
+      const suite = this.mapping.tests[0];
+      this.selectedTestSuite = suite
+        ? this.buildTestSuiteState(suite)
+        : undefined;
     }
-    return [];
-  }
-
-  get failingSuites(): MappingTestSuite[] {
-    const results = this.testableResults;
-    if (results?.length) {
-      return this.mapping.tests.filter((suite) =>
-        results
-          .filter((res) => res.parentSuite?.id === suite.id)
-          .some((e) => !isTestPassing(e)),
-      );
-    }
-    return [];
-  }
-
-  get staticSuites(): MappingTestSuite[] {
-    const results = this.testableResults;
-    if (results?.length) {
-      return this.mapping.tests.filter((suite) =>
-        results.every((res) => res.parentSuite?.id !== suite.id),
-      );
-    }
-    return this.mapping.tests;
-  }
-
-  resolveSuiteResults(suite: MappingTestSuite): TestResult[] | undefined {
-    return this.testableResults?.filter((t) => t.parentSuite?.id === suite.id);
-  }
-
-  clearTestResultsForSuite(suite: MappingTestSuite): void {
-    this.testableResults = this.testableResults?.filter(
-      (t) => !(this.resolveSuiteResults(suite) ?? []).includes(t),
-    );
-  }
-
-  setTestableResults(val: TestResult[] | undefined): void {
-    this.testableResults = val;
-  }
-
-  init(): void {
-    const suite = this.mapping.tests[0];
-    this.selectedTestSuite = suite
-      ? this.buildTestSuiteState(suite)
-      : undefined;
   }
 
   openCreateModal(): void {
@@ -658,29 +611,9 @@ export class MappingTestableState {
     this.createSuiteState = undefined;
   }
 
-  renameTestableComponent(val: string | undefined): void {
-    const _component = this.testableComponentToRename;
-    if (_component) {
-      testable_setId(_component, val ?? '');
-    }
-  }
-
   changeSuite(suite: MappingTestSuite): void {
     if (this.selectedTestSuite?.suite !== suite) {
       this.selectedTestSuite = this.buildTestSuiteState(suite);
-    }
-  }
-
-  setRenameComponent(
-    testSuite: MappingTestSuite | MappingTest | undefined,
-  ): void {
-    this.testableComponentToRename = testSuite;
-  }
-
-  deleteTestSuite(testSuite: MappingTestSuite): void {
-    mapping_deleteTestSuite(this.mapping, testSuite);
-    if (this.selectedTestSuite?.suite === testSuite) {
-      this.init();
     }
   }
 
@@ -710,7 +643,7 @@ export class MappingTestableState {
     }
   }
 
-  *runSuite(suite: MappingTestSuite): GeneratorFn<void> {
+  override *runSuite(suite: MappingTestSuite): GeneratorFn<void> {
     try {
       this.runningSuite = suite;
       this.clearTestResultsForSuite(suite);
@@ -718,15 +651,36 @@ export class MappingTestableState {
       this.selectedTestSuite?.testStates.forEach((t) =>
         t.runningTestAction.inProgress(),
       );
-      const input = new RunTestsTestableInput(this.mapping);
-      suite.tests.forEach((t) =>
-        input.unitTestIds.push(new UniqueTestId(suite, t)),
-      );
-      const testResults =
-        (yield this.editorStore.graphManagerState.graphManager.runTests(
-          [input],
-          this.editorStore.graphManagerState.graph,
-        )) as TestResult[];
+      let testResults: TestResult[];
+      if (isRelationalMappingTestSuite(suite)) {
+        // TEMPORARY RUN each test separately. This is done to help with performance
+        // specifically with running realtional mapping tests as we generate a plan during each test.
+        // with this change we would still do this but in parallel reducing the time to run the suite
+        const inputs = suite.tests.map((t) => {
+          const input = new RunTestsTestableInput(this.mapping);
+          input.unitTestIds.push(new UniqueTestId(suite, t));
+          return input;
+        });
+        const _testResults = (yield Promise.all(
+          inputs.map((i) =>
+            this.editorStore.graphManagerState.graphManager.runTests(
+              [i],
+              this.editorStore.graphManagerState.graph,
+            ),
+          ),
+        )) as TestResult[][];
+        testResults = _testResults.flat();
+      } else {
+        const input = new RunTestsTestableInput(this.mapping);
+        suite.tests.forEach((t) =>
+          input.unitTestIds.push(new UniqueTestId(suite, t)),
+        );
+        testResults =
+          (yield this.editorStore.graphManagerState.graphManager.runTests(
+            [input],
+            this.editorStore.graphManagerState.graph,
+          )) as TestResult[];
+      }
       this.handleNewResults(testResults);
     } catch (error) {
       assertErrorThrown(error);
@@ -738,79 +692,5 @@ export class MappingTestableState {
       );
       this.runningSuite = undefined;
     }
-  }
-
-  *runTestable(): GeneratorFn<void> {
-    try {
-      this.setTestableResults(undefined);
-      this.isRunningTestableSuitesState.inProgress();
-      this.selectedTestSuite?.testStates.forEach((t) => t.resetResult());
-      this.selectedTestSuite?.testStates.forEach((t) =>
-        t.runningTestAction.inProgress(),
-      );
-      const input = new RunTestsTestableInput(this.mapping);
-      const testResults =
-        (yield this.editorStore.graphManagerState.graphManager.runTests(
-          [input],
-          this.editorStore.graphManagerState.graph,
-        )) as TestResult[];
-      this.handleNewResults(testResults);
-      this.isRunningTestableSuitesState.complete();
-    } catch (error) {
-      assertErrorThrown(error);
-      this.editorStore.applicationStore.notificationService.notifyError(error);
-      this.isRunningTestableSuitesState.fail();
-    } finally {
-      this.selectedTestSuite?.testStates.forEach((t) =>
-        t.runningTestAction.complete(),
-      );
-    }
-  }
-
-  *runAllFailingSuites(): GeneratorFn<void> {
-    try {
-      this.isRunningFailingSuitesState.inProgress();
-      const input = new RunTestsTestableInput(this.mapping);
-      this.failingSuites.forEach((s) => {
-        s.tests.forEach((t) => input.unitTestIds.push(new UniqueTestId(s, t)));
-      });
-      const testResults =
-        (yield this.editorStore.graphManagerState.graphManager.runTests(
-          [input],
-          this.editorStore.graphManagerState.graph,
-        )) as TestResult[];
-      this.handleNewResults(testResults);
-      this.isRunningFailingSuitesState.complete();
-    } catch (error) {
-      assertErrorThrown(error);
-      this.editorStore.applicationStore.notificationService.notifyError(error);
-      this.isRunningFailingSuitesState.fail();
-    } finally {
-      this.selectedTestSuite?.testStates.forEach((t) =>
-        t.runningTestAction.complete(),
-      );
-    }
-  }
-
-  handleNewResults(results: TestResult[]): void {
-    if (this.testableResults?.length) {
-      const newSuitesResults = results
-        .map((e) => e.parentSuite?.id)
-        .filter(isNonNullable);
-      const reducedFilters = this.testableResults.filter(
-        (res) => !newSuitesResults.includes(res.parentSuite?.id ?? ''),
-      );
-      this.setTestableResults([...reducedFilters, ...results]);
-    } else {
-      this.setTestableResults(results);
-    }
-    this.testableResults?.forEach((result) => {
-      const state = this.selectedTestSuite?.testStates.find(
-        (t) =>
-          t.test.id === result.atomicTest.id &&
-          t.parentState.suite.id === result.parentSuite?.id,
-      );
-      state?.handleTestResult(result);
-    });
   }
 }

@@ -20,13 +20,14 @@ import {
 } from '@finos/legend-application';
 import {
   type PackageableElement,
-  GRAPH_MANAGER_EVENT,
+  type SourceInformation,
   type TextCompilationResult,
+  type GraphManagerOperationReport,
+  GRAPH_MANAGER_EVENT,
   EngineError,
   GraphBuilderError,
-  type GraphManagerOperationReport,
   reportGraphAnalytics,
-  type SourceInformation,
+  INTERNAL__UnknownElement,
 } from '@finos/legend-graph';
 import {
   type GeneratorFn,
@@ -34,6 +35,8 @@ import {
   LogEvent,
   ActionState,
   StopWatch,
+  assertNonNullable,
+  filterByType,
 } from '@finos/legend-shared';
 import type { Entity } from '@finos/legend-storage';
 import { makeObservable, flow, flowResult, observable } from 'mobx';
@@ -48,6 +51,11 @@ import { graph_dispose } from '../graph-modifier/GraphModifierHelper.js';
 import { LegendStudioTelemetryHelper } from '../../__lib__/LegendStudioTelemetryHelper.js';
 import { GraphEditorMode } from './GraphEditorMode.js';
 import { ElementEditorState } from './editor-state/element-editor-state/ElementEditorState.js';
+import { LEGEND_STUDIO_APP_EVENT } from '../../__lib__/LegendStudioEvent.js';
+
+export enum GRAMMAR_MODE_EDITOR_ACTION {
+  GO_TO_ELEMENT_DEFINITION = 'go-to-element-definition',
+}
 
 export class GraphEditGrammarModeState extends GraphEditorMode {
   grammarTextEditorState: GrammarTextEditorState;
@@ -57,11 +65,20 @@ export class GraphEditGrammarModeState extends GraphEditorMode {
     makeObservable(this, {
       grammarTextEditorState: observable,
       compileText: flow,
+      goToElement: flow,
     });
     this.grammarTextEditorState = new GrammarTextEditorState(this.editorStore);
   }
 
-  *initialize(isFallback?: boolean): GeneratorFn<void> {
+  get headerLabel(): string {
+    return 'Text Mode';
+  }
+
+  *initialize(isFallback?: {
+    isCompilationFailure?: boolean;
+    isGraphBuildFailure?: boolean;
+    useStoredEntities?: boolean;
+  }): GeneratorFn<void> {
     this.editorStore.localChangesState = new TextLocalChangesState(
       this.editorStore,
       this.editorStore.sdlcState,
@@ -81,6 +98,11 @@ export class GraphEditGrammarModeState extends GraphEditorMode {
         sourceInformationIndex,
       );
 
+      //Include the UnknownPackageableElements when sending to compute local changes
+      //Otherwise, they get deleted because they dont exist in the graphGrammarText
+      const unknownEntities = this.getUnknownPackageableElementsAsEntities();
+      entities.push(...unknownEntities);
+
       yield flowResult(
         this.editorStore.changeDetectionState.computeLocalChangesInTextMode(
           entities,
@@ -93,7 +115,11 @@ export class GraphEditGrammarModeState extends GraphEditorMode {
         error,
       );
     }
-    if (isFallback) {
+    if (
+      isFallback?.isCompilationFailure ||
+      isFallback?.isGraphBuildFailure ||
+      isFallback?.useStoredEntities
+    ) {
       yield flowResult(
         this.globalCompile({
           ignoreBlocking: true,
@@ -118,6 +144,47 @@ export class GraphEditGrammarModeState extends GraphEditorMode {
     }
   }
 
+  *goToElement(elementPath: string): GeneratorFn<void> {
+    try {
+      const sourceInformationIndex = new Map<string, SourceInformation>();
+      (yield this.editorStore.graphManagerState.graphManager.pureCodeToEntities(
+        this.grammarTextEditorState.graphGrammarText,
+        {
+          sourceInformationIndex,
+        },
+      )) as Entity[];
+      this.grammarTextEditorState.setSourceInformationIndex(
+        sourceInformationIndex,
+      );
+      const sourceInformation =
+        this.grammarTextEditorState.sourceInformationIndex.get(elementPath);
+      assertNonNullable(
+        sourceInformation,
+        `No definition found for current element in current grammar. Element may not exist of be defined in dependencies`,
+      );
+      this.grammarTextEditorState.setForcedCursorPosition({
+        lineNumber: sourceInformation.startLine,
+        column: 0,
+      });
+      this.editorStore.applicationStore.logService.info(
+        LogEvent.create(
+          LEGEND_STUDIO_APP_EVENT.TEXT_MODE_ACTION_KEYBOARD_SHORTCUT_GO_TO_DEFINITION__SUCCESS,
+        ),
+      );
+    } catch (error) {
+      assertErrorThrown(error);
+      this.editorStore.applicationStore.notificationService.notifyError(
+        `Unable to go to element ${elementPath}: ${error.message}`,
+      );
+      this.editorStore.applicationStore.logService.error(
+        LogEvent.create(
+          LEGEND_STUDIO_APP_EVENT.TEXT_MODE_ACTION_KEYBOARD_SHORTCUT_GO_TO_DEFINITION__ERROR,
+        ),
+        error,
+      );
+    }
+  }
+
   *compileText(
     options?: {
       onError?: () => void;
@@ -133,6 +200,12 @@ export class GraphEditGrammarModeState extends GraphEditorMode {
 
   getCurrentGraphHash(): string {
     return this.grammarTextEditorState.currentTextGraphHash;
+  }
+
+  getUnknownPackageableElementsAsEntities(): Entity[] {
+    return this.editorStore.graphManagerState.graph.allOwnElements.filter(
+      filterByType(INTERNAL__UnknownElement),
+    );
   }
 
   *addElement(
@@ -294,6 +367,12 @@ export class GraphEditGrammarModeState extends GraphEditorMode {
       )) as TextCompilationResult;
 
       const entities = compilationResult.entities;
+
+      //Include the UnknownPackageableElements when updating graph and sending to compute local changes
+      //Otherwise, they get deleted because they dont exist in the CompilationResult
+      const unknownEntities = this.getUnknownPackageableElementsAsEntities();
+      entities.push(...unknownEntities);
+
       this.editorStore.graphState.setMostRecentCompilationGraphHash(
         currentGraphHash,
       );
@@ -306,7 +385,7 @@ export class GraphEditGrammarModeState extends GraphEditorMode {
       if (!options?.disableNotificationOnSuccess) {
         if (this.editorStore.graphState.warnings.length) {
           this.editorStore.applicationStore.notificationService.notifyWarning(
-            `Compilation suceeded with warnings`,
+            `Compilation succeeded with warnings`,
           );
         } else {
           if (!options?.disableNotificationOnSuccess) {
@@ -417,8 +496,15 @@ export class GraphEditGrammarModeState extends GraphEditorMode {
             compilationResult.warnings,
           )
         : [];
-      this.editorStore.graphState.compilationResultEntities =
-        compilationResult.entities;
+
+      const entities = compilationResult.entities;
+
+      //Include the UnknownPackageableElements when updating graph
+      //Otherwise, they get deleted because they dont exist in the CompilationResult
+      const unknownEntities = this.getUnknownPackageableElementsAsEntities();
+      entities.push(...unknownEntities);
+
+      this.editorStore.graphState.compilationResultEntities = entities;
       this.editorStore.applicationStore.alertService.setBlockingAlert({
         message: 'Leaving text mode and rebuilding graph...',
         showLoading: true,
@@ -497,10 +583,11 @@ export class GraphEditGrammarModeState extends GraphEditorMode {
         this.grammarTextEditorState.setGraphGrammarText(editorGrammar),
       );
     } else {
+      //Exclude UnknownPackageableElements from GrammarText editor mode since they cant be tranformed to PureCode
       const graphGrammar =
         (yield this.editorStore.graphManagerState.graphManager.graphToPureCode(
           this.editorStore.graphManagerState.graph,
-          { pretty: true },
+          { pretty: true, excludeUnknown: true },
         )) as string;
       yield flowResult(
         this.grammarTextEditorState.setGraphGrammarText(graphGrammar),

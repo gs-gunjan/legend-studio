@@ -14,27 +14,42 @@
  * limitations under the License.
  */
 
-import { assertTrue, assertNonEmptyString } from '@finos/legend-shared';
+import {
+  assertTrue,
+  assertNonEmptyString,
+  guaranteeType,
+} from '@finos/legend-shared';
 import {
   EngineRuntime,
   StoreConnections,
   IdentifiedConnection,
+  ConnectionStores,
+  SingleConnectionRuntime,
 } from '../../../../../../../../graph/metamodel/pure/packageableElements/runtime/Runtime.js';
 import type { V1_GraphBuilderContext } from '../../../../transformation/pureGraph/to/V1_GraphBuilderContext.js';
-import type { V1_EngineRuntime } from '../../../../model/packageableElements/runtime/V1_Runtime.js';
+import {
+  V1_SingleConnectionEngineRuntime,
+  type V1_EngineRuntime,
+} from '../../../../model/packageableElements/runtime/V1_Runtime.js';
 import { V1_buildConnection } from './V1_ConnectionBuilderHelper.js';
+import { ConnectionPointer } from '../../../../../../../../graph/metamodel/pure/packageableElements/connection/Connection.js';
+import { PackageableElementExplicitReference } from '../../../../../../../../graph/metamodel/pure/packageableElements/PackageableElementReference.js';
 
 export const V1_buildEngineRuntime = (
   runtime: V1_EngineRuntime,
   context: V1_GraphBuilderContext,
 ): EngineRuntime => {
-  const runtimeValue = new EngineRuntime();
+  const runtimeValue =
+    runtime instanceof V1_SingleConnectionEngineRuntime
+      ? new SingleConnectionRuntime()
+      : new EngineRuntime();
   runtimeValue.mappings = runtime.mappings.map((mapping) =>
     context.resolveMapping(mapping.path),
   );
   // NOTE: here we don't check if the mappings are fully covered by the runtime, we leave this job for the full compiler
   // and make this a validation check in the UI
   const connectionIds = new Set();
+  // DEPRECATED
   runtime.connections.forEach((protocolStoreConnections) => {
     const store = context.resolveStore(protocolStoreConnections.store.path);
     const storeConnections = new StoreConnections(store);
@@ -55,14 +70,29 @@ export const V1_buildEngineRuntime = (
           context,
           store,
         );
-        // make sure connection are indexed by store properly
-        assertTrue(
-          connection.store.value === store.value,
-          `Runtime connections must be correctly indexed by store`,
-        );
         return new IdentifiedConnection(identifiedConnection.id, connection);
       });
     runtimeValue.connections.push(storeConnections);
+  });
+  //
+  runtimeValue.connectionStores = runtime.connectionStores.map((_conStore) => {
+    const connection = V1_buildConnection(
+      _conStore.connectionPointer,
+      context,
+      undefined,
+    );
+    const conPointer = guaranteeType(
+      connection,
+      ConnectionPointer,
+      `Connection in Connection store expected to be connection pointer`,
+    );
+    const _val = new ConnectionStores(conPointer);
+    _val.storePointers = _conStore.storePointers.map((storePtr) =>
+      PackageableElementExplicitReference.create(
+        context.graph.getStore(storePtr.path),
+      ),
+    );
+    return _val;
   });
   return runtimeValue;
 };

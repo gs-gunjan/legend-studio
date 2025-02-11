@@ -24,10 +24,14 @@ import {
   resolvePackagePathAndElementName,
   ELEMENT_PATH_DELIMITER,
   RawVariableExpression,
+  getFunctionSignature,
+  GenericTypeExplicitReference,
+  GenericType,
 } from '@finos/legend-graph';
 import {
   type QueryBuilderState,
   ClassQueryBuilderState,
+  QueryBuilderAdvancedWorkflowState,
 } from '@finos/legend-query-builder';
 import {
   assertErrorThrown,
@@ -48,7 +52,7 @@ import { NewServiceModal } from '../service-editor/NewServiceModal.js';
 import {
   CaretDownIcon,
   Dialog,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentItem,
   MenuContentItemLabel,
@@ -68,11 +72,11 @@ const promoteQueryToService = async (
   const applicationStore = editorStore.applicationStore;
   try {
     const mapping = guaranteeNonNullable(
-      queryBuilderState.mapping,
+      queryBuilderState.executionContextState.mapping,
       'Mapping is required to create service execution',
     );
     const runtime = guaranteeNonNullable(
-      queryBuilderState.runtimeValue,
+      queryBuilderState.executionContextState.runtimeValue,
       'Runtime is required to create service execution',
     );
     const query = queryBuilderState.buildQuery();
@@ -115,8 +119,8 @@ export const promoteQueryToFunction = async (
     const query = queryBuilderState.buildFromQuery();
     const returnType = queryBuilderState.getQueryReturnType();
     const _function = new ConcreteFunctionDefinition(
-      functionName,
-      PackageableElementExplicitReference.create(returnType),
+      functionName, // use functionName for now and it will be reset after composing _function.parameters and _function.returnType
+      GenericTypeExplicitReference.create(new GenericType(returnType)),
       Multiplicity.ONE,
     );
     // we will copy the body of the query to the body of the function and extract the parameters out
@@ -133,6 +137,8 @@ export const promoteQueryToFunction = async (
             ),
           ),
       );
+    // reset function name to be function signature
+    _function.name = functionName + getFunctionSignature(_function);
     await flowResult(
       editorStore.graphEditorMode.addElement(_function, packagePath, true),
     );
@@ -269,15 +275,15 @@ const PromoteToServiceQueryBuilderAction = observer(
       setPromoteQueryType(type);
     const closeNewServiceModal = (): void => setPromoteQueryType(undefined);
     const allowPromotion = Boolean(
-      queryBuilderState.mapping &&
-        queryBuilderState.runtimeValue &&
+      queryBuilderState.executionContextState.mapping &&
+        queryBuilderState.executionContextState.runtimeValue &&
         !queryBuilderState.allValidationIssues.length,
     );
 
     const renderSaveAsModal = (): React.ReactNode => {
       if (
         promoteQueryModal === PROMOTE_QUERY_TYPE.SERVICE &&
-        queryBuilderState.mapping
+        queryBuilderState.executionContextState.mapping
       ) {
         const promoteToService = async (
           packagePath: string,
@@ -295,7 +301,7 @@ const PromoteToServiceQueryBuilderAction = observer(
 
         return (
           <NewServiceModal
-            mapping={queryBuilderState.mapping}
+            mapping={queryBuilderState.executionContextState.mapping}
             close={closeNewServiceModal}
             showModal={true}
             promoteToService={promoteToService}
@@ -330,7 +336,7 @@ const PromoteToServiceQueryBuilderAction = observer(
 
     return (
       <>
-        <DropdownMenu
+        <ControlledDropdownMenu
           className="query-builder__dialog__header__custom-action"
           title="Promote Query..."
           content={
@@ -358,7 +364,7 @@ const PromoteToServiceQueryBuilderAction = observer(
             Save As...
           </div>
           <CaretDownIcon className="query-builder__sub-header__custom-action__icon" />
-        </DropdownMenu>
+        </ControlledDropdownMenu>
         {renderSaveAsModal()}
       </>
     );
@@ -372,10 +378,13 @@ export const queryClass = async (
   const embeddedQueryBuilderState = editorStore.embeddedQueryBuilderState;
   await flowResult(
     embeddedQueryBuilderState.setEmbeddedQueryBuilderConfiguration({
-      setupQueryBuilderState: () => {
+      setupQueryBuilderState: async () => {
         const queryBuilderState = new ClassQueryBuilderState(
           embeddedQueryBuilderState.editorStore.applicationStore,
           embeddedQueryBuilderState.editorStore.graphManagerState,
+          QueryBuilderAdvancedWorkflowState.INSTANCE,
+          editorStore.applicationStore.config.options.queryBuilderConfig,
+          editorStore.editorMode.getSourceInfo(),
         );
         queryBuilderState.changeClass(_class);
         queryBuilderState.propagateClassChange(_class);

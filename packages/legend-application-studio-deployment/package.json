@@ -1,6 +1,6 @@
 {
   "name": "@finos/legend-application-studio-deployment",
-  "version": "9.60.0",
+  "version": "13.26.0",
   "private": true,
   "description": "Legend Studio web application deployment",
   "keywords": [
@@ -17,14 +17,16 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "bundle": "yarn clean && yarn build:webpack && node ./scripts/setup.js ./dist/studio",
-    "bundle:analyze": "cross-env NODE_ENV=production webpack --mode production --analyze",
-    "bundle:fast": "cross-env NODE_ENV=production PRODUCTION_MODE=fast webpack --mode production && node ./scripts/setup.js ./dist/studio",
+    "build:tailwindcss": "tailwindcss -i ./style/tailwind.css -o ./lib/tailwind.css --minify",
     "build:webpack": "cross-env NODE_ENV=production webpack --mode production",
     "build-dry:docker": "../../scripts/docker/dry-build-docker-image.sh legend-studio ./dist/studio",
+    "bundle": "yarn clean && yarn build:tailwindcss && yarn build:webpack && node ./scripts/setup.js ./dist/studio",
+    "bundle:analyze": "cross-env NODE_ENV=production webpack --mode production --analyze",
+    "bundle:fast": "cross-env NODE_ENV=production PRODUCTION_MODE=fast webpack --mode production && node ./scripts/setup.js ./dist/studio",
     "clean": "yarn clean:cache && rimraf \"dist\"",
     "clean:cache": "rimraf \"build\"",
-    "dev": "npm-run-all --parallel dev:ts dev:webpack",
+    "dev": "npm-run-all --parallel dev:ts dev:tailwindcss dev:webpack",
+    "dev:tailwindcss": "tailwindcss -i ./style/tailwind.css -o ./lib/tailwind.css --watch",
     "dev:ts": "tsc --watch --preserveWatchOutput",
     "dev:webpack": "cross-env NODE_ENV=development webpack serve --mode development",
     "dev:webpack:debug": "cross-env NODE_ENV=development DEVELOPMENT_MODE=debug webpack serve --mode development",
@@ -38,15 +40,16 @@
   },
   "devDependencies": {
     "@finos/legend-dev-utils": "workspace:*",
-    "copy-webpack-plugin": "11.0.0",
+    "copy-webpack-plugin": "12.0.2",
     "cross-env": "7.0.3",
-    "eslint": "8.43.0",
+    "eslint": "9.19.0",
     "npm-run-all": "4.1.5",
-    "rimraf": "5.0.1",
-    "typescript": "5.1.3",
-    "webpack": "5.88.0",
-    "webpack-bundle-analyzer": "4.9.0",
-    "webpack-cli": "5.1.4",
-    "webpack-dev-server": "4.15.1"
+    "rimraf": "6.0.1",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.7.3",
+    "webpack": "5.97.1",
+    "webpack-bundle-analyzer": "4.10.2",
+    "webpack-cli": "6.0.1",
+    "webpack-dev-server": "5.2.0"
   }
 }

@@ -19,30 +19,44 @@ import {
   type GenericLegendApplicationStore,
 } from '@finos/legend-application';
 import {
-  type LightQuery,
-  QuerySearchSpecification,
   type QueryInfo,
-  type BasicGraphManagerState,
+  type LightQuery,
+  type AbstractPureGraphManager,
   type Query,
+  type RawLambda,
+  QuerySearchSpecification,
+  GRAPH_MANAGER_EVENT,
+  QuerySearchSortBy,
 } from '@finos/legend-graph';
 import {
-  ActionState,
   type GeneratorFn,
+  ActionState,
   assertErrorThrown,
   guaranteeNonNullable,
+  LogEvent,
 } from '@finos/legend-shared';
 import { makeObservable, observable, action, flow } from 'mobx';
 import type { QueryBuilderState } from './QueryBuilderState.js';
 import type {
+  CuratedTemplateQuerySpecification,
   LoadQueryFilterOption,
   QueryBuilder_LegendApplicationPlugin_Extension,
 } from './QueryBuilder_LegendApplicationPlugin_Extension.js';
 
-export const QUERY_LOADER_TYPEAHEAD_SEARCH_LIMIT = 20;
+export const QUERY_LOADER_TYPEAHEAD_SEARCH_LIMIT = 50;
+export const QUERY_LOADER_DEFAULT_QUERY_SEARCH_LIMIT = 10;
+
+export enum SORT_BY_OPTIONS {
+  SORT_BY_CREATE = 'Last Created',
+  SORT_BY_VIEW = 'Last Viewed',
+  SORT_BY_UPDATE = 'Last Updated',
+}
+
+export type SortByOption = { label: SORT_BY_OPTIONS; value: SORT_BY_OPTIONS };
 
 export class QueryLoaderState {
   readonly applicationStore: GenericLegendApplicationStore;
-  readonly graphManagerState: BasicGraphManagerState;
+  readonly graphManager: AbstractPureGraphManager;
 
   readonly searchQueriesState = ActionState.create();
   readonly renameQueryState = ActionState.create();
@@ -61,7 +75,8 @@ export class QueryLoaderState {
 
   readonly isReadOnly?: boolean | undefined;
   readonly onQueryRenamed?: ((query: LightQuery) => void) | undefined;
-  readonly onQueryDeleted?: ((query: LightQuery) => void) | undefined;
+  readonly onQueryDeleted?: ((query: string) => void) | undefined;
+  readonly handleFetchDefaultQueriesFailure?: (() => void) | undefined;
 
   queryBuilderState?: QueryBuilderState | undefined;
 
@@ -69,16 +84,20 @@ export class QueryLoaderState {
   showCurrentUserQueriesOnly = false; // TODO: if we start having more native filters, we should make them part of `extraFilters`
   extraFilters = new Map<string, boolean>();
   extraFilterOptions: LoadQueryFilterOption[] = [];
+  extraQueryFilterOptionsRelatedToTemplateQuery: string[] = [];
   queries: LightQuery[] = [];
+  curatedTemplateQuerySpecifications: CuratedTemplateQuerySpecification[] = [];
 
   isQueryLoaderDialogOpen = false;
+  isCuratedTemplateToggled = false;
   showingDefaultQueries = true;
   showPreviewViewer = false;
-  queryPreviewContent?: QueryInfo;
+  queryPreviewContent?: QueryInfo | { name: string; content: string };
+  sortBy = SORT_BY_OPTIONS.SORT_BY_VIEW;
 
   constructor(
     applicationStore: GenericLegendApplicationStore,
-    graphManagerState: BasicGraphManagerState,
+    graphManager: AbstractPureGraphManager,
     options: {
       decorateSearchSpecification?:
         | ((val: QuerySearchSpecification) => QuerySearchSpecification)
@@ -89,10 +108,10 @@ export class QueryLoaderState {
       generateDefaultQueriesSummaryText?:
         | ((queries: LightQuery[]) => string)
         | undefined;
-
       isReadOnly?: boolean | undefined;
       onQueryRenamed?: ((query: LightQuery) => void) | undefined;
-      onQueryDeleted?: ((query: LightQuery) => void) | undefined;
+      onQueryDeleted?: ((query: string) => void) | undefined;
+      handleFetchDefaultQueriesFailure?: (() => void) | undefined;
     },
   ) {
     makeObservable(this, {
@@ -103,11 +122,16 @@ export class QueryLoaderState {
       showCurrentUserQueriesOnly: observable,
       showPreviewViewer: observable,
       searchText: observable,
+      isCuratedTemplateToggled: observable,
+      curatedTemplateQuerySpecifications: observable,
+      sortBy: observable,
+      setSortBy: action,
       setSearchText: action,
       setQueryLoaderDialogOpen: action,
       setQueries: action,
       setShowCurrentUserQueriesOnly: action,
       setShowPreviewViewer: action,
+      setIsCuratedTemplateToggled: action,
       searchQueries: flow,
       getPreviewQueryContent: flow,
       deleteQuery: flow,
@@ -116,7 +140,7 @@ export class QueryLoaderState {
     });
 
     this.applicationStore = applicationStore;
-    this.graphManagerState = graphManagerState;
+    this.graphManager = graphManager;
 
     this.loadQuery = options.loadQuery;
     this.fetchDefaultQueries = options.fetchDefaultQueries;
@@ -126,6 +150,29 @@ export class QueryLoaderState {
     this.isReadOnly = options.isReadOnly;
     this.onQueryRenamed = options.onQueryRenamed;
     this.onQueryDeleted = options.onQueryDeleted;
+    this.handleFetchDefaultQueriesFailure =
+      options.handleFetchDefaultQueriesFailure;
+  }
+
+  setIsCuratedTemplateToggled(val: boolean): void {
+    this.isCuratedTemplateToggled = val;
+  }
+
+  setSortBy(val: SORT_BY_OPTIONS): void {
+    this.sortBy = val;
+  }
+
+  getQuerySearchSortBy(sortByValue: string): QuerySearchSortBy | undefined {
+    switch (sortByValue) {
+      case SORT_BY_OPTIONS.SORT_BY_CREATE:
+        return QuerySearchSortBy.SORT_BY_CREATE;
+      case SORT_BY_OPTIONS.SORT_BY_UPDATE:
+        return QuerySearchSortBy.SORT_BY_UPDATE;
+      case SORT_BY_OPTIONS.SORT_BY_VIEW:
+        return QuerySearchSortBy.SORT_BY_VIEW;
+      default:
+        return undefined;
+    }
   }
 
   setSearchText(val: string): void {
@@ -140,6 +187,15 @@ export class QueryLoaderState {
     this.queries = val;
   }
 
+  // search query using search specification
+  canPerformAdvancedSearch(searchText: string): boolean {
+    return !(
+      searchText.length < DEFAULT_TYPEAHEAD_SEARCH_MINIMUM_SEARCH_LENGTH &&
+      !this.showCurrentUserQueriesOnly &&
+      Array.from(this.extraFilters.values()).every((value) => value === false)
+    );
+  }
+
   setShowPreviewViewer(val: boolean): void {
     this.showPreviewViewer = val;
   }
@@ -150,6 +206,7 @@ export class QueryLoaderState {
 
   reset(): void {
     this.setShowCurrentUserQueriesOnly(false);
+    this.setIsCuratedTemplateToggled(false);
   }
 
   *initialize(queryBuilderState: QueryBuilderState): GeneratorFn<void> {
@@ -162,20 +219,36 @@ export class QueryLoaderState {
             plugin as QueryBuilder_LegendApplicationPlugin_Extension
           ).getExtraLoadQueryFilterOptions?.() ?? [],
       );
+    this.extraQueryFilterOptionsRelatedToTemplateQuery =
+      this.applicationStore.pluginManager
+        .getApplicationPlugins()
+        .flatMap(
+          (plugin) =>
+            (plugin as QueryBuilder_LegendApplicationPlugin_Extension)
+              .getQueryFilterOptionsRelatedToTemplateQuery?.()(
+                guaranteeNonNullable(this.queryBuilderState),
+              )
+              .flat() ?? [],
+        );
     const extraFilters = this.extraFilterOptions.map((filterOption) =>
       filterOption.label(guaranteeNonNullable(this.queryBuilderState)),
     );
     extraFilters.forEach(
       (filter) => filter && this.extraFilters.set(filter, false),
     );
+    this.curatedTemplateQuerySpecifications =
+      this.applicationStore.pluginManager
+        .getApplicationPlugins()
+        .flatMap(
+          (plugin) =>
+            (
+              plugin as QueryBuilder_LegendApplicationPlugin_Extension
+            ).getCuratedTemplateQuerySpecifications?.() ?? [],
+        );
   }
 
   *searchQueries(searchText: string): GeneratorFn<void> {
-    if (
-      searchText.length < DEFAULT_TYPEAHEAD_SEARCH_MINIMUM_SEARCH_LENGTH &&
-      !this.showCurrentUserQueriesOnly &&
-      Array.from(this.extraFilters.values()).every((value) => value === false)
-    ) {
+    if (!this.canPerformAdvancedSearch(searchText)) {
       // if no search text is specified, use fetch the default queries
       if (!searchText) {
         this.showingDefaultQueries = true;
@@ -185,12 +258,18 @@ export class QueryLoaderState {
           if (!this.fetchDefaultQueries) {
             return;
           }
-          this.queries = (yield this.fetchDefaultQueries()) as LightQuery[];
+          this.queries = (
+            (yield this.fetchDefaultQueries()) as LightQuery[]
+          ).sort((a, b) => a.name.localeCompare(b.name));
           this.searchQueriesState.pass();
         } catch (error) {
           this.searchQueriesState.fail();
           assertErrorThrown(error);
-          this.applicationStore.notificationService.notifyError(error);
+          this.applicationStore.logService.error(
+            LogEvent.create(GRAPH_MANAGER_EVENT.GET_QUERY_FAILURE),
+            error,
+          );
+          this.handleFetchDefaultQueriesFailure?.();
         }
       }
 
@@ -202,12 +281,15 @@ export class QueryLoaderState {
     this.showingDefaultQueries = false;
     this.searchQueriesState.inProgress();
     try {
-      let searchSpecification = new QuerySearchSpecification();
-      searchSpecification.searchTerm = searchText;
+      let searchSpecification =
+        QuerySearchSpecification.createDefault(searchText);
       searchSpecification.limit = QUERY_LOADER_TYPEAHEAD_SEARCH_LIMIT + 1;
-      searchSpecification.exactMatchName = true;
       searchSpecification.showCurrentUserQueriesOnly =
         this.showCurrentUserQueriesOnly;
+      const querySearchSortBy = this.getQuerySearchSortBy(this.sortBy);
+      if (querySearchSortBy) {
+        searchSpecification.sortByOption = querySearchSortBy;
+      }
       if (this.queryBuilderState) {
         Array.from(this.extraFilters.entries()).forEach(([key, value]) => {
           if (value) {
@@ -228,9 +310,14 @@ export class QueryLoaderState {
       searchSpecification =
         this.decorateSearchSpecification?.(searchSpecification) ??
         searchSpecification;
-      this.queries = (yield this.graphManagerState.graphManager.searchQueries(
+      this.queries = (yield this.graphManager.searchQueries(
         searchSpecification,
       )) as LightQuery[];
+      if (!querySearchSortBy) {
+        this.queries = this.queries.toSorted((a, b) =>
+          a.name.localeCompare(b.name),
+        );
+      }
       this.searchQueriesState.pass();
     } catch (error) {
       assertErrorThrown(error);
@@ -242,7 +329,7 @@ export class QueryLoaderState {
   *renameQuery(queryId: string, name: string): GeneratorFn<void> {
     this.renameQueryState.inProgress();
     try {
-      const query = (yield this.graphManagerState.graphManager.renameQuery(
+      const query = (yield this.graphManager.renameQuery(
         queryId,
         name,
       )) as Query;
@@ -262,11 +349,9 @@ export class QueryLoaderState {
   *deleteQuery(queryId: string): GeneratorFn<void> {
     this.deleteQueryState.inProgress();
     try {
-      const query = (yield this.graphManagerState.graphManager.deleteQuery(
-        queryId,
-      )) as Query;
-      this.onQueryDeleted?.(query);
-      this.applicationStore.notificationService.notify(
+      yield this.graphManager.deleteQuery(queryId);
+      this.onQueryDeleted?.(queryId);
+      this.applicationStore.notificationService.notifySuccess(
         'Deleted query successfully',
       );
       this.deleteQueryState.pass();
@@ -278,17 +363,35 @@ export class QueryLoaderState {
     }
   }
 
-  *getPreviewQueryContent(queryId: string): GeneratorFn<void> {
+  *getPreviewQueryContent(
+    queryId: string | undefined,
+    template?: {
+      queryName: string;
+      queryContent: RawLambda;
+    },
+  ): GeneratorFn<void> {
     this.previewQueryState.inProgress();
     try {
-      const queryInfo = (yield this.graphManagerState.graphManager.getQueryInfo(
-        queryId,
-      )) as QueryInfo;
-      this.queryPreviewContent = queryInfo;
-      this.queryPreviewContent.content =
-        (yield this.graphManagerState.graphManager.prettyLambdaContent(
-          queryInfo.content,
-        )) as string;
+      if (queryId) {
+        const queryInfo = (yield this.graphManager.getQueryInfo(
+          queryId,
+        )) as QueryInfo;
+        this.queryPreviewContent = queryInfo;
+        this.queryPreviewContent.content =
+          (yield this.graphManager.prettyLambdaContent(
+            queryInfo.content,
+          )) as string;
+      } else if (template) {
+        this.queryPreviewContent = {
+          name: template.queryName,
+          content: '',
+        } as QueryInfo;
+        this.queryPreviewContent.content =
+          (yield this.graphManager.lambdaToPureCode(
+            template.queryContent,
+            true,
+          )) as string;
+      }
       this.previewQueryState.pass();
     } catch (error) {
       assertErrorThrown(error);

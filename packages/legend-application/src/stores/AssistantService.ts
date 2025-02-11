@@ -15,7 +15,6 @@
  */
 
 import { action, makeObservable, observable, computed } from 'mobx';
-import type { DocumentationEntry } from './DocumentationService.js';
 import type { GenericLegendApplicationStore } from './ApplicationStore.js';
 import {
   type MarkdownText,
@@ -25,6 +24,7 @@ import {
   ActionState,
   FuzzySearchEngine,
   FuzzySearchAdvancedConfigState,
+  type DocumentationEntry,
 } from '@finos/legend-shared';
 
 export enum VIRTUAL_ASSISTANT_TAB {
@@ -106,9 +106,11 @@ export class AssistantService {
    * This key is used to allow programmatic re-rendering of the assistant panel
    */
   panelRenderingKey = uuid();
+  isDisabled = false;
   isHidden = true; // hide by default unless specified by the application to show
   isOpen = false;
-  selectedTab = VIRTUAL_ASSISTANT_TAB.SEARCH;
+  isPanelMaximized = false;
+  selectedTab: string = VIRTUAL_ASSISTANT_TAB.SEARCH;
   currentDocumentationEntry: VirtualAssistantDocumentationEntry | undefined;
 
   // search text
@@ -122,8 +124,10 @@ export class AssistantService {
 
   constructor(applicationStore: GenericLegendApplicationStore) {
     makeObservable(this, {
+      isDisabled: observable,
       isHidden: observable,
       isOpen: observable,
+      isPanelMaximized: observable,
       panelRenderingKey: observable,
       isOverSearchLimit: observable,
       selectedTab: observable,
@@ -132,8 +136,10 @@ export class AssistantService {
       currentDocumentationEntry: observable,
       showSearchConfigurationMenu: observable,
       currentContextualDocumentationEntry: computed,
+      setIsDisabled: action,
       setIsHidden: action,
       setIsOpen: action,
+      setIsPanelMaximized: action,
       setSelectedTab: action,
       setSearchText: action,
       resetSearch: action,
@@ -238,8 +244,16 @@ export class AssistantService {
     }
   }
 
+  setIsDisabled(val: boolean): void {
+    this.isDisabled = val;
+  }
+
   setIsHidden(val: boolean): void {
     this.isHidden = val;
+  }
+
+  setIsPanelMaximized(val: boolean): void {
+    this.isPanelMaximized = val;
   }
 
   hideAssistant(): void {
@@ -260,7 +274,7 @@ export class AssistantService {
     this.isOpen = val;
   }
 
-  setSelectedTab(val: VIRTUAL_ASSISTANT_TAB): void {
+  setSelectedTab(val: string): void {
     this.selectedTab = val;
   }
 

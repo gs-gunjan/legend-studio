@@ -14,27 +14,42 @@
  * limitations under the License.
  */
 
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
 import { fastify } from 'fastify';
 import { fastifyCors } from '@fastify/cors';
-import DOCUMENTATION_DATA from './DummyDocumentationData.json' assert { type: 'json' };
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const getFileContent = (file: string): string =>
+  readFileSync(file, { encoding: 'utf-8' });
 
 const PORT = 9999;
-// const API_BASE_URL = '/api';
+const RESOURCE_BASE_URL = '/resource';
 
 const server = fastify({
   logger: true,
 });
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
 server.register(fastifyCors, {
   methods: ['OPTIONS'],
   origin: [/localhost/],
   credentials: true,
 });
 
-server.get(`/documentation.json`, async (request, reply) => {
-  await reply.send(DOCUMENTATION_DATA);
-});
+server.get(
+  `${RESOURCE_BASE_URL}/documentation.json`,
+  async (request, reply) => {
+    await reply.send(
+      JSON.parse(
+        getFileContent(
+          resolve(__dirname, '../data/documentationRegistry/dummy.json'),
+        ),
+      ),
+    );
+  },
+);
 
 server.listen(
   {

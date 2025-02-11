@@ -88,6 +88,7 @@ const EnumerationMappingSourceSelectorModal = observer(
   }) => {
     const { enumerationMapping, closeModal, open } = props;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const options = [PrimitiveType.INTEGER, PrimitiveType.STRING]
       .map(buildElementOption)
       .concat(
@@ -100,9 +101,9 @@ const EnumerationMappingSourceSelectorModal = observer(
     const filterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (
-        option: PackageableElementOption<PackageableElement>,
-      ): string => option.value.path,
+      stringify: (option: {
+        data: PackageableElementOption<PackageableElement>;
+      }): string => option.data.value.path,
     });
     const sourceType = enumerationMapping.sourceType?.value;
     const selectedSourceType = sourceType
@@ -124,9 +125,6 @@ const EnumerationMappingSourceSelectorModal = observer(
     };
     const handleEnter = (): void => sourceSelectorRef.current?.focus();
 
-    const isDarkMode =
-      editorStore.applicationStore.config.options
-        .TEMPORARY__enableMappingTestableEditor;
     return (
       <Dialog
         open={open}
@@ -143,16 +141,24 @@ const EnumerationMappingSourceSelectorModal = observer(
           },
         }}
       >
-        <Modal className="search-modal" darkMode={isDarkMode}>
+        <Modal
+          className="search-modal"
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+        >
           <ModalTitle title="Choose a Source" />
           <CustomSelectorInput
-            ref={sourceSelectorRef}
+            inputRef={sourceSelectorRef}
             options={options}
             onChange={changeSourceType}
             value={selectedSourceType}
             placeholder="Choose a type..."
             isClearable={true}
-            darkMode={isDarkMode}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
             filterOption={filterOption}
             formatOptionLabel={getPackageableElementOptionFormatter({})}
           />
@@ -180,7 +186,7 @@ export const SourceValueInput = observer(
     const value =
       sourceValue.value instanceof Enum
         ? sourceValue.value.name
-        : sourceValue.value ?? '';
+        : (sourceValue.value ?? '');
     const onChange: React.ChangeEventHandler<HTMLInputElement> = (event) =>
       updateSourceValue(event.target.value);
     const onBlur: React.ChangeEventHandler<HTMLInputElement> = (event) => {
@@ -212,7 +218,7 @@ export const SourceValueInput = observer(
       },
       [isReadOnly, updateSourceValue, value],
     );
-    const [{ canDrop }, dropRef] = useDrop<
+    const [{ canDrop }, dropConnector] = useDrop<
       TypeDragSource,
       void,
       { canDrop: boolean }
@@ -226,10 +232,12 @@ export const SourceValueInput = observer(
       }),
       [handleDrop],
     );
+    const ref = useRef<HTMLDivElement>(null);
+    dropConnector(ref);
 
     return (
       <div
-        ref={dropRef}
+        ref={ref}
         className={clsx(
           'enumeration-mapping-editor__enum-value__source-value',
           {
@@ -378,7 +386,7 @@ export const EnumerationMappingEditor = observer(
       },
       [enumerationMapping, isReadOnly],
     );
-    const [{ isDragOver, canDrop }, dropRef] = useDrop<
+    const [{ isDragOver, canDrop }, dropConnector] = useDrop<
       ElementDragSource,
       void,
       { isDragOver: boolean; canDrop: boolean }
@@ -519,7 +527,7 @@ export const EnumerationMappingEditor = observer(
                 </PanelHeader>
                 <PanelContent>
                   <PanelDropZone
-                    dropTargetConnector={dropRef}
+                    dropTargetConnector={dropConnector}
                     isDragOver={
                       Boolean(sourceType) && isDragOver && !isReadOnly
                     }

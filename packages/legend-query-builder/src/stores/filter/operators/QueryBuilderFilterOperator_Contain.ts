@@ -36,19 +36,17 @@ import {
 } from './QueryBuilderFilterOperatorValueSpecificationBuilder.js';
 import {
   buildNotExpression,
-  generateDefaultValueForPrimitiveType,
-  getNonCollectionValueSpecificationType,
   unwrapNotExpression,
 } from '../../QueryBuilderValueSpecificationHelper.js';
 import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../graph/QueryBuilderMetaModelConst.js';
 import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../../QueryBuilderStateHashUtils.js';
-import { buildPrimitiveInstanceValue } from '../../shared/ValueSpecificationEditorHelper.js';
+import { buildDefaultInstanceValue } from '../../shared/ValueSpecificationEditorHelper.js';
 
 export class QueryBuilderFilterOperator_Contain
   extends QueryBuilderFilterOperator
   implements Hashable
 {
-  getLabel(filterConditionState: FilterConditionState): string {
+  getLabel(): string {
     return 'contains';
   }
 
@@ -65,9 +63,11 @@ export class QueryBuilderFilterOperator_Contain
   isCompatibleWithFilterConditionValue(
     filterConditionState: FilterConditionState,
   ): boolean {
-    const type = filterConditionState.value
-      ? getNonCollectionValueSpecificationType(filterConditionState.value)
-      : undefined;
+    const type =
+      filterConditionState.rightConditionValue &&
+      !filterConditionState.rightConditionValue.isCollection
+        ? filterConditionState.rightConditionValue.type
+        : undefined;
     return PrimitiveType.STRING === type;
   }
 
@@ -79,29 +79,30 @@ export class QueryBuilderFilterOperator_Contain
         .genericType.value.rawType;
     switch (propertyType.path) {
       case PRIMITIVE_TYPE.STRING: {
-        return buildPrimitiveInstanceValue(
+        return buildDefaultInstanceValue(
           filterConditionState.filterState.queryBuilderState.graphManagerState
             .graph,
-          propertyType.path,
-          generateDefaultValueForPrimitiveType(propertyType.path),
+          propertyType,
           filterConditionState.filterState.queryBuilderState.observerContext,
+          filterConditionState.filterState.queryBuilderState
+            .INTERNAL__enableInitializingDefaultSimpleExpressionValue,
         );
       }
       default:
         throw new UnsupportedOperationError(
-          `Can't get default value for filter operator '${this.getLabel(
-            filterConditionState,
-          )}' when the LHS property is of type '${propertyType.path}'`,
+          `Can't get default value for filter operator '${this.getLabel()}' when the LHS property is of type '${propertyType.path}'`,
         );
     }
   }
 
   buildFilterConditionExpression(
     filterConditionState: FilterConditionState,
+    lambdaParameterName?: string | undefined,
   ): ValueSpecification {
     return buildFilterConditionExpression(
       filterConditionState,
       QUERY_BUILDER_SUPPORTED_FUNCTIONS.CONTAINS,
+      lambdaParameterName,
     );
   }
 
@@ -125,15 +126,19 @@ export class QueryBuilderFilterOperator_Contain
 }
 
 export class QueryBuilderFilterOperator_NotContain extends QueryBuilderFilterOperator_Contain {
-  override getLabel(filterConditionState: FilterConditionState): string {
+  override getLabel(): string {
     return `doesn't contain`;
   }
 
   override buildFilterConditionExpression(
     filterConditionState: FilterConditionState,
+    lambdaParameterName?: string | undefined,
   ): ValueSpecification {
     return buildNotExpression(
-      super.buildFilterConditionExpression(filterConditionState),
+      super.buildFilterConditionExpression(
+        filterConditionState,
+        lambdaParameterName,
+      ),
     );
   }
 

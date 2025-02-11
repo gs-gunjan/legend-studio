@@ -34,7 +34,7 @@ module.exports = {
     },
   },
   create(context) {
-    function getFileProtocolVersion(node) {
+    function getFileProtocolVersion() {
       const filePath = context.getFilename();
       if (!micromatch.isMatch(filePath, [PROTOCOL_FILE_PATTERN])) {
         return undefined;
@@ -62,7 +62,7 @@ module.exports = {
     }
     return {
       ExportNamedDeclaration(node) {
-        const fileProtocolVersion = getFileProtocolVersion(node);
+        const fileProtocolVersion = getFileProtocolVersion();
         if (!fileProtocolVersion) {
           return;
         }

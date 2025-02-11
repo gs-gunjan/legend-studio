@@ -26,13 +26,17 @@ import {
 } from '@finos/legend-graph';
 import {
   assertTrue,
-  getNullableFirstEntry,
   guaranteeNonNullable,
   IllegalStateError,
 } from '@finos/legend-shared';
 import { action, makeObservable, observable } from 'mobx';
 import { renderServiceQueryBuilderSetupPanelContent } from '../../components/workflows/ServiceQueryBuilder.js';
 import { QueryBuilderState } from '../QueryBuilderState.js';
+import type { QueryBuilderConfig } from '../../graph-manager/QueryBuilderConfig.js';
+import type {
+  QueryBuilderActionConfig,
+  QueryBuilderWorkflowState,
+} from '../query-workflow/QueryBuilderWorkFlowState.js';
 
 export type ServiceExecutionContext = {
   key: string;
@@ -57,6 +61,8 @@ export class ServiceQueryBuilderState extends QueryBuilderState {
   constructor(
     applicationStore: GenericLegendApplicationStore,
     graphManagerState: GraphManagerState,
+    workflowState: QueryBuilderWorkflowState,
+    actionConfig: QueryBuilderActionConfig,
     service: Service,
     usableServices: Service[] | undefined,
     executionContextKey?: string | undefined,
@@ -64,8 +70,16 @@ export class ServiceQueryBuilderState extends QueryBuilderState {
     onExecutionContextChange?:
       | ((val: ServiceExecutionContext) => void)
       | undefined,
+    config?: QueryBuilderConfig | undefined,
+    sourceInfo?: object | undefined,
   ) {
-    super(applicationStore, graphManagerState);
+    super(
+      applicationStore,
+      graphManagerState,
+      workflowState,
+      config,
+      sourceInfo,
+    );
 
     makeObservable(this, {
       selectedExecutionContext: observable,
@@ -76,23 +90,18 @@ export class ServiceQueryBuilderState extends QueryBuilderState {
     this.usableServices = usableServices;
     this.onServiceChange = onServiceChange;
     this.onExecutionContextChange = onExecutionContextChange;
+    this.workflowState.updateActionConfig(actionConfig);
 
     if (service.execution instanceof PureSingleExecution) {
-      assertTrue(
-        Boolean(service.execution.mapping && service.execution.runtime),
-        'Service queries without runtime/mapping are not supported',
-      );
-      this.mapping = service.execution.mapping?.value;
-      this.runtimeValue = service.execution.runtime;
+      this.executionContextState.mapping = service.execution.mapping?.value;
+      this.executionContextState.runtimeValue = service.execution.runtime;
     } else if (service.execution instanceof PureMultiExecution) {
-      this.executionContexts = service.execution.executionParameters.map(
-        (ep) => ({
+      this.executionContexts =
+        service.execution.executionParameters?.map((ep) => ({
           key: ep.key,
           mapping: ep.mapping.value,
           runtimeValue: ep.runtime,
-        }),
-      );
-
+        })) ?? [];
       let selectedExecutionContext: ServiceExecutionContext;
       if (executionContextKey) {
         const matchingExecutionContext = this.executionContexts.find(
@@ -115,8 +124,9 @@ export class ServiceQueryBuilderState extends QueryBuilderState {
       }
 
       this.setSelectedExecutionContext(selectedExecutionContext);
-      this.mapping = selectedExecutionContext.mapping;
-      this.runtimeValue = selectedExecutionContext.runtimeValue;
+      this.executionContextState.mapping = selectedExecutionContext.mapping;
+      this.executionContextState.runtimeValue =
+        selectedExecutionContext.runtimeValue;
     }
   }
 
@@ -126,16 +136,16 @@ export class ServiceQueryBuilderState extends QueryBuilderState {
 
   override get sideBarClassName(): string | undefined {
     return this.executionContexts.length
-      ? 'query-builder__setup__service--with-mutiple-execution'
+      ? 'query-builder__setup__service--with-multiple-execution'
       : 'query-builder__setup__service';
   }
 
   override get isMappingReadOnly(): boolean {
-    return true;
+    return !this.executionContextState.specifiedInQuery;
   }
 
   override get isRuntimeReadOnly(): boolean {
-    return true;
+    return !this.executionContextState.specifiedInQuery;
   }
 
   /**
@@ -145,23 +155,25 @@ export class ServiceQueryBuilderState extends QueryBuilderState {
    * - If no class is chosen, try to choose a compatible class
    * - If the chosen class is compatible with the new chosen mapping, do nothing, otherwise, try to choose a compatible class
    */
-  propagateExecutionContextChange(
-    executionContext: ServiceExecutionContext,
-  ): void {
-    const mapping = executionContext.mapping;
-    this.changeMapping(mapping, { keepQueryContent: true });
-    this.changeRuntime(executionContext.runtimeValue);
+  override async propagateExecutionContextChange(
+    isGraphBuildingNotRequired?: boolean,
+  ): Promise<void> {
+    if (this.selectedExecutionContext) {
+      const mapping = this.selectedExecutionContext.mapping;
+      this.changeMapping(mapping, { keepQueryContent: true });
+      this.changeRuntime(this.selectedExecutionContext.runtimeValue);
 
-    const compatibleClasses = getMappingCompatibleClasses(
-      mapping,
-      this.graphManagerState.usableClasses,
-    );
-    // if there is no chosen class or the chosen one is not compatible
-    // with the mapping then pick a compatible class if possible
-    if (!this.class || !compatibleClasses.includes(this.class)) {
-      const possibleNewClass = getNullableFirstEntry(compatibleClasses);
-      if (possibleNewClass) {
-        this.changeClass(possibleNewClass);
+      const compatibleClasses = getMappingCompatibleClasses(
+        mapping,
+        this.graphManagerState.usableClasses,
+      );
+      // if there is no chosen class or the chosen one is not compatible
+      // with the mapping then pick a compatible class if possible
+      if (!this.class || !compatibleClasses.includes(this.class)) {
+        const possibleNewClass = compatibleClasses[0];
+        if (possibleNewClass) {
+          this.changeClass(possibleNewClass);
+        }
       }
     }
   }

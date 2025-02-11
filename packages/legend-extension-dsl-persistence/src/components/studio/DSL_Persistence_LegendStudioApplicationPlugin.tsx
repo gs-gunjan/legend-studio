@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../package.json';
-import type { DocumentationEntry } from '@finos/legend-application';
+import packageJson from '../../../package.json' with { type: 'json' };
 import { MeteorIcon, PuzzlePieceIcon } from '@finos/legend-art';
 import type { PackageableElement } from '@finos/legend-graph';
 import {
@@ -35,6 +34,7 @@ import {
   type PureGrammarParserElementDocumentationGetter,
   type PureGrammarParserDocumentationGetter,
   type ElementTypeLabelGetter,
+  PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY,
 } from '@finos/legend-application-studio';
 import { Persistence } from '../../graph/metamodel/pure/model/packageableElements/persistence/DSL_Persistence_Persistence.js';
 import { PersistenceContext } from '../../graph/metamodel/pure/model/packageableElements/persistence/DSL_Persistence_PersistenceContext.js';
@@ -43,7 +43,8 @@ import {
   BLANK_PERSISTENCE_SNIPPET,
 } from '../../__lib__/studio/DSL_Persistence_LegendStudioCodeSnippet.js';
 import { DSL_PERSISTENCE_LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../__lib__/studio/DSL_Persistence_LegendStudioDocumentation.js';
-import type { PureGrammarTextSuggestion } from '@finos/legend-lego/code-editor';
+import type { PureGrammarTextSuggestion } from '@finos/legend-code-editor';
+import type { DocumentationEntry } from '@finos/legend-shared';
 
 const PERSISTENCE_ELEMENT_TYPE = 'PERSISTENCE';
 const PERSISTENCE_CONTEXT_ELEMENT_TYPE = 'PERSISTENCE_CONTEXT';
@@ -83,6 +84,15 @@ export class DSL_Persistence_LegendStudioApplicationPlugin
 
   getExtraSupportedElementTypes(): string[] {
     return [PERSISTENCE_ELEMENT_TYPE, PERSISTENCE_CONTEXT_ELEMENT_TYPE];
+  }
+
+  getExtraSupportedElementTypesWithCategory?(): Map<string, string[]> {
+    const elementTypesWithCategoryMap = new Map<string, string[]>();
+    elementTypesWithCategoryMap.set(
+      PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.OTHER,
+      [PERSISTENCE_ELEMENT_TYPE, PERSISTENCE_CONTEXT_ELEMENT_TYPE],
+    );
+    return elementTypesWithCategoryMap;
   }
 
   getExtraElementClassifiers(): ElementClassifier[] {

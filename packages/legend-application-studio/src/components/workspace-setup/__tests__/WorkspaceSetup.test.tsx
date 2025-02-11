@@ -23,6 +23,11 @@ import { ApplicationStoreProvider } from '@finos/legend-application';
 import { TEST__BrowserEnvironmentProvider } from '@finos/legend-application/test';
 import { LegendStudioFrameworkProvider } from '../../LegendStudioFrameworkProvider.js';
 import { TEST__provideMockedLegendStudioBaseStore } from '../../__test-utils__/LegendStudioFrameworkTestUtils.js';
+import {
+  generateSetupRoute,
+  LEGEND_STUDIO_ROUTE_PATTERN,
+} from '../../../__lib__/LegendStudioNavigation.js';
+import { Route, Routes } from '@finos/legend-application/browser';
 
 test(integrationTest('Shows project searcher properly'), async () => {
   const baseStore = TEST__provideMockedLegendStudioBaseStore();
@@ -33,9 +38,21 @@ test(integrationTest('Shows project searcher properly'), async () => {
 
   const { queryByText } = render(
     <ApplicationStoreProvider store={baseStore.applicationStore}>
-      <TEST__BrowserEnvironmentProvider>
+      <TEST__BrowserEnvironmentProvider
+        initialEntries={[
+          generateSetupRoute(
+            TEST_DATA__DefaultSDLCInfo.project.projectId,
+            undefined,
+          ),
+        ]}
+      >
         <LegendStudioFrameworkProvider>
-          <WorkspaceSetup />
+          <Routes>
+            <Route
+              path={LEGEND_STUDIO_ROUTE_PATTERN.SETUP_WORKSPACE}
+              element={<WorkspaceSetup />}
+            />
+          </Routes>
         </LegendStudioFrameworkProvider>
       </TEST__BrowserEnvironmentProvider>
     </ApplicationStoreProvider>,
@@ -44,6 +61,27 @@ test(integrationTest('Shows project searcher properly'), async () => {
   // NOTE: react-select does not seem to produce a normal input box where we could set the placeholder attribute
   // as such, we cannot use `queryByPlaceholderText` but use `queryByText` instead
   await waitFor(() =>
+    expect(queryByText('Welcome to Legend Studio')).not.toBeNull(),
+  );
+  await waitFor(() =>
     expect(queryByText('Search for project...')).not.toBeNull(),
   );
+  await waitFor(() =>
+    expect(queryByText('Search for an existing project')).not.toBeNull(),
+  );
+  await waitFor(() =>
+    expect(queryByText('Choose an existing workspace')).not.toBeNull(),
+  );
+  await waitFor(() =>
+    expect(
+      queryByText('In order to choose a workspace, a project must be chosen'),
+    ).not.toBeNull(),
+  );
+  await waitFor(() => expect(queryByText('Go')).not.toBeNull());
+  await waitFor(() => expect(queryByText('Create New Project')).not.toBeNull());
+  await waitFor(() =>
+    expect(queryByText(`Need to create a new workspace?`)).not.toBeNull(),
+  );
+  //check successfully load cards
+  await waitFor(() => expect(queryByText('Showcase Projects')).not.toBeNull());
 });

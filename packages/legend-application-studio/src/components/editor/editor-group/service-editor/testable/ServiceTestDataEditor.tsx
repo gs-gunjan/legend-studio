@@ -16,10 +16,12 @@
 
 import {
   BlankPanelPlaceholder,
+  CaretDownIcon,
   clsx,
   ContextMenu,
   CustomSelectorInput,
   Dialog,
+  ControlledDropdownMenu,
   InfoCircleIcon,
   MaskIcon,
   MenuContent,
@@ -37,20 +39,26 @@ import {
   ResizablePanelGroup,
   ResizablePanelSplitter,
   ResizablePanelSplitterLine,
+  TimesIcon,
 } from '@finos/legend-art';
 import {
   type IdentifiedConnection,
   type ConnectionTestData,
   type DataElement,
+  type ValueSpecification,
   getAllIdentifiedServiceConnections,
   DataElementReference,
   PackageableElementExplicitReference,
+  Column,
 } from '@finos/legend-graph';
 import { observer } from 'mobx-react-lite';
 import { forwardRef, useState } from 'react';
-import type {
-  ConnectionTestDataState,
-  ServiceTestDataState,
+import {
+  createMockPrimitiveValueSpecificationFromRelationalDataType,
+  type ConnectionTestDataState,
+  type RowIdentifierState,
+  type ServiceTestDataState,
+  type TableRowIdentifierState,
 } from '../../../../../stores/editor/editor-state/element-editor-state/service/testable/ServiceTestDataState.js';
 import type { EmbeddedDataTypeOption } from '../../../../../stores/editor/editor-state/element-editor-state/data/DataEditorState.js';
 import { EmbeddedDataEditor } from '../../data-editor/EmbeddedDataEditor.js';
@@ -62,16 +70,285 @@ import {
   useApplicationStore,
 } from '@finos/legend-application';
 import { buildElementOption } from '@finos/legend-lego/graph-editor';
-import { prettyCONSTName } from '@finos/legend-shared';
+import {
+  filterByType,
+  guaranteeNonNullable,
+  prettyCONSTName,
+} from '@finos/legend-shared';
 import type { DSL_Data_LegendStudioApplicationPlugin_Extension } from '../../../../../stores/extensions/DSL_Data_LegendStudioApplicationPlugin_Extension.js';
 import { useEditorStore } from '../../../EditorStoreProvider.js';
-import { LambdaParameterValuesEditor } from '@finos/legend-query-builder';
+import {
+  BasicValueSpecificationEditor,
+  LambdaParameterValuesEditor,
+} from '@finos/legend-query-builder';
 import { LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../../../../__lib__/LegendStudioDocumentation.js';
+import type { TableOption } from '../../data-editor/RelationalCSVDataEditor.js';
+import { getPrimitiveTypeFromRelationalType } from '../../../../../stores/editor/utils/MockDataUtils.js';
+
+export interface ColumnOption {
+  value: Column;
+  label: string;
+}
+
+export const RowIdentifierEditor = observer(
+  (props: {
+    tableRowIdentifierState: TableRowIdentifierState;
+    rowIdentifierState: RowIdentifierState;
+  }) => {
+    const { tableRowIdentifierState, rowIdentifierState } = props;
+    const applicationStore = useApplicationStore();
+    const columnOptions = tableRowIdentifierState.table.columns
+      .filter(filterByType(Column))
+      .map((_c) => ({
+        label: _c.name,
+        value: _c,
+      }));
+    const changeColumn = (val: ColumnOption): void => {
+      if (rowIdentifierState.column.name !== val.value.name) {
+        const valueSpec =
+          createMockPrimitiveValueSpecificationFromRelationalDataType(
+            guaranteeNonNullable(rowIdentifierState.column.type),
+            tableRowIdentifierState.connectionTestDataState.editorStore
+              .graphManagerState.graph,
+            tableRowIdentifierState.connectionTestDataState.editorStore
+              .changeDetectionState.observerContext,
+          );
+        if (valueSpec) {
+          rowIdentifierState.updateRowIdentifierValue(valueSpec);
+          rowIdentifierState.updateRowIdentifierColumn(val.value);
+        }
+      }
+    };
+
+    const resetNode = (): void => {
+      const valueSpec =
+        createMockPrimitiveValueSpecificationFromRelationalDataType(
+          guaranteeNonNullable(rowIdentifierState.column.type),
+          tableRowIdentifierState.connectionTestDataState.editorStore
+            .graphManagerState.graph,
+          tableRowIdentifierState.connectionTestDataState.editorStore
+            .changeDetectionState.observerContext,
+        );
+      if (valueSpec) {
+        rowIdentifierState.updateRowIdentifierValue(valueSpec);
+      }
+    };
+
+    return (
+      <div className="panel__content__form__section__list">
+        <div className="panel__content__form__section__list__new-item">
+          <CustomSelectorInput
+            className="service-editor__owner__selector"
+            placeholder="Choose a column..."
+            options={columnOptions}
+            onChange={changeColumn}
+            value={{
+              label: rowIdentifierState.column.name,
+
+              value: rowIdentifierState.column,
+            }}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
+          />
+          <BasicValueSpecificationEditor
+            valueSpecification={rowIdentifierState.value}
+            setValueSpecification={(val: ValueSpecification): void => {
+              rowIdentifierState.updateRowIdentifierValue(val);
+            }}
+            graph={
+              tableRowIdentifierState.connectionTestDataState.editorStore
+                .graphManagerState.graph
+            }
+            observerContext={
+              tableRowIdentifierState.connectionTestDataState.editorStore
+                .changeDetectionState.observerContext
+            }
+            typeCheckOption={{
+              expectedType: guaranteeNonNullable(
+                getPrimitiveTypeFromRelationalType(
+                  guaranteeNonNullable(rowIdentifierState.column.type),
+                ),
+              ),
+            }}
+            resetValue={resetNode}
+          />
+          <button
+            className="btn--icon btn--dark btn--sm"
+            onClick={(): void =>
+              tableRowIdentifierState.removeRowIdentifierState(
+                rowIdentifierState,
+              )
+            }
+            tabIndex={-1}
+            title={'Remove Row'}
+          >
+            <TimesIcon />
+          </button>
+        </div>
+      </div>
+    );
+  },
+);
+
+export const TableRowIdentifierEditor = observer(
+  (props: {
+    connectionTestDataState: ConnectionTestDataState;
+    tableRowIdentifierState: TableRowIdentifierState;
+  }) => {
+    const { connectionTestDataState, tableRowIdentifierState } = props;
+    const applicationStore = useApplicationStore();
+    const tables = connectionTestDataState.getAvailableTables();
+    const tableOptions = tables.map((_t) => ({
+      label: `${_t.schema.name}.${_t.name}`,
+      value: _t,
+    }));
+
+    const changeTable = (val: TableOption): void => {
+      if (tableRowIdentifierState.table !== val.value) {
+        tableRowIdentifierState.updateTable(val.value);
+        tableRowIdentifierState.setNewRowIdentifierState([]);
+      }
+    };
+    const addNewRow = (): void => {
+      tableRowIdentifierState.addNewRowIdentifierState(
+        guaranteeNonNullable(
+          tableRowIdentifierState.table.columns.filter(filterByType(Column))[0],
+        ),
+      );
+    };
+    return (
+      <ModalBody className="lambda-parameter-values__modal__body">
+        <div className="panel__content__form__section">
+          <div className="panel__content__form__section__header__label">
+            Table
+          </div>
+          <div className="panel__content__form__section__header__prompt">
+            create seed data below based on root tables
+          </div>
+          <CustomSelectorInput
+            placeholder="Choose a root table..."
+            options={tableOptions}
+            onChange={changeTable}
+            value={{
+              label: `${tableRowIdentifierState.table.schema.name}.${tableRowIdentifierState.table.name}`,
+
+              value: tableRowIdentifierState.table,
+            }}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
+          />
+        </div>
+        <div className="panel__content__form__section">
+          <div className="panel__content__form__section__header__label">
+            Seed Data
+          </div>
+          <div className="panel__content__form__section__header__prompt">
+            create value for primary key column
+          </div>
+          {tableRowIdentifierState.rowIdentifierStates.map(
+            (rowIdentifierState) => (
+              <RowIdentifierEditor
+                key={rowIdentifierState._UUID}
+                tableRowIdentifierState={tableRowIdentifierState}
+                rowIdentifierState={rowIdentifierState}
+              />
+            ),
+          )}
+          <div className="panel__content__form__section__list__new-item__add">
+            <button
+              className="panel__content__form__section__list__new-item__add-btn btn btn--dark"
+              onClick={addNewRow}
+              tabIndex={-1}
+              title="Add Seed Data for column"
+            >
+              Add Row
+            </button>
+          </div>
+        </div>
+      </ModalBody>
+    );
+  },
+);
+
+export const SeedDataInputModal = observer(
+  (props: { connectionTestDataState: ConnectionTestDataState }) => {
+    const { connectionTestDataState } = props;
+    const applicationStore = useApplicationStore();
+    const useSeedDataInputModal = connectionTestDataState.useSeedDataInputModal;
+    const closeModal = (): void =>
+      connectionTestDataState.setUseSeedDataInputModal(false);
+    const generateWithSeedData = (): void => {
+      closeModal();
+      flowResult(connectionTestDataState.generateTestDataWithSeedData()).catch(
+        applicationStore.alertUnhandledError,
+      );
+    };
+    const addNewTable = (): void => {
+      const tables = connectionTestDataState.getAvailableTables();
+      if (tables[0]) {
+        connectionTestDataState.addNewTableIdentifierState(tables[0]);
+      }
+    };
+
+    return (
+      <Dialog
+        open={useSeedDataInputModal}
+        onClose={closeModal}
+        classes={{
+          root: 'editor-modal__root-container',
+          container: 'editor-modal__container',
+          paper: 'editor-modal__content',
+        }}
+      >
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="editor-modal lambda-parameter-values__modal"
+        >
+          <ModalHeader title="Create Seed Data Input (BETA)" />
+          <ModalBody className="lambda-parameter-values__modal__body">
+            {connectionTestDataState.tableRowIdentifierStates.map(
+              (tableRowIdentifierState) => (
+                <TableRowIdentifierEditor
+                  key={tableRowIdentifierState._UUID}
+                  connectionTestDataState={connectionTestDataState}
+                  tableRowIdentifierState={tableRowIdentifierState}
+                />
+              ),
+            )}
+            <button
+              className="panel__content__form__section__list__new-item__add-btn btn btn--dark"
+              onClick={addNewTable}
+              tabIndex={-1}
+              title="Add Seed Data for table"
+            >
+              Add a Different Table
+            </button>
+          </ModalBody>
+          <ModalFooter>
+            <ModalFooterButton
+              onClick={closeModal}
+              text="Close"
+              type="secondary"
+            />
+            <ModalFooterButton onClick={generateWithSeedData} text="Generate" />
+          </ModalFooter>
+        </Modal>
+      </Dialog>
+    );
+  },
+);
 
 export const UseDataElementModal = observer(
   (props: { connectionTestDataState: ConnectionTestDataState }) => {
     const { connectionTestDataState } = props;
     const editorStore = connectionTestDataState.editorStore;
+    const applicationStore = editorStore.applicationStore;
     const useSharedModal = connectionTestDataState.useSharedModal;
     const closeModal = (): void =>
       connectionTestDataState.setUseSharedModal(false);
@@ -110,7 +387,12 @@ export const UseDataElementModal = observer(
         classes={{ container: 'search-modal__container' }}
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
-        <Modal darkMode={true} className="service-test-data-modal">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="service-test-data-modal"
+        >
           <ModalBody>
             <div className="panel__content__form__section">
               <div className="panel__content__form__section__header__label">
@@ -123,7 +405,10 @@ export const UseDataElementModal = observer(
                   options={dataElementOptions}
                   onChange={onDataElementChange}
                   value={selectedDataElement}
-                  darkMode={true}
+                  darkMode={
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled
+                  }
                 />
               </div>
             </div>
@@ -199,6 +484,21 @@ export const ConnectionTestDataEditor = observer(
       }
     };
 
+    const generateTestDataWithSeedData = (): void => {
+      connectionTestDataState.setUseSeedDataInputModal(true);
+      connectionTestDataState.setNewTableIdentifierState([]);
+      const table = connectionTestDataState.getAvailableTables()[0];
+      if (table) {
+        connectionTestDataState.addNewTableIdentifierState(table);
+      }
+    };
+
+    const generateQuerySchemas = (): void => {
+      flowResult(connectionTestDataState.generateQuerySchemas()).catch(
+        applicationStore.alertUnhandledError,
+      );
+    };
+
     return (
       <div className="service-test-data-editor">
         <div className="service-test-suite-editor__header">
@@ -231,22 +531,55 @@ export const ConnectionTestDataEditor = observer(
                 <MaskIcon />
               </button>
             </div>
-            <button
-              className="panel__header__action service-execution-editor__test-data__generate-btn"
-              onClick={generateTestData}
-              title="Generate test data if possible"
-              disabled={
-                connectionTestDataState.generatingTestDataState.isInProgress
-              }
-              tabIndex={-1}
-            >
-              <div className="service-execution-editor__test-data__generate-btn__label">
-                <RefreshIcon className="service-execution-editor__test-data__generate-btn__label__icon" />
-                <div className="service-execution-editor__test-data__generate-btn__label__title">
+            <div className="btn__dropdown-combo btn__dropdown-combo--primary">
+              <button
+                className="btn__dropdown-combo__label"
+                onClick={generateTestData}
+                title="Generate test data if possible"
+                disabled={
+                  connectionTestDataState.generatingTestDataState.isInProgress
+                }
+                tabIndex={-1}
+              >
+                <RefreshIcon className="btn__dropdown-combo__label__icon" />
+                <div className="btn__dropdown-combo__label__title">
                   Generate
                 </div>
-              </div>
-            </button>
+              </button>
+              <ControlledDropdownMenu
+                className="btn__dropdown-combo__dropdown-btn"
+                content={
+                  <MenuContent>
+                    <MenuContentItem
+                      className="btn__dropdown-combo__option"
+                      onClick={generateQuerySchemas}
+                      disabled={
+                        connectionTestDataState.generateSchemaQueryState
+                          .isInProgress
+                      }
+                    >
+                      Generate Query Schemas
+                    </MenuContentItem>
+                    <MenuContentItem
+                      className="btn__dropdown-combo__option"
+                      onClick={generateTestDataWithSeedData}
+                      disabled={
+                        connectionTestDataState
+                          .generatingTestDataWithSeedDataState.isInProgress
+                      }
+                    >
+                      Generate with Seed Data (Beta)
+                    </MenuContentItem>
+                  </MenuContent>
+                }
+                menuProps={{
+                  anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+                  transformOrigin: { vertical: 'top', horizontal: 'right' },
+                }}
+              >
+                <CaretDownIcon />
+              </ControlledDropdownMenu>
+            </div>
             <button
               className="panel__header__action service-execution-editor__test-data__generate-btn"
               onClick={openShared}
@@ -282,6 +615,11 @@ export const ConnectionTestDataEditor = observer(
         )}
         {connectionTestDataState.useSharedModal && (
           <UseDataElementModal
+            connectionTestDataState={connectionTestDataState}
+          />
+        )}
+        {connectionTestDataState.useSeedDataInputModal && (
+          <SeedDataInputModal
             connectionTestDataState={connectionTestDataState}
           />
         )}
@@ -371,6 +709,7 @@ export const NewConnectionDataModal = observer(
   (props: { testDataState: ServiceTestDataState }) => {
     const { testDataState } = props;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const dataElementOptions =
       editorStore.graphManagerState.usableDataElements.map(buildElementOption);
     const newConnectionState = testDataState.newConnectionDataState;
@@ -486,7 +825,10 @@ export const NewConnectionDataModal = observer(
                   onChange={onConnectionSelectionChange}
                   value={selectedConnection}
                   isClearable={false}
-                  darkMode={true}
+                  darkMode={
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled
+                  }
                 />
               </div>
             </div>
@@ -504,7 +846,10 @@ export const NewConnectionDataModal = observer(
                   onChange={onEmbeddedTypeChange}
                   value={selectedEmbeddedType}
                   isClearable={false}
-                  darkMode={true}
+                  darkMode={
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled
+                  }
                 />
               </div>
             </div>
@@ -520,23 +865,23 @@ export const NewConnectionDataModal = observer(
                     options={dataElementOptions}
                     onChange={onDataElementChange}
                     value={selectedDataElement}
-                    darkMode={true}
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
                   />
                 </div>
               </div>
             )}
           </ModalBody>
           <ModalFooter>
-            <button
-              type="button" // prevent this toggler being activated on form submission
-              className="btn btn--dark"
+            <ModalFooterButton
               onClick={closeModal}
-            >
-              Cancel
-            </button>
-            <button className="btn btn--dark" disabled={isDisabled}>
-              Create
-            </button>
+              text="Cancel"
+              type="secondary"
+              preventFormSubmit={true} // prevent this toggler being activated on form submission
+            />
+            <ModalFooterButton text="Create" disabled={isDisabled} />
           </ModalFooter>
         </form>
       </Dialog>
@@ -584,10 +929,28 @@ export const ServiceTestDataEditor = observer(
               tooltipText="Click to add connection test data"
             />
           )}
+          <PanelLoadingIndicator
+            isLoading={
+              Boolean(
+                testDataState.selectedDataState?.generatingTestDataState
+                  .isInProgress,
+              ) ||
+              Boolean(
+                testDataState.selectedDataState?.generateSchemaQueryState
+                  .isInProgress,
+              ) ||
+              Boolean(
+                testDataState.selectedDataState
+                  ?.generatingTestDataWithSeedDataState.isInProgress,
+              )
+            }
+          />
           {hideExplorer && selectedDataState ? (
-            <ConnectionTestDataEditor
-              connectionTestDataState={selectedDataState}
-            />
+            <>
+              <ConnectionTestDataEditor
+                connectionTestDataState={selectedDataState}
+              />
+            </>
           ) : (
             <ResizablePanelGroup orientation="vertical">
               <ResizablePanel minSize={100}>
@@ -630,12 +993,6 @@ export const ServiceTestDataEditor = observer(
                 <ResizablePanelSplitterLine color="var(--color-dark-grey-200)" />
               </ResizablePanelSplitter>
               <ResizablePanel minSize={600}>
-                <PanelLoadingIndicator
-                  isLoading={Boolean(
-                    testDataState.selectedDataState?.generatingTestDataState
-                      .isInProgress,
-                  )}
-                />
                 {testDataState.selectedDataState && (
                   <ConnectionTestDataEditor
                     connectionTestDataState={testDataState.selectedDataState}

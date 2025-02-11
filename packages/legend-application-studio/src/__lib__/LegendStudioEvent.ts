@@ -30,15 +30,24 @@ export enum LEGEND_STUDIO_APP_EVENT {
   PACKAGE_TREE_BUILDER_FAILURE = 'editor.package-tree-build.failure',
   MODEL_LOADER_FAILURE = 'editor.model-loader.failure',
   DATABASE_BUILDER_FAILURE = 'editor.database-builder.failure',
+  DATABASE_MODEL_BUILDER_FAILURE = 'editor.database-model-builder.failure',
   SERVICE_REGISTRATION_FAILURE = 'editor.service-editor.registration.failure',
   SERVICE_TEST_RUNNER_FAILURE = 'editor.service-editor.test-runner.failure',
   SERVICE_TEST_SETUP_FAILURE = 'editor.service-editor.test-setup.failure',
   GENERATION_FAILURE = 'editor.generation.failure',
   EXTERNAL_FORMAT_FAILURE = 'editor.external-format.failure',
   MAPPING_TEST_FAILURE = 'editor.mapping-editor.test-runner.failure',
+
+  ENGINE_MANAGER_FAILURE = 'engine.manager.failure',
   // SDLC
   // TODO: consider to split this generic errors into more specific events
   SDLC_MANAGER_FAILURE = 'sdlc.manager.failure',
+
+  SHOWCASE_MANAGER_FAILURE = 'showcase.manager.failure',
+  // showcase manager
+  SHOWCASE_MANAGER_LAUNCH = 'showcase.manager.launch',
+  SHOWCASE_MANAGER_SHOWCASE_PROJECT_LAUNCH = 'showcase.manager.showcase.project.launch',
+  SHOWCASE_VIEWER_LAUNCH = 'showcase.viewer.launch',
 
   UPDATE_WORKSPACE__SUCCESS = 'sdlc.workspace-update.success',
   PUSH_LOCAL_CHANGES__SUCCESS = 'sdlc.local-changes-push.success',
@@ -63,4 +72,9 @@ export enum LEGEND_STUDIO_APP_EVENT {
 
   CHANGE_DETECTION_PRECOMPUTE_GRAPH_HASHES__SUCCESS = 'change-detection.graph.pre-hash.success',
   CHANGE_DETECTION_OBSERVE_GRAPH__SUCCESS = 'change-detection.graph.observation.success',
+
+  // text editor
+  TEXT_MODE_ACTION_KEYBOARD_SHORTCUT_GO_TO_DEFINITION__LAUNCH = 'editor.text-mode.action.keyboard.shortcut.go-to-element.launch',
+  TEXT_MODE_ACTION_KEYBOARD_SHORTCUT_GO_TO_DEFINITION__ERROR = 'editor.text-mode.action.keyboard.shortcut.go-to-element.error',
+  TEXT_MODE_ACTION_KEYBOARD_SHORTCUT_GO_TO_DEFINITION__SUCCESS = 'editor.text-mode.action.keyboard.shortcut.go-to-element.success',
 }

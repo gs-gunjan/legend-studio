@@ -42,7 +42,7 @@ export class QueryBuilderFilterOperator_IsEmpty
   extends QueryBuilderFilterOperator
   implements Hashable
 {
-  getLabel(filterConditionState: FilterConditionState): string {
+  getLabel(): string {
     return 'is empty';
   }
 
@@ -69,7 +69,7 @@ export class QueryBuilderFilterOperator_IsEmpty
   isCompatibleWithFilterConditionValue(
     filterConditionState: FilterConditionState,
   ): boolean {
-    return filterConditionState.value === undefined;
+    return filterConditionState.rightConditionValue === undefined;
   }
 
   getDefaultFilterConditionValue(
@@ -80,10 +80,12 @@ export class QueryBuilderFilterOperator_IsEmpty
 
   buildFilterConditionExpression(
     filterConditionState: FilterConditionState,
+    lambdaParameterName?: string | undefined,
   ): ValueSpecification {
     return buildFilterConditionExpression(
       filterConditionState,
       QUERY_BUILDER_SUPPORTED_FUNCTIONS.IS_EMPTY,
+      lambdaParameterName,
     );
   }
 
@@ -108,15 +110,19 @@ export class QueryBuilderFilterOperator_IsEmpty
 }
 
 export class QueryBuilderFilterOperator_IsNotEmpty extends QueryBuilderFilterOperator_IsEmpty {
-  override getLabel(filterConditionState: FilterConditionState): string {
+  override getLabel(): string {
     return `is not empty`;
   }
 
   override buildFilterConditionExpression(
     filterConditionState: FilterConditionState,
+    lambdaParameterName?: string | undefined,
   ): ValueSpecification {
     return buildNotExpression(
-      super.buildFilterConditionExpression(filterConditionState),
+      super.buildFilterConditionExpression(
+        filterConditionState,
+        lambdaParameterName,
+      ),
     );
   }
 

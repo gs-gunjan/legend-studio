@@ -95,7 +95,12 @@ export const TEST_DATA__simpleProjectionWithBusinessTemporalSourceAndProcessingT
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'businessDate',
         multiplicity: {
           lowerBound: 1,
@@ -104,7 +109,12 @@ export const TEST_DATA__simpleProjectionWithBusinessTemporalSourceAndProcessingT
       },
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'processingDate',
         multiplicity: {
           lowerBound: 1,
@@ -191,7 +201,12 @@ export const TEST_DATA__simpleProjectionWithBusinessTemporalSourceAndBusinessTem
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'businessDate',
         multiplicity: {
           lowerBound: 1,
@@ -282,7 +297,12 @@ export const TEST_DATA__simpleProjectionWithBusinessTemporalSourceAndBiTemporalT
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'businessDate',
         multiplicity: {
           lowerBound: 1,
@@ -291,7 +311,12 @@ export const TEST_DATA__simpleProjectionWithBusinessTemporalSourceAndBiTemporalT
       },
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'processingDate',
         multiplicity: {
           lowerBound: 1,
@@ -382,7 +407,12 @@ export const TEST_DATA__simpleProjectionWithBiTemporalSourceAndBiTemporalTarget 
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         multiplicity: {
           lowerBound: 1,
           upperBound: 1,
@@ -391,7 +421,12 @@ export const TEST_DATA__simpleProjectionWithBiTemporalSourceAndBiTemporalTarget 
       },
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         multiplicity: {
           lowerBound: 1,
           upperBound: 1,
@@ -478,7 +513,12 @@ export const TEST_DATA__simpleProjectionWithBiTemporalSourceAndBusinessTemporalT
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'businessDate',
         multiplicity: {
           lowerBound: 1,
@@ -487,7 +527,12 @@ export const TEST_DATA__simpleProjectionWithBiTemporalSourceAndBusinessTemporalT
       },
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'processingDate',
         multiplicity: {
           lowerBound: 1,
@@ -578,7 +623,12 @@ export const TEST_DATA__simpleProjectionWithBiTemporalSourceAndProcessingTempora
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'businessDate',
         multiplicity: {
           lowerBound: 1,
@@ -587,7 +637,12 @@ export const TEST_DATA__simpleProjectionWithBiTemporalSourceAndProcessingTempora
       },
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'processingDate',
         multiplicity: {
           lowerBound: 1,
@@ -682,7 +737,12 @@ export const TEST_DATA__simpleProjectionWithProcessingTemporalSourceAndBiTempora
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'businessDate',
         multiplicity: {
           lowerBound: 1,
@@ -691,7 +751,12 @@ export const TEST_DATA__simpleProjectionWithProcessingTemporalSourceAndBiTempora
       },
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'processingDate',
         multiplicity: {
           lowerBound: 1,
@@ -782,7 +847,12 @@ export const TEST_DATA__simpleProjectionWithProcessingTemporalSourceAndBusinessT
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'businessDate',
         multiplicity: {
           lowerBound: 1,
@@ -791,7 +861,12 @@ export const TEST_DATA__simpleProjectionWithProcessingTemporalSourceAndBusinessT
       },
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'processingDate',
         multiplicity: {
           lowerBound: 1,
@@ -878,7 +953,12 @@ export const TEST_DATA__simpleProjectionWithProcessingTemporalSourceAndProcessin
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'processingDate',
         multiplicity: {
           lowerBound: 1,
@@ -965,7 +1045,12 @@ export const TEST_DATA__simpleProjectionWithNonTemporalSourceAndProcessingTempor
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'processingDate',
         multiplicity: {
           lowerBound: 1,
@@ -1056,7 +1141,12 @@ export const TEST_DATA__simpleProjectionWithNonTemporalSourceAndBiTemporalTarget
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'processingDate',
         multiplicity: {
           lowerBound: 1,
@@ -1065,7 +1155,12 @@ export const TEST_DATA__simpleProjectionWithNonTemporalSourceAndBiTemporalTarget
       },
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'businessDate',
         multiplicity: {
           lowerBound: 1,
@@ -1152,7 +1247,12 @@ export const TEST_DATA__simpleProjectionWithNonTemporalSourceAndBusinessTemporal
     parameters: [
       {
         _type: 'var',
-        class: 'Date',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
         name: 'businessDate',
         multiplicity: {
           lowerBound: 1,
@@ -1353,7 +1453,12 @@ export const TEST_DATA__simpleProjectionWithAggregationInput = {
   parameters: [
     {
       _type: 'var',
-      class: 'Date',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
       name: 'businessDate',
       multiplicity: {
         lowerBound: 1,
@@ -1479,7 +1584,12 @@ export const TEST_DATA__simpleProjectionWithAggregationOutput = {
   parameters: [
     {
       _type: 'var',
-      class: 'Date',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
       name: 'businessDate',
       multiplicity: {
         lowerBound: 1,
@@ -1632,3 +1742,1869 @@ export const TEST_DATA__getAllWithHardcodedDateOutput = {
   ],
   parameters: [],
 };
+
+export const TEST_DATA__simpleProjectionWithBusinessMilestonedColumn = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'letFunction',
+      parameters: [
+        {
+          _type: 'string',
+          value: 'businessDate',
+        },
+        {
+          _type: 'func',
+          function: 'meta::pure::functions::date::now',
+          parameters: [],
+        },
+      ],
+    },
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'my::Firm',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'equal',
+              parameters: [
+                {
+                  _type: 'property',
+                  parameters: [
+                    {
+                      _type: 'property',
+                      parameters: [
+                        {
+                          _type: 'property',
+                          parameters: [
+                            {
+                              _type: 'var',
+                              name: 'x',
+                            },
+                            {
+                              _type: 'var',
+                              name: 'businessDate',
+                            },
+                          ],
+                          property: 'businessTemporal',
+                        },
+                      ],
+                      property: 'businessTemporal',
+                    },
+                  ],
+                  property: 'firmID',
+                },
+                {
+                  _type: 'integer',
+                  value: 0,
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__simpleFilterWithBusinessTemporalSourceAndBusinessTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person',
+              },
+              {
+                _type: 'var',
+                name: 'businessDate',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                        ],
+                        property: 'businessTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithBusinessTemporalSourceAndProcessingTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person',
+              },
+              {
+                _type: 'var',
+                name: 'businessDate',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'processingDate',
+                          },
+                        ],
+                        property: 'processingTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithBusinessTemporalSourceAndBiTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person',
+              },
+              {
+                _type: 'var',
+                name: 'businessDate',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'processingDate',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'businessDate',
+                          },
+                        ],
+                        property: 'biTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithProcessingTemporalSourceAndBusinessTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person2',
+              },
+              {
+                _type: 'var',
+                name: 'processingDate',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'businessDate',
+                          },
+                        ],
+                        property: 'businessTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithProcessingTemporalSourceAndProcessingTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person2',
+              },
+              {
+                _type: 'var',
+                name: 'processingDate',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                        ],
+                        property: 'processingTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithProcessingTemporalSourceAndBiTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person2',
+              },
+              {
+                _type: 'var',
+                name: 'processingDate',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'processingDate',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'businessDate',
+                          },
+                        ],
+                        property: 'biTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithBiTemporalSourceAndBusinessTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person1',
+              },
+              {
+                _type: 'var',
+                name: 'processingDate',
+              },
+              {
+                _type: 'var',
+                name: 'businessDate',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                        ],
+                        property: 'businessTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithBiTemporalSourceAndProcessingTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person1',
+              },
+              {
+                _type: 'var',
+                name: 'processingDate',
+              },
+              {
+                _type: 'var',
+                name: 'businessDate',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                        ],
+                        property: 'processingTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithBiTemporalSourceAndBiTemporalTarget = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'my::Person1',
+            },
+            {
+              _type: 'var',
+              name: 'processingDate',
+            },
+            {
+              _type: 'var',
+              name: 'businessDate',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'equal',
+              parameters: [
+                {
+                  _type: 'property',
+                  parameters: [
+                    {
+                      _type: 'property',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                      property: 'biTemporal',
+                    },
+                  ],
+                  property: 'firmID',
+                },
+                {
+                  _type: 'integer',
+                  value: 0,
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'processingDate',
+    },
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'businessDate',
+    },
+  ],
+};
+
+export const TEST_DATA__simpleFilterWithNonTemporalSourceAndBusinessTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Firm',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'businessDate',
+                          },
+                        ],
+                        property: 'businessTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithNonTemporalSourceAndProcessingTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'filter',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAll',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Firm',
+              },
+            ],
+          },
+          {
+            _type: 'lambda',
+            body: [
+              {
+                _type: 'func',
+                function: 'equal',
+                parameters: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'processingDate',
+                          },
+                        ],
+                        property: 'processingTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                  {
+                    _type: 'integer',
+                    value: 0,
+                  },
+                ],
+              },
+            ],
+            parameters: [
+              {
+                _type: 'var',
+                name: 'x',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleFilterWithNonTemporalSourceAndBiTemporalTarget = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'filter',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'getAll',
+          parameters: [
+            {
+              _type: 'packageableElementPtr',
+              fullPath: 'my::Firm',
+            },
+          ],
+        },
+        {
+          _type: 'lambda',
+          body: [
+            {
+              _type: 'func',
+              function: 'equal',
+              parameters: [
+                {
+                  _type: 'property',
+                  parameters: [
+                    {
+                      _type: 'property',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                        {
+                          _type: 'var',
+                          name: 'processingDate',
+                        },
+                        {
+                          _type: 'var',
+                          name: 'businessDate',
+                        },
+                      ],
+                      property: 'biTemporal',
+                    },
+                  ],
+                  property: 'firmID',
+                },
+                {
+                  _type: 'integer',
+                  value: 0,
+                },
+              ],
+            },
+          ],
+          parameters: [
+            {
+              _type: 'var',
+              name: 'x',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  parameters: [
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'processingDate',
+    },
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'businessDate',
+    },
+  ],
+};
+
+export const TEST_DATA__simpleGetAllVersionsWithProcessingTemporalClass = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'getAllVersions',
+      parameters: [
+        {
+          _type: 'packageableElementPtr',
+          fullPath: 'my::Person2',
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__simpleGetAllVersionsWithBusinessTemporalClass = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'getAllVersions',
+      parameters: [
+        {
+          _type: 'packageableElementPtr',
+          fullPath: 'my::Person',
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__simpleGetAllVersionsWithBiTemporalClass = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'getAllVersions',
+      parameters: [
+        {
+          _type: 'packageableElementPtr',
+          fullPath: 'my::Person1',
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__simpleGetAllVersionsWithNonTemporalClass = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'getAllVersions',
+      parameters: [
+        {
+          _type: 'packageableElementPtr',
+          fullPath: 'my::Firm',
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
+export const TEST_DATA__simpleGetAllVersionsInRangeWithBusinessTemporalClass = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'getAllVersionsInRange',
+      parameters: [
+        {
+          _type: 'packageableElementPtr',
+          fullPath: 'my::Person',
+        },
+        {
+          _type: 'var',
+          name: 'start',
+        },
+        {
+          _type: 'var',
+          name: 'end',
+        },
+      ],
+    },
+  ],
+  parameters: [
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'start',
+    },
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'end',
+    },
+  ],
+};
+
+export const TEST_DATA__simpleGetAllVersionsInRangeWithBiTemporalClass = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'getAllVersionsInRange',
+      parameters: [
+        {
+          _type: 'packageableElementPtr',
+          fullPath: 'my::Person1',
+        },
+        {
+          _type: 'var',
+          name: 'start',
+        },
+        {
+          _type: 'var',
+          name: 'end',
+        },
+      ],
+    },
+  ],
+  parameters: [
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'start',
+    },
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'end',
+    },
+  ],
+};
+
+export const TEST_DATA__simpleGetAllVersionsInRangeWithProcessingTemporalClass =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'getAllVersionsInRange',
+        parameters: [
+          {
+            _type: 'packageableElementPtr',
+            fullPath: 'my::Person2',
+          },
+          {
+            _type: 'var',
+            name: 'start',
+          },
+          {
+            _type: 'var',
+            name: 'end',
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'start',
+      },
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'end',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleGetAllVersionsInRangeWithNonTemporalClass = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'getAllVersionsInRange',
+      parameters: [
+        {
+          _type: 'packageableElementPtr',
+          fullPath: 'my::Firm',
+        },
+        {
+          _type: 'var',
+          name: 'start',
+        },
+        {
+          _type: 'var',
+          name: 'end',
+        },
+      ],
+    },
+  ],
+  parameters: [
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'start',
+    },
+    {
+      _type: 'var',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Date',
+        },
+      },
+      multiplicity: {
+        lowerBound: 1,
+        upperBound: 1,
+      },
+      name: 'end',
+    },
+  ],
+};
+
+export const TEST_DATA__simpleGetAllVersionsWithBusinessTemporalSourceAndBusinessTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'project',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAllVersions',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person',
+              },
+            ],
+          },
+          {
+            _type: 'collection',
+            multiplicity: {
+              lowerBound: 1,
+              upperBound: 1,
+            },
+            values: [
+              {
+                _type: 'lambda',
+                body: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'businessDate',
+                          },
+                        ],
+                        property: 'businessTemporal',
+                      },
+                    ],
+                    property: 'date',
+                  },
+                ],
+                parameters: [
+                  {
+                    _type: 'var',
+                    name: 'x',
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            _type: 'collection',
+            multiplicity: {
+              lowerBound: 1,
+              upperBound: 1,
+            },
+            values: [
+              {
+                _type: 'string',
+                value: 'Business Temporal/Date',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleGetAllVersionsWithBiTemporalSourceAndBiTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'project',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAllVersions',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person1',
+              },
+            ],
+          },
+          {
+            _type: 'collection',
+            multiplicity: {
+              lowerBound: 1,
+              upperBound: 1,
+            },
+            values: [
+              {
+                _type: 'lambda',
+                body: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'processingDate',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'businessDate',
+                          },
+                        ],
+                        property: 'biTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                ],
+                parameters: [
+                  {
+                    _type: 'var',
+                    name: 'x',
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            _type: 'collection',
+            multiplicity: {
+              lowerBound: 1,
+              upperBound: 1,
+            },
+            values: [
+              {
+                _type: 'string',
+                value: 'Bi Temporal/Firmid',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleGetAllVersionsWithProcessingTemporalSourceAndProcessingTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'project',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAllVersions',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person2',
+              },
+            ],
+          },
+          {
+            _type: 'collection',
+            multiplicity: {
+              lowerBound: 1,
+              upperBound: 1,
+            },
+            values: [
+              {
+                _type: 'lambda',
+                body: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'processingDate',
+                          },
+                        ],
+                        property: 'processingTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                ],
+                parameters: [
+                  {
+                    _type: 'var',
+                    name: 'x',
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            _type: 'collection',
+            multiplicity: {
+              lowerBound: 1,
+              upperBound: 1,
+            },
+            values: [
+              {
+                _type: 'string',
+                value: 'Processing Temporal/Firmid',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'processingDate',
+      },
+    ],
+  };
+
+export const TEST_DATA__simpleGetAllVersionsWithProcessingTemporalSourceAndBusinessTemporalTarget =
+  {
+    _type: 'lambda',
+    body: [
+      {
+        _type: 'func',
+        function: 'project',
+        parameters: [
+          {
+            _type: 'func',
+            function: 'getAllVersions',
+            parameters: [
+              {
+                _type: 'packageableElementPtr',
+                fullPath: 'my::Person2',
+              },
+            ],
+          },
+          {
+            _type: 'collection',
+            multiplicity: {
+              lowerBound: 1,
+              upperBound: 1,
+            },
+            values: [
+              {
+                _type: 'lambda',
+                body: [
+                  {
+                    _type: 'property',
+                    parameters: [
+                      {
+                        _type: 'property',
+                        parameters: [
+                          {
+                            _type: 'var',
+                            name: 'x',
+                          },
+                          {
+                            _type: 'var',
+                            name: 'businessDate',
+                          },
+                        ],
+                        property: 'businessTemporal',
+                      },
+                    ],
+                    property: 'firmID',
+                  },
+                ],
+                parameters: [
+                  {
+                    _type: 'var',
+                    name: 'x',
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            _type: 'collection',
+            multiplicity: {
+              lowerBound: 1,
+              upperBound: 1,
+            },
+            values: [
+              {
+                _type: 'string',
+                value: 'Business Temporal/Firmid',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    parameters: [
+      {
+        _type: 'var',
+        genericType: {
+          rawType: {
+            _type: 'packageableType',
+            fullPath: 'Date',
+          },
+        },
+        multiplicity: {
+          lowerBound: 1,
+          upperBound: 1,
+        },
+        name: 'businessDate',
+      },
+    ],
+  };

@@ -70,7 +70,12 @@ export const TEST_DATA__DataRoundtrip = [
             lowerBound: 0,
           },
           name: 'givenNames',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },

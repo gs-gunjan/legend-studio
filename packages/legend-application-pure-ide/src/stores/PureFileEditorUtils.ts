@@ -19,7 +19,7 @@ import {
   CODE_EDITOR_LANGUAGE,
   isTokenOneOf,
   PURE_GRAMMAR_TOKEN,
-} from '@finos/legend-lego/code-editor';
+} from '@finos/legend-code-editor';
 import {
   ELEMENT_PATH_DELIMITER,
   extractElementNameFromPath,
@@ -227,10 +227,21 @@ export const collectExtraInlineSnippetSuggestions =
     },
   ];
 
-export const getCopyrightHeaderSuggestions =
-  (): monacoLanguagesAPI.CompletionItem[] => {
-    const results: monacoLanguagesAPI.CompletionItem[] = [];
+export const getCopyrightHeaderSuggestions = (
+  position: IPosition,
+  model: monacoEditorAPI.ITextModel,
+): monacoLanguagesAPI.CompletionItem[] => {
+  const results: monacoLanguagesAPI.CompletionItem[] = [];
+  const textUntilPosition = model
+    .getValueInRange({
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: position.lineNumber,
+      endColumn: position.column,
+    })
+    .trimStart();
 
+  if (['', '/'].includes(textUntilPosition)) {
     results.push({
       label: {
         label: `/copyright`,
@@ -248,9 +259,10 @@ export const getCopyrightHeaderSuggestions =
         endColumn: 1000,
       },
     } as monacoLanguagesAPI.CompletionItem);
+  }
 
-    return results;
-  };
+  return results;
+};
 
 const constructorClassSuggestionToCompletionItem = (suggestion: {
   pureId: string;
@@ -269,7 +281,7 @@ const constructorClassSuggestionToCompletionItem = (suggestion: {
     insertText: `${suggestion.pureName}(${suggestion.requiredClassProperties
       .map((property, idx) => `${property}=\${${idx + 1}:}`)
       .join(',')})`,
-  } as monacoLanguagesAPI.CompletionItem);
+  }) as monacoLanguagesAPI.CompletionItem;
 
 const createFunctionInvocationSnippet = (
   functionName: string,
@@ -310,16 +322,16 @@ const elementSuggestionToCompletionItem = (
     type === ConceptType.PACKAGE
       ? monacoLanguagesAPI.CompletionItemKind.Folder
       : type === ConceptType.CLASS
-      ? monacoLanguagesAPI.CompletionItemKind.Class
-      : type === ConceptType.FUNCTION
-      ? monacoLanguagesAPI.CompletionItemKind.Function
-      : type === ConceptType.ENUMERATION
-      ? monacoLanguagesAPI.CompletionItemKind.Enum
-      : type === ConceptType.PROFILE
-      ? monacoLanguagesAPI.CompletionItemKind.Module
-      : type === ConceptType.ASSOCIATION
-      ? monacoLanguagesAPI.CompletionItemKind.Interface
-      : monacoLanguagesAPI.CompletionItemKind.Value;
+        ? monacoLanguagesAPI.CompletionItemKind.Class
+        : type === ConceptType.FUNCTION
+          ? monacoLanguagesAPI.CompletionItemKind.Function
+          : type === ConceptType.ENUMERATION
+            ? monacoLanguagesAPI.CompletionItemKind.Enum
+            : type === ConceptType.PROFILE
+              ? monacoLanguagesAPI.CompletionItemKind.Module
+              : type === ConceptType.ASSOCIATION
+                ? monacoLanguagesAPI.CompletionItemKind.Interface
+                : monacoLanguagesAPI.CompletionItemKind.Value;
   return {
     label: {
       label: suggestion.pureName,
@@ -379,8 +391,8 @@ export const getIncompletePathSuggestions = async (
           isUsingConstructor
             ? [ConceptType.CLASS]
             : isUsingArrowFunction
-            ? [ConceptType.FUNCTION, ConceptType.NATIVE_FUNCTION]
-            : [],
+              ? [ConceptType.FUNCTION, ConceptType.NATIVE_FUNCTION]
+              : [],
         )
       ).map((child) => deserialize(ElementSuggestion, child));
     } catch {
@@ -456,8 +468,8 @@ export const getIdentifierSuggestions = async (
         isUsingConstructor
           ? [ConceptType.CLASS]
           : isUsingArrowFunction
-          ? [ConceptType.FUNCTION, ConceptType.NATIVE_FUNCTION]
-          : [],
+            ? [ConceptType.FUNCTION, ConceptType.NATIVE_FUNCTION]
+            : [],
       )
     ).map((child) => deserialize(ElementSuggestion, child));
   } catch {
@@ -509,14 +521,14 @@ const attributeSuggestionToCompletionItem = (
     type === ConceptType.PROPERTY
       ? monacoLanguagesAPI.CompletionItemKind.Property
       : type === ConceptType.QUALIFIED_PROPERTY
-      ? monacoLanguagesAPI.CompletionItemKind.Method
-      : type === ConceptType.TAG
-      ? monacoLanguagesAPI.CompletionItemKind.Constant
-      : type === ConceptType.STEREOTYPE
-      ? monacoLanguagesAPI.CompletionItemKind.Value
-      : type === ConceptType.ENUM_VALUE
-      ? monacoLanguagesAPI.CompletionItemKind.Enum
-      : monacoLanguagesAPI.CompletionItemKind.Value;
+        ? monacoLanguagesAPI.CompletionItemKind.Method
+        : type === ConceptType.TAG
+          ? monacoLanguagesAPI.CompletionItemKind.Constant
+          : type === ConceptType.STEREOTYPE
+            ? monacoLanguagesAPI.CompletionItemKind.Value
+            : type === ConceptType.ENUM_VALUE
+              ? monacoLanguagesAPI.CompletionItemKind.Enum
+              : monacoLanguagesAPI.CompletionItemKind.Value;
   return {
     label: {
       label: suggestion.pureName,
@@ -598,7 +610,7 @@ const castingClassSuggestionToCompletionItem = (
     insertTextRules:
       monacoLanguagesAPI.CompletionItemInsertTextRule.InsertAsSnippet,
     insertText: suggestion.pureName,
-  } as monacoLanguagesAPI.CompletionItem);
+  }) as monacoLanguagesAPI.CompletionItem;
 
 export const getCastingClassSuggestions = async (
   position: IPosition,
@@ -634,7 +646,7 @@ const variableSuggestionToCompletionItem = (
       ? `zzzz_${suggestion.name}`
       : suggestion.name,
     insertText: suggestion.name,
-  } as monacoLanguagesAPI.CompletionItem);
+  }) as monacoLanguagesAPI.CompletionItem;
 
 const VARIABLE_SUGGESTION_SCANNING_RANGE = 10;
 

@@ -74,6 +74,15 @@ import { INTERNAL__UnknownFunctionActivator } from '../../../../../../../graph/m
 import type { V1_INTERNAL__UnknownFunctionActivator } from '../../../model/packageableElements/function/V1_INTERNAL__UnknownFunctionActivator.js';
 import type { V1_INTERNAL__UnknownStore } from '../../../model/packageableElements/store/V1_INTERNAL__UnknownStore.js';
 import { INTERNAL__UnknownStore } from '../../../../../../../graph/metamodel/pure/packageableElements/store/INTERNAL__UnknownStore.js';
+import type { V1_SnowflakeApp } from '../../../model/packageableElements/function/V1_SnowflakeApp.js';
+import { SnowflakeApp } from '../../../../../../../graph/metamodel/pure/packageableElements/function/SnowflakeApp.js';
+import type { V1_INTERNAL__UnknownElement } from '../../../model/packageableElements/V1_INTERNAL__UnknownElement.js';
+import { INTERNAL__UnknownElement } from '../../../../../../../graph/metamodel/pure/packageableElements/INTERNAL__UnknownElement.js';
+import type { V1_HostedService } from '../../../model/packageableElements/function/V1_HostedService.js';
+import { HostedService } from '../../../../../../../graph/metamodel/pure/packageableElements/function/HostedService.js';
+import { V1_buildFunctionActivatorActions } from './helpers/V1_LegendLambdaHelper.js';
+import { GenericTypeImplicitReference } from '../../../../../../../graph/metamodel/pure/packageableElements/domain/GenericTypeReference.js';
+import { GenericType } from '../../../../../../../graph/metamodel/pure/packageableElements/domain/GenericType.js';
 
 export class V1_ElementFirstPassBuilder
   implements V1_PackageableElementVisitor<PackageableElement>
@@ -103,6 +112,34 @@ export class V1_ElementFirstPassBuilder
       );
   }
 
+  visit_INTERNAL__UnknownElement(
+    element: V1_INTERNAL__UnknownElement,
+  ): PackageableElement {
+    assertNonEmptyString(
+      element.package,
+      `Element 'package' field is missing or empty`,
+    );
+    assertNonEmptyString(
+      element.name,
+      `Element 'name' field is missing or empty`,
+    );
+    const metamodel = new INTERNAL__UnknownElement(element.name);
+    const path = V1_buildFullPath(element.package, element.name);
+    V1_checkDuplicatedElement(path, this.context, this.elementPathCache);
+    this.context.currentSubGraph.INTERNAL__setOwnUnknown(path, metamodel);
+    addElementToPackage(
+      getOrCreateGraphPackage(
+        this.context.currentSubGraph,
+        element.package,
+        this.packageCache,
+      ),
+      metamodel,
+    );
+    metamodel.content = element.content;
+    metamodel.classifierPath = element.classifierPath;
+    return metamodel;
+  }
+
   visit_INTERNAL__UnknownPackageableElement(
     element: V1_INTERNAL__UnknownPackageableElement,
   ): PackageableElement {
@@ -130,6 +167,71 @@ export class V1_ElementFirstPassBuilder
       metamodel,
     );
     metamodel.content = element.content;
+    return metamodel;
+  }
+
+  visit_SnowflakeApp(element: V1_SnowflakeApp): PackageableElement {
+    assertNonEmptyString(
+      element.package,
+      `Function activator 'package' field is missing or empty`,
+    );
+    assertNonEmptyString(
+      element.name,
+      `Function activator 'name' field is missing or empty`,
+    );
+    const metamodel = new SnowflakeApp(element.name);
+    const path = V1_buildFullPath(element.package, element.name);
+    V1_checkDuplicatedElement(path, this.context, this.elementPathCache);
+    this.context.currentSubGraph.setOwnFunctionActivator(path, metamodel);
+    addElementToPackage(
+      getOrCreateGraphPackage(
+        this.context.currentSubGraph,
+        element.package,
+        this.packageCache,
+      ),
+      metamodel,
+    );
+    metamodel.applicationName = element.applicationName;
+    metamodel.description = element.description;
+    if (element.usageRole) {
+      metamodel.usageRole = element.usageRole;
+    }
+    if (element.permissionScheme) {
+      metamodel.permissionScheme = element.permissionScheme;
+    }
+
+    metamodel.description = element.description;
+    V1_buildFunctionActivatorActions(element, metamodel);
+    return metamodel;
+  }
+
+  visit_HostedService(element: V1_HostedService): PackageableElement {
+    assertNonEmptyString(
+      element.package,
+      `Rest Service 'package' field is missing or empty`,
+    );
+    assertNonEmptyString(
+      element.name,
+      `Rest Service 'name' field is missing or empty`,
+    );
+    const metamodel = new HostedService(element.name);
+    const path = V1_buildFullPath(element.package, element.name);
+    V1_checkDuplicatedElement(path, this.context, this.elementPathCache);
+    this.context.currentSubGraph.setOwnFunctionActivator(path, metamodel);
+    addElementToPackage(
+      getOrCreateGraphPackage(
+        this.context.currentSubGraph,
+        element.package,
+        this.packageCache,
+      ),
+      metamodel,
+    );
+    metamodel.documentation = element.documentation;
+    metamodel.pattern = element.pattern;
+    metamodel.autoActivateUpdates = element.autoActivateUpdates;
+    metamodel.storeModel = element.storeModel;
+    metamodel.generateLineage = element.generateLineage;
+    V1_buildFunctionActivatorActions(element, metamodel);
     return metamodel;
   }
 
@@ -338,7 +440,10 @@ export class V1_ElementFirstPassBuilder
     const func = new ConcreteFunctionDefinition(
       name,
       // This is just a stub to fill in when we first create the function
-      PackageableElementImplicitReference.create(PrimitiveType.STRING, ''),
+      GenericTypeImplicitReference.create(
+        PackageableElementImplicitReference.create(PrimitiveType.STRING, ''),
+        new GenericType(PrimitiveType.STRING),
+      ),
       Multiplicity.ZERO_MANY,
     );
     const path = V1_buildFullPath(element.package, name);

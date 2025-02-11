@@ -17,13 +17,20 @@
     { "path": "packages/legend-manual-tests" },
     { "path": "packages/legend-shared" },
     { "path": "packages/legend-storage" },
-    { "path": "packages/legend-server-sdlc" },
-    { "path": "packages/legend-server-depot" },
     { "path": "packages/legend-graph" },
     { "path": "packages/legend-query-builder" },
+    { "path": "packages/legend-data-cube" },
     { "path": "packages/legend-art" },
+    { "path": "packages/legend-code-editor" },
     { "path": "packages/legend-lego" },
     { "path": "packages/legend-application" },
+    // sdlc
+    { "path": "packages/legend-server-sdlc" },
+    // depot
+    { "path": "packages/legend-server-depot" },
+    // showcase
+    { "path": "packages/legend-server-showcase" },
+    { "path": "packages/legend-server-showcase-deployment" },
     // studio
     { "path": "packages/legend-application-studio" },
     { "path": "packages/legend-application-studio-bootstrap" },
@@ -32,22 +39,31 @@
     { "path": "packages/legend-application-query" },
     { "path": "packages/legend-application-query-bootstrap" },
     { "path": "packages/legend-application-query-deployment" },
+    // data cube
+    { "path": "packages/legend-application-data-cube" },
+    { "path": "packages/legend-application-data-cube-bootstrap" },
+    { "path": "packages/legend-application-data-cube-deployment" },
     // pure ide
     { "path": "packages/legend-application-pure-ide" },
     { "path": "packages/legend-application-pure-ide-deployment" },
+     // repl
+     { "path": "packages/legend-application-repl" },
+     { "path": "packages/legend-application-repl-deployment" },
     // extensions
     { "path": "packages/legend-extension-tracer-zipkin" },
     { "path": "packages/legend-extension-assortment" },
     { "path": "packages/legend-extension-dsl-text" },
     { "path": "packages/legend-extension-dsl-diagram" },
     { "path": "packages/legend-extension-dsl-data-space" },
+    { "path": "packages/legend-extension-dsl-data-space-studio" },
     { "path": "packages/legend-extension-dsl-service" },
     { "path": "packages/legend-extension-dsl-persistence" },
-    { "path": "packages/legend-extension-dsl-mastery" },
     { "path": "packages/legend-extension-store-service-store" },
     { "path": "packages/legend-extension-store-flat-data" },
     { "path": "packages/legend-extension-store-relational" },
+    { "path": "packages/legend-vscode-extension-dependencies" },
+    { "path":  "packages/legend-extension-dsl-data-quality"},
     // fixtures
-    { "path": "fixtures/legend-mock-server" }
+    { "path": "fixtures/legend-mock-server" },
   ]
 }

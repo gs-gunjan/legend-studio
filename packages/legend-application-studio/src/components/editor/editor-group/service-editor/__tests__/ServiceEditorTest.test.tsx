@@ -22,6 +22,7 @@ import {
   getByTitle,
   queryByText,
   getAllByTitle,
+  getAllByPlaceholderText,
 } from '@testing-library/react';
 import { integrationTest } from '@finos/legend-shared/test';
 import {
@@ -33,13 +34,18 @@ import {
   TEST_DATA__multiEXecutionService,
   TEST_DATA__serviceEntities,
 } from './TEST_DATA__ServiceEditor.js';
-import TEST_DATA__ExternalFormatServiceEntities from './TEST_DATA__ExternalFormatServiceEntities.json';
+import TEST_DATA__ExternalFormatServiceEntities from './TEST_DATA__ExternalFormatServiceEntities.json' with { type: 'json' };
 import { MockedMonacoEditorInstance } from '@finos/legend-lego/code-editor/test';
 import { LEGEND_STUDIO_TEST_ID } from '../../../../../__lib__/LegendStudioTesting.js';
 import { ServiceEditorState } from '../../../../../stores/editor/editor-state/element-editor-state/service/ServiceEditorState.js';
 import { LegendStudioPluginManager } from '../../../../../application/LegendStudioPluginManager.js';
 import { QueryBuilder_GraphManagerPreset } from '@finos/legend-query-builder';
 import { guaranteeNonNullable } from '@finos/legend-shared';
+import {
+  Core_GraphManagerPreset,
+  resolveServiceQueryRawLambda,
+} from '@finos/legend-graph';
+import { getContentTypeWithParamFromQuery } from '../../../../../stores/editor/utils/TestableUtils.js';
 
 test(integrationTest('Service Multi Execution Editor'), async () => {
   const MOCK__editorStore = TEST__provideMockedEditorStore();
@@ -98,7 +104,12 @@ test(integrationTest('Service Multi Execution Editor'), async () => {
 });
 
 const pluginManager = LegendStudioPluginManager.create();
-pluginManager.usePresets([new QueryBuilder_GraphManagerPreset()]).install();
+pluginManager
+  .usePresets([
+    new QueryBuilder_GraphManagerPreset(),
+    new Core_GraphManagerPreset(),
+  ])
+  .install();
 
 test(
   integrationTest('Test Enternal Format Service Test Parameter Setup'),
@@ -141,19 +152,25 @@ test(
       ),
     );
 
-    const bindingParmPairs = MOCK__editorStore.tabManagerState
-      .getCurrentEditorState(ServiceEditorState)
-      .testableState.selectedSuiteState?.testStates[0]?.setupState.getBindingWithParamFromQuery();
-    expect(bindingParmPairs).toHaveLength(2);
+    const contentTypeParmPairs = getContentTypeWithParamFromQuery(
+      resolveServiceQueryRawLambda(
+        MOCK__editorStore.tabManagerState.getCurrentEditorState(
+          ServiceEditorState,
+        ).service,
+      ),
+      MOCK__editorStore,
+    );
+
+    expect(contentTypeParmPairs).toHaveLength(2);
     const firstPair = guaranteeNonNullable(
-      guaranteeNonNullable(bindingParmPairs)[0],
+      guaranteeNonNullable(contentTypeParmPairs)[0],
     );
     const secondPair = guaranteeNonNullable(
-      guaranteeNonNullable(bindingParmPairs)[1],
+      guaranteeNonNullable(contentTypeParmPairs)[1],
     );
-    expect(firstPair.binding.name).toBe('PersonBinding');
+    expect(firstPair.contentType).toBe('application/x.flatdata');
     expect(firstPair.param).toBe('data');
-    expect(secondPair.binding.name).toBe('PersonBinding');
+    expect(secondPair.contentType).toBe('application/x.flatdata');
     expect(secondPair.param).toBe('data1');
     fireEvent.click(getByText(serviceTestEditor, 'Setup'));
     await waitFor(() =>
@@ -216,14 +233,21 @@ test(
       ),
     );
     fireEvent.click(getByText(serviceTestEditor, 'Setup'));
-    const bindingParmPairsForByte = MOCK__editorStore.tabManagerState
-      .getCurrentEditorState(ServiceEditorState)
-      .testableState.selectedSuiteState?.testStates[0]?.setupState.getBindingWithParamFromQuery();
-    expect(bindingParmPairsForByte).toHaveLength(1);
+    const contentTypeParmPairsForByte = getContentTypeWithParamFromQuery(
+      resolveServiceQueryRawLambda(
+        MOCK__editorStore.tabManagerState.getCurrentEditorState(
+          ServiceEditorState,
+        ).service,
+      ),
+      MOCK__editorStore,
+    );
+
+    expect(contentTypeParmPairsForByte).toHaveLength(1);
     expect(
-      guaranteeNonNullable(guaranteeNonNullable(bindingParmPairsForByte)[0])
-        .binding.name,
-    ).toBe('PersonBinding');
+      guaranteeNonNullable(guaranteeNonNullable(contentTypeParmPairsForByte)[0])
+        .contentType,
+    ).toBe('application/x.flatdata');
+
     //Test showing actual string as value for byte type
     await waitFor(() =>
       getByText(
@@ -233,6 +257,78 @@ test(
     );
     await waitFor(() =>
       getAllByTitle(serviceTestSetupEditor, 'Open in a popup...'),
+    );
+
+    // Test click `generate` button to generate an empty string as a default value
+    fireEvent.click(getByText(serviceTestEditor, 'Generate'));
+    await waitFor(() =>
+      getAllByPlaceholderText(serviceTestSetupEditor, '(empty)'),
+    );
+  },
+);
+
+test(
+  integrationTest(
+    'Test Enternal Format Service Test Parameter Setup for only specifying ContentType and Byte',
+  ),
+  async () => {
+    const MOCK__editorStore = TEST__provideMockedEditorStore({ pluginManager });
+    const renderResult = await TEST__setUpEditorWithDefaultSDLCData(
+      MOCK__editorStore,
+      {
+        entities: TEST_DATA__ExternalFormatServiceEntities,
+      },
+    );
+    MockedMonacoEditorInstance.getValue.mockReturnValue('');
+    await TEST__openElementFromExplorerTree(
+      'demo::externalFormat::flatdata::simple::service::FlatdataWithM2MContentType',
+      renderResult,
+    );
+    const editorGroup = await waitFor(() =>
+      renderResult.getByTestId(LEGEND_STUDIO_TEST_ID.EDITOR_GROUP),
+    );
+    await waitFor(() => getByText(editorGroup, 'Test'));
+    fireEvent.click(getByText(editorGroup, 'Test'));
+    const serviceTestEditor = await waitFor(() =>
+      renderResult.getByTestId(LEGEND_STUDIO_TEST_ID.SERVICE_TEST_EDITOR),
+    );
+    await waitFor(() => getByText(serviceTestEditor, 'Setup'));
+    fireEvent.click(getByText(serviceTestEditor, 'Setup'));
+    const serviceTestSetupEditor = await waitFor(() =>
+      renderResult.getByTestId(
+        LEGEND_STUDIO_TEST_ID.SERVICE_TEST_EDITOR__SETUP__PARAMETERS,
+      ),
+    );
+    fireEvent.click(getByText(serviceTestEditor, 'Setup'));
+    const contentTypeParmPairsForByte = getContentTypeWithParamFromQuery(
+      resolveServiceQueryRawLambda(
+        MOCK__editorStore.tabManagerState.getCurrentEditorState(
+          ServiceEditorState,
+        ).service,
+      ),
+      MOCK__editorStore,
+    );
+
+    expect(contentTypeParmPairsForByte).toHaveLength(1);
+    expect(
+      guaranteeNonNullable(guaranteeNonNullable(contentTypeParmPairsForByte)[0])
+        .contentType,
+    ).toBe('application/json');
+    //Test showing actual string as value for byte type
+    await waitFor(() =>
+      getByText(
+        serviceTestSetupEditor,
+        'First Name,Last NameJohn,DoeOlive,Yew',
+      ),
+    );
+    await waitFor(() =>
+      getAllByTitle(serviceTestSetupEditor, 'Open in a popup...'),
+    );
+
+    // Test click `generate` button to generate an empty string as a default value
+    fireEvent.click(getByText(serviceTestEditor, 'Generate'));
+    await waitFor(() =>
+      getAllByPlaceholderText(serviceTestSetupEditor, '(empty)'),
     );
   },
 );

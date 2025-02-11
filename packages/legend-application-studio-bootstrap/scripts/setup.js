@@ -53,6 +53,9 @@ export const setup = (outputDir) => {
         query: {
           url: 'http://localhost:9001/query',
         },
+        showcase: {
+          url: 'http://localhost:9003/api',
+        },
         documentation: {
           url: 'https://legend.finos.org',
           registry: [
@@ -69,7 +72,7 @@ export const setup = (outputDir) => {
             /**
              * Use this end-point when developing documentation locally
              */
-            // { url: 'http://localhost:9999/documentation.json' },
+            // { url: 'http://localhost:9999/resource/documentation.json' },
             {
               url: 'https://legend.finos.org/resource/studio/documentation/shared.json',
               simple: true,
@@ -80,25 +83,28 @@ export const setup = (outputDir) => {
             },
           ],
         },
-        core: {
-          // TEMPORARY__serviceRegistrationConfig: [
-          //   {
-          //     env: 'dev',
-          //     executionUrl: 'http://localhost.com:9999',
-          //     managementUrl: 'http://localhost.com:9999/services/#',
-          //     modes: ['FULL_INTERACTIVE', 'SEMI_INTERACTIVE', 'PROD'],
-          //   },
-          //   {
-          //     env: 'prod',
-          //     executionUrl: 'http://localhost.com:9999',
-          //     managementUrl: 'http://localhost.com:9999/services/#',
-          //     modes: ['PROD'],
-          //   },
-          // ],
-          TEMPORARY__enableMappingTestableEditor: false,
-          TEMPORARY__enableFunctionActivatorSupport: false,
-          TEMPORARY__enableRawSQLExecutor: false,
-          TEMPORARY__enableLocalConnectionBuilder: false,
+        extensions: {
+          core: {
+            // TEMPORARY__serviceRegistrationConfig: [
+            //   {
+            //     env: 'dev',
+            //     executionUrl: 'http://localhost.com:9999',
+            //     managementUrl: 'http://localhost.com:9999/services/#',
+            //     modes: ['FULL_INTERACTIVE', 'SEMI_INTERACTIVE', 'PROD'],
+            //   },
+            //   {
+            //     env: 'prod',
+            //     executionUrl: 'http://localhost.com:9999',
+            //     managementUrl: 'http://localhost.com:9999/services/#',
+            //     modes: ['PROD'],
+            //   },
+            // ],
+            TEMPORARY__enableLocalConnectionBuilder: false,
+            NonProductionFeatureFlag: true,
+            queryBuilderConfig: {
+              TEMPORARY__enableExportToCube: true,
+            },
+          },
         },
       },
       undefined,

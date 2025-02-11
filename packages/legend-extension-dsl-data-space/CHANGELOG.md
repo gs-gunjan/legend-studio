@@ -1,5 +1,679 @@
 # @finos/legend-extension-dsl-data-space
 
+## 10.4.47
+
+## 10.4.46
+
+## 10.4.45
+
+## 10.4.44
+
+## 10.4.43
+
+## 10.4.42
+
+## 10.4.41
+
+## 10.4.40
+
+## 10.4.39
+
+## 10.4.38
+
+## 10.4.37
+
+## 10.4.36
+
+## 10.4.35
+
+## 10.4.34
+
+### Patch Changes
+
+- [#3808](https://github.com/finos/legend-studio/pull/3808) [`eec360c`](https://github.com/finos/legend-studio/commit/eec360cd6b019d272945bfae9782ec613c17f72c) ([@kelly-thai](https://github.com/kelly-thai)) - Updating dataspaces to dataproducts where necessary
+
+## 10.4.33
+
+## 10.4.32
+
+## 10.4.31
+
+## 10.4.30
+
+## 10.4.29
+
+## 10.4.28
+
+## 10.4.27
+
+## 10.4.26
+
+## 10.4.25
+
+## 10.4.24
+
+## 10.4.23
+
+## 10.4.22
+
+## 10.4.21
+
+## 10.4.20
+
+## 10.4.19
+
+## 10.4.18
+
+### Patch Changes
+
+- [#3729](https://github.com/finos/legend-studio/pull/3729) [`e282c5a`](https://github.com/finos/legend-studio/commit/e282c5a8bdb3697574aeb66266b42966c08b0cba) ([@kelly-thai](https://github.com/kelly-thai)) - Putting data product on one line
+
+## 10.4.17
+
+## 10.4.16
+
+## 10.4.15
+
+## 10.4.14
+
+## 10.4.13
+
+## 10.4.12
+
+### Patch Changes
+
+- [#3693](https://github.com/finos/legend-studio/pull/3693) [`85053ba`](https://github.com/finos/legend-studio/commit/85053ba06ef38f4017499b09e0b78fda1e12e6b8) ([@pragyasri-gs](https://github.com/pragyasri-gs)) - Add queryChatState in QueryBuilderState for aborting previous API requests
+
+## 10.4.11
+
+## 10.4.10
+
+### Patch Changes
+
+- [#3683](https://github.com/finos/legend-studio/pull/3683) [`42b374c`](https://github.com/finos/legend-studio/commit/42b374c56646f89003d49201efcafb69f5555d1d) ([@kelly-thai](https://github.com/kelly-thai)) - Changing instances of Data Space to Data Product in UI
+
+## 10.4.9
+
+## 10.4.8
+
+### Patch Changes
+
+- [#3677](https://github.com/finos/legend-studio/pull/3677) [`9f921df`](https://github.com/finos/legend-studio/commit/9f921df1ca814e464e09a7e76c37d65a7b850ce7) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix rendering dependency funtions when loading using minimal graph
+
+## 10.4.7
+
+## 10.4.6
+
+## 10.4.5
+
+### Patch Changes
+
+- [#3660](https://github.com/finos/legend-studio/pull/3660) [`9dd4bf6`](https://github.com/finos/legend-studio/commit/9dd4bf64fdbcfb16e010c9aa6bf89e79aa3c3109) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - leverage minimal graph to build query builder with datsapaces
+
+## 10.4.4
+
+## 10.4.3
+
+## 10.4.2
+
+## 10.4.1
+
+## 10.4.0
+
+### Minor Changes
+
+- [#3488](https://github.com/finos/legend-studio/pull/3488) [`2fa496b`](https://github.com/finos/legend-studio/commit/2fa496bfce04a1bc42d75f2c31febc48a938bcbc) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Use PMCD returned by mapping analysis to build minimal graph for query
+
+## 10.3.86
+
+## 10.3.85
+
+## 10.3.84
+
+## 10.3.83
+
+## 10.3.82
+
+## 10.3.81
+
+## 10.3.80
+
+## 10.3.79
+
+## 10.3.78
+
+## 10.3.77
+
+### Patch Changes
+
+- [#3553](https://github.com/finos/legend-studio/pull/3553) [`ed4abf7`](https://github.com/finos/legend-studio/commit/ed4abf74e827d9fcefd4a835695c205aa7d96c7d) ([@travisstebbins](https://github.com/travisstebbins)) - Allow plugging in different engine implementations into into V1_PureGraphManager
+
+## 10.3.76
+
+## 10.3.75
+
+## 10.3.74
+
+## 10.3.73
+
+### Patch Changes
+
+- [#3542](https://github.com/finos/legend-studio/pull/3542) [`ea81381`](https://github.com/finos/legend-studio/commit/ea813817fc759353c6461621f65d690c0196b921) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - update DataSpaceAnalysisResult metamodel
+
+## 10.3.72
+
+## 10.3.71
+
+## 10.3.70
+
+### Patch Changes
+
+- [#3508](https://github.com/finos/legend-studio/pull/3508) [`ec76548`](https://github.com/finos/legend-studio/commit/ec76548c9c0ee107972b076a95834bd3d4a86a36) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Use the DataSpace analytics result to bypass reading the connection when using PMCD to load the minimal graph
+
+## 10.3.69
+
+## 10.3.68
+
+## 10.3.67
+
+## 10.3.66
+
+## 10.3.65
+
+## 10.3.64
+
+## 10.3.63
+
+### Patch Changes
+
+- [#3487](https://github.com/finos/legend-studio/pull/3487) [`ac83e22`](https://github.com/finos/legend-studio/commit/ac83e223b15de8aa285670bc69e4b200fd8499c8) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Fix resolving elements in packages for fixing in dataspace elements render.
+
+## 10.3.62
+
+## 10.3.61
+
+### Patch Changes
+
+- [#3463](https://github.com/finos/legend-studio/pull/3463) [`2770a48`](https://github.com/finos/legend-studio/commit/2770a48ab539c9724ccb8909c99726510acb4986) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Display all dataspace executables in Legend Query
+
+## 10.3.60
+
+## 10.3.59
+
+## 10.3.58
+
+## 10.3.57
+
+## 10.3.56
+
+### Patch Changes
+
+- [#3447](https://github.com/finos/legend-studio/pull/3447) [`7495e91`](https://github.com/finos/legend-studio/commit/7495e916907c85c7c33dd6453bad9af14e2fff43) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Refactor data sapce executable to support use function pointer
+
+## 10.3.55
+
+## 10.3.54
+
+## 10.3.53
+
+## 10.3.52
+
+## 10.3.51
+
+## 10.3.50
+
+## 10.3.49
+
+## 10.3.48
+
+## 10.3.47
+
+### Patch Changes
+
+- [#3394](https://github.com/finos/legend-studio/pull/3394) [`3e857e6`](https://github.com/finos/legend-studio/commit/3e857e6f483822bbf4047f25a4f7357b452fc1c6) ([@travisstebbins](https://github.com/travisstebbins)) - Add link button to share data space
+
+- [#3391](https://github.com/finos/legend-studio/pull/3391) [`2a99947`](https://github.com/finos/legend-studio/commit/2a99947be1988d64099fd203ae6d23da4b01a6fe) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Make templates(0) disable and remove funnel icon
+
+## 10.3.46
+
+### Patch Changes
+
+- [#3358](https://github.com/finos/legend-studio/pull/3358) [`6df105a`](https://github.com/finos/legend-studio/commit/6df105a5a1999e5a7f99c0e0366ddd9d7f4eb492) ([@Djakhangir](https://github.com/Djakhangir)) - Added form (FormTextEditor) and state management (FormEditorState) to DataSpace and plugin.
+
+## 10.3.45
+
+## 10.3.44
+
+## 10.3.43
+
+## 10.3.42
+
+## 10.3.41
+
+## 10.3.40
+
+## 10.3.39
+
+## 10.3.38
+
+## 10.3.37
+
+## 10.3.36
+
+## 10.3.35
+
+## 10.3.34
+
+## 10.3.33
+
+## 10.3.32
+
+## 10.3.31
+
+## 10.3.30
+
+## 10.3.29
+
+## 10.3.28
+
+## 10.3.27
+
+## 10.3.26
+
+## 10.3.25
+
+## 10.3.24
+
+## 10.3.23
+
+## 10.3.22
+
+## 10.3.21
+
+## 10.3.20
+
+### Patch Changes
+
+- [#3214](https://github.com/finos/legend-studio/pull/3214) [`06fa9fc`](https://github.com/finos/legend-studio/commit/06fa9fc9c51c2e1ae1e773178a40d6b0d620c073) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Only show element path when hovering over dataspace name
+
+- [#3228](https://github.com/finos/legend-studio/pull/3228) [`02b9c59`](https://github.com/finos/legend-studio/commit/02b9c590c4b140ca5a297b94211921421770e8ba) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix explorer tree is not showing all properties while scrolling
+
+## 10.3.19
+
+## 10.3.18
+
+## 10.3.17
+
+## 10.3.16
+
+### Patch Changes
+
+- [#3208](https://github.com/finos/legend-studio/pull/3208) [`603ee53`](https://github.com/finos/legend-studio/commit/603ee53a5c0e28e30dbefc7863675b92183d8068) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add recently visited dataspaces. Redirect dataspace to most recent dataspace. Show recently visited datasapces on top of selector.
+
+## 10.3.15
+
+## 10.3.14
+
+### Patch Changes
+
+- [#3162](https://github.com/finos/legend-studio/pull/3162) [`ef8410a`](https://github.com/finos/legend-studio/commit/ef8410a625c3e1184ba6fa600f40490d1d2dfdf0) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Hide execution context in Properties panel if only one defined.
+
+## 10.3.13
+
+## 10.3.12
+
+### Patch Changes
+
+- [#3155](https://github.com/finos/legend-studio/pull/3155) [`98dc893`](https://github.com/finos/legend-studio/commit/98dc893935497060ab6a5c26cd20f18c4dbc7d42) ([@travisstebbins](https://github.com/travisstebbins)) - Sort selectors for DataSpaceQueryBuilder component
+
+- [#3146](https://github.com/finos/legend-studio/pull/3146) [`45fd4af`](https://github.com/finos/legend-studio/commit/45fd4afe2484a1ac8eecd9f06668fc7094137b52) ([@travisstebbins](https://github.com/travisstebbins)) - Update query builder setup to use text instead of icons
+
+## 10.3.11
+
+## 10.3.10
+
+## 10.3.9
+
+## 10.3.8
+
+## 10.3.7
+
+## 10.3.6
+
+## 10.3.5
+
+## 10.3.4
+
+## 10.3.3
+
+## 10.3.2
+
+## 10.3.1
+
+## 10.3.0
+
+### Minor Changes
+
+- [#3078](https://github.com/finos/legend-studio/pull/3078) [`960d8c4c4`](https://github.com/finos/legend-studio/commit/960d8c4c498e4848148e1f4d4d3a8ffd85eb085b) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Seperate dsl-dataspace-studio into own module.
+
+## 10.2.4
+
+## 10.2.3
+
+### Patch Changes
+
+- [#3076](https://github.com/finos/legend-studio/pull/3076) [`6c3f18e4d`](https://github.com/finos/legend-studio/commit/6c3f18e4d3f784eb5c3108cab89d998bfa089e8f) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Redirect root legend query app to dataSpace creator view.
+
+- [#3073](https://github.com/finos/legend-studio/pull/3073) [`1ce2ea7a4`](https://github.com/finos/legend-studio/commit/1ce2ea7a442c887eceb4d3780e48ca5cd1e04eb0) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add 'New Query` to existing query action.
+
+## 10.2.2
+
+### Patch Changes
+
+- [#3070](https://github.com/finos/legend-studio/pull/3070) [`cbe27c3e5`](https://github.com/finos/legend-studio/commit/cbe27c3e54ef771717deb9caf2ce5e1d111f3613) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add doc link of template query in dataspace
+
+## 10.2.1
+
+### Patch Changes
+
+- [#3053](https://github.com/finos/legend-studio/pull/3053) [`97427fae3`](https://github.com/finos/legend-studio/commit/97427fae331658cc9575e8465b831b63ad8569f3) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Display template query title and add a tag to mark template query
+
+- [#3043](https://github.com/finos/legend-studio/pull/3043) [`4cc55d572`](https://github.com/finos/legend-studio/commit/4cc55d572a8db24d89be7f4183c461be1054bb7b) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support promoting existing query as template query in dataspace
+
+- [#3048](https://github.com/finos/legend-studio/pull/3048) [`ac7448077`](https://github.com/finos/legend-studio/commit/ac7448077ce73f77d7effa759d9a851ef7d324ab) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support Id in template query
+
+## 10.2.0
+
+### Minor Changes
+
+- [#3049](https://github.com/finos/legend-studio/pull/3049) [`627242e96`](https://github.com/finos/legend-studio/commit/627242e9600dbfe8d7b72a2c4d6e41b43ff7f03d) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Change loadDataspace api to fetch all dataspaces and do search in memory.
+
+## 10.1.96
+
+## 10.1.95
+
+### Patch Changes
+
+- [#3008](https://github.com/finos/legend-studio/pull/3008) [`bb233a4b4`](https://github.com/finos/legend-studio/commit/bb233a4b43e3ff9bd90383ebd818c9852a71a4b8) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support loading template query from Query Loader
+
+## 10.1.94
+
+### Patch Changes
+
+- [#3019](https://github.com/finos/legend-studio/pull/3019) [`13bd7ad50`](https://github.com/finos/legend-studio/commit/13bd7ad500a6133b136c5b6ae0ef98e95f16d7da) ([@travisstebbins](https://github.com/travisstebbins)) - Fix query light mode inconsistencies
+
+- [#3006](https://github.com/finos/legend-studio/pull/3006) [`fb98bd37d`](https://github.com/finos/legend-studio/commit/fb98bd37dad819fc613b166aa0c29b94513da909) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support loading template query inside query builder
+
+## 10.1.93
+
+## 10.1.92
+
+### Patch Changes
+
+- [#3011](https://github.com/finos/legend-studio/pull/3011) [`2ffb0ad8f`](https://github.com/finos/legend-studio/commit/2ffb0ad8f702a1ac422157a9f096702bb700b8b9) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support share dataspace template query in Legend Query
+
+## 10.1.91
+
+## 10.1.90
+
+### Patch Changes
+
+- [#3004](https://github.com/finos/legend-studio/pull/3004) [`f72c89ce2`](https://github.com/finos/legend-studio/commit/f72c89ce264900e66b5b1ed5d7e6d523ab418446) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support template query in dataspace
+
+## 10.1.89
+
+## 10.1.88
+
+## 10.1.87
+
+## 10.1.86
+
+## 10.1.85
+
+## 10.1.84
+
+## 10.1.83
+
+## 10.1.82
+
+## 10.1.81
+
+## 10.1.80
+
+## 10.1.79
+
+## 10.1.78
+
+## 10.1.77
+
+## 10.1.76
+
+## 10.1.75
+
+## 10.1.74
+
+### Patch Changes
+
+- [#2917](https://github.com/finos/legend-studio/pull/2917) [`fc75e4921`](https://github.com/finos/legend-studio/commit/fc75e4921e28d39bb8ed355987973dfdce8f0150) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Fix loading correct dataspace exec context.
+
+## 10.1.73
+
+## 10.1.72
+
+## 10.1.71
+
+## 10.1.70
+
+### Patch Changes
+
+- [#2896](https://github.com/finos/legend-studio/pull/2896) [`a71ca3193`](https://github.com/finos/legend-studio/commit/a71ca319397f8871d909fae263477a8913e0a6a7) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Default to latest when creating a query from dataspace
+
+## 10.1.69
+
+## 10.1.68
+
+## 10.1.67
+
+### Patch Changes
+
+- [#2876](https://github.com/finos/legend-studio/pull/2876) [`9277ae422`](https://github.com/finos/legend-studio/commit/9277ae42270d7f2d99923c6321a5a6ca2a84da14) ([@pragyasri-gs](https://github.com/pragyasri-gs)) - Exporting DataSpaceQuerySetupState to be used in QueryChat
+
+## 10.1.66
+
+## 10.1.65
+
+## 10.1.64
+
+## 10.1.63
+
+## 10.1.62
+
+## 10.1.61
+
+## 10.1.60
+
+## 10.1.59
+
+## 10.1.58
+
+## 10.1.57
+
+## 10.1.56
+
+## 10.1.55
+
+## 10.1.54
+
+## 10.1.53
+
+## 10.1.52
+
+## 10.1.51
+
+## 10.1.50
+
+## 10.1.49
+
+## 10.1.48
+
+## 10.1.47
+
+### Patch Changes
+
+- [#2767](https://github.com/finos/legend-studio/pull/2767) [`9f4b85648`](https://github.com/finos/legend-studio/commit/9f4b856482d4be4c62d76debc848af713fc252fa) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Enable queryBuilderConfig in DataSpaceQueryBuilderState
+
+- [#2760](https://github.com/finos/legend-studio/pull/2760) [`07664090d`](https://github.com/finos/legend-studio/commit/07664090d33239fbab4beb8f0a24d45c9e6d9d08) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Fix testable collector to predicate of packagable element and fix getting testables from dependencies.
+
+## 10.1.46
+
+## 10.1.45
+
+## 10.1.44
+
+## 10.1.43
+
+## 10.1.42
+
+### Patch Changes
+
+- [#2704](https://github.com/finos/legend-studio/pull/2704) [`c3eba6cb9`](https://github.com/finos/legend-studio/commit/c3eba6cb93406a3a52897aa4db86520133fd7b5c) ([@gayathrir11](https://github.com/gayathrir11)) - Fix changing dataspace for an existing query saving it in inconsistent state
+
+## 10.1.41
+
+## 10.1.40
+
+## 10.1.39
+
+## 10.1.38
+
+### Patch Changes
+
+- [#2695](https://github.com/finos/legend-studio/pull/2695) [`e38dba9fb`](https://github.com/finos/legend-studio/commit/e38dba9fb6452882ab6fb1b76ce0010926508b87) ([@gayathrir11](https://github.com/gayathrir11)) - Fix filtering by current class in query loader.
+
+## 10.1.37
+
+## 10.1.36
+
+## 10.1.35
+
+## 10.1.34
+
+## 10.1.33
+
+## 10.1.32
+
+## 10.1.31
+
+## 10.1.30
+
+## 10.1.29
+
+## 10.1.28
+
+## 10.1.27
+
+## 10.1.26
+
+## 10.1.25
+
+## 10.1.24
+
+## 10.1.23
+
+## 10.1.22
+
+## 10.1.21
+
+## 10.1.20
+
+## 10.1.19
+
+## 10.1.18
+
+### Patch Changes
+
+- [#2556](https://github.com/finos/legend-studio/pull/2556) [`be4ed675b`](https://github.com/finos/legend-studio/commit/be4ed675b2e54b67e97b78d19098c79047bd9ac0) ([@gayathrir11](https://github.com/gayathrir11)) - Support querying `DataSpace` from studio
+
+## 10.1.17
+
+## 10.1.16
+
+## 10.1.15
+
+## 10.1.14
+
+## 10.1.13
+
+## 10.1.12
+
+## 10.1.11
+
+## 10.1.10
+
+## 10.1.9
+
+## 10.1.8
+
+## 10.1.7
+
+## 10.1.6
+
+## 10.1.5
+
+### Patch Changes
+
+- [#2445](https://github.com/finos/legend-studio/pull/2445) [`1e84302f9`](https://github.com/finos/legend-studio/commit/1e84302f9cee4c1139ac9601b7977115eec27d6f) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support service with multi execution in Dataspace Quick Start
+
+## 10.1.4
+
+## 10.1.3
+
+## 10.1.2
+
+## 10.1.1
+
+## 10.1.0
+
+### Minor Changes
+
+- [#2469](https://github.com/finos/legend-studio/pull/2469) [`2503ccb8e`](https://github.com/finos/legend-studio/commit/2503ccb8e55544d1940bb0cab5e52172be89ddd2) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Use dataSpace `elements` to filter on explorer classes.
+
+## 10.0.55
+
+## 10.0.54
+
+## 10.0.53
+
+## 10.0.52
+
+## 10.0.51
+
+## 10.0.50
+
+## 10.0.49
+
+## 10.0.48
+
+### Patch Changes
+
+- [#2390](https://github.com/finos/legend-studio/pull/2390) [`9af0f1b3a`](https://github.com/finos/legend-studio/commit/9af0f1b3ae2a814d7250a72cb7c41c5c1cbb54b3) ([@gayathrir11](https://github.com/gayathrir11)) - Use dataspace analytics cache to get mapping model coverage analysis
+
+## 10.0.47
+
+## 10.0.46
+
+## 10.0.45
+
+## 10.0.44
+
+## 10.0.43
+
+## 10.0.42
+
+## 10.0.41
+
+## 10.0.40
+
 ## 10.0.39
 
 ## 10.0.38

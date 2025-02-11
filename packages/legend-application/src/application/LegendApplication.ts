@@ -40,7 +40,12 @@ import {
   type DocumentationRegistryEntry,
 } from '../stores/DocumentationService.js';
 import type { LegendApplicationPlugin } from '../stores/LegendApplicationPlugin.js';
-import { ApplicationStore } from '../stores/ApplicationStore.js';
+import {
+  ApplicationStore,
+  type GenericLegendApplicationStore,
+} from '../stores/ApplicationStore.js';
+import { registerDownloadHelperServiceWorker } from '../util/DownloadHelperServiceWorker.js';
+import type { VersionReleaseNotes } from '../stores/ReleaseNotesService.js';
 
 export abstract class LegendApplicationLogger {
   abstract debug(event: LogEvent, ...data: unknown[]): void;
@@ -86,7 +91,7 @@ export class LegendApplicationWebConsole extends LegendApplicationLogger {
 export interface LegendApplicationConfigurationInput<
   T extends LegendApplicationConfigurationData,
 > {
-  baseAddress: string;
+  baseAddress?: string;
   configData: T;
   versionData: LegendApplicationVersionData;
   docEntries?: Record<string, DocumentationEntryData>;
@@ -108,6 +113,11 @@ export abstract class LegendApplication {
       ) => void)
     | undefined;
   protected _isConfigured = false;
+
+  protected downloadHelperServiceWorkerPath: string | undefined;
+  protected downloadHelper = false;
+
+  protected releaseNotes: VersionReleaseNotes[] | undefined;
 
   protected constructor(
     pluginManager: LegendApplicationPluginManager<LegendApplicationPlugin>,
@@ -157,16 +167,33 @@ export abstract class LegendApplication {
     return this;
   }
 
-  async fetchApplicationConfiguration(
-    baseUrl: string,
-  ): Promise<[LegendApplicationConfig, ExtensionsConfigurationData]> {
+  withDownloadHelper(path?: string | undefined): LegendApplication {
+    this.downloadHelper = true;
+    this.downloadHelperServiceWorkerPath = path;
+    return this;
+  }
+
+  withReleaseNotes(releaseNotes: VersionReleaseNotes[]): LegendApplication {
+    this.releaseNotes = releaseNotes;
+    return this;
+  }
+
+  setupApplicationStore(store: GenericLegendApplicationStore): void {
+    if (this.releaseNotes) {
+      store.releaseNotesService.configure(this.releaseNotes);
+    }
+  }
+
+  async fetchApplicationConfiguration(): Promise<
+    [LegendApplicationConfig, ExtensionsConfigurationData]
+  > {
     const client = new NetworkClient();
 
     // app config
     let configData: LegendApplicationConfigurationData | undefined;
     try {
       configData = await client.get<LegendApplicationConfigurationData>(
-        `${window.location.origin}${baseUrl}config.json`,
+        `${window.location.origin}${this.baseAddress}config.json`,
       );
     } catch (error) {
       assertErrorThrown(error);
@@ -184,7 +211,7 @@ export abstract class LegendApplication {
     let versionData;
     try {
       versionData = await client.get<LegendApplicationVersionData>(
-        `${window.location.origin}${baseUrl}version.json`,
+        `${window.location.origin}${this.baseAddress}version.json`,
       );
     } catch (error) {
       assertErrorThrown(error);
@@ -199,7 +226,7 @@ export abstract class LegendApplication {
       await this.configureApplication({
         configData,
         versionData,
-        baseAddress: baseUrl,
+        baseAddress: this.baseAddress,
       }),
       configData.extensions ?? {},
     ];
@@ -293,7 +320,7 @@ export abstract class LegendApplication {
     try {
       // fetch application config
       const [config, extensionConfigData] =
-        await this.fetchApplicationConfiguration(this.baseAddress);
+        await this.fetchApplicationConfiguration();
       this.config = config;
 
       // setup plugins
@@ -319,6 +346,9 @@ export abstract class LegendApplication {
           .map((setup) => setup(applicationStore)),
       );
 
+      // set up application
+      this.setupApplicationStore(applicationStore);
+
       // load application
       await this.loadApplication(applicationStore);
 
@@ -326,6 +356,11 @@ export abstract class LegendApplication {
         LogEvent.create(APPLICATION_EVENT.APPLICATION_LOAD__SUCCESS),
         'Legend application loaded',
       );
+      if (this.downloadHelper) {
+        registerDownloadHelperServiceWorker(
+          this.downloadHelperServiceWorkerPath,
+        );
+      }
     } catch (error) {
       assertErrorThrown(error);
       this.logger.error(

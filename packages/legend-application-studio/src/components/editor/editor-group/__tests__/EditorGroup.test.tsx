@@ -25,7 +25,7 @@ import {
   getByTitle,
   getAllByTestId,
 } from '@testing-library/react';
-import TEST_DATA__m2mGraphEntities from '../../../../stores/editor/__tests__/TEST_DATA__M2MGraphEntities.json';
+import TEST_DATA__m2mGraphEntities from '../../../../stores/editor/__tests__/TEST_DATA__M2MGraphEntities.json' with { type: 'json' };
 import { integrationTest } from '@finos/legend-shared/test';
 import {
   TEST__openElementFromExplorerTree,
@@ -45,6 +45,11 @@ beforeEach(async () => {
 });
 
 test(integrationTest('Test navigation between element states'), async () => {
+  //check successfully load cards
+  await waitFor(() =>
+    expect(renderResult.queryByText('Showcase Projects')).not.toBeNull(),
+  );
+
   // Test opening multiple elements
   await TEST__openElementFromExplorerTree('ui::test1::Animal', renderResult);
   const packageExplorer = renderResult.getByTestId(

@@ -18,7 +18,7 @@ import {
   type GeneratorFn,
   assertErrorThrown,
   LogEvent,
-  getNullableLastEntry,
+  ActionState,
 } from '@finos/legend-shared';
 import { observable, makeObservable, flow, flowResult, action } from 'mobx';
 import { editor as monacoEditorAPI } from 'monaco-editor';
@@ -32,7 +32,7 @@ import type { EditorStore } from '../EditorStore.js';
 import {
   CODE_EDITOR_LANGUAGE,
   moveCursorToPosition,
-} from '@finos/legend-lego/code-editor';
+} from '@finos/legend-code-editor';
 import type { CommandRegistrar } from '@finos/legend-application';
 import { STO_RELATIONAL_LEGEND_STUDIO_COMMAND_KEY } from '../../../__lib__/STO_Relational_LegendStudioCommand.js';
 import { PANEL_MODE } from '../EditorConfig.js';
@@ -40,11 +40,16 @@ import { DatabaseSchemaExplorerState } from '../editor-state/element-editor-stat
 
 const DEFAULT_SQL_TEXT = `--Start building your SQL. Note that you can also drag-and-drop nodes from schema explorer\n`;
 
+export interface SQL_ExecutionResult {
+  value: string;
+  sqlDuration: number;
+}
+
 export class SQLPlaygroundPanelState implements CommandRegistrar {
   readonly editorStore: EditorStore;
 
-  isFetchingSchema = false;
-  isExecutingRawSQL = false;
+  isFetchingSchema = ActionState.create();
+  executeRawSQLState = ActionState.create();
 
   connection?: PackageableConnection | undefined;
   database?: Database | undefined;
@@ -54,23 +59,24 @@ export class SQLPlaygroundPanelState implements CommandRegistrar {
   sqlEditor?: monacoEditorAPI.IStandaloneCodeEditor | undefined;
   sqlEditorViewState?: monacoEditorAPI.ICodeEditorViewState | undefined;
   sqlText = DEFAULT_SQL_TEXT;
-  sqlExecutionResult?: string | undefined;
+  sqlExecutionResult?: SQL_ExecutionResult | undefined;
 
-  isBuildingDatabase = false;
-  isUpdatingDatabase = false;
+  isLocalModeEnabled = false;
 
   constructor(editorStore: EditorStore) {
     makeObservable(this, {
       isFetchingSchema: observable,
-      isExecutingRawSQL: observable,
+      executeRawSQLState: observable,
       connection: observable,
       database: observable,
       schemaExplorerState: observable,
       sqlText: observable,
-      resetSQL: action,
+      isLocalModeEnabled: observable,
       sqlExecutionResult: observable,
       sqlEditor: observable.ref,
       sqlEditorViewState: observable.ref,
+      stopExecuteSQL: action,
+      toggleIsLocalModeEnabled: action,
       setConnection: action,
       setSQLEditor: action,
       setSQLEditorViewState: action,
@@ -111,14 +117,12 @@ export class SQLPlaygroundPanelState implements CommandRegistrar {
       const lines = this.sqlText.split('\n');
       moveCursorToPosition(val, {
         lineNumber: lines.length,
-        column: getNullableLastEntry(lines)?.length ?? 0,
+        column: lines.at(-1)?.length ?? 0,
       });
     }
   }
 
-  resetSQL(): void {
-    this.setSQLText(DEFAULT_SQL_TEXT);
-    this.sqlEditorTextModel.setValue(DEFAULT_SQL_TEXT);
+  stopExecuteSQL(): void {
     this.sqlExecutionResult = undefined;
   }
 
@@ -151,13 +155,18 @@ export class SQLPlaygroundPanelState implements CommandRegistrar {
     );
   }
 
+  toggleIsLocalModeEnabled(): void {
+    this.isLocalModeEnabled = !this.isLocalModeEnabled;
+    this.sqlExecutionResult = undefined;
+  }
+
   *executeRawSQL(): GeneratorFn<void> {
-    if (!this.connection || this.isExecutingRawSQL) {
+    if (!this.connection || this.executeRawSQLState.isInProgress) {
       return;
     }
 
     try {
-      this.isExecutingRawSQL = true;
+      this.executeRawSQLState.inProgress();
 
       let sql = this.sqlText;
       const currentSelection = this.sqlEditor?.getSelection();
@@ -168,12 +177,16 @@ export class SQLPlaygroundPanelState implements CommandRegistrar {
           sql = selectionValue;
         }
       }
-
-      this.sqlExecutionResult =
+      const start = Date.now();
+      const value =
         (yield this.editorStore.graphManagerState.graphManager.executeRawSQL(
           guaranteeRelationalDatabaseConnection(this.connection),
           sql,
         )) as string;
+      this.sqlExecutionResult = {
+        value: value,
+        sqlDuration: Date.now() - start,
+      };
     } catch (error) {
       assertErrorThrown(error);
       this.editorStore.applicationStore.logService.error(
@@ -182,7 +195,7 @@ export class SQLPlaygroundPanelState implements CommandRegistrar {
       );
       this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
-      this.isExecutingRawSQL = false;
+      this.executeRawSQLState.complete();
     }
   }
 }

@@ -128,7 +128,12 @@ export const TEST_DATA__DatabaseRoundtrip = [
           },
         },
       ],
-      includedStores: ['model::relational::tests::dbInc'],
+      includedStores: [
+        {
+          path: 'model::relational::tests::dbInc',
+          type: 'STORE',
+        },
+      ],
       joins: [
         {
           name: 'Product_Synonym',
@@ -1827,7 +1832,12 @@ export const TEST_DATA__DatabaseRoundtrip = [
     content: {
       _type: 'relational',
       filters: [],
-      includedStores: ['model::relational::tests::db'],
+      includedStores: [
+        {
+          path: 'model::relational::tests::db',
+          type: 'STORE',
+        },
+      ],
       joins: [],
       name: 'db2',
       package: 'model::relational::tests',
@@ -1936,7 +1946,6 @@ export const TEST_DATA__DatabaseRoundtrip = [
           },
         },
       ],
-      includedStores: [],
       joins: [
         {
           name: 'personViewWithFirmTable',
@@ -3051,7 +3060,6 @@ export const TEST_DATA__DatabaseWithSelfJoin = [
           views: [],
         },
       ],
-      includedStores: [],
     },
     classifierPath: 'meta::relational::metamodel::Database',
   },
@@ -3125,7 +3133,6 @@ export const TEST_DATA__DatabaseWithSelfJoin = [
           views: [],
         },
       ],
-      includedStores: [],
     },
     classifierPath: 'meta::relational::metamodel::Database',
   },
@@ -3145,7 +3152,12 @@ export const TEST_DATA__simpleEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'line1',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -3164,7 +3176,12 @@ export const TEST_DATA__simpleEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'legalName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -3172,7 +3189,12 @@ export const TEST_DATA__simpleEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'employees',
-          type: 'other::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'other::Person',
+            },
+          },
         },
         {
           multiplicity: {
@@ -3180,7 +3202,12 @@ export const TEST_DATA__simpleEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'address',
-          type: 'other::Address',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'other::Address',
+            },
+          },
         },
       ],
     },
@@ -3199,7 +3226,12 @@ export const TEST_DATA__simpleEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -3207,7 +3239,12 @@ export const TEST_DATA__simpleEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'firm',
-          type: 'other::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'other::Firm',
+            },
+          },
         },
         {
           multiplicity: {
@@ -3215,7 +3252,12 @@ export const TEST_DATA__simpleEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'address',
-          type: 'other::Address',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'other::Address',
+            },
+          },
         },
       ],
     },
@@ -3253,7 +3295,6 @@ export const TEST_DATA__simpleEmbeddedRelationalRoundtrip = [
           },
         },
       ],
-      includedStores: [],
       joins: [
         {
           name: 'testJoin',
@@ -3468,7 +3509,12 @@ export const TEST_DATA__multiLevelEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'line1',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -3487,7 +3533,12 @@ export const TEST_DATA__multiLevelEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'legalName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -3495,7 +3546,12 @@ export const TEST_DATA__multiLevelEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'employees',
-          type: 'other::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'other::Person',
+            },
+          },
         },
         {
           multiplicity: {
@@ -3503,7 +3559,12 @@ export const TEST_DATA__multiLevelEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'address',
-          type: 'other::Address',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'other::Address',
+            },
+          },
         },
       ],
     },
@@ -3522,7 +3583,12 @@ export const TEST_DATA__multiLevelEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -3530,7 +3596,12 @@ export const TEST_DATA__multiLevelEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'firm',
-          type: 'other::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'other::Firm',
+            },
+          },
         },
         {
           multiplicity: {
@@ -3538,7 +3609,12 @@ export const TEST_DATA__multiLevelEmbeddedRelationalRoundtrip = [
             upperBound: 1,
           },
           name: 'address',
-          type: 'other::Address',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'other::Address',
+            },
+          },
         },
       ],
     },
@@ -3549,7 +3625,6 @@ export const TEST_DATA__multiLevelEmbeddedRelationalRoundtrip = [
     content: {
       _type: 'relational',
       filters: [],
-      includedStores: [],
       joins: [],
       name: 'db',
       package: 'mapping',
@@ -3797,7 +3872,6 @@ export const TEST_DATA__RelationalDatabaseConnectionRoundtrip = [
     content: {
       _type: 'relational',
       filters: [],
-      includedStores: [],
       joins: [],
       name: 'dbInc',
       package: 'apps::pure::studio::relational::tests',
@@ -3965,6 +4039,31 @@ export const TEST_DATA__RelationalDatabaseConnectionRoundtrip = [
         type: 'H2',
       },
       name: 'H2Connection',
+      package: 'simple',
+    },
+    classifierPath: 'meta::pure::runtime::PackageableConnection',
+  },
+  {
+    path: 'simple::H2Connection2',
+    content: {
+      _type: 'connection',
+      connectionValue: {
+        _type: 'RelationalDatabaseConnection',
+        authenticationStrategy: {
+          _type: 'h2Default',
+        },
+        databaseType: 'H2',
+        datasourceSpecification: {
+          _type: 'static',
+          databaseName: 'myDb',
+          host: 'somehost',
+          port: 999,
+        },
+        element: 'apps::pure::studio::relational::tests::dbInc',
+        queryTimeOutInSeconds: 1000,
+        type: 'H2',
+      },
+      name: 'H2Connection2',
       package: 'simple',
     },
     classifierPath: 'meta::pure::runtime::PackageableConnection',
@@ -4187,7 +4286,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -4195,7 +4299,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'street',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -4203,7 +4312,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'comments',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
       qualifiedProperties: [
@@ -4249,10 +4363,20 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
-      superTypes: ['apps::meta::pure::tests::model::simple::GeographicEntity'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::GeographicEntity',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -4271,7 +4395,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
       _type: 'class',
       name: 'Department',
       package: 'apps::meta::pure::tests::model::simple',
-      superTypes: ['apps::meta::pure::tests::model::simple::Organization'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::Organization',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -4281,7 +4410,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
       _type: 'class',
       name: 'Division',
       package: 'apps::meta::pure::tests::model::simple',
-      superTypes: ['apps::meta::pure::tests::model::simple::Organization'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::Organization',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -4298,7 +4432,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'address',
-          type: 'apps::meta::pure::tests::model::simple::Address',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Address',
+            },
+          },
         },
       ],
     },
@@ -4316,7 +4455,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
           },
           name: 'locations',
-          type: 'apps::meta::pure::tests::model::simple::Location',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Location',
+            },
+          },
         },
       ],
       qualifiedProperties: [
@@ -4395,8 +4539,13 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class:
-                'apps::meta::pure::tests::model::simple::GeographicEntityType',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath:
+                    'apps::meta::pure::tests::model::simple::GeographicEntityType',
+                },
+              },
               multiplicity: {
                 lowerBound: 0,
               },
@@ -4406,7 +4555,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           returnMultiplicity: {
             lowerBound: 0,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Location',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Location',
+            },
+          },
         },
       ],
     },
@@ -4425,7 +4579,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'legalName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -4433,7 +4592,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'nickName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
       qualifiedProperties: [
@@ -4491,7 +4655,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'Float',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           body: [
@@ -4524,7 +4693,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'Integer',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           body: [
@@ -4557,7 +4731,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
             upperBound: 1,
           },
-          returnType: 'Integer',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           body: [
@@ -4623,7 +4802,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -4698,7 +4882,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -4839,7 +5028,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -4901,7 +5095,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -4913,7 +5112,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
             upperBound: 1,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Person',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
         {
           body: [
@@ -4981,7 +5185,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -4993,7 +5202,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -5055,7 +5269,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5067,7 +5286,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
             upperBound: 1,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Person',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
         {
           body: [
@@ -5129,7 +5353,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'Integer',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'Integer',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5140,7 +5369,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           returnMultiplicity: {
             lowerBound: 0,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Person',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
         {
           body: [
@@ -5234,7 +5468,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5243,7 +5482,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             },
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5254,7 +5498,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           returnMultiplicity: {
             lowerBound: 0,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Person',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
         {
           body: [
@@ -5380,7 +5629,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5389,7 +5643,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             },
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5398,7 +5657,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             },
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5410,7 +5674,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Person',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
         {
           body: [
@@ -5472,7 +5741,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'Integer',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'Integer',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5484,7 +5758,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'Boolean',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           body: [
@@ -5560,7 +5839,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
             upperBound: 1,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Person',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
         {
           body: [
@@ -5628,7 +5912,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5640,7 +5929,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
             upperBound: 1,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Person',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
         {
           body: [
@@ -5752,7 +6046,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5764,7 +6063,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -5879,7 +6183,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -5900,7 +6209,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           returnMultiplicity: {
             lowerBound: 0,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Address',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Address',
+            },
+          },
         },
         {
           body: [
@@ -5960,10 +6274,20 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'Boolean',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
       ],
-      superTypes: ['apps::meta::pure::tests::model::simple::EntityWithAddress'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::EntityWithAddress',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -5980,14 +6304,25 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'establishedDate',
-          type: 'Date',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Date',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'employeesExt',
-          type: 'apps::meta::pure::tests::model::simple::PersonExtension',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath:
+                'apps::meta::pure::tests::model::simple::PersonExtension',
+            },
+          },
         },
       ],
       qualifiedProperties: [
@@ -6016,7 +6351,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'Integer',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           body: [
@@ -6057,10 +6397,20 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
-      superTypes: ['apps::meta::pure::tests::model::simple::Firm'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::Firm',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -6077,7 +6427,13 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'type',
-          type: 'apps::meta::pure::tests::model::simple::GeographicEntityType',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath:
+                'apps::meta::pure::tests::model::simple::GeographicEntityType',
+            },
+          },
         },
       ],
     },
@@ -6096,7 +6452,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'place',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6104,10 +6465,20 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'censusdate',
-          type: 'Date',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Date',
+            },
+          },
         },
       ],
-      superTypes: ['apps::meta::pure::tests::model::simple::GeographicEntity'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::GeographicEntity',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -6124,7 +6495,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
       qualifiedProperties: [
@@ -6216,7 +6592,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           returnMultiplicity: {
             lowerBound: 0,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Organization',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Organization',
+            },
+          },
         },
         {
           body: [
@@ -6285,7 +6666,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           returnMultiplicity: {
             lowerBound: 0,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Organization',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Organization',
+            },
+          },
         },
         {
           body: [
@@ -6347,7 +6733,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -6359,7 +6750,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Organization',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Organization',
+            },
+          },
         },
         {
           body: [
@@ -6428,7 +6824,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           returnMultiplicity: {
             lowerBound: 0,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Person',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
       ],
     },
@@ -6447,7 +6848,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'firstName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6455,14 +6861,24 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'lastName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'otherNames',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6470,7 +6886,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'extraInformation',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6478,7 +6899,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'manager',
-          type: 'apps::meta::pure::tests::model::simple::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6486,7 +6912,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6494,7 +6925,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'nickName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6502,7 +6938,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'activeEmployment',
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
       ],
       qualifiedProperties: [
@@ -6558,7 +6999,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -6622,7 +7068,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -6634,7 +7085,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -6987,7 +7443,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 0,
                 upperBound: 1,
@@ -6996,7 +7457,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             },
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
               multiplicity: {
                 lowerBound: 0,
               },
@@ -7007,7 +7473,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -7136,7 +7607,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -7296,7 +7772,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -7365,7 +7846,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
           returnMultiplicity: {
             lowerBound: 0,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Organization',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Organization',
+            },
+          },
         },
         {
           body: [
@@ -7384,7 +7870,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           body: [
@@ -7426,12 +7917,23 @@ export const TEST_DATA__RelationalAssociationMapping = [
           returnMultiplicity: {
             lowerBound: 0,
           },
-          returnType: 'apps::meta::pure::tests::model::simple::Address',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Address',
+            },
+          },
         },
       ],
       superTypes: [
-        'apps::meta::pure::tests::model::simple::EntityWithAddress',
-        'apps::meta::pure::tests::model::simple::EntityWithLocations',
+        {
+          path: 'apps::meta::pure::tests::model::simple::EntityWithAddress',
+          type: 'CLASS',
+        },
+        {
+          path: 'apps::meta::pure::tests::model::simple::EntityWithLocations',
+          type: 'CLASS',
+        },
       ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
@@ -7449,7 +7951,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'birthdate',
-          type: 'Date',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Date',
+            },
+          },
         },
       ],
       qualifiedProperties: [
@@ -7478,10 +7985,20 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
             upperBound: 1,
           },
-          returnType: 'Integer',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
-      superTypes: ['apps::meta::pure::tests::model::simple::Person'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::Person',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -7498,7 +8015,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'lastNameFirst',
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -7506,7 +8028,13 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'nested',
-          type: 'apps::meta::pure::tests::model::simple::PersonNameParameterNested',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath:
+                'apps::meta::pure::tests::model::simple::PersonNameParameterNested',
+            },
+          },
         },
       ],
     },
@@ -7525,7 +8053,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'prefix',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -7544,7 +8077,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -7556,7 +8094,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
       _type: 'class',
       name: 'Team',
       package: 'apps::meta::pure::tests::model::simple',
-      superTypes: ['apps::meta::pure::tests::model::simple::Organization'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::Organization',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -7566,7 +8109,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
       _type: 'class',
       name: 'Address',
       package: 'apps::meta::relational::tests::mapping::union::extend',
-      superTypes: ['apps::meta::pure::tests::model::simple::Address'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::Address',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -7576,7 +8124,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
       _type: 'class',
       name: 'Firm',
       package: 'apps::meta::relational::tests::mapping::union::extend',
-      superTypes: ['apps::meta::pure::tests::model::simple::Firm'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::Firm',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -7586,7 +8139,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
       _type: 'class',
       name: 'Person',
       package: 'apps::meta::relational::tests::mapping::union::extend',
-      superTypes: ['apps::meta::pure::tests::model::simple::Person'],
+      superTypes: [
+        {
+          path: 'apps::meta::pure::tests::model::simple::Person',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -7603,14 +8161,24 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'location',
-          type: 'apps::meta::pure::tests::model::simple::Location',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Location',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'addresses',
-          type: 'apps::meta::pure::tests::model::simple::Address',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Address',
+            },
+          },
         },
       ],
     },
@@ -7629,14 +8197,24 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'bridge',
-          type: 'apps::meta::pure::tests::model::simple::Bridge',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Bridge',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'employees',
-          type: 'apps::meta::pure::tests::model::simple::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
       ],
     },
@@ -7655,7 +8233,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'bridge',
-          type: 'apps::meta::pure::tests::model::simple::Bridge',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Bridge',
+            },
+          },
         },
         {
           multiplicity: {
@@ -7663,7 +8246,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'firm',
-          type: 'apps::meta::pure::tests::model::simple::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Firm',
+            },
+          },
         },
       ],
     },
@@ -7682,14 +8270,24 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'firm',
-          type: 'apps::meta::pure::tests::model::simple::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Firm',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'employees',
-          type: 'apps::meta::pure::tests::model::simple::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
       ],
     },
@@ -7708,7 +8306,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'ceoFirm',
-          type: 'apps::meta::pure::tests::model::simple::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Firm',
+            },
+          },
         },
         {
           multiplicity: {
@@ -7716,7 +8319,12 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'ceo',
-          type: 'apps::meta::pure::tests::model::simple::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
       ],
     },
@@ -7735,14 +8343,24 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'firm',
-          type: 'apps::meta::pure::tests::model::simple::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Firm',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'organizations',
-          type: 'apps::meta::pure::tests::model::simple::Organization',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Organization',
+            },
+          },
         },
       ],
     },
@@ -7760,14 +8378,24 @@ export const TEST_DATA__RelationalAssociationMapping = [
             lowerBound: 0,
           },
           name: 'organizations',
-          type: 'apps::meta::pure::tests::model::simple::Organization',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Organization',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'members',
-          type: 'apps::meta::pure::tests::model::simple::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Person',
+            },
+          },
         },
       ],
     },
@@ -7786,14 +8414,25 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'location',
-          type: 'apps::meta::pure::tests::model::simple::Location',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Location',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'placeOfInterest',
-          type: 'apps::meta::pure::tests::model::simple::PlaceOfInterest',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath:
+                'apps::meta::pure::tests::model::simple::PlaceOfInterest',
+            },
+          },
         },
       ],
     },
@@ -7812,14 +8451,24 @@ export const TEST_DATA__RelationalAssociationMapping = [
             upperBound: 1,
           },
           name: 'parent',
-          type: 'apps::meta::pure::tests::model::simple::Organization',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Organization',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'children',
-          type: 'apps::meta::pure::tests::model::simple::Organization',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'apps::meta::pure::tests::model::simple::Organization',
+            },
+          },
         },
       ],
     },
@@ -7857,7 +8506,6 @@ export const TEST_DATA__RelationalAssociationMapping = [
           },
         },
       ],
-      includedStores: [],
       joins: [
         {
           name: 'personViewWithFirmTable',
@@ -8906,8 +9554,10 @@ export const TEST_DATA__RelationalAssociationMapping = [
       associationMappings: [
         {
           _type: 'relational',
-          association:
-            'apps::meta::pure::tests::model::simple::PlacesOfInterest',
+          association: {
+            path: 'apps::meta::pure::tests::model::simple::PlacesOfInterest',
+            type: 'ASSOCIATION',
+          },
           propertyMappings: [
             {
               _type: 'relationalPropertyMapping',
@@ -9544,8 +10194,10 @@ export const TEST_DATA__RelationalAssociationMapping = [
               ],
             },
           ],
-          enumeration:
-            'apps::meta::pure::tests::model::simple::GeographicEntityType',
+          enumeration: {
+            path: 'apps::meta::pure::tests::model::simple::GeographicEntityType',
+            type: 'ENUMERATION',
+          },
           id: 'GE',
         },
       ],
@@ -9572,7 +10224,12 @@ export const TEST_DATA__XStoreAssociationMapping = [
             upperBound: 1,
           },
           name: 'id',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9580,7 +10237,12 @@ export const TEST_DATA__XStoreAssociationMapping = [
             upperBound: 1,
           },
           name: 'legalName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -9599,7 +10261,12 @@ export const TEST_DATA__XStoreAssociationMapping = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -9618,14 +10285,24 @@ export const TEST_DATA__XStoreAssociationMapping = [
             upperBound: 1,
           },
           name: 'employer',
-          type: 'test::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'test::Firm',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'employees',
-          type: 'test::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'test::Person',
+            },
+          },
         },
       ],
     },
@@ -9638,7 +10315,10 @@ export const TEST_DATA__XStoreAssociationMapping = [
       associationMappings: [
         {
           _type: 'xStore',
-          association: 'test::Firm_Person',
+          association: {
+            path: 'test::Firm_Person',
+            type: 'ASSOCIATION',
+          },
           propertyMappings: [
             {
               _type: 'xStorePropertyMapping',

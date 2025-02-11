@@ -50,6 +50,7 @@ export enum DatabaseType {
   BigQuery = 'BigQuery',
   Spanner = 'Spanner',
   Trino = 'Trino',
+  DuckDB = 'DuckDB',
 }
 
 export abstract class DatabaseConnection extends Connection {
@@ -64,6 +65,7 @@ export abstract class DatabaseConnection extends Connection {
   type: string;
   timeZone?: string | undefined;
   quoteIdentifiers?: boolean | undefined;
+  queryTimeOutInSeconds?: number | undefined;
   postProcessorWithParameter: unknown[] = [];
 
   constructor(store: PackageableElementReference<Database>, type: string) {
@@ -103,6 +105,7 @@ export class RelationalDatabaseConnection extends DatabaseConnection {
       this.datasourceSpecification,
       this.authenticationStrategy,
       this.localMode?.toString() ?? '',
+      this.queryTimeOutInSeconds?.toString() ?? '',
       hashArray(this.postProcessors),
     ]);
   }

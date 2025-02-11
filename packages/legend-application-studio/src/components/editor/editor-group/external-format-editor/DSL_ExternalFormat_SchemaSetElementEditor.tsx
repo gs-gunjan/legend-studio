@@ -36,6 +36,7 @@ import {
   ModalBody,
   ModalFooter,
   ModalHeader,
+  ModalFooterButton,
 } from '@finos/legend-art';
 import { ExternalFormatSchema as Schema } from '@finos/legend-graph';
 import { flowResult } from 'mobx';
@@ -54,10 +55,8 @@ import {
   externalFormat_schema_setLocation,
 } from '../../../../stores/graph-modifier/DSL_ExternalFormat_GraphModifierHelper.js';
 import { SchemaSetModelGenerationEditor } from './DSL_ExternalFormat_SchemaSetModelGenerationEditor.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 import { getEditorLanguageForFormat } from '../../../../stores/editor/editor-state/ArtifactGenerationViewerState.js';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../../__lib__/LegendStudioApplicationNavigationContext.js';
 import { useApplicationNavigationContext } from '@finos/legend-application';
@@ -67,6 +66,7 @@ const SchemaLoader = observer(
     schemaSetEditorState: InnerSchemaSetEditorState | SchemaSetEditorState;
   }) => {
     const { schemaSetEditorState } = props;
+    const applicationStore = schemaSetEditorState.editorStore.applicationStore;
     const importState = schemaSetEditorState.importSchemaContentState;
     const onClose = (): void => importState.closeModal();
     const onChange: React.ChangeEventHandler<HTMLInputElement> = (event) => {
@@ -88,7 +88,12 @@ const SchemaLoader = observer(
           appear: false, // disable transition
         }}
       >
-        <Modal darkMode={true} className="modal--scrollable patch-loader">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="modal--scrollable patch-loader"
+        >
           <ModalHeader title="Schema Content Loader" />
           <ModalBody>
             <PanelLoadingIndicator
@@ -135,13 +140,12 @@ const SchemaLoader = observer(
             )}
           </ModalBody>
           <ModalFooter>
-            <button
-              className="btn btn--dark blocking-alert__action--standard"
+            <ModalFooterButton
+              className="blocking-alert__action--standard"
+              text="Import Schemas"
               onClick={importSchemas}
               disabled={!importState.files?.length}
-            >
-              Import Schemas
-            </button>
+            />
           </ModalFooter>
         </Modal>
       </Dialog>

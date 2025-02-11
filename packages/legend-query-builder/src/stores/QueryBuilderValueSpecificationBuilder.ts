@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { guaranteeNonNullable } from '@finos/legend-shared';
+import {
+  UnsupportedOperationError,
+  guaranteeNonNullable,
+  guaranteeType,
+} from '@finos/legend-shared';
 import {
   type Class,
   Multiplicity,
@@ -28,25 +32,47 @@ import {
   GenericTypeExplicitReference,
   LambdaFunction,
   SimpleFunctionExpression,
-  PrimitiveInstanceValue,
-  PrimitiveType,
   SUPPORTED_FUNCTIONS,
+  RuntimePointer,
 } from '@finos/legend-graph';
 import type { QueryBuilderState } from './QueryBuilderState.js';
 import { buildFilterExpression } from './filter/QueryBuilderFilterValueSpecificationBuilder.js';
 import type { LambdaFunctionBuilderOption } from './QueryBuilderValueSpecificationBuilderHelper.js';
 import type { QueryBuilderFetchStructureState } from './fetch-structure/QueryBuilderFetchStructureState.js';
-import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../graph/QueryBuilderMetaModelConst.js';
+import { QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS } from '../graph/QueryBuilderMetaModelConst.js';
 import { buildWatermarkExpression } from './watermark/QueryBuilderWatermarkValueSpecificationBuilder.js';
 import { buildExecutionQueryFromLambdaFunction } from './shared/LambdaParameterState.js';
-import type { QueryBuilderConstantExpressionState } from './QueryBuilderConstantsState.js';
+import {
+  QueryBuilderEmbeddedFromExecutionContextState,
+  type QueryBuilderExecutionContextState,
+} from './QueryBuilderExecutionContextState.js';
 
 export const buildGetAllFunction = (
   _class: Class,
   multiplicity: Multiplicity,
 ): SimpleFunctionExpression => {
   const _func = new SimpleFunctionExpression(
-    extractElementNameFromPath(QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_ALL),
+    extractElementNameFromPath(
+      QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL,
+    ),
+  );
+  const classInstance = new InstanceValue(
+    multiplicity,
+    GenericTypeExplicitReference.create(new GenericType(_class)),
+  );
+  classInstance.values[0] = PackageableElementExplicitReference.create(_class);
+  _func.parametersValues.push(classInstance);
+  return _func;
+};
+
+export const buildGetAllVersionsInRangeFunction = (
+  _class: Class,
+  multiplicity: Multiplicity,
+): SimpleFunctionExpression => {
+  const _func = new SimpleFunctionExpression(
+    extractElementNameFromPath(
+      QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS_IN_RANGE,
+    ),
   );
   const classInstance = new InstanceValue(
     multiplicity,
@@ -63,7 +89,7 @@ const buildGetAllVersionsFunction = (
 ): SimpleFunctionExpression => {
   const _func = new SimpleFunctionExpression(
     extractElementNameFromPath(
-      QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_ALL_VERSIONS,
+      QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS,
     ),
   );
   const classInstance = new InstanceValue(
@@ -75,20 +101,43 @@ const buildGetAllVersionsFunction = (
   return _func;
 };
 
-const buildLetExpression = (
-  constantExpressionState: QueryBuilderConstantExpressionState,
-): SimpleFunctionExpression => {
-  const varName = constantExpressionState.variable.name;
-  const value = constantExpressionState.value;
-  const leftSide = new PrimitiveInstanceValue(
-    GenericTypeExplicitReference.create(new GenericType(PrimitiveType.STRING)),
-  );
-  leftSide.values = [varName];
-  const letFunc = new SimpleFunctionExpression(
-    extractElementNameFromPath(SUPPORTED_FUNCTIONS.LET),
-  );
-  letFunc.parametersValues = [leftSide, value];
-  return letFunc;
+const buildExecutionContextState = (
+  executionState: QueryBuilderExecutionContextState,
+  lambdaFunction: LambdaFunction,
+): LambdaFunction => {
+  if (executionState instanceof QueryBuilderEmbeddedFromExecutionContextState) {
+    const precedingExpression = guaranteeNonNullable(
+      lambdaFunction.expressionSequence[0],
+      `Can't build from() expression: preceding expression is not defined`,
+    );
+    const fromFunc = new SimpleFunctionExpression(
+      extractElementNameFromPath(SUPPORTED_FUNCTIONS.FROM),
+    );
+    // 1st param
+    const mapping = guaranteeNonNullable(
+      executionState.mapping,
+      'Mapping required for building from() expression',
+    );
+    const mappingInstance = new InstanceValue(Multiplicity.ONE, undefined);
+    mappingInstance.values = [
+      PackageableElementExplicitReference.create(mapping),
+    ];
+    // 2nd parameter
+    const runtime = guaranteeType(
+      executionState.runtimeValue,
+      RuntimePointer,
+      'Runtime Pointer required for building from() expression',
+    );
+    const runtimeInstance = new InstanceValue(Multiplicity.ONE, undefined);
+    runtimeInstance.values = [runtime.packageableRuntime];
+    fromFunc.parametersValues = [
+      precedingExpression,
+      mappingInstance,
+      runtimeInstance,
+    ];
+    lambdaFunction.expressionSequence[0] = fromFunc;
+  }
+  return lambdaFunction;
 };
 
 const buildFetchStructure = (
@@ -134,15 +183,55 @@ export const buildLambdaFunction = (
     );
     lambdaFunction.expressionSequence[0] = getAllVersionsFunction;
   } else {
-    // build getAll()
-    const getAllFunction = buildGetAllFunction(_class, Multiplicity.ONE);
-    if (milestoningStereotype) {
-      // build milestoning parameter(s) for getAll()
-      queryBuilderState.milestoningState
-        .getMilestoningImplementation(milestoningStereotype)
-        .buildGetAllParameters(getAllFunction);
+    switch (queryBuilderState.getAllFunction) {
+      case QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS: {
+        if (milestoningStereotype) {
+          const getAllVersionsFunction = buildGetAllVersionsFunction(
+            _class,
+            Multiplicity.ONE,
+          );
+          lambdaFunction.expressionSequence[0] = getAllVersionsFunction;
+        } else {
+          throw new UnsupportedOperationError(
+            `Unable to build query lamdba: getAllVersions() expects source class to be milestoned`,
+          );
+        }
+        break;
+      }
+      case QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS_IN_RANGE: {
+        if (milestoningStereotype) {
+          const getAllVersionsInRangeFunction =
+            buildGetAllVersionsInRangeFunction(_class, Multiplicity.ONE);
+          queryBuilderState.milestoningState
+            .getMilestoningImplementation(milestoningStereotype)
+            .buildGetAllVersionsInRangeParameters(
+              getAllVersionsInRangeFunction,
+            );
+          lambdaFunction.expressionSequence[0] = getAllVersionsInRangeFunction;
+        } else {
+          throw new UnsupportedOperationError(
+            `Unable to build query lamdba: getAllVersionsInRange() expects source class to be milestoned`,
+          );
+        }
+        break;
+      }
+      case QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL: {
+        // build getAll()
+        const getAllFunction = buildGetAllFunction(_class, Multiplicity.ONE);
+        if (milestoningStereotype) {
+          // build milestoning parameter(s) for getAll()
+          queryBuilderState.milestoningState
+            .getMilestoningImplementation(milestoningStereotype)
+            .buildGetAllParameters(getAllFunction);
+        }
+        lambdaFunction.expressionSequence[0] = getAllFunction;
+        break;
+      }
+      default:
+        throw new UnsupportedOperationError(
+          `Unable to build query lambda: unknown ${queryBuilderState.getAllFunction} function`,
+        );
     }
-    lambdaFunction.expressionSequence[0] = getAllFunction;
   }
 
   // build watermark
@@ -157,11 +246,17 @@ export const buildLambdaFunction = (
     lambdaFunction,
     options,
   );
+  // build execution-state
+  buildExecutionContextState(
+    queryBuilderState.executionContextState,
+    lambdaFunction,
+  );
 
   // build variable expressions
   if (queryBuilderState.constantState.constants.length) {
-    const letExpressions =
-      queryBuilderState.constantState.constants.map(buildLetExpression);
+    const letExpressions = queryBuilderState.constantState.constants.map((e) =>
+      e.buildLetExpression(),
+    );
     lambdaFunction.expressionSequence = [
       ...letExpressions,
       ...lambdaFunction.expressionSequence,

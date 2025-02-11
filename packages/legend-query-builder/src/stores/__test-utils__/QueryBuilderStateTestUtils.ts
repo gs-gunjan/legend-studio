@@ -41,6 +41,7 @@ import {
   INTERNAL__BasicQueryBuilderState,
   type QueryBuilderState,
 } from '../QueryBuilderState.js';
+import { QueryBuilderAdvancedWorkflowState } from '../query-workflow/QueryBuilderWorkFlowState.js';
 
 export class TEST__LegendApplicationPluginManager
   extends LegendApplicationPluginManager<LegendApplicationPlugin>
@@ -131,6 +132,8 @@ export const TEST__setUpQueryBuilderState = async (
   const queryBuilderState = new INTERNAL__BasicQueryBuilderState(
     applicationStore,
     graphManagerState,
+    QueryBuilderAdvancedWorkflowState.INSTANCE,
+    undefined,
   );
   if (rawLambda) {
     queryBuilderState.initializeWithQuery(rawLambda);
@@ -138,9 +141,11 @@ export const TEST__setUpQueryBuilderState = async (
   if (executionContext) {
     const graph = queryBuilderState.graphManagerState.graph;
     queryBuilderState.class = graph.getClass(executionContext._class);
-    queryBuilderState.mapping = graph.getMapping(executionContext.mapping);
+    queryBuilderState.executionContextState.mapping = graph.getMapping(
+      executionContext.mapping,
+    );
     if (executionContext.runtime) {
-      queryBuilderState.runtimeValue = graph.getRuntime(
+      queryBuilderState.executionContextState.runtimeValue = graph.getRuntime(
         executionContext.runtime,
       );
     }

@@ -21,6 +21,7 @@ import {
   type ServerClientConfig,
   type TraceData,
   HttpHeader,
+  NetworkClient,
 } from '@finos/legend-shared';
 import type { V1_PureModelContextData } from '../model/context/V1_PureModelContextData.js';
 import type {
@@ -43,7 +44,7 @@ import type { V1_LightQuery, V1_Query } from './query/V1_Query.js';
 import type { V1_ServiceStorage } from './service/V1_ServiceStorage.js';
 import type { GenerationMode } from '../../../../../graph-manager/action/generation/GenerationConfigurationDescription.js';
 import type { V1_QuerySearchSpecification } from './query/V1_QuerySearchSpecification.js';
-import type { EXECUTION_SERIALIZATION_FORMAT } from '../../../../../graph-manager/action/execution/ExecutionResult.js';
+import { EXECUTION_SERIALIZATION_FORMAT } from '../../../../../graph-manager/action/execution/ExecutionResult.js';
 import type { V1_ExternalFormatDescription } from './externalFormat/V1_ExternalFormatDescription.js';
 import type { V1_ExternalFormatModelGenerationInput } from './externalFormat/V1_ExternalFormatModelGeneration.js';
 import type { V1_GenerateSchemaInput } from './externalFormat/V1_GenerateSchemaInput.js';
@@ -77,10 +78,24 @@ import type {
   V1_ArtifactGenerationExtensionInput,
   V1_ArtifactGenerationExtensionOutput,
 } from './generation/V1_ArtifactGenerationExtensionApi.js';
+import type { V1_DatabaseToModelGenerationInput } from './relational/V1_DatabaseToModelGenerationInput.js';
+import type { V1_TestDataGenerationInput } from './service/V1_TestDataGenerationInput.js';
+import type { V1_TestDataGenerationResult } from './service/V1_TestDataGenerationResult.js';
+import type { V1_RelationalConnectionBuilder } from './relational/V1_RelationalConnectionBuilder.js';
+import type { V1_LambdaPrefix } from './lambda/V1_LambdaPrefix.js';
+import type { V1_DebugTestsResult } from './test/V1_DebugTestsResult.js';
+import type { V1_RelationType } from '../model/packageableElements/type/V1_RelationType.js';
+import type { CodeCompletionResult } from '../../../../action/compilation/Completion.js';
+import type { V1_CompleteCodeInput } from './compilation/V1_CompleteCodeInput.js';
+import type { DeploymentResult } from '../../../../action/DeploymentResult.js';
+import type { PersistentDataCube } from '../../../../action/query/PersistentDataCube.js';
 
 enum CORE_ENGINE_ACTIVITY_TRACE {
   GRAMMAR_TO_JSON = 'transform Pure code to protocol',
   JSON_TO_GRAMMAR = 'transform protocol to Pure code',
+
+  DATABASE_TO_MODELS = 'generate models from database',
+  TEST_DATA_GENERATION = 'generate test data',
 
   EXTERNAL_FORMAT_TO_PROTOCOL = 'transform external format code to protocol',
   GENERATE_FILE = 'generate file',
@@ -97,14 +112,21 @@ enum CORE_ENGINE_ACTIVITY_TRACE {
   REGISTER_SERVICE = 'register service',
   GET_SERVICE_VERSION = 'get service version',
   ACTIVATE_SERVICE_GENERATION_ID = 'activate service generation id',
+  VALIDATE_SERVICE_ASSERTION_ID = 'validate service assertion id',
   RUN_SERVICE_TESTS = 'run service tests',
   GENERATE_TEST_DATA_WITH_DEFAULT_SEED = 'generate test data with default seed',
+  GENERATE_TEST_DATA_WITH_SEED = 'generate test data with seed',
 
   RUN_TESTS = 'run tests',
 
   CREATE_QUERY = 'create query',
   UPDATE_QUERY = 'update query',
+  PATCH_QUERY = 'patch query',
   DELETE_QUERY = 'delete query',
+
+  CREATE_DATA_CUBE = 'create DataCube',
+  UPDATE_DATA_CUBE = 'update DataCube',
+  DELETE_DATA_CUBE = 'delete DataCube',
 
   CANCEL_USER_EXECUTIONS = 'cancel user executions',
 
@@ -130,6 +152,29 @@ export type V1_GrammarParserBatchInputEntry = {
       }
     | undefined;
 };
+
+enum ENGINE_EXECUTION_SERIALIZATION_FORMAT {
+  CSV_TRANSFORMED = 'csv_transformed',
+}
+
+export const V1_getEngineSerializationFormat = (
+  val: EXECUTION_SERIALIZATION_FORMAT,
+): ENGINE_EXECUTION_SERIALIZATION_FORMAT | string => {
+  switch (val) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    case EXECUTION_SERIALIZATION_FORMAT.CSV:
+      return ENGINE_EXECUTION_SERIALIZATION_FORMAT.CSV_TRANSFORMED;
+    default:
+      return val;
+  }
+};
+
+// eslint-disable-next-line @finos/legend/enforce-protocol-export-prefix
+export async function getCurrentUserIDFromEngineServer(
+  engineServerUrl: string,
+): Promise<string> {
+  return new NetworkClient().get(`${engineServerUrl}/server/v1/currentUser`);
+}
 
 export class V1_EngineServerClient extends AbstractServerClient {
   currentUserId?: string | undefined;
@@ -177,11 +222,19 @@ export class V1_EngineServerClient extends AbstractServerClient {
 
   _pure = (): string => `${this.baseUrl}/pure/v1`;
 
+  _sdlc = (): string => `${this.baseUrl}/sdlc/v1`;
+
   // ------------------------------------------- Server -------------------------------------------
 
   _server = (): string => `${this.baseUrl}/server/v1`;
   getCurrentUserId = (): Promise<string> =>
     this.get(`${this._server()}/currentUser`);
+
+  // ------------------------------------------- Server -------------------------------------------
+
+  _lambda = (): string => `${this.baseUrl}/lambda/v1`;
+  getLambdaPrefixes = (): Promise<PlainObject<V1_LambdaPrefix>[]> =>
+    this.get(`${this._lambda()}/lambdaPrefixes`);
 
   // ------------------------------------------- Protocol -------------------------------------------
 
@@ -190,6 +243,31 @@ export class V1_EngineServerClient extends AbstractServerClient {
 
   getSubtypeInfo = (): Promise<SubtypeInfo> =>
     this.get(`${this._pure()}/protocol/pure/getSubtypeInfo`);
+
+  // ------------------------------------------- SDLC -------------------------------------------
+
+  createPrototypeProject = (): Promise<{
+    projectId: string;
+    webUrl: string | undefined;
+    owner: string;
+  }> =>
+    this.post(
+      `${this._sdlc()}/createPrototypeProject`,
+      undefined,
+      {},
+      {
+        [HttpHeader.CONTENT_TYPE]: ContentType.TEXT_PLAIN,
+      },
+    );
+
+  validUserAccessRole = (userId: string): Promise<boolean> =>
+    this.get(
+      `${this._sdlc()}/userHasPrototypeProjectAccess/${userId}`,
+      undefined,
+      {
+        [HttpHeader.CONTENT_TYPE]: ContentType.TEXT_PLAIN,
+      },
+    );
 
   // ------------------------------------------- Grammar -------------------------------------------
 
@@ -270,6 +348,30 @@ export class V1_EngineServerClient extends AbstractServerClient {
       {},
       undefined,
       undefined,
+      { enableCompression: true },
+    );
+
+  grammarToJSON_valueSpecification = (
+    input: string,
+    sourceId?: string | undefined,
+    lineOffset?: number | undefined,
+    columnOffset?: number | undefined,
+    returnSourceInformation?: boolean | undefined,
+  ): Promise<PlainObject<V1_ValueSpecification>> =>
+    this.postWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.GRAMMAR_TO_JSON),
+      `${this._grammarToJSON()}/valueSpecification`,
+      input,
+      {},
+      {
+        [HttpHeader.CONTENT_TYPE]: ContentType.TEXT_PLAIN,
+      },
+      {
+        sourceId,
+        lineOffset,
+        columnOffset,
+        returnSourceInformation,
+      },
       { enableCompression: true },
     );
 
@@ -373,6 +475,20 @@ export class V1_EngineServerClient extends AbstractServerClient {
       { enableCompression: true },
     );
 
+  JSONToGrammar_valueSpecification = (
+    input: PlainObject<V1_ValueSpecification>,
+    renderStyle?: V1_RenderStyle | undefined,
+  ): Promise<string> =>
+    this.postWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.JSON_TO_GRAMMAR),
+      `${this._JSONToGrammar()}/valueSpecification`,
+      input,
+      {},
+      { [HttpHeader.ACCEPT]: ContentType.TEXT_PLAIN },
+      { renderStyle },
+      { enableCompression: false },
+    );
+
   JSONToGrammar_relationalOperationElement = (
     input: PlainObject<V1_RawRelationalOperationElement>,
     renderStyle?: V1_RenderStyle | undefined,
@@ -409,6 +525,19 @@ export class V1_EngineServerClient extends AbstractServerClient {
     this.postWithTracing(
       this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.RUN_TESTS),
       `${this._pure()}/testable/runTests`,
+      this.debugPayload(input, CORE_ENGINE_ACTIVITY_TRACE.RUN_TESTS),
+      {},
+      undefined,
+      undefined,
+      { enableCompression: true },
+    );
+
+  debugTests = (
+    input: PlainObject<V1_RunTestsInput>,
+  ): Promise<PlainObject<V1_DebugTestsResult>> =>
+    this.postWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.RUN_TESTS),
+      `${this._pure()}/testable/debugTests`,
       this.debugPayload(input, CORE_ENGINE_ACTIVITY_TRACE.RUN_TESTS),
       {},
       undefined,
@@ -499,6 +628,20 @@ export class V1_EngineServerClient extends AbstractServerClient {
     PlainObject<V1_GenerationConfigurationDescription>[]
   > => this.get(`${this._pure()}/schemaGeneration/availableGenerations`);
 
+  // --------------------------------------------- Test Data Generation ---------------------------------------------
+
+  _testDataGeneration = (): string => `${this._pure()}/testData/generation`;
+
+  generateTestData(
+    input: PlainObject<V1_TestDataGenerationInput>,
+  ): Promise<PlainObject<V1_TestDataGenerationResult>> {
+    return this.postWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.TEST_DATA_GENERATION),
+      `${this._testDataGeneration()}/DONOTUSE_generateTestData`,
+      this.debugPayload(input, CORE_ENGINE_ACTIVITY_TRACE.TEST_DATA_GENERATION),
+    );
+  }
+
   // ------------------------------------------- Compile -------------------------------------------
 
   compile = (
@@ -527,29 +670,60 @@ export class V1_EngineServerClient extends AbstractServerClient {
       { enableCompression: true },
     );
 
+  lambdaRelationType = (
+    input: PlainObject<V1_LambdaReturnTypeInput>,
+  ): Promise<PlainObject<V1_RelationType>> =>
+    this.postWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.GET_LAMBDA_RETURN_TYPE),
+      `${this._pure()}/compilation/lambdaRelationType`,
+      input,
+      {},
+      undefined,
+      undefined,
+      { enableCompression: true },
+    );
+
+  completeCode = (
+    input: PlainObject<V1_CompleteCodeInput>,
+  ): Promise<PlainObject<CodeCompletionResult>> =>
+    this.postWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.GET_LAMBDA_RETURN_TYPE),
+      `${this._pure()}/codeCompletion/completeCode`,
+      input,
+      {},
+      undefined,
+      undefined,
+      { enableCompression: true },
+    );
+
   // ------------------------------------------- Execute -------------------------------------------
 
   _execution = (): string => `${this._pure()}/execution`;
   _executionManager = (): string => `${this._server()}/executionManager`;
 
-  execute = (
+  runQuery = (
     input: PlainObject<V1_ExecuteInput>,
     options?: {
-      returnResultAsText?: boolean;
+      returnAsResponse?: boolean;
       serializationFormat?: EXECUTION_SERIALIZATION_FORMAT | undefined;
+      abortController?: AbortController | undefined;
     },
   ): Promise<PlainObject<V1_ExecutionResult> | Response> =>
     this.postWithTracing(
       this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.EXECUTE),
       `${this._execution()}/execute`,
       this.debugPayload(input, CORE_ENGINE_ACTIVITY_TRACE.EXECUTE),
-      {},
+      {
+        signal: options?.abortController?.signal ?? null,
+      },
       undefined,
       {
-        serializationFormat: options?.serializationFormat,
+        serializationFormat: options?.serializationFormat
+          ? V1_getEngineSerializationFormat(options.serializationFormat)
+          : undefined,
       },
       { enableCompression: true },
-      { skipProcessing: Boolean(options?.returnResultAsText) },
+      { skipProcessing: Boolean(options?.returnAsResponse) },
     );
 
   generatePlan = (
@@ -602,6 +776,24 @@ export class V1_EngineServerClient extends AbstractServerClient {
       { enableCompression: true },
     );
 
+  generateTestDataWithSeed = (
+    input: PlainObject<V1_ExecuteInput>,
+  ): Promise<string> =>
+    this.postWithTracing(
+      this.getTraceData(
+        CORE_ENGINE_ACTIVITY_TRACE.GENERATE_TEST_DATA_WITH_SEED,
+      ),
+      `${this._execution()}/testDataGeneration/generateTestData_WithSeed`,
+      this.debugPayload(
+        input,
+        CORE_ENGINE_ACTIVITY_TRACE.GENERATE_TEST_DATA_WITH_SEED,
+      ),
+      {},
+      { [HttpHeader.ACCEPT]: ContentType.TEXT_PLAIN },
+      undefined,
+      { enableCompression: true },
+    );
+
   /**
    * TODO: this is an internal API that should me refactored out using extension mechanism
    */
@@ -630,7 +822,7 @@ export class V1_EngineServerClient extends AbstractServerClient {
   ): Promise<PlainObject<V1_LightQuery>[]> =>
     this.post(`${this._query()}/search`, searchSpecification, undefined);
   getQueries = (queryIds: string[]): Promise<PlainObject<V1_LightQuery>[]> =>
-    this.get(`${this._query()}/batch`, {}, undefined, { queryIds: queryIds });
+    this.get(`${this._query()}/batch`, {}, undefined, { queryIds });
   getQuery = (queryId: string): Promise<PlainObject<V1_Query>> =>
     this.get(this._query(queryId));
   createQuery = (
@@ -650,10 +842,58 @@ export class V1_EngineServerClient extends AbstractServerClient {
       this._query(queryId),
       query,
     );
+  patchQuery = (
+    queryId: string,
+    query: PlainObject<Partial<V1_Query>>,
+  ): Promise<PlainObject<V1_Query>> =>
+    this.putWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.PATCH_QUERY),
+      `${this._query(queryId)}/patchQuery`,
+      query,
+    );
   deleteQuery = (queryId: string): Promise<PlainObject<V1_Query>> =>
     this.deleteWithTracing(
       this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.DELETE_QUERY),
       this._query(queryId),
+    );
+
+  // ------------------------------------------- DataCube -------------------------------------------
+
+  _dataCube = (id?: string): string =>
+    `${this.queryBaseUrl ?? this.baseUrl}/pure/v1/query/dataCube${
+      id ? `/${encodeURIComponent(id)}` : ''
+    }`;
+  searchDataCubes = (
+    searchSpecification: PlainObject<V1_QuerySearchSpecification>,
+  ): Promise<PlainObject<PersistentDataCube>[]> =>
+    this.post(`${this._dataCube()}/search`, searchSpecification, undefined);
+  getDataCubes = (ids: string[]): Promise<PlainObject<PersistentDataCube>[]> =>
+    this.get(`${this._dataCube()}/batch`, {}, undefined, {
+      queryIds: ids,
+    });
+  getDataCube = (id: string): Promise<PlainObject<PersistentDataCube>> =>
+    this.get(this._dataCube(id));
+  createDataCube = (
+    dataCube: PlainObject<PersistentDataCube>,
+  ): Promise<PlainObject<PersistentDataCube>> =>
+    this.postWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.CREATE_DATA_CUBE),
+      this._dataCube(),
+      dataCube,
+    );
+  updateDataCube = (
+    id: string,
+    dataCube: PlainObject<PersistentDataCube>,
+  ): Promise<PlainObject<PersistentDataCube>> =>
+    this.putWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.UPDATE_DATA_CUBE),
+      this._dataCube(id),
+      dataCube,
+    );
+  deleteDataCube = (id: string): Promise<PlainObject<PersistentDataCube>> =>
+    this.deleteWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.DELETE_DATA_CUBE),
+      this._dataCube(id),
     );
 
   // --------------------------------------- Analysis ---------------------------------------
@@ -761,7 +1001,7 @@ export class V1_EngineServerClient extends AbstractServerClient {
 
   publishFunctionActivatorToSandbox(
     input: PlainObject<V1_FunctionActivatorInput>,
-  ): Promise<PlainObject<V1_FunctionActivatorError>[]> {
+  ): Promise<PlainObject<DeploymentResult>> {
     return this.postWithTracing(
       this.getTraceData(
         CORE_ENGINE_ACTIVITY_TRACE.PUBLISH_FUNCTION_ACTIVATOR_TO_SANDBOX,
@@ -773,6 +1013,27 @@ export class V1_EngineServerClient extends AbstractServerClient {
       ),
     );
   }
+
+  // ------------------------------------------- Relational ---------------------------------------
+
+  _relationalElement = (): string => `${this._pure()}/relational`;
+
+  generateModelsFromDatabaseSpecification(
+    input: PlainObject<V1_DatabaseToModelGenerationInput>,
+  ): Promise<PlainObject<V1_PureModelContextData>> {
+    return this.postWithTracing(
+      this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.DATABASE_TO_MODELS),
+      `${this._relationalElement()}/generateModelsFromDatabaseSpecification`,
+      this.debugPayload(input, CORE_ENGINE_ACTIVITY_TRACE.DATABASE_TO_MODELS),
+    );
+  }
+
+  getAvailableRelationalDatabaseTypeConfigurations = (): Promise<
+    PlainObject<V1_RelationalConnectionBuilder>[]
+  > =>
+    this.get(
+      `${this._relationalElement()}/connection/supportedDbAuthenticationFlows`,
+    );
 
   // ------------------------------------------- Service -------------------------------------------
 
@@ -822,6 +1083,27 @@ export class V1_EngineServerClient extends AbstractServerClient {
       { skipProcessing: true },
     );
 
+  runServicePostVal = (
+    servicePath: string,
+    input: PlainObject,
+    assertionId: string,
+  ): Promise<PlainObject> =>
+    this.postWithTracing(
+      this.getTraceData(
+        CORE_ENGINE_ACTIVITY_TRACE.VALIDATE_SERVICE_ASSERTION_ID,
+      ),
+      `${this._service()}/doValidation`,
+      input,
+      {},
+      undefined,
+      {
+        assertionId: assertionId,
+
+        servicePath: servicePath,
+      },
+      { enableCompression: true },
+    );
+
   private getRegisterServiceUrlFromExecMode = (
     serviceExecutionMode: ServiceExecutionMode,
   ): string => {
@@ -845,6 +1127,7 @@ export class V1_EngineServerClient extends AbstractServerClient {
     serviceExecutionMode: ServiceExecutionMode,
     TEMPORARY__useStoreModel: boolean,
     TEMPORARY__useGenerateLineage: boolean,
+    TEMPORARY__useGenerateOpenApi: boolean,
   ): Promise<PlainObject<V1_ServiceRegistrationResult>> =>
     this.postWithTracing(
       this.getTraceData(CORE_ENGINE_ACTIVITY_TRACE.REGISTER_SERVICE),
@@ -859,7 +1142,14 @@ export class V1_EngineServerClient extends AbstractServerClient {
             storeModel: TEMPORARY__useStoreModel,
             generateLineage: TEMPORARY__useGenerateLineage,
           }
-        : { generateLineage: TEMPORARY__useGenerateLineage },
+        : serviceExecutionMode === ServiceExecutionMode.SEMI_INTERACTIVE
+          ? {
+              generateLineage: TEMPORARY__useGenerateLineage,
+            }
+          : {
+              generateLineage: TEMPORARY__useGenerateLineage,
+              generateOpenApi: TEMPORARY__useGenerateOpenApi,
+            },
       { enableCompression: true },
     );
 }

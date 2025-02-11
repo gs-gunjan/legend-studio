@@ -15,6 +15,7 @@
  */
 
 import { resolve, dirname } from 'path';
+import webpack from 'webpack';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import appConfig from './studio.config.js';
 import {
@@ -25,6 +26,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+const { DefinePlugin } = webpack;
+
 export default (env, arg) => {
   const { isEnvDevelopment } = getEnvInfo(env, arg);
 
@@ -34,7 +37,12 @@ export default (env, arg) => {
     appConfig,
     babelConfigPath: resolve(__dirname, '../../babel.config.cjs'),
     enableReactFastRefresh: isEnvDevelopment,
+    serviceWorkerConfig: {
+      filename: 'ServiceWorker.js',
+      import: resolve(__dirname, './ServiceWorker.js'),
+    },
   });
+  /** @type {import('webpack').Configuration} */
   const config = {
     ...baseConfig,
     devServer: {
@@ -43,6 +51,10 @@ export default (env, arg) => {
     },
     plugins: [
       ...baseConfig.plugins,
+      new DefinePlugin({
+        AG_GRID_LICENSE: null,
+      }),
+
       // For development, we want to serve the `config.json` and `version.json` files at the `/baseUrl`
       isEnvDevelopment &&
         new CopyWebpackPlugin({

@@ -33,6 +33,7 @@ export enum LEGEND_QUERY_ROUTE_PATTERN_TOKEN {
 }
 
 export const LEGEND_QUERY_ROUTE_PATTERN = Object.freeze({
+  DEFAULT: '/',
   SETUP: '/setup',
   EDIT_EXISTING_QUERY_SETUP: '/setup/existing-query',
   CREATE_MAPPING_QUERY_SETUP: '/setup/manual',
@@ -43,6 +44,7 @@ export const LEGEND_QUERY_ROUTE_PATTERN = Object.freeze({
   CREATE_FROM_MAPPING_QUERY: `/create/manual/:${LEGEND_QUERY_ROUTE_PATTERN_TOKEN.GAV}/:${LEGEND_QUERY_ROUTE_PATTERN_TOKEN.MAPPING_PATH}/:${LEGEND_QUERY_ROUTE_PATTERN_TOKEN.RUNTIME_PATH}`,
   CREATE_FROM_SERVICE_QUERY: `/create-from-service/:${LEGEND_QUERY_ROUTE_PATTERN_TOKEN.GAV}/:${LEGEND_QUERY_ROUTE_PATTERN_TOKEN.SERVICE_PATH}`,
   EDIT_EXISTING_QUERY: `/edit/:${LEGEND_QUERY_ROUTE_PATTERN_TOKEN.QUERY_ID}`,
+  DATA_CUBE_EXISTING_QUERY: `/edit/:${LEGEND_QUERY_ROUTE_PATTERN_TOKEN.QUERY_ID}/cube`,
 });
 
 export enum LEGEND_QUERY_SETUP_QUERY_PARAM_TOKEN {
@@ -198,11 +200,12 @@ export const EXTERNAL_APPLICATION_NAVIGATION__generateStudioSDLCProjectViewUrl =
   (
     studioApplicationUrl: string,
     projectId: string,
+    versionId: string | undefined,
     entityPath: string | undefined,
   ): string =>
     `${studioApplicationUrl}/view/${projectId}${
-      entityPath ? `/entity/${entityPath}` : ''
-    }`;
+      versionId ? `/version/${versionId}` : ''
+    }${entityPath ? `/entity/${entityPath}` : ''}`;
 
 /**
  * @external_application_navigation This depends on Legend Studio routing and is hardcoded so it's potentially brittle
@@ -233,3 +236,31 @@ export const EXTERNAL_APPLICATION_NAVIGATION__generateStudioUpdateProjectService
 export const EXTERNAL_APPLICATION_NAVIGATION__generateStudioProductionizeQueryUrl =
   (studioApplicationUrl: string, queryId: string): string =>
     `${studioApplicationUrl}/extensions/productionize-query/${queryId}`;
+
+/**
+ * @external_application_navigation This depends on Legend Taxonomy routing and is hardcoded so it's potentially brittle
+ */
+export const EXTERNAL_APPLICATION_NAVIGATION__generateTaxonomyDataspaceViewUrl =
+  (
+    taxonomyApplicationUrl: string,
+    groupId: string,
+    artifactId: string,
+    versionId: string,
+    dataspacePath: string,
+  ): string =>
+    `${taxonomyApplicationUrl}/dataspace/${generateGAVCoordinates(
+      groupId,
+      artifactId,
+      versionId,
+    )}/${dataspacePath}`;
+
+/**
+ * @external_application_navigation This depends on Legend DataCube routing and is hardcoded so it's potentially brittle
+ */
+export const EXTERNAL_APPLICATION_NAVIGATION__generateNewDataCubeUrl = (
+  dataCubeApplicationUrl: string,
+  sourceData: object,
+): string =>
+  `${dataCubeApplicationUrl}?sourceData=${encodeURIComponent(
+    btoa(JSON.stringify(sourceData)),
+  )}`;

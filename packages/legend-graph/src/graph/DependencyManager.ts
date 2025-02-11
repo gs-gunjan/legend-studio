@@ -18,6 +18,7 @@ import {
   type Clazz,
   guaranteeNonNullable,
   IllegalStateError,
+  isNonNullable,
 } from '@finos/legend-shared';
 import type { PackageableElement } from '../graph/metamodel/pure/packageableElements/PackageableElement.js';
 import type { Enumeration } from '../graph/metamodel/pure/packageableElements/domain/Enumeration.js';
@@ -37,14 +38,16 @@ import type { FileGenerationSpecification } from '../graph/metamodel/pure/packag
 import type { GenerationSpecification } from '../graph/metamodel/pure/packageableElements/generationSpecification/GenerationSpecification.js';
 import type { Measure } from '../graph/metamodel/pure/packageableElements/domain/Measure.js';
 import type { SectionIndex } from '../graph/metamodel/pure/packageableElements/section/SectionIndex.js';
-import { type EntitiesWithOrigin } from '@finos/legend-storage';
+import { type EntitiesWithOrigin, GAV_DELIMITER } from '@finos/legend-storage';
 import type { Database } from './metamodel/pure/packageableElements/store/relational/model/Database.js';
 import type { DataElement } from './metamodel/pure/packageableElements/data/DataElement.js';
 import type { ExecutionEnvironmentInstance } from './metamodel/pure/packageableElements/service/ExecutionEnvironmentInstance.js';
 import { LegendSDLC, type GraphDataOrigin } from './GraphDataOrigin.js';
 import type { FunctionActivator } from './metamodel/pure/packageableElements/function/FunctionActivator.js';
+import type { PureGraphPlugin } from './PureGraphPlugin.js';
+import type { Testable } from './metamodel/pure/test/Testable.js';
 
-const DEPENDENCY_ROOT_PACKAGE_PREFIX = '@dependency__';
+export const DEPENDENCY_ROOT_PACKAGE_PREFIX = '@dependency__';
 export const generateDependencyRootPackageName = (
   dependencyKey: string,
 ): string => `${DEPENDENCY_ROOT_PACKAGE_PREFIX}${dependencyKey}`;
@@ -58,9 +61,9 @@ export const extractDependencyGACoordinateFromRootPackageName = (
   return packageName.substring(DEPENDENCY_ROOT_PACKAGE_PREFIX.length);
 };
 
-class DependencyModel extends BasicModel {
+export class DependencyModel extends BasicModel {
   constructor(
-    extensionElementClasses: Clazz<PackageableElement>[],
+    extensionElementClasses: PureGraphPlugin[],
     root: Package,
     origin: GraphDataOrigin,
   ) {
@@ -85,15 +88,15 @@ const buildDependencyElementGetter =
   };
 
 export class DependencyManager {
-  private readonly extensionElementClasses: Clazz<PackageableElement>[];
+  private readonly graphPlugins: PureGraphPlugin[];
 
   private _origin: GraphDataOrigin | undefined;
 
   roots: Package[] = [];
   projectDependencyModelsIndex = new Map<string, BasicModel>();
 
-  constructor(extensionElementClasses: Clazz<PackageableElement>[]) {
-    this.extensionElementClasses = extensionElementClasses;
+  constructor(graphPlugins: PureGraphPlugin[]) {
+    this.graphPlugins = graphPlugins;
   }
 
   /**
@@ -110,7 +113,7 @@ export class DependencyManager {
         this.projectDependencyModelsIndex.set(
           dependencyKey,
           new DependencyModel(
-            this.extensionElementClasses,
+            this.graphPlugins,
             pkg,
             new LegendSDLC(
               entitiesWithOrigin.groupId,
@@ -297,7 +300,9 @@ export class DependencyManager {
   get fileGenerations(): FileGenerationSpecification[] {
     return this.dependencyGraphs.flatMap((dep) => dep.ownFileGenerations);
   }
-
+  get testables(): Testable[] {
+    return this.dependencyGraphs.flatMap((dep) => dep.ownTestables);
+  }
   get executionEnvironments(): ExecutionEnvironmentInstance[] {
     return this.dependencyGraphs.flatMap((dep) => dep.ownExecutionEnvironments);
   }
@@ -325,5 +330,20 @@ export class DependencyManager {
       Boolean(dep.getOwnNullableElement(path, includePackage)),
     );
     return model?.getOwnNullableElement(path, includePackage);
+  }
+
+  getPackages(path: string): Package[] {
+    return this.dependencyGraphs
+      .map((dep) => dep.getNullablePackage(path))
+      .filter(isNonNullable);
+  }
+
+  getElementOrigin(element: PackageableElement): string | undefined {
+    const model = this.dependencyGraphs.find((dep) =>
+      Boolean(dep.getOwnNullableElement(element.path)),
+    );
+    return model?.origin instanceof LegendSDLC
+      ? `${model.origin.groupId}${GAV_DELIMITER}${model.origin.artifactId}`
+      : undefined;
   }
 }

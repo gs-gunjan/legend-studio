@@ -25,16 +25,14 @@ import type {
   NewElementState,
 } from './editor/NewElementState.js';
 import type { Class, PackageableElement, Testable } from '@finos/legend-graph';
-import {
-  type DocumentationEntry,
-  LegendApplicationPlugin,
-} from '@finos/legend-application';
+import { LegendApplicationPlugin } from '@finos/legend-application';
 import type { TestableMetadata } from './editor/sidebar-state/testable/GlobalTestRunnerState.js';
 import type {
   ExtensionModelImportRendererState,
   ModelImporterState,
 } from './editor/editor-state/ModelImporterState.js';
-import type { PureGrammarTextSuggestion } from '@finos/legend-lego/code-editor';
+import type { PureGrammarTextSuggestion } from '@finos/legend-code-editor';
+import type { DocumentationEntry } from '@finos/legend-shared';
 
 export type ExplorerContextMenuItemRendererConfiguration = {
   key: string;
@@ -49,7 +47,7 @@ export type EditorExtensionComponentRendererConfiguration = {
   renderer: (editorStore: EditorStore) => React.ReactNode | undefined;
 };
 
-export type EditorExtensionStateCreator = (
+export type EditorExtensionStateBuilder = (
   editorStore: EditorStore,
 ) => EditorExtensionState | undefined;
 
@@ -77,7 +75,7 @@ export type TestableMetadataGetter = (
   editorStore: EditorStore,
 ) => TestableMetadata | undefined;
 
-export type TestRunnerTabConfiguration = {
+export type TestRunnerViewConfiguration = {
   key: string;
   title: string;
   renderer: (editorStore: EditorStore) => React.ReactNode | undefined;
@@ -95,16 +93,18 @@ export abstract class LegendStudioApplicationPlugin extends LegendApplicationPlu
   }
 
   /**
+   * Get the list of extension state builders for editor store.
+   *
+   * This is a mechanism to have the store holds references to extension states
+   * so that we can refer back to these states when needed or do cross-extensions
+   * operations
+   */
+  getExtraEditorExtensionStateBuilders?(): EditorExtensionStateBuilder[];
+
+  /**
    * Get the list of items to be rendered in the explorer context menu.
    */
   getExtraExplorerContextMenuItemRendererConfigurations?(): ExplorerContextMenuItemRendererConfiguration[];
-
-  /**
-   * Get the list of creators for editor extension state.
-   *
-   * This is a mechanism to extend the editor store.
-   */
-  getExtraEditorExtensionStateCreators?(): EditorExtensionStateCreator[];
 
   /**
    * Get the list of configurations for the renderer of editor extension states.
@@ -127,9 +127,9 @@ export abstract class LegendStudioApplicationPlugin extends LegendApplicationPlu
   getExtraTestableMetadata?(): TestableMetadataGetter[];
 
   /**
-   * Get the list of configurations for the editor for a test runner tab.
+   * Get the list of view configurations for test runner.
    */
-  getExtraTestRunnerTabConfigurations?(): TestRunnerTabConfiguration[];
+  getExtraTestRunnerViewConfigurations?(): TestRunnerViewConfiguration[];
 }
 
 export type PureGrammarElementLabeler = (
@@ -233,6 +233,11 @@ export interface DSL_LegendStudioApplicationPlugin_Extension
   getExtraSupportedElementTypes?(): string[];
 
   /**
+   * Get the Map of the supported packageable element type specifiers with its category.
+   */
+  getExtraSupportedElementTypesWithCategory?(): Map<string, string[]>;
+
+  /**
    * Get the list of classifiers for a packageable element.
    */
   getExtraElementClassifiers?(): ElementClassifier[];
@@ -319,4 +324,10 @@ export interface DSL_LegendStudioApplicationPlugin_Extension
    * (e.g. Class, Enum in ###Pure)
    */
   getExtraPureGrammarParserElementSnippetSuggestionsGetters?(): PureGrammarParserElementSnippetSuggestionsGetter[];
+
+  /**
+   * Get a string of the Pure grammar element name for auto-folding the element
+   * (e.g. Diagram, or Text)
+   */
+  getExtraGrammarTextEditorAutoFoldingElementCreatorKeywords?(): string[];
 }

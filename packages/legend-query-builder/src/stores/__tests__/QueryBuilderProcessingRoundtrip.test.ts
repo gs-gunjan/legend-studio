@@ -37,10 +37,13 @@ import {
   TEST_DATA__temporalModel,
   TEST_DATA__personWithSubType,
   TEST_DATA_dateCompabilityForFilterAndPostFilter,
+  TEST_DATA__fromWithPersonProject,
+  TEST_DATA__projectWithSlice,
 } from './TEST_DATA__QueryBuilder_LambdaProcessingRoundtrip.js';
-import TEST_DATA__BindingM2MModel from './TEST_DATA__QueryBuilder_Model_BindingM2M.json';
-import TEST_DATA__PostFilterModel from './TEST_DATA__QueryBuilder_Model_PostFilter.json';
-import TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M from './TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M.json';
+import TEST_DATA__BindingM2MModel from './TEST_DATA__QueryBuilder_Model_BindingM2M.json' with { type: 'json' };
+import TEST_DATA__PostFilterModel from './TEST_DATA__QueryBuilder_Model_PostFilter.json' with { type: 'json' };
+import TEST_DATA__ComplexRelationalModel from './TEST_DATA__QueryBuilder_Model_ComplexRelational.json' with { type: 'json' };
+import TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M from './TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M.json' with { type: 'json' };
 import {
   simpleDerivationProjection,
   groupByWithDerivationProjection,
@@ -68,6 +71,8 @@ import {
   TEST_DATA__graphFetchWithSerializationConfigWithNullableConfigProperties,
 } from './TEST_DATA__QueryBuilder_GraphFetch.js';
 import { TEST__LegendApplicationPluginManager } from '../__test-utils__/QueryBuilderStateTestUtils.js';
+import { TEST_DATA__lambda_ContantExpression_MultiConstantAndCalculatedVariables } from './TEST_DATA__QueryBuilder_ConstantExpression.js';
+import { TEST_DATA__projectionWithWAVGAggregation } from './TEST_DATA__QueryBuilder_Generic.js';
 
 const pluginManager = TEST__LegendApplicationPluginManager.create();
 pluginManager
@@ -111,6 +116,10 @@ const bindingM2MCtx = {
 
 const identitfyM2MCtx = {
   entities: TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M,
+};
+
+const projectionCtx = {
+  entities: TEST_DATA__ComplexRelationalModel,
 };
 
 const cases: RoundtripTestCase[] = [
@@ -191,6 +200,11 @@ const cases: RoundtripTestCase[] = [
     TEST_DATA__personWithParameter,
   ],
   [
+    'Simple TDS function with from() function',
+    relationalCtx,
+    TEST_DATA__fromWithPersonProject,
+  ],
+  [
     'Date compability for Filter and Post-filter',
     postFilterCtx,
     TEST_DATA_dateCompabilityForFilterAndPostFilter,
@@ -215,6 +229,11 @@ const cases: RoundtripTestCase[] = [
     olapGroupbyCtx,
     TEST_DATA__lambda_olapGroupBy_SimpleStringRankWithPostFilter,
   ],
+  [
+    'Constant expression with multi string instance + calculated constants',
+    olapGroupbyCtx,
+    TEST_DATA__lambda_ContantExpression_MultiConstantAndCalculatedVariables,
+  ],
   // externalize
   [
     'Simple externalize() on graphfetch()',
@@ -226,6 +245,10 @@ const cases: RoundtripTestCase[] = [
     bindingM2MCtx,
     TEST_DATA__lambda_Externalize_externalize_graphFetchChecked,
   ],
+  // slice
+  ['Simple slice() function', relationalCtx, TEST_DATA__projectWithSlice],
+  // aggregation
+  ['wavg() function', projectionCtx, TEST_DATA__projectionWithWAVGAggregation],
 ];
 
 describe(unitTest('Lambda processing roundtrip'), () => {
@@ -246,7 +269,7 @@ describe(unitTest('Lambda processing roundtrip'), () => {
       );
       const _lambdaJson =
         graphManagerState.graphManager.serializeRawValueSpecification(
-          graphManagerState.graphManager.buildRawValueSpecification(
+          graphManagerState.graphManager.transformValueSpecToRawValueSpec(
             lambda,
             graphManagerState.graph,
           ),

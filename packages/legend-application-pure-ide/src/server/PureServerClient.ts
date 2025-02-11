@@ -30,9 +30,9 @@ import type {
   SearchResultCoordinate,
   SearchResultEntry,
 } from '../server/models/SearchEntry.js';
-import type {
-  AbstractTestRunnerCheckResult,
-  TestRunnerCancelResult,
+import {
+  type AbstractTestRunnerCheckResult,
+  type TestRunnerCancelResult,
 } from '../server/models/Test.js';
 import {
   type Usage,
@@ -67,8 +67,8 @@ import type {
 } from './models/Suggestion.js';
 import { ROOT_PACKAGE_PATH } from '../stores/PureIDEConfig.js';
 
-export class PureClient {
-  private networkClient: NetworkClient;
+export class PureServerClient {
+  private readonly networkClient: NetworkClient;
 
   // Pure IDE info
   userId = 'localuser';
@@ -83,7 +83,7 @@ export class PureClient {
   get baseUrl(): string {
     return guaranteeNonNullable(
       this.networkClient.baseUrl,
-      `Pure client has not been configured properly`,
+      `Pure server client has not been configured properly`,
     );
   }
 
@@ -167,7 +167,7 @@ export class PureClient {
     searchText: string,
     isCaseSensitive: boolean,
     isRegExp: boolean,
-    limit = 2000,
+    limit = 100,
   ): Promise<PlainObject<SearchResultEntry>[]> =>
     this.networkClient.get(
       `${this.baseUrl}/findInSources`,
@@ -214,6 +214,18 @@ export class PureClient {
         testRunnerId,
       },
     );
+
+  getPCTAdapters = async (): Promise<PlainObject<Usage>[]> => {
+    const result = await this.networkClient.get(
+      `${this.baseUrl}/execute`,
+      undefined,
+      undefined,
+      {
+        func: 'meta::pure::ide::testing::getPCTAdapters__Pair_MANY_',
+      },
+    );
+    return Array.isArray(result) ? result : [result];
+  };
 
   // ------------------------------------------- Concept -------------------------------------------
 

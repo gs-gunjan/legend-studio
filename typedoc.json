@@ -20,7 +20,9 @@
     "**/packages/legend-art",
     "**/packages/legend-lego",
     "**/packages/legend-application-*",
-    "**/packages/legend-extension-*"
+    "**/packages/legend-extension-*",
+    "**/packages/legend-server-showcase",
+    "**/packages/legend-server-showcase-*",
   ],
   // NOTE: to be updated when we structure the doc better
   "readme": "./website/api.md",
@@ -28,5 +30,5 @@
   "theme": "legend",
   "customCss": "./website/legend-typedoc-theme.css",
   "logLevel": "Verbose",
-  "treatWarningsAsErrors": true
+  "treatWarningsAsErrors": false // TODO: we should enable this once we want to properly enforce the doc generation
 }

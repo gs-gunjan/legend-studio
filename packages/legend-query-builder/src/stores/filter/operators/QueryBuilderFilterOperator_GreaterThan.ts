@@ -35,19 +35,15 @@ import {
   buildFilterConditionExpression,
 } from './QueryBuilderFilterOperatorValueSpecificationBuilder.js';
 import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../graph/QueryBuilderMetaModelConst.js';
-import {
-  generateDefaultValueForPrimitiveType,
-  getNonCollectionValueSpecificationType,
-  isTypeCompatibleForAssignment,
-} from '../../QueryBuilderValueSpecificationHelper.js';
+import { isTypeCompatibleForAssignment } from '../../QueryBuilderValueSpecificationHelper.js';
 import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../../QueryBuilderStateHashUtils.js';
-import { buildPrimitiveInstanceValue } from '../../shared/ValueSpecificationEditorHelper.js';
+import { buildDefaultInstanceValue } from '../../shared/ValueSpecificationEditorHelper.js';
 
 export class QueryBuilderFilterOperator_GreaterThan
   extends QueryBuilderFilterOperator
   implements Hashable
 {
-  getLabel(filterConditionState: FilterConditionState): string {
+  getLabel(): string {
     return '>';
   }
 
@@ -74,8 +70,9 @@ export class QueryBuilderFilterOperator_GreaterThan
     filterConditionState: FilterConditionState,
   ): boolean {
     return isTypeCompatibleForAssignment(
-      filterConditionState.value
-        ? getNonCollectionValueSpecificationType(filterConditionState.value)
+      filterConditionState.rightConditionValue &&
+        !filterConditionState.rightConditionValue.isCollection
+        ? filterConditionState.rightConditionValue.type
         : undefined,
       filterConditionState.propertyExpressionState.propertyExpression.func.value
         .genericType.value.rawType,
@@ -94,44 +91,37 @@ export class QueryBuilderFilterOperator_GreaterThan
       case PRIMITIVE_TYPE.FLOAT:
       case PRIMITIVE_TYPE.INTEGER:
       case PRIMITIVE_TYPE.STRICTDATE:
-      case PRIMITIVE_TYPE.DATETIME: {
-        return buildPrimitiveInstanceValue(
-          filterConditionState.filterState.queryBuilderState.graphManagerState
-            .graph,
-          propertyType.path,
-          generateDefaultValueForPrimitiveType(propertyType.path),
-          filterConditionState.filterState.queryBuilderState.observerContext,
-        );
-      }
+      case PRIMITIVE_TYPE.DATETIME:
       case PRIMITIVE_TYPE.DATE: {
-        return buildPrimitiveInstanceValue(
+        return buildDefaultInstanceValue(
           filterConditionState.filterState.queryBuilderState.graphManagerState
             .graph,
-          PRIMITIVE_TYPE.STRICTDATE,
-          generateDefaultValueForPrimitiveType(propertyType.path),
+          propertyType,
           filterConditionState.filterState.queryBuilderState.observerContext,
+          filterConditionState.filterState.queryBuilderState
+            .INTERNAL__enableInitializingDefaultSimpleExpressionValue,
         );
       }
       default:
         throw new UnsupportedOperationError(
-          `Can't get default value for filter operator '${this.getLabel(
-            filterConditionState,
-          )}' when the LHS property is of type '${propertyType.path}'`,
+          `Can't get default value for filter operator '${this.getLabel()}' when the LHS property is of type '${propertyType.path}'`,
         );
     }
   }
 
   buildFilterConditionExpression(
     filterConditionState: FilterConditionState,
+    lambdaParameterName?: string | undefined,
   ): ValueSpecification {
     return buildFilterConditionExpression(
       filterConditionState,
       filterConditionState.propertyExpressionState.propertyExpression.func.value
         .genericType.value.rawType.path === PRIMITIVE_TYPE.DATETIME &&
-        filterConditionState.value?.genericType?.value.rawType.path !==
+        filterConditionState.rightConditionValue?.type?.path !==
           PRIMITIVE_TYPE.DATETIME
         ? QUERY_BUILDER_SUPPORTED_FUNCTIONS.IS_AFTER_DAY
         : QUERY_BUILDER_SUPPORTED_FUNCTIONS.GREATER_THAN,
+      lambdaParameterName,
     );
   }
 

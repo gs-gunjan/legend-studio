@@ -24,30 +24,30 @@ jobs:
     if: github.repository == 'finos/legend-studio'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3.5.3
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0 # disabling shallow clone is recommended for improving relevancy of reporting
       - name: Get Yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
       - name: Setup Yarn cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.2.0
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: ${{ runner.os }}-yarn-
       - name: Setup Node
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.2.0
         with:
-          node-version: 16
+          node-version: 21
         # Install step is needed for Typescript scanning to work properly since
         # we refer to another packages in `tsconfig` files, which is used by Sonar
         # See https://community.sonarsource.com/t/sonarts-is-not-able-to-analyse-typescript-files/21510/5
       - name: Install dependencies
         run: yarn
       - name: SonarCloud scan
-        uses: sonarsource/sonarcloud-github-action@v1.9
+        uses: sonarsource/sonarcloud-github-action@v4.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -62,7 +62,7 @@ jobs:
       security-events: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3.5.3
+        uses: actions/checkout@v4.2.2
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
         with:

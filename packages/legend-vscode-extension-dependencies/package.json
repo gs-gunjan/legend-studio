@@ -1,0 +1,82 @@
+{
+  "name": "@finos/legend-vscode-extension-dependencies",
+  "version": "4.0.74",
+  "homepage": "https://github.com/finos/legend-studio/tree/master/packages/legend-vscode-extension-dependencies",
+  "bugs": {
+    "url": "https://github.com/finos/legend-studio/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/finos/legend-studio.git",
+    "directory": "packages/legend-vscode-extension-dependencies"
+  },
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./lib/index.js",
+      "require": "./lib/bundles/bundle.cjs.js"
+    },
+    "./style/index.css": {
+      "default": "./lib/bundles/style/bundle.css"
+    }
+  },
+  "module": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build:tailwindcss": "tailwindcss -i ./style/tailwind.css -o ./lib/tailwind.css --minify",
+    "build:ts": "tsc --project ./tsconfig.build.json",
+    "bundle": "yarn clean && yarn build:tailwindcss && yarn build:ts && yarn rollup -c && echo '{\"type\": \"commonjs\"}' > lib/bundles/package.json",
+    "clean": "npm-run-all clean:cache clean:lib",
+    "clean:cache": "rimraf \"build\"",
+    "clean:lib": "rimraf \"lib\"",
+    "dev": "npm-run-all --parallel dev:ts",
+    "dev:ts": "tsc --watch --preserveWatchOutput",
+    "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location ./build/.eslintcache --report-unused-disable-directives --parser-options=project:\"./tsconfig.json\" \"./src/**/*.{js,ts,tsx}\"",
+    "publish:pre-prepare": "yarn bundle",
+    "publish:prepare": "node ../../scripts/release/preparePublishContent.js",
+    "publish:snapshot": "node ../../scripts/release/publishDevSnapshot.js",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@finos/legend-application": "workspace:*",
+    "@finos/legend-application-query-bootstrap": "workspace:*",
+    "@finos/legend-application-studio": "workspace:*",
+    "@finos/legend-art": "workspace:*",
+    "@finos/legend-data-cube": "workspace:*",
+    "@finos/legend-extension-dsl-diagram": "workspace:*",
+    "@finos/legend-graph": "workspace:*",
+    "@finos/legend-lego": "workspace:*",
+    "@finos/legend-query-builder": "workspace:*",
+    "@finos/legend-shared": "workspace:*",
+    "@finos/legend-storage": "workspace:*",
+    "@types/react": "19.0.8",
+    "react": "19.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "7.26.7",
+    "@finos/legend-dev-utils": "workspace:*",
+    "@rollup/plugin-babel": "6.0.4",
+    "@rollup/plugin-commonjs": "28.0.2",
+    "@rollup/plugin-json": "6.1.0",
+    "@rollup/plugin-node-resolve": "16.0.0",
+    "@rollup/plugin-terser": "0.4.4",
+    "cross-env": "7.0.3",
+    "eslint": "9.19.0",
+    "npm-run-all": "4.1.5",
+    "postcss": "8.5.1",
+    "postcss-url": "10.1.3",
+    "rimraf": "6.0.1",
+    "rollup": "4.34.3",
+    "rollup-plugin-flow": "1.1.1",
+    "rollup-plugin-import-css": "3.5.8",
+    "rollup-plugin-postcss": "4.0.2",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.7.3"
+  },
+  "publishConfig": {
+    "directory": "build/publishContent"
+  }
+}

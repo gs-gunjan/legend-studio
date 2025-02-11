@@ -23,7 +23,6 @@ import {
   ShareIcon,
   PanelLoadingIndicator,
   ContextMenu,
-  SyncIcon,
   PencilIcon,
   InfoCircleIcon,
   TimesIcon,
@@ -35,8 +34,10 @@ import {
   Modal,
   ModalBody,
   ModalFooter,
+  ModalFooterButton,
   MenuContentItem,
   MenuContent,
+  PanelFormBooleanField,
 } from '@finos/legend-art';
 import { PROJECT_OVERVIEW_ACTIVITY_MODE } from '../../../stores/editor/sidebar-state/ProjectOverviewState.js';
 import {
@@ -52,10 +53,24 @@ import {
   NewVersionType,
   WorkspaceType,
   areWorkspacesEquivalent,
+  Review,
+  ReviewState,
+  Patch,
 } from '@finos/legend-server-sdlc';
 import { useEditorStore } from '../EditorStoreProvider.js';
 import { useApplicationStore } from '@finos/legend-application';
 import { useLegendStudioApplicationStore } from '../../LegendStudioFrameworkProvider.js';
+import {
+  ActionState,
+  assertErrorThrown,
+  guaranteeNonNullable,
+  LogEvent,
+} from '@finos/legend-shared';
+import type { VersionOption } from '../editor-group/project-configuration-editor/ProjectDependencyEditor.js';
+import { DocumentationLink } from '@finos/legend-lego/application';
+import { LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../../__lib__/LegendStudioDocumentation.js';
+import type { PatchOption } from '../../workspace-setup/CreateWorkspaceModal.js';
+import { LEGEND_STUDIO_APP_EVENT } from '../../../__lib__/LegendStudioEvent.js';
 
 const ShareProjectModal = observer(
   (props: { open: boolean; closeModal: () => void }) => {
@@ -97,7 +112,12 @@ const ShareProjectModal = observer(
 
     return (
       <Dialog onClose={closeModal} open={open}>
-        <Modal darkMode={true} className="modal--no-padding">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="modal--no-padding"
+        >
           <PanelLoadingIndicator isLoading={isDispatchingAction} />
           <ModalBody>
             <div className="project-overview__share-project__modal__info-entry">
@@ -120,7 +140,10 @@ const ShareProjectModal = observer(
                             }
                           : null
                       }
-                      darkMode={true}
+                      darkMode={
+                        !applicationStore.layoutService
+                          .TEMPORARY__isLightColorThemeEnabled
+                      }
                     />
                   </div>
                 ) : (
@@ -140,13 +163,12 @@ const ShareProjectModal = observer(
             </div>
           </ModalBody>
           <ModalFooter>
-            <button
-              className="btn--wide btn--dark"
+            <ModalFooterButton
+              className="btn--wide"
+              text="Copy Link"
               disabled={isFetchingProject}
               onClick={copyProjectElementLink}
-            >
-              Copy Link
-            </button>
+            />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -180,10 +202,10 @@ const WorkspaceViewer = observer((props: { workspace: Workspace }) => {
   const { workspace } = props;
   const editorStore = useEditorStore();
   const applicationStore = useApplicationStore();
-  const isActive = areWorkspacesEquivalent(
-    editorStore.sdlcState.activeWorkspace,
-    workspace,
-  );
+  const isActive =
+    areWorkspacesEquivalent(editorStore.sdlcState.activeWorkspace, workspace) &&
+    workspace.source ===
+      editorStore.sdlcState.activePatch?.patchReleaseVersionId.id;
   const [isSelectedFromContextMenu, setIsSelectedFromContextMenu] =
     useState(false);
   const onContextMenuOpen = (): void => setIsSelectedFromContextMenu(true);
@@ -210,6 +232,7 @@ const WorkspaceViewer = observer((props: { workspace: Workspace }) => {
             applicationStore.navigationService.navigator.generateAddress(
               generateEditorRoute(
                 workspace.projectId,
+                editorStore.sdlcState.activePatch?.patchReleaseVersionId.id,
                 workspace.workspaceId,
                 workspace.workspaceType,
               ),
@@ -226,9 +249,14 @@ const WorkspaceViewer = observer((props: { workspace: Workspace }) => {
               <UserIcon />
             )}
           </div>
-          <div className="project-overview__item__link__content__name">
+          <div className="project-overview__item__link__content__name project-overview__workspace__viewer__label">
             {workspace.workspaceId}
           </div>
+          {workspace.source && (
+            <div className="project-overview__workspace__viewer__source">
+              {`patch/${workspace.source}`}
+            </div>
+          )}
         </div>
       </button>
     </ContextMenu>
@@ -276,7 +304,7 @@ const WorkspacesViewer = observer(() => {
         >
           {workspaces.map((workspace) => (
             <WorkspaceViewer
-              key={`${workspace.workspaceType}.${workspace.workspaceId}`}
+              key={`${workspace.workspaceType}.${workspace.workspaceId}.${workspace.source}`}
               workspace={workspace}
             />
           ))}
@@ -317,14 +345,26 @@ const ReleaseEditor = observer(() => {
   const canCreateVersion =
     !isCurrentProjectVersionLatest &&
     !isDispatchingAction &&
-    editorStore.sdlcServerClient.features.canCreateVersion;
+    editorStore.sdlcServerClient.features.canCreateVersion &&
+    editorStore.sdlcState.canCreateVersion;
+  const disabledCreateVersionTitle = isCurrentProjectVersionLatest
+    ? `Can't create version: project version not the latest`
+    : !editorStore.sdlcServerClient.features.canCreateVersion
+      ? `Can't create version: current svn system does not support creating versions`
+      : !editorStore.sdlcState.canCreateVersion
+        ? `Can't create version: You do not have the rights to create a version`
+        : undefined;
 
   // since this can be affected by other users, we refresh it more proactively
   useEffect(() => {
     flowResult(projectOverviewState.fetchLatestProjectVersion()).catch(
       applicationStore.alertUnhandledError,
     );
-  }, [applicationStore, projectOverviewState]);
+  }, [
+    applicationStore,
+    editorStore.sdlcState.activePatch,
+    projectOverviewState,
+  ]);
 
   return (
     <div className="panel side-bar__panel project-overview__panel project-overview__release">
@@ -337,7 +377,11 @@ const ReleaseEditor = observer(() => {
       </div>
       <div className="panel__content project-overview__release__panel__content project-overview__release__content">
         <PanelLoadingIndicator isLoading={isDispatchingAction} />
-        <div className="project-overview__release__editor">
+        <div
+          className={clsx(
+            'project-overview__release__editor project-overview__release__editor__project',
+          )}
+        >
           <textarea
             className="project-overview__release__editor__input input--dark"
             spellCheck={false}
@@ -352,6 +396,7 @@ const ReleaseEditor = observer(() => {
               onClick={createMajorRelease}
               disabled={!canCreateVersion}
               title={
+                disabledCreateVersionTitle ??
                 'Create a major release which comes with backward-incompatible features'
               }
             >
@@ -362,6 +407,7 @@ const ReleaseEditor = observer(() => {
               onClick={createMinorRelease}
               disabled={!canCreateVersion}
               title={
+                disabledCreateVersionTitle ??
                 'Create a minor release which comes with backward-compatible features'
               }
             >
@@ -372,6 +418,7 @@ const ReleaseEditor = observer(() => {
               onClick={createPatchRelease}
               disabled={!canCreateVersion}
               title={
+                disabledCreateVersionTitle ??
                 'Create a patch release which comes with backward-compatible bug fixes'
               }
             >
@@ -483,6 +530,318 @@ const ReleaseEditor = observer(() => {
   );
 });
 
+const PatchEditor = observer(() => {
+  const editorStore = useEditorStore();
+  const applicationStore = useLegendStudioApplicationStore();
+  const projectOverviewState = editorStore.projectOverviewState;
+  const [versionOptions] = useState<VersionOption[]>(
+    editorStore.sdlcState.projectVersions.map((v) => ({
+      label: v.id.id,
+      value: v.id.id,
+    })),
+  );
+  const [selectedVersionOption, setSelectedVersionOption] =
+    useState<VersionOption | null>(null);
+  const patches = projectOverviewState.patches;
+  const [selectedPatchOption, setSelectedPatchOption] =
+    useState<PatchOption | null>(null);
+  const [workspaceName, setWorkspaceName] = useState<string>('');
+  const [isGroupWorkspace, setIsGroupWorkspace] = useState<boolean>(true);
+  const [committedReviews, setCommittedReviews] = useState<Review[]>([]);
+  const [fetchSelectedPatchCommittedReviews] = useState(ActionState.create());
+  const onPatchOptionChange = async (
+    val: PatchOption | null,
+  ): Promise<void> => {
+    if (
+      (val !== null || selectedPatchOption !== null) &&
+      (!val || !selectedPatchOption || val.value !== selectedPatchOption.value)
+    ) {
+      setSelectedPatchOption(val);
+      fetchSelectedPatchCommittedReviews.inProgress();
+      try {
+        if (val && val.value instanceof Patch) {
+          const reviews = await editorStore.sdlcServerClient.getReviews(
+            projectOverviewState.sdlcState.activeProject.projectId,
+            val.value.patchReleaseVersionId.id,
+            {
+              state: ReviewState.COMMITTED,
+            },
+          );
+          setCommittedReviews(
+            reviews.map((v) => Review.serialization.fromJson(v)),
+          );
+        } else {
+          setCommittedReviews([]);
+        }
+      } catch (error) {
+        assertErrorThrown(error);
+        editorStore.applicationStore.logService.error(
+          LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
+          error,
+        );
+      } finally {
+        fetchSelectedPatchCommittedReviews.reset();
+      }
+    } else {
+      setCommittedReviews([]);
+    }
+  };
+  const onVersionOptionChange = (val: VersionOption | null): void => {
+    if (
+      (val !== null || selectedVersionOption !== null) &&
+      (!val ||
+        !selectedVersionOption ||
+        val.value !== selectedVersionOption.value)
+    ) {
+      setSelectedVersionOption(val);
+    }
+  };
+  const createPatch = (): void => {
+    if (selectedVersionOption) {
+      flowResult(
+        projectOverviewState.createPatch(
+          selectedVersionOption.value,
+          workspaceName,
+          isGroupWorkspace ? WorkspaceType.GROUP : WorkspaceType.USER,
+        ),
+      ).catch(applicationStore.alertUnhandledError);
+    }
+  };
+  const toggleGroupWorkspace = (): void => {
+    setIsGroupWorkspace(!isGroupWorkspace);
+  };
+  const changeWorkspaceName: React.ChangeEventHandler<HTMLInputElement> = (
+    event,
+  ) => setWorkspaceName(event.target.value);
+  const isDispatchingAction =
+    projectOverviewState.isFetchingLatestVersion ||
+    projectOverviewState.isFetchingCurrentProjectRevision ||
+    projectOverviewState.isCreatingVersion;
+  const { latestProjectVersion, currentProjectRevision } = projectOverviewState;
+  const createPatchRelease = applicationStore.guardUnhandledError(() =>
+    flowResult(
+      projectOverviewState.createPatchVersion(
+        guaranteeNonNullable(selectedPatchOption).label,
+      ),
+    ),
+  );
+  const isCurrentProjectVersionLatest =
+    Boolean(latestProjectVersion) &&
+    latestProjectVersion?.revisionId === currentProjectRevision?.id;
+  const canCreateVersion =
+    !isCurrentProjectVersionLatest &&
+    !isDispatchingAction &&
+    editorStore.sdlcServerClient.features.canCreateVersion;
+  const patchBlurb = `Releasing above mentioned version would delete the upstream branch created for doing this patch release. By doing so you won't be access any of the branches created for development for doing this patch release`;
+
+  useEffect(() => {
+    flowResult(projectOverviewState.fetchPatches()).catch(
+      applicationStore.alertUnhandledError,
+    );
+  }, [
+    applicationStore.alertUnhandledError,
+    applicationStore.notificationService,
+    editorStore.sdlcServerClient,
+    editorStore.sdlcState.activeProject.projectId,
+
+    projectOverviewState,
+  ]);
+
+  return (
+    <div className="panel side-bar__panel project-overview__panel project-overview__patch">
+      <div className="panel__header">
+        <div className="panel__header__title">
+          <div className="panel__header__title__content">
+            Create Patch
+            <DocumentationLink
+              className="project-overview__patch__documentation"
+              documentationKey={
+                LEGEND_STUDIO_DOCUMENTATION_KEY.QUESTION_WHAT_ARE_PROJECT_ROLES
+              }
+            />
+          </div>
+        </div>
+      </div>
+      <div className="panel__content project-overview__panel__content">
+        <div
+          className={clsx('project-overview__patch__create', {
+            'project-overview__patch__create--progress':
+              projectOverviewState.createPatchState.isInProgress,
+          })}
+        >
+          <PanelLoadingIndicator
+            isLoading={projectOverviewState.createPatchState.isInProgress}
+          />
+          <div className="project-overview__patch__content__progress-msg">
+            {projectOverviewState.createPatchState.message}
+          </div>
+          <div className="panel__content__form">
+            <div className="panel__content__form__section">
+              <div className="panel__content__form__section__header__label">
+                Source Version
+              </div>
+              <CustomSelectorInput
+                className="project-overview__patch__source__version__selector"
+                options={versionOptions}
+                onChange={onVersionOptionChange}
+                value={selectedVersionOption}
+                placeholder={'Select source version'}
+                isClearable={true}
+                escapeClearsValue={true}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
+              />
+            </div>
+          </div>
+          <div className="panel__content__form">
+            <div className="panel__content__form__section">
+              <div className="panel__content__form__section__header__label">
+                Workspace Name
+              </div>
+              <input
+                className="panel__content__form__section__input"
+                title="Workspace Name"
+                spellCheck={false}
+                value={workspaceName}
+                placeholder="Workspace Name"
+                onChange={changeWorkspaceName}
+              />
+            </div>
+          </div>
+          <div className="panel__content__form__section project-overview__patch__workspace__type__button">
+            <PanelFormBooleanField
+              name="Group Workspace"
+              prompt="Group workspaces can be accessed by all users in the project"
+              value={isGroupWorkspace}
+              isReadOnly={false}
+              update={toggleGroupWorkspace}
+            />
+          </div>
+          <div className="panel__content__form__section__list__new-item__add">
+            <button
+              disabled={
+                projectOverviewState.createPatchState.isInProgress ||
+                !editorStore.sdlcServerClient.features.canCreateVersion ||
+                !selectedVersionOption
+              }
+              onClick={(): void => createPatch()}
+              className="panel__content__form__section__list__new-item__add-btn btn btn--dark project-overview__patch__create__button"
+            >
+              Create
+            </button>
+          </div>
+        </div>
+        <div className="project-overview__patch__release">
+          <div className="panel__header">
+            <div className="panel__header__title">
+              <div className="panel__header__title__content">Release Patch</div>
+            </div>
+          </div>
+          <div className="project-overview__patch__release">
+            <PanelLoadingIndicator isLoading={isDispatchingAction} />
+            <>
+              <div className="panel__content__form">
+                <div className="panel__content__form__section">
+                  <div className="panel__content__form__section__header__label">
+                    Patch
+                  </div>
+                  <CustomSelectorInput
+                    className="project-overview__patch__source__version__selector"
+                    options={patches.map((p) => ({
+                      label: p.patchReleaseVersionId.id,
+                      value: p,
+                    }))}
+                    onChange={(val: PatchOption | null) => {
+                      onPatchOptionChange(val).catch(
+                        applicationStore.alertUnhandledError,
+                      );
+                    }}
+                    value={selectedPatchOption}
+                    placeholder={'Select patch you want to release'}
+                    isClearable={true}
+                    escapeClearsValue={true}
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
+                  />
+                </div>
+              </div>
+              <div className="project-overview__patch__release__content">
+                {patchBlurb}
+              </div>
+              <div className="panel__content__form__section__list__new-item__add">
+                <button
+                  className="panel__content__form__section__list__new-item__add-btn btn btn--dark project-overview__patch__release__button"
+                  onClick={createPatchRelease}
+                  disabled={!canCreateVersion && !selectedPatchOption}
+                  title={'Create a patch release'}
+                >
+                  Release
+                </button>
+              </div>
+            </>
+          </div>
+        </div>
+
+        <div className="project-overview__release__info">
+          <div className="panel project-overview__release__info__reviews">
+            <div className="panel__header">
+              <div className="panel__header__title">
+                <div className="panel__header__title__content">
+                  COMMITTED REVIEWS
+                </div>
+                <div
+                  className="side-bar__panel__title__info"
+                  title="All committed reviews in the patch since it got created"
+                >
+                  <InfoCircleIcon />
+                </div>
+              </div>
+              <div
+                className="side-bar__panel__header__changes-count"
+                data-testid={
+                  LEGEND_STUDIO_TEST_ID.SIDEBAR_PANEL_HEADER__CHANGES_COUNT
+                }
+              >
+                {committedReviews.length}
+              </div>
+            </div>
+            <PanelContent>
+              {committedReviews.map((review) => (
+                <button
+                  key={review.id}
+                  className="side-bar__panel__item workspace-updater__review__link"
+                  tabIndex={-1}
+                  onClick={(): void =>
+                    applicationStore.navigationService.navigator.visitAddress(
+                      applicationStore.navigationService.navigator.generateAddress(
+                        generateReviewRoute(review.projectId, review.id),
+                      ),
+                    )
+                  }
+                  title="See review"
+                >
+                  <div className="workspace-updater__review">
+                    <span className="workspace-updater__review__name">
+                      {review.title}
+                    </span>
+                    <span className="workspace-updater__review__info">
+                      {review.author.name}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </PanelContent>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 const VersionsViewer = observer(() => {
   const editorStore = useEditorStore();
   const applicationStore = useLegendStudioApplicationStore();
@@ -554,7 +913,8 @@ const OverviewViewer = observer(() => {
   const initialName = sdlcState.currentProject?.name ?? '';
   const initialDescription = sdlcState.currentProject?.description ?? '';
   const initialTags = sdlcState.currentProject?.tags ?? [];
-  const isDispatchingAction = projectOverviewState.isUpdatingProject;
+  const isDispatchingAction =
+    projectOverviewState.updatingProjectState.isInProgress;
   const [projectIdentifier, setProjectIdentifier] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [itemValue, setItemValue] = useState<string>('');
@@ -619,7 +979,6 @@ const OverviewViewer = observer(() => {
       ),
     ).catch(applicationStore.alertUnhandledError);
   };
-
   return (
     <div className="panel side-bar__panel project-overview__panel project-overview__overview">
       <div className="panel__header">
@@ -628,14 +987,20 @@ const OverviewViewer = observer(() => {
             {PROJECT_OVERVIEW_ACTIVITY_MODE.OVERVIEW}
           </div>
         </div>
-        <button
-          className="panel__header__action side-bar__header__action local-changes__sync-btn"
-          onClick={handleUpdate}
-          tabIndex={-1}
-          title="Update project"
-        >
-          <SyncIcon />
-        </button>
+        <div className="panel__header__actions">
+          <button
+            className="panel__header__action project-overview__update-btn"
+            onClick={handleUpdate}
+            title="Update Project"
+            tabIndex={-1}
+          >
+            <div className="project-overview__update-btn__label">
+              <div className="project-overview__update-btn__label__title">
+                Update
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
       <div className="panel__content project-overview__panel__content">
         <PanelLoadingIndicator isLoading={isDispatchingAction} />
@@ -801,6 +1166,8 @@ interface ProjectOverviewActivityDisplay {
 export const ProjectOverviewActivityBar = observer(() => {
   const editorStore = useEditorStore();
   const projectOverviewState = editorStore.projectOverviewState;
+  const isInEmbeddedMode =
+    editorStore.projectConfigurationEditorState.isInEmbeddedMode;
   const changeActivity =
     (activity: PROJECT_OVERVIEW_ACTIVITY_MODE): (() => void) =>
     (): void =>
@@ -813,9 +1180,19 @@ export const ProjectOverviewActivityBar = observer(() => {
     },
     { mode: PROJECT_OVERVIEW_ACTIVITY_MODE.VERSIONS, title: 'Versions' },
     { mode: PROJECT_OVERVIEW_ACTIVITY_MODE.WORKSPACES, title: 'Workspaces' },
-  ].filter((activity): activity is ProjectOverviewActivityDisplay =>
-    Boolean(activity),
-  );
+    { mode: PROJECT_OVERVIEW_ACTIVITY_MODE.PATCH, title: 'Patch' },
+  ]
+    .filter((activity): activity is ProjectOverviewActivityDisplay =>
+      Boolean(activity),
+    )
+    .filter(
+      (act) =>
+        // releasing not supported in embedded mode
+        !(
+          act.mode === PROJECT_OVERVIEW_ACTIVITY_MODE.RELEASE &&
+          isInEmbeddedMode
+        ),
+    );
 
   return (
     <div
@@ -865,6 +1242,8 @@ export const ProjectOverview = observer(() => {
         return <VersionsViewer />;
       case PROJECT_OVERVIEW_ACTIVITY_MODE.WORKSPACES:
         return <WorkspacesViewer />;
+      case PROJECT_OVERVIEW_ACTIVITY_MODE.PATCH:
+        return <PatchEditor />;
       default:
         return null;
     }

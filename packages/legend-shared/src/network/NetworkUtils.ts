@@ -39,6 +39,12 @@ const compressData = (data: object | string): Blob =>
   new Blob([deflate(isObject(data) ? JSON.stringify(data) : data)]);
 
 export const URL_SEPARATOR = '/';
+/**
+ *  Reference: https://uibakery.io/regex-library/url
+ */
+const URL_REGEX = new RegExp(
+  '^(?:https?|ssh|ftp|file)://(?:www.)?[-a-zA-Z0-9@:%._+~#=]{1,256}.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)$',
+);
 export const HttpStatus = StatusCodes;
 export const CHARSET = 'charset=utf-8';
 
@@ -51,9 +57,12 @@ export enum ContentType {
   APPLICATION_JSON = 'application/json',
   APPLICATION_XML = 'application/xml',
   APPLICATION_ZLIB = 'application/zlib',
+  APPLICATION_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   TEXT_PLAIN = 'text/plain',
+  TEXT_HTML = 'text/html',
   TEXT_CSV = 'text/csv',
   ALL = '*/*',
+  MESSAGE_RFC822 = 'message/rfc822',
 }
 
 export enum HttpMethod {
@@ -159,7 +168,7 @@ const extractMessage = (payload: Payload): string => {
  * should be optional and configurable.
  */
 export const autoReAuthenticate = (url: string): Promise<void> =>
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   new Promise((resolve: Function): void => {
     const id = 'AUTO_AUTHENTICATION_IFRAME';
     const previous = document.getElementById(id);
@@ -305,14 +314,13 @@ export const createRequestHeaders = (
    */
   baseRequestHeaders.Accept = ContentType.APPLICATION_JSON;
   if (method !== HttpMethod.GET) {
-    baseRequestHeaders[
-      HttpHeader.CONTENT_TYPE
-    ] = `${ContentType.APPLICATION_JSON};${CHARSET}`;
+    baseRequestHeaders[HttpHeader.CONTENT_TYPE] =
+      `${ContentType.APPLICATION_JSON};${CHARSET}`;
   }
   return mergeRequestHeaders(baseRequestHeaders, headers);
 };
 
-interface NetworkClientConfig {
+export interface NetworkClientConfig {
   options?: PlainObject | undefined;
   baseUrl?: string | undefined;
 }
@@ -585,4 +593,14 @@ export const buildUrl = (parts: string[]): string =>
     .map((part) => part.replaceAll(/^\/+/g, '').replaceAll(/\/+$/g, ''))
     .join(URL_SEPARATOR);
 
-export const sanitizeURL = (val: string): string => sanitizeUrl(val);
+export const sanitizeURL = (val: string): string => {
+  // eslint-disable-next-line no-process-env
+  if (process.env.NODE_ENV === 'test') {
+    // NOTE: the library we use for sanizing URL use URL.canParse() which is not available in JSDOM
+    // so we skip sanitizing URL in test environment for now
+    return val;
+  }
+  return sanitizeUrl(val);
+};
+
+export const isValidURL = (val: string): boolean => URL_REGEX.test(val);

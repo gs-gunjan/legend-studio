@@ -50,11 +50,13 @@ import {
   V1_buildVariable,
   V1_buildUnit,
   V1_buildTaggedValue,
+  V1_buildFunctionSuite,
 } from './helpers/V1_DomainBuilderHelper.js';
 import {
   V1_buildServiceExecution,
   V1_buildLegacyServiceTest,
   V1_buildPostValidation,
+  V1_buildServiceOwnership,
 } from './helpers/V1_ServiceBuilderHelper.js';
 import {
   V1_buildEnumerationMapping,
@@ -101,6 +103,15 @@ import {
 } from '../../../model/packageableElements/mapping/V1_MappingInclude.js';
 import { V1_INTERNAL__UnknownMappingInclude } from '../../../model/packageableElements/mapping/V1_INTERNAL__UnknownMappingInclude.js';
 import type { V1_INTERNAL__UnknownStore } from '../../../model/packageableElements/store/V1_INTERNAL__UnknownStore.js';
+import type { V1_SnowflakeApp } from '../../../model/packageableElements/function/V1_SnowflakeApp.js';
+import {
+  V1_buildHostedServiceDeploymentConfiguration,
+  V1_buildSnowflakeAppDeploymentConfiguration,
+  V1_buildDeploymentOwnership,
+  V1_builHostedServiceOwnership,
+} from './helpers/V1_FunctionActivatorBuilderHelper.js';
+import type { V1_INTERNAL__UnknownElement } from '../../../model/packageableElements/V1_INTERNAL__UnknownElement.js';
+import type { V1_HostedService } from '../../../model/packageableElements/function/V1_HostedService.js';
 
 export class V1_ElementSecondPassBuilder
   implements V1_PackageableElementVisitor<void>
@@ -115,6 +126,10 @@ export class V1_ElementSecondPassBuilder
     this.context.extensions
       .getExtraBuilderOrThrow(element)
       .runSecondPass(element, this.context);
+  }
+
+  visit_INTERNAL__UnknownElement(element: V1_INTERNAL__UnknownElement): void {
+    throw new UnsupportedOperationError();
   }
 
   visit_INTERNAL__UnknownPackageableElement(
@@ -136,10 +151,81 @@ export class V1_ElementSecondPassBuilder
             generateFunctionPrettyName(fn, {
               fullPath: true,
               spacing: false,
-            }) === element.function.replaceAll(/\s*/gu, ''),
+            }) === element.function.path.replaceAll(/\s*/gu, ''),
         ),
       ),
     );
+  }
+
+  visit_SnowflakeApp(element: V1_SnowflakeApp): void {
+    const metamodel = this.context.currentSubGraph.getOwnFunctionActivator(
+      V1_buildFullPath(element.package, element.name),
+    );
+    metamodel.function = PackageableElementExplicitReference.create(
+      guaranteeNonNullable(
+        this.context.graph.functions.find(
+          (fn) =>
+            generateFunctionPrettyName(fn, {
+              fullPath: true,
+              spacing: false,
+              notIncludeParamName: true,
+            }) === element.function.path.replaceAll(/\s*/gu, ''),
+        ),
+      ),
+    );
+    metamodel.ownership = V1_buildDeploymentOwnership(
+      element.ownership,
+      metamodel,
+    );
+    metamodel.activationConfiguration =
+      V1_buildSnowflakeAppDeploymentConfiguration(
+        element.activationConfiguration,
+        this.context,
+      );
+    metamodel.stereotypes = element.stereotypes
+      .map((stereotype) => this.context.resolveStereotype(stereotype))
+      .filter(isNonNullable);
+    metamodel.taggedValues = element.taggedValues
+      .map((taggedValue) => V1_buildTaggedValue(taggedValue, this.context))
+      .filter(isNonNullable);
+  }
+
+  visit_HostedService(element: V1_HostedService): void {
+    assertNonEmptyString(
+      element.pattern,
+      `Hosted Service 'pattern' field is missing or empty`,
+    );
+    const metamodel = this.context.currentSubGraph.getOwnFunctionActivator(
+      V1_buildFullPath(element.package, element.name),
+    );
+    metamodel.function = PackageableElementExplicitReference.create(
+      guaranteeNonNullable(
+        this.context.graph.functions.find(
+          (fn) =>
+            generateFunctionPrettyName(fn, {
+              fullPath: true,
+              spacing: false,
+              notIncludeParamName: true,
+            }) === element.function.path.replaceAll(/\s*/gu, ''),
+        ),
+      ),
+    );
+    metamodel.ownership = V1_builHostedServiceOwnership(
+      element.ownership,
+      metamodel,
+    );
+    if (element.activationConfiguration) {
+      metamodel.activationConfiguration =
+        V1_buildHostedServiceDeploymentConfiguration(
+          element.activationConfiguration,
+        );
+    }
+    metamodel.stereotypes = element.stereotypes
+      .map((stereotype) => this.context.resolveStereotype(stereotype))
+      .filter(isNonNullable);
+    metamodel.taggedValues = element.taggedValues
+      .map((taggedValue) => V1_buildTaggedValue(taggedValue, this.context))
+      .filter(isNonNullable);
   }
 
   visit_INTERNAL__UnknownStore(element: V1_INTERNAL__UnknownStore): void {
@@ -151,7 +237,8 @@ export class V1_ElementSecondPassBuilder
       V1_buildFullPath(element.package, element.name),
     );
     const uniqueStereotypes = new Set<string>();
-    profile.p_stereotypes = element.stereotypes.map((stereotype) => {
+    profile.p_stereotypes = element.stereotypes.map((stereotypeV) => {
+      const stereotype = stereotypeV.value;
       if (uniqueStereotypes.has(stereotype)) {
         const message = `Found duplicated stereotype '${stereotype}' in profile '${element.path}'`;
         /**
@@ -169,7 +256,8 @@ export class V1_ElementSecondPassBuilder
       return new Stereotype(profile, stereotype);
     });
     const uniqueTags = new Set<string>();
-    profile.p_tags = element.tags.map((tag) => {
+    profile.p_tags = element.tags.map((tagV) => {
+      const tag = tagV.value;
       if (uniqueTags.has(tag)) {
         const message = `Found duplicated tag '${tag}' in profile '${element.path}'`;
         /**
@@ -269,9 +357,9 @@ export class V1_ElementSecondPassBuilder
   visit_ConcreteFunctionDefinition(
     protocol: V1_ConcreteFunctionDefinition,
   ): void {
-    assertNonEmptyString(
-      protocol.returnType,
-      `Function 'returnType' field is missing or empty`,
+    assertNonNullable(
+      protocol.returnGenericType,
+      `Function 'returnGenericType' field is missing or empty`,
     );
     assertNonNullable(
       protocol.returnMultiplicity,
@@ -280,7 +368,9 @@ export class V1_ElementSecondPassBuilder
     const func = this.context.currentSubGraph.getOwnFunction(
       V1_buildFullPath(protocol.package, V1_buildFunctionSignature(protocol)),
     );
-    func.returnType = this.context.resolveType(protocol.returnType);
+    func.returnType = this.context.resolveGenericTypeFromProtocol(
+      protocol.returnGenericType,
+    );
     func.returnMultiplicity = this.context.graph.getMultiplicity(
       protocol.returnMultiplicity.lowerBound,
       protocol.returnMultiplicity.upperBound,
@@ -296,6 +386,11 @@ export class V1_ElementSecondPassBuilder
     );
     func.expressionSequence = protocol.body;
     func.functionName = getFunctionName(func, func.name);
+    if (protocol.tests?.length) {
+      func.tests = protocol.tests.map((l) =>
+        V1_buildFunctionSuite(l, this.context),
+      );
+    }
   }
 
   visit_FlatData(element: V1_FlatData): void {
@@ -312,7 +407,7 @@ export class V1_ElementSecondPassBuilder
       V1_buildFullPath(element.package, element.name),
     );
     database.includes = element.includedStores.map((includedStore) =>
-      this.context.resolveDatabase(includedStore),
+      this.context.resolveDatabase(includedStore.path),
     );
     database.schemas = element.schemas.map((schema) =>
       V1_buildSchema(schema, database, this.context),
@@ -386,6 +481,9 @@ export class V1_ElementSecondPassBuilder
     service.owners = element.owners.slice();
     service.documentation = element.documentation;
     service.autoActivateUpdates = element.autoActivateUpdates;
+    if (element.ownership) {
+      service.ownership = V1_buildServiceOwnership(element.ownership, service);
+    }
     // NOTE: process execution before the test, so we can do some check between test and execution (such matching type, keys, etc.)
     service.execution = V1_buildServiceExecution(
       element.execution,

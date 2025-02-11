@@ -47,7 +47,7 @@
   &__header__tabs {
     display: flex;
     height: 100%;
-    overflow-x: overlay;
+    overflow-x: auto;
   }
 
   &__header__tab__label {
@@ -347,4 +347,9 @@
       height: 100% !important;
     }
   }
+}
+
+.mapping-migration-tool {
+  padding: 1rem;
+  height: calc(100% - 4rem);
 }

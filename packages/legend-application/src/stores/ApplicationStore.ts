@@ -23,6 +23,7 @@ import {
   assertErrorThrown,
   IllegalStateError,
   type Writable,
+  isNonNullable,
 } from '@finos/legend-shared';
 import { APPLICATION_EVENT } from '../__lib__/LegendApplicationEvent.js';
 import type { LegendApplicationConfig } from '../application/LegendApplicationConfig.js';
@@ -48,17 +49,35 @@ import { SettingService } from './SettingService.js';
 import { DefaultNavigator } from './navigation/DefaultNavigator.js';
 import type { ApplicationPlatform } from './platform/ApplicationPlatform.js';
 import { UserDataService } from './UserDataService.js';
+import { ReleaseNotesService } from './ReleaseNotesService.js';
 
 export type GenericLegendApplicationStore = ApplicationStore<
   LegendApplicationConfig,
   LegendApplicationPluginManager<LegendApplicationPlugin>
 >;
 
+export abstract class ApplicationExtensionState {
+  /**
+   * This helps to better type-check for this empty abtract type
+   * See https://github.com/finos/legend-studio/blob/master/docs/technical/typescript-usage.md#understand-typescript-structual-type-system
+   */
+  private readonly _$nominalTypeBrand!: 'ApplicationExtensionState';
+
+  abstract get INTERNAL__identifierKey(): string;
+}
+
 export class ApplicationStore<
   T extends LegendApplicationConfig,
   V extends LegendApplicationPluginManager<LegendApplicationPlugin>,
 > {
   readonly uuid = uuid();
+
+  /**
+   * This is a mechanism to have the store holds references to extension states
+   * so that we can refer back to these states when needed or do cross-extensions
+   * operations
+   */
+  readonly extensionStates: ApplicationExtensionState[] = [];
 
   readonly config: T;
   readonly pluginManager: V;
@@ -86,6 +105,9 @@ export class ApplicationStore<
   // support
   readonly documentationService: DocumentationService;
   readonly assistantService: AssistantService;
+
+  // release
+  readonly releaseNotesService: ReleaseNotesService;
 
   // event
   readonly eventService: EventService;
@@ -120,6 +142,7 @@ export class ApplicationStore<
 
     this.documentationService = new DocumentationService(this);
     this.assistantService = new AssistantService(this);
+    this.releaseNotesService = new ReleaseNotesService(this);
 
     this.eventService = new EventService();
     this.eventService.registerEventNotifierPlugins(
@@ -132,13 +155,30 @@ export class ApplicationStore<
     this.telemetryService.setup();
     this.tracerService = new TracerService();
     this.tracerService.registerPlugins(pluginManager.getTracerServicePlugins());
+
+    // extensions
+    this.extensionStates = this.pluginManager
+      .getApplicationPlugins()
+      .flatMap(
+        (plugin) => plugin.getExtraApplicationExtensionStateBuilders?.() ?? [],
+      )
+      .map((creator) => creator(this))
+      .filter(isNonNullable);
   }
 
   async initialize(platform: ApplicationPlatform): Promise<void> {
     if (!this.initState.isInInitialState) {
-      this.notificationService.notifyIllegalState(
-        'Application store is re-initialized',
-      );
+      // eslint-disable-next-line no-process-env
+      if (process.env.NODE_ENV === 'production') {
+        this.notificationService.notifyIllegalState(
+          'Application store is re-initialized',
+        );
+      } else {
+        this.logService.debug(
+          LogEvent.create(APPLICATION_EVENT.DEBUG),
+          'Application store is re-initialized',
+        );
+      }
       return;
     }
     this.initState.inProgress();
@@ -170,12 +210,16 @@ export class ApplicationStore<
    * of throwing them to the UI. This enforces that by throwing `IllegalStateError`
    */
   alertUnhandledError = (error: Error): void => {
+    this.logUnhandledError(error);
+    this.notificationService.notifyIllegalState(error.message);
+  };
+
+  logUnhandledError = (error: Error): void => {
     this.logService.error(
       LogEvent.create(APPLICATION_EVENT.ILLEGAL_APPLICATION_STATE_OCCURRED),
       'Encountered unhandled error in component tree',
       error,
     );
-    this.notificationService.notifyIllegalState(error.message);
   };
 
   /**

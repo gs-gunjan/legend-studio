@@ -15,11 +15,16 @@
  */
 
 import { observer } from 'mobx-react-lite';
-import { ACTIVITY_MODE, PANEL_MODE } from '../../stores/editor/EditorConfig.js';
+import {
+  ACTIVITY_MODE,
+  EDITOR_MODE,
+  PANEL_MODE,
+  USER_JOURNEYS,
+} from '../../stores/editor/EditorConfig.js';
 import { LEGEND_STUDIO_TEST_ID } from '../../__lib__/LegendStudioTesting.js';
 import {
   clsx,
-  DropdownMenu,
+  ControlledDropdownMenu,
   RepoIcon,
   MenuContent,
   MenuContentItem,
@@ -36,10 +41,16 @@ import {
   MenuContentDivider,
   FlaskIcon,
   RobotIcon,
+  WorkflowIcon,
+  ReadMeIcon,
 } from '@finos/legend-art';
 import { useEditorStore } from './EditorStoreProvider.js';
-import { forwardRef, useState } from 'react';
-import { VIRTUAL_ASSISTANT_TAB } from '@finos/legend-application';
+import { forwardRef, useEffect, useState } from 'react';
+import {
+  ReleaseLogManager,
+  ReleaseNotesManager,
+  VIRTUAL_ASSISTANT_TAB,
+} from '@finos/legend-application';
 import { LegendStudioAppInfo } from '../LegendStudioAppInfo.js';
 import { generateSetupRoute } from '../../__lib__/LegendStudioNavigation.js';
 import { useLegendStudioApplicationStore } from '../LegendStudioFrameworkProvider.js';
@@ -47,6 +58,11 @@ import {
   ActivityBarItemExperimentalBadge,
   type ActivityBarItemConfig,
 } from '@finos/legend-lego/application';
+import {
+  ShowcaseManagerState,
+  openShowcaseManager,
+} from '../../stores/ShowcaseManagerState.js';
+import { toggleShowcasePanel } from './ShowcaseSideBar.js';
 
 const SettingsMenu = observer(
   forwardRef<HTMLDivElement, unknown>(function SettingsMenu(props, ref) {
@@ -66,7 +82,9 @@ const SettingsMenu = observer(
   }),
 );
 
-export const ActivityBarMenu: React.FC = () => {
+export const ActivityBarMenu: React.FC<{
+  openShowcasePanel?: () => void;
+}> = ({ openShowcasePanel }) => {
   const applicationStore = useLegendStudioApplicationStore();
   const appDocUrl = applicationStore.documentationService.url;
   const docLinks = applicationStore.documentationService.links;
@@ -87,7 +105,7 @@ export const ActivityBarMenu: React.FC = () => {
   const goToWorkspaceSetup = (): void =>
     applicationStore.navigationService.navigator.visitAddress(
       applicationStore.navigationService.navigator.generateAddress(
-        generateSetupRoute(undefined),
+        generateSetupRoute(undefined, undefined),
       ),
     );
   // help
@@ -98,11 +116,18 @@ export const ActivityBarMenu: React.FC = () => {
       VIRTUAL_ASSISTANT_TAB.SEARCH,
     );
   };
+  // showcases
+  const showcaseManagerState =
+    ShowcaseManagerState.retrieveNullableState(applicationStore);
+  // release notification
+  useEffect(() => {
+    applicationStore.releaseNotesService.updateViewedVersion();
+  }, [applicationStore]);
 
   return (
     <>
       <div className="activity-bar__menu">
-        <DropdownMenu
+        <ControlledDropdownMenu
           className="activity-bar__menu-item"
           menuProps={{
             anchorOrigin: { vertical: 'top', horizontal: 'right' },
@@ -112,7 +137,17 @@ export const ActivityBarMenu: React.FC = () => {
           content={
             <MenuContent>
               <MenuContentItem onClick={showAppInfo}>About</MenuContentItem>
-              <MenuContentItem onClick={openHelp}>Help...</MenuContentItem>
+              {showcaseManagerState?.isEnabled && (
+                <MenuContentItem
+                  onClick={() =>
+                    openShowcasePanel
+                      ? openShowcasePanel()
+                      : openShowcaseManager(applicationStore)
+                  }
+                >
+                  See Showcases
+                </MenuContentItem>
+              )}
               <MenuContentItem
                 disabled={!appDocUrl}
                 onClick={goToDocumentation}
@@ -127,6 +162,7 @@ export const ActivityBarMenu: React.FC = () => {
                   {entry.label}
                 </MenuContentItem>
               ))}
+              <MenuContentItem onClick={openHelp}>Help...</MenuContentItem>
               <MenuContentDivider />
               <MenuContentItem onClick={goToWorkspaceSetup}>
                 Back to workspace setup
@@ -135,9 +171,11 @@ export const ActivityBarMenu: React.FC = () => {
           }
         >
           <MenuIcon />
-        </DropdownMenu>
+        </ControlledDropdownMenu>
       </div>
       <LegendStudioAppInfo open={openAppInfo} closeModal={hideAppInfo} />
+      <ReleaseLogManager />
+      <ReleaseNotesManager />
     </>
   );
 };
@@ -247,105 +285,133 @@ export const ActivityBar = observer(() => {
       data-testid={LEGEND_STUDIO_TEST_ID.ACTIVITY_BAR_ITEM_ICON_INDICATOR}
     ></div>
   );
+  const lazyTextModeEnabled = editorStore.mode === EDITOR_MODE.LAZY_TEXT_EDITOR;
   // tabs
-  const activities: ActivityBarItemConfig[] = (
-    [
-      {
-        mode: ACTIVITY_MODE.EXPLORER,
-        title: 'Explorer (Ctrl + Shift + X)',
-        icon: <FileTrayIcon className="activity-bar__explorer-icon" />,
-      },
-      !editorStore.isInConflictResolutionMode && {
-        mode: ACTIVITY_MODE.TEST_RUNNER,
-        title: 'Test Runner',
-        icon: <FlaskIcon />,
-      },
-      !editorStore.isInConflictResolutionMode && {
-        mode: ACTIVITY_MODE.LOCAL_CHANGES,
-        title: `Local Changes (Ctrl + Shift + G)${
-          localChanges ? ` - ${localChanges} unpushed changes` : ''
-        }`,
-        icon: (
-          <div className="activity-bar__local-change-icon activity-bar__item__icon-with-indicator">
-            <CodeBranchIcon />
-            {localChangesIndicatorStatusIcon}
-          </div>
-        ),
-      },
-      !editorStore.isInConflictResolutionMode && {
-        mode: ACTIVITY_MODE.WORKSPACE_UPDATER,
-        title: `Update Workspace (Ctrl + Shift + U)${
-          workspaceUpdateChanges
-            ? ` - Update available${
-                workspaceUpdatePotentialConflicts
-                  ? ' with potential conflicts'
-                  : ''
-              }`
-            : ''
-        }`,
-        icon: (
-          <div className="activity-bar__workspace-updater-icon activity-bar__item__icon-with-indicator">
-            <CloudDownloadIcon />
-            {projectLatestChangesIndicatorStatusIcon}
-          </div>
-        ),
-      },
-      !editorStore.isInConflictResolutionMode && {
-        mode: ACTIVITY_MODE.WORKSPACE_REVIEW,
-        title: `Review (Ctrl + Shift + M)${
-          reviewChanges ? ` - ${reviewChanges} changes` : ''
-        }`,
-        icon: (
-          <div className="activity-bar__review-icon activity-bar__item__icon-with-indicator">
-            <GitPullRequestIcon />
-            {reviewChangesIndicatorStatusIcon}
-          </div>
-        ),
-      },
-      editorStore.isInConflictResolutionMode && {
-        mode: ACTIVITY_MODE.CONFLICT_RESOLUTION,
-        title: `Conflict Resolution${
-          conflictResolutionChanges
-            ? ` - ${conflictResolutionChanges} changes${
-                conflictResolutionConflicts
-                  ? ` (${conflictResolutionConflicts} unresolved conflicts)`
-                  : ''
-              }`
-            : ''
-        }`,
-        icon: (
-          <div className="activity-bar__conflict-resolution-icon activity-bar__item__icon-with-indicator">
-            <GitMergeIcon />
-            {conflictResolutionChangesIndicatorStatusIcon}
-          </div>
-        ),
-      },
-      !editorStore.isInConflictResolutionMode && {
-        mode: ACTIVITY_MODE.PROJECT_OVERVIEW,
-        title: 'Project',
-        icon: <RepoIcon className="activity-bar__project-overview-icon" />,
-      },
-      !editorStore.isInConflictResolutionMode && {
-        mode: ACTIVITY_MODE.WORKFLOW_MANAGER,
-        title: 'Workflow Manager',
-        icon: <WrenchIcon />,
-      },
-      !editorStore.isInConflictResolutionMode && {
-        mode: ACTIVITY_MODE.REGISTER_SERVICES,
-        title: 'Register Service (Beta)',
-        icon: (
-          <>
-            <RobotIcon className="activity-bar__icon--service-registrar" />
-            <ActivityBarItemExperimentalBadge />
-          </>
-        ),
-      },
-    ] as (ActivityBarItemConfig | boolean)[]
-  ).filter((activity): activity is ActivityBarItemConfig => Boolean(activity));
+  const activities: ActivityBarItemConfig[] = [
+    {
+      mode: ACTIVITY_MODE.EXPLORER,
+      title: 'Explorer (Ctrl + Shift + X)',
+      icon: <FileTrayIcon className="activity-bar__explorer-icon" />,
+    },
+    {
+      mode: ACTIVITY_MODE.TEST_RUNNER,
+      title: 'Test Runner',
+      icon: <FlaskIcon />,
+      disabled: editorStore.isInConflictResolutionMode || lazyTextModeEnabled,
+    },
+    {
+      mode: ACTIVITY_MODE.LOCAL_CHANGES,
+      title: `Local Changes (Ctrl + Shift + G)${
+        localChanges ? ` - ${localChanges} unpushed changes` : ''
+      }`,
+      icon: (
+        <div className="activity-bar__local-change-icon activity-bar__item__icon-with-indicator">
+          <CodeBranchIcon />
+          {localChangesIndicatorStatusIcon}
+        </div>
+      ),
+      disabled: editorStore.isInConflictResolutionMode,
+    },
+    {
+      mode: ACTIVITY_MODE.WORKSPACE_UPDATER,
+      title: `Update Workspace (Ctrl + Shift + U)${
+        workspaceUpdateChanges
+          ? ` - Update available${
+              workspaceUpdatePotentialConflicts
+                ? ' with potential conflicts'
+                : ''
+            }`
+          : ''
+      }`,
+      icon: (
+        <div className="activity-bar__workspace-updater-icon activity-bar__item__icon-with-indicator">
+          <CloudDownloadIcon />
+          {projectLatestChangesIndicatorStatusIcon}
+        </div>
+      ),
+      disabled: editorStore.isInConflictResolutionMode,
+    },
+    {
+      mode: ACTIVITY_MODE.WORKSPACE_REVIEW,
+      title: `Review (Ctrl + Shift + M)${
+        reviewChanges ? ` - ${reviewChanges} changes` : ''
+      }`,
+      icon: (
+        <div className="activity-bar__review-icon activity-bar__item__icon-with-indicator">
+          <GitPullRequestIcon />
+          {reviewChangesIndicatorStatusIcon}
+        </div>
+      ),
+      disabled: editorStore.isInConflictResolutionMode,
+    },
+    {
+      mode: ACTIVITY_MODE.CONFLICT_RESOLUTION,
+      title: `Conflict Resolution${
+        conflictResolutionChanges
+          ? ` - ${conflictResolutionChanges} changes${
+              conflictResolutionConflicts
+                ? ` (${conflictResolutionConflicts} unresolved conflicts)`
+                : ''
+            }`
+          : ''
+      }`,
+      icon: (
+        <div className="activity-bar__conflict-resolution-icon activity-bar__item__icon-with-indicator">
+          <GitMergeIcon />
+          {conflictResolutionChangesIndicatorStatusIcon}
+        </div>
+      ),
+
+      disabled: !editorStore.isInConflictResolutionMode || lazyTextModeEnabled,
+    },
+    {
+      mode: ACTIVITY_MODE.PROJECT_OVERVIEW,
+      title: 'Project',
+      icon: <RepoIcon className="activity-bar__project-overview-icon" />,
+      disabled: editorStore.isInConflictResolutionMode,
+    },
+    {
+      mode: ACTIVITY_MODE.WORKFLOW_MANAGER,
+      title: 'Workflow Manager',
+      icon: <WrenchIcon />,
+      disabled: editorStore.isInConflictResolutionMode,
+    },
+    {
+      mode: ACTIVITY_MODE.REGISTER_SERVICES,
+      title: 'Register Service (Beta)',
+      icon: (
+        <>
+          <RobotIcon className="activity-bar__icon--service-registrar" />
+          <ActivityBarItemExperimentalBadge />
+        </>
+      ),
+      disabled: editorStore.isInConflictResolutionMode || lazyTextModeEnabled,
+    },
+  ].filter((activity) => !activity.disabled);
+
+  const userJourneys: ActivityBarItemConfig[] = [
+    {
+      mode: USER_JOURNEYS.END_TO_END_WORKFLOWS,
+      title: 'End to End Workflows (Beta)',
+      icon: (
+        <div>
+          <WorkflowIcon className="activity-bar__icon--service-registrar" />
+          <ActivityBarItemExperimentalBadge />
+        </div>
+      ),
+      disabled:
+        editorStore.isInConflictResolutionMode ||
+        !editorStore.applicationStore.config.options.NonProductionFeatureFlag,
+    },
+  ].filter((activity) => !activity.disabled);
+
+  const openShowcasePanel = () => {
+    toggleShowcasePanel(editorStore);
+  };
 
   return (
     <div className="activity-bar">
-      <ActivityBarMenu />
+      <ActivityBarMenu openShowcasePanel={openShowcasePanel} />
       <div className="activity-bar__items">
         {activities.map((activity) => (
           <button
@@ -362,9 +428,34 @@ export const ActivityBar = observer(() => {
             {activity.icon}
           </button>
         ))}
+        {Boolean(userJourneys.length) && <MenuContentDivider />}
+        {userJourneys.map((activity) => (
+          <button
+            key={activity.mode}
+            className={clsx('activity-bar__item', {
+              'activity-bar__item--active':
+                editorStore.sideBarDisplayState.isOpen &&
+                editorStore.activeActivity === activity.mode,
+            })}
+            onClick={changeActivity(activity.mode)}
+            tabIndex={-1}
+            title={activity.title}
+          >
+            {activity.icon}
+          </button>
+        ))}
       </div>
-      <DropdownMenu
+      <button
+        className={clsx('activity-bar__item')}
+        onClick={() => openShowcasePanel()}
+        tabIndex={-1}
+        title={'Open Showcases'}
+      >
+        <ReadMeIcon />
+      </button>
+      <ControlledDropdownMenu
         className="activity-bar__item"
+        title="Settings"
         content={<SettingsMenu />}
         menuProps={{
           anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
@@ -373,7 +464,7 @@ export const ActivityBar = observer(() => {
         }}
       >
         <CogIcon />
-      </DropdownMenu>
+      </ControlledDropdownMenu>
     </div>
   );
 });

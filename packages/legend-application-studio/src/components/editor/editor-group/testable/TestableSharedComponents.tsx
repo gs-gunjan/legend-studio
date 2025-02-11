@@ -27,6 +27,7 @@ import {
   ModalFooter,
   ModalFooterButton,
   ModalHeader,
+  ModalTitle,
   PanelContent,
   PanelFormTextField,
   PanelHeader,
@@ -35,8 +36,16 @@ import {
   RefreshIcon,
   WrenchIcon,
 } from '@finos/legend-art';
-import { type DataElement, TestError } from '@finos/legend-graph';
 import {
+  type DataElement,
+  type ValueSpecification,
+  type VariableExpression,
+  type PrimitiveInstanceValue,
+  TestError,
+  PrimitiveType,
+} from '@finos/legend-graph';
+import {
+  ContentType,
   prettyCONSTName,
   tryToFormatLosslessJSONString,
 } from '@finos/legend-shared';
@@ -50,15 +59,13 @@ import {
   type TestAssertionResultState,
   type TestAssertionEditorState,
   type TestAssertionState,
+  EqualToAssertionState,
 } from '../../../../stores/editor/editor-state/element-editor-state/testable/TestAssertionState.js';
 import { externalFormatData_setData } from '../../../../stores/graph-modifier/DSL_Data_GraphModifierHelper.js';
 import { TESTABLE_RESULT } from '../../../../stores/editor/sidebar-state/testable/GlobalTestRunnerState.js';
 import { UnsupportedEditorPanel } from '../UnsupportedElementEditor.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-  JSONDiffView,
-} from '@finos/legend-lego/code-editor';
+import { CodeEditor, JSONDiffView } from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
 import { forwardRef, useState } from 'react';
 import type { TestableTestEditorState } from '../../../../stores/editor/editor-state/element-editor-state/testable/TestableEditorState.js';
 import { getTestableResultIcon } from '../../side-bar/testable/GlobalTestRunner.js';
@@ -67,6 +74,12 @@ import {
   buildElementOption,
   getPackageableElementOptionFormatter,
 } from '@finos/legend-lego/graph-editor';
+import type { TestParamContentType } from '../../../../stores/editor/utils/TestableUtils.js';
+import {
+  BasicValueSpecificationEditor,
+  buildDefaultInstanceValue,
+} from '@finos/legend-query-builder';
+import { useApplicationStore } from '@finos/legend-application';
 
 export const SharedDataElementModal = observer(
   (props: {
@@ -77,6 +90,7 @@ export const SharedDataElementModal = observer(
     close: () => void;
   }) => {
     const { filterBy, isReadOnly, close, editorStore, handler } = props;
+    const applicationStore = editorStore.applicationStore;
     const dataElements =
       editorStore.graphManagerState.graph.dataElements.filter((e) =>
         filterBy ? filterBy(e) : true,
@@ -108,7 +122,12 @@ export const SharedDataElementModal = observer(
         classes={{ container: 'search-modal__container' }}
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
-        <Modal darkMode={true} className="service-test-data-modal">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="service-test-data-modal"
+        >
           <ModalBody>
             <div className="panel__content__form__section">
               <div className="panel__content__form__section__header__label">
@@ -122,7 +141,10 @@ export const SharedDataElementModal = observer(
                   onChange={onDataElementChange}
                   formatOptionLabel={getPackageableElementOptionFormatter({})}
                   value={selectedDataElement}
-                  darkMode={true}
+                  darkMode={
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled
+                  }
                 />
               </div>
             </div>
@@ -250,11 +272,62 @@ const EqualToJsonAsssertionEditor = observer(
   },
 );
 
+const EqualToAsssertionEditor = observer(
+  (props: {
+    testAssertionEditorState: TestAssertionEditorState;
+    equalToAssertionState: EqualToAssertionState;
+  }) => {
+    const { equalToAssertionState, testAssertionEditorState } = props;
+    const editorStore = testAssertionEditorState.editorStore;
+    const resetNode = (): void => {
+      const type = equalToAssertionState.valueSpec.genericType?.value.rawType;
+      if (type) {
+        const valSpec = buildDefaultInstanceValue(
+          testAssertionEditorState.editorStore.graphManagerState.graph,
+          type,
+          testAssertionEditorState.editorStore.changeDetectionState
+            .observerContext,
+          true,
+        );
+        equalToAssertionState.updateValueSpec(valSpec);
+      }
+    };
+
+    return (
+      <>
+        <div className="equal-to-editor__content">
+          <div className="equal-to-editor__content__data">
+            <BasicValueSpecificationEditor
+              valueSpecification={equalToAssertionState.valueSpec}
+              setValueSpecification={(val: ValueSpecification): void => {
+                equalToAssertionState.updateValueSpec(val);
+              }}
+              graph={editorStore.graphManagerState.graph}
+              observerContext={editorStore.changeDetectionState.observerContext}
+              resetValue={resetNode}
+              typeCheckOption={{
+                expectedType:
+                  equalToAssertionState.valueSpec.genericType?.value.rawType ??
+                  PrimitiveType.STRING,
+              }}
+            />
+          </div>
+        </div>
+      </>
+    );
+  },
+);
+
 const EqualToJsonAssertFailViewer = observer(
   (props: { equalToJsonAssertFailState: EqualToJsonAssertFailState }) => {
     const { equalToJsonAssertFailState } = props;
+    const applicationStore =
+      equalToJsonAssertFailState.resultState.editorStore.applicationStore;
     const open = (): void => equalToJsonAssertFailState.setDiffModal(true);
     const close = (): void => equalToJsonAssertFailState.setDiffModal(false);
+    const expected = equalToJsonAssertFailState.status.expected;
+    const actual = equalToJsonAssertFailState.status.actual;
+
     return (
       <>
         <div className="equal-to-json-editor__message" onClick={open}>
@@ -270,7 +343,13 @@ const EqualToJsonAssertFailViewer = observer(
               paper: 'editor-modal__content',
             }}
           >
-            <Modal darkMode={true} className="editor-modal">
+            <Modal
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
+              className="editor-modal"
+            >
               <ModalHeader>
                 <div className="equal-to-json-result__diff__summary">
                   <div className="equal-to-json-result__diff__header__label">
@@ -285,13 +364,14 @@ const EqualToJsonAssertFailViewer = observer(
                 </div>
               </ModalHeader>
               <ModalBody>
-                <JSONDiffView
-                  from={equalToJsonAssertFailState.status.expected}
-                  to={equalToJsonAssertFailState.status.actual}
-                />
+                <JSONDiffView from={expected} to={actual} lossless={true} />
               </ModalBody>
               <ModalFooter>
-                <ModalFooterButton text="Close" onClick={close} />
+                <ModalFooterButton
+                  text="Close"
+                  onClick={close}
+                  type="secondary"
+                />
               </ModalFooter>
             </Modal>
           </Dialog>
@@ -533,6 +613,13 @@ export const TestAssertionEditor = observer(
             testAssertionEditorState={testAssertionState}
           />
         );
+      } else if (state instanceof EqualToAssertionState) {
+        return (
+          <EqualToAsssertionEditor
+            equalToAssertionState={state}
+            testAssertionEditorState={testAssertionState}
+          />
+        );
       }
       return (
         <UnsupportedEditorPanel
@@ -594,6 +681,74 @@ export const TestAssertionEditor = observer(
           )}
         </div>
       </div>
+    );
+  },
+);
+
+export const ExternalFormatParameterEditorModal = observer(
+  (props: {
+    valueSpec: ValueSpecification;
+    varExpression: VariableExpression;
+    isReadOnly: boolean;
+    onClose: () => void;
+    updateParamValue: (val: string) => void;
+    contentTypeParamPair: TestParamContentType;
+  }) => {
+    const {
+      valueSpec,
+      varExpression,
+      isReadOnly,
+      onClose,
+      updateParamValue,
+      contentTypeParamPair,
+    } = props;
+    const applicationStore = useApplicationStore();
+    const paramValue =
+      varExpression.genericType?.value.rawType === PrimitiveType.BYTE
+        ? atob((valueSpec as PrimitiveInstanceValue).values[0] as string)
+        : ((valueSpec as PrimitiveInstanceValue).values[0] as string);
+    return (
+      <Dialog
+        open={true}
+        onClose={onClose}
+        classes={{ container: 'search-modal__container' }}
+        PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
+      >
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className={clsx('editor-modal lambda-editor__popup__modal')}
+        >
+          <ModalHeader>
+            <ModalTitle title="Edit Parameter Value" />
+          </ModalHeader>
+          <ModalBody>
+            <div className="service-test-editor__setup__parameter__code-editor__container">
+              <div className="service-test-editor__setup__parameter__code-editor__container__content">
+                <CodeEditor
+                  inputValue={paramValue}
+                  updateInput={updateParamValue}
+                  isReadOnly={isReadOnly}
+                  language={
+                    contentTypeParamPair.contentType ===
+                    ContentType.APPLICATION_JSON.toString()
+                      ? CODE_EDITOR_LANGUAGE.JSON
+                      : CODE_EDITOR_LANGUAGE.TEXT
+                  }
+                />
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <ModalFooterButton
+              text="Close"
+              onClick={onClose}
+              type="secondary"
+            />
+          </ModalFooter>
+        </Modal>
+      </Dialog>
     );
   },
 );

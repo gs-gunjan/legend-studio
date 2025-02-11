@@ -181,7 +181,7 @@ export class EntityChangeConflictEditorState extends EntityDiffViewerState {
       entityPath: string | undefined,
     ) => Entity | undefined,
   ) {
-    super(editorStore);
+    super(baseRevision, currentChangeRevision, editorStore);
 
     makeObservable<
       EntityChangeConflictEditorState,
@@ -286,9 +286,9 @@ export class EntityChangeConflictEditorState extends EntityDiffViewerState {
   }
 
   private get sortedMergedConflicts(): MergeConflict[] {
-    return this.mergeConflicts
-      .slice()
-      .sort((a, b) => a.startHeader - b.startHeader);
+    return this.mergeConflicts.toSorted(
+      (a, b) => a.startHeader - b.startHeader,
+    );
   }
 
   get canUseTheirs(): boolean {
@@ -426,6 +426,7 @@ export class EntityChangeConflictEditorState extends EntityDiffViewerState {
       const elementGrammar =
         (yield this.editorStore.graphManagerState.graphManager.entitiesToPureCode(
           [entity],
+          { pretty: true },
         )) as string;
       return elementGrammar;
     }

@@ -68,7 +68,7 @@ export const ServiceRegistrationEditor = observer(() => {
       }
     : null;
   const onServiceTypeSelectionChange = (
-    val: { label: ServiceExecutionMode; value: ServiceExecutionMode } | null,
+    val: { label: string; value: ServiceExecutionMode } | null,
   ): void => {
     registrationState.updateType(val?.value);
   };
@@ -94,8 +94,8 @@ export const ServiceRegistrationEditor = observer(() => {
           ServiceExecutionMode.SEMI_INTERACTIVE,
         )} and ${prettyCONSTName(ServiceExecutionMode.PROD)} service types`
       : !registrationState.versionOptions.length
-      ? 'Project has no versions'
-      : undefined;
+        ? 'Project has no versions'
+        : undefined;
 
   // activate
   const toggleActivatePostRegistration = (): void => {
@@ -114,6 +114,12 @@ export const ServiceRegistrationEditor = observer(() => {
   const toggleUseGenerateLineage = (): void => {
     registrationState.setUseGenerateLineage(
       !registrationState.TEMPORARY__useGenerateLineage,
+    );
+  };
+
+  const toggleUseGenerateOpenApi = (): void => {
+    registrationState.setUseGenerateOpenApi(
+      !registrationState.TEMPORARY__useGenerateOpenApi,
     );
   };
 
@@ -200,7 +206,10 @@ export const ServiceRegistrationEditor = observer(() => {
               options={envOptions}
               onChange={onServerEnvChange}
               value={selectedEnvOption}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
           <div className="panel__content__form__section">
@@ -215,7 +224,10 @@ export const ServiceRegistrationEditor = observer(() => {
               options={serviceTypesOptions}
               onChange={onServiceTypeSelectionChange}
               value={selectedServiceType}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
           {registrationState.serviceExecutionMode ===
@@ -281,7 +293,38 @@ export const ServiceRegistrationEditor = observer(() => {
               </div>
             </div>
           }
-
+          {registrationState.serviceExecutionMode ===
+            ServiceExecutionMode.PROD && (
+            <div className="panel__content__form__section">
+              <div className="panel__content__form__section__header__label">
+                Generate Open Api
+              </div>
+              <div
+                className="panel__content__form__section__toggler"
+                onClick={toggleUseGenerateOpenApi}
+              >
+                <button
+                  className={clsx(
+                    'panel__content__form__section__toggler__btn',
+                    {
+                      'panel__content__form__section__toggler__btn--toggled':
+                        registrationState.TEMPORARY__useGenerateOpenApi,
+                    },
+                  )}
+                  tabIndex={-1}
+                >
+                  {registrationState.TEMPORARY__useGenerateOpenApi ? (
+                    <CheckSquareIcon />
+                  ) : (
+                    <SquareIcon />
+                  )}
+                </button>
+                <div className="panel__content__form__section__toggler__prompt">
+                  Generate Open Api
+                </div>
+              </div>
+            </div>
+          )}
           <div className="panel__content__form__section">
             <div className="panel__content__form__section__header__label">
               Project Version
@@ -294,7 +337,10 @@ export const ServiceRegistrationEditor = observer(() => {
               options={registrationState.versionOptions ?? []}
               onChange={onVersionSelectionChange}
               value={selectedVersion}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
               disabled={registrationState.versionOptions === undefined}
               placeholder={versionPlaceholder}
               isLoading={

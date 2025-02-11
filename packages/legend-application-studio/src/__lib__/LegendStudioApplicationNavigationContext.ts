@@ -46,12 +46,14 @@ export enum LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY {
   ENUMERATION_MAPPING_EDITOR = 'studio.editor.mapping-editor.enumeration-mapping-editor',
   MAPPING_EXECUTION_EDITOR = 'studio.editor.mapping-editor.execution-editor',
   DEPRECATED_MAPPING_TEST_EDITOR = 'studio.editor.mapping-editor.deprecated-test-editor',
-  MAPPING_TEST_EDITOR = 'studio.editor.mapping-editor.test-editor',
+  MAPPING_EDITOR_TEST = 'studio.editor.mapping-editor.test',
+  FUNCTION_EDITOR_TEST = 'studio.editor.function-editor.test',
 
   RUNTIME_EDITOR = 'studio.editor.runtime-editor',
 
   CONNECTION_EDITOR = 'studio.editor.connection-editor',
   DATABASE_BUILDER = 'studio.editor.connection-editor.database-builder',
+  DATABASE_MODEL_BUILDER = 'studio.editor.database-editor.model-builder',
 
   SERVICE_EDITOR = 'studio.editor.service-editor',
   SERVICE_EDITOR_EXECUTION = 'studio.editor.service-editor.execution',

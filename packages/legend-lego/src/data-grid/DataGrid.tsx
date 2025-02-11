@@ -15,39 +15,66 @@
  */
 
 import {
-  AgGridReact,
-  type AgReactUiProps,
-  type AgGridReactProps,
-} from '@ag-grid-community/react';
-import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model';
-import {
+  type CellRange,
+  type CellSelectionChangedEvent,
   type CellMouseOverEvent,
   type ICellRendererParams,
-  ModuleRegistry,
-} from '@ag-grid-community/core';
+  type GridOptions,
+  type ColDef,
+  type ColumnState,
+  type GridApi,
+  type IRowNode,
+  type GetContextMenuItemsParams,
+  type MenuItemDef,
+  type IAggFuncParams,
+  type DefaultMenuItem,
+  type Module,
+  AllCommunityModule,
+} from 'ag-grid-community';
+import { LicenseManager, AllEnterpriseModule } from 'ag-grid-enterprise';
+import {
+  AgGridReact,
+  type AgGridReactProps,
+  type CustomHeaderProps,
+} from 'ag-grid-react';
+
+export const communityModules: Module[] = [AllCommunityModule];
+export const enterpriseModules: Module[] = [AllEnterpriseModule];
+export const allModules: Module[] = communityModules.concat(enterpriseModules);
+
+declare const AG_GRID_LICENSE: string;
 
 export function DataGrid<TData = unknown>(
-  props: AgGridReactProps<TData> | AgReactUiProps<TData>,
-): JSX.Element {
+  props: AgGridReactProps<TData>,
+): React.ReactNode {
+  if (AG_GRID_LICENSE) {
+    LicenseManager.setLicenseKey(AG_GRID_LICENSE);
+  }
   return (
     <AgGridReact
-      // Temporarily disable usage the browser's ResizeObserver as sometimes, this causes the error
-      // `ResizeObserver loop limit exceeded` when we zoom in too much, in our cases, the problem
-      // seem to arise when the scrollbar visibility changes as row data is being supplied
-      // one way to resolve this problem is to set `alwaysShowVerticalScroll={true}`
-      // See https://github.com/ag-grid/ag-grid/issues/2588
-      suppressBrowserResizeObserver={true}
+      theme="legacy"
       {...props}
-      modules={[ClientSideRowModelModule]}
+      // NOTE: for test, we don't want to handle the error messages outputed by ag-grid so
+      // we disable enterprise features for now
+      // eslint-disable-next-line no-process-env
+      modules={process.env.NODE_ENV === 'test' ? communityModules : allModules}
     />
   );
 }
 
-export const configureDataGridComponent = (): void => {
-  ModuleRegistry.registerModules([ClientSideRowModelModule]);
-};
-
 export type {
+  CellRange as DataGridCellRange,
   CellMouseOverEvent as DataGridCellMouseOverEvent,
+  CellSelectionChangedEvent as DataGridCellSelectionChangedEvent,
   ICellRendererParams as DataGridCellRendererParams,
+  GridOptions as DataGridOptions,
+  ColDef as DataGridColumnDefinition,
+  ColumnState as DataGridColumnState,
+  GridApi as DataGridApi,
+  IRowNode as DataGridIRowNode,
+  GetContextMenuItemsParams as DataGridGetContextMenuItemsParams,
+  MenuItemDef as DataGridMenuItemDef,
+  IAggFuncParams as DataGridIAggFuncParams,
+  CustomHeaderProps as DataGridCustomHeaderProps,
+  DefaultMenuItem as DataGridDefaultMenuItem,
 };

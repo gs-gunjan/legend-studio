@@ -1,5 +1,251 @@
 # @finos/legend-application
 
+## 16.0.24
+
+## 16.0.23
+
+## 16.0.22
+
+## 16.0.21
+
+## 16.0.20
+
+## 16.0.19
+
+## 16.0.18
+
+## 16.0.17
+
+## 16.0.16
+
+## 16.0.15
+
+## 16.0.14
+
+## 16.0.13
+
+## 16.0.12
+
+## 16.0.11
+
+## 16.0.10
+
+## 16.0.9
+
+## 16.0.8
+
+## 16.0.7
+
+## 16.0.6
+
+### Patch Changes
+
+- [#3620](https://github.com/finos/legend-studio/pull/3620) [`fc4ea53`](https://github.com/finos/legend-studio/commit/fc4ea536c3c94892108ea5d51f903c902feeb339) ([@travisstebbins](https://github.com/travisstebbins)) - Add flags to disable QueryBuilder buttons not needed in Legend VS Code extension
+
+## 16.0.5
+
+## 16.0.4
+
+## 16.0.3
+
+## 16.0.2
+
+### Patch Changes
+
+- [#3570](https://github.com/finos/legend-studio/pull/3570) [`9ef2efc`](https://github.com/finos/legend-studio/commit/9ef2efca9dbaf38c015510cce66284ee8b27aed8) ([@travisstebbins](https://github.com/travisstebbins)) - Allow injecting application configuration.
+
+## 16.0.1
+
+## 16.0.0
+
+### Major Changes
+
+- [#3556](https://github.com/finos/legend-studio/pull/3556) [`12ea153`](https://github.com/finos/legend-studio/commit/12ea15327d8ad4386983c2a6b6ec839aacb0c1e4) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Move `DocumentationEntry` to `@finos/legend-shared`.
+
+## 15.1.31
+
+## 15.1.30
+
+### Patch Changes
+
+- [#3527](https://github.com/finos/legend-studio/pull/3527) [`2d61b1d`](https://github.com/finos/legend-studio/commit/2d61b1d5394ad73f43722f80dcdea1d39a732019) ([@travisstebbins](https://github.com/travisstebbins)) - Make LegendApplicationConfigurationInput baseAddress and versionData props optional
+
+- [#3499](https://github.com/finos/legend-studio/pull/3499) [`2f4227b`](https://github.com/finos/legend-studio/commit/2f4227ba995fc8245c1c3eeb62ad71cd39821732) ([@travisstebbins](https://github.com/travisstebbins)) - Add QueryBuilder to VS Code extension
+
+## 15.1.29
+
+## 15.1.28
+
+## 15.1.27
+
+## 15.1.26
+
+## 15.1.25
+
+## 15.1.24
+
+## 15.1.23
+
+## 15.1.22
+
+## 15.1.21
+
+## 15.1.20
+
+## 15.1.19
+
+## 15.1.18
+
+## 15.1.17
+
+## 15.1.16
+
+## 15.1.15
+
+## 15.1.14
+
+## 15.1.13
+
+## 15.1.12
+
+## 15.1.11
+
+## 15.1.10
+
+## 15.1.9
+
+## 15.1.8
+
+## 15.1.7
+
+## 15.1.6
+
+## 15.1.5
+
+## 15.1.4
+
+### Patch Changes
+
+- [#3200](https://github.com/finos/legend-studio/pull/3200) [`5459b23`](https://github.com/finos/legend-studio/commit/5459b2327a87b098812daae8e7fa094bd73fde5e) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Show release notes up until the last opened version
+
+## 15.1.3
+
+## 15.1.2
+
+## 15.1.1
+
+## 15.1.0
+
+### Minor Changes
+
+- [#3153](https://github.com/finos/legend-studio/pull/3153) [`3027689`](https://github.com/finos/legend-studio/commit/3027689f37a9ba9afd694072a2559bbbb4d9a15e) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add release notes and log viewer for LegendApplication.
+
+## 15.0.76
+
+## 15.0.75
+
+## 15.0.74
+
+## 15.0.73
+
+### Patch Changes
+
+- [#3019](https://github.com/finos/legend-studio/pull/3019) [`13bd7ad50`](https://github.com/finos/legend-studio/commit/13bd7ad500a6133b136c5b6ae0ef98e95f16d7da) ([@travisstebbins](https://github.com/travisstebbins)) - Fix query light mode inconsistencies
+
+## 15.0.72
+
+## 15.0.71
+
+## 15.0.70
+
+## 15.0.69
+
+## 15.0.68
+
+## 15.0.67
+
+## 15.0.66
+
+## 15.0.65
+
+## 15.0.64
+
+## 15.0.63
+
+## 15.0.62
+
+## 15.0.61
+
+## 15.0.60
+
+## 15.0.59
+
+## 15.0.58
+
+## 15.0.57
+
+## 15.0.56
+
+## 15.0.55
+
+## 15.0.54
+
+## 15.0.53
+
+## 15.0.52
+
+## 15.0.51
+
+## 15.0.50
+
+## 15.0.49
+
+## 15.0.48
+
+## 15.0.47
+
+## 15.0.46
+
+## 15.0.45
+
+## 15.0.44
+
+## 15.0.43
+
+## 15.0.42
+
+## 15.0.41
+
+## 15.0.40
+
+## 15.0.39
+
+## 15.0.38
+
+## 15.0.37
+
+## 15.0.36
+
+## 15.0.35
+
+## 15.0.34
+
+## 15.0.33
+
+## 15.0.32
+
+## 15.0.31
+
+## 15.0.30
+
+## 15.0.29
+
+## 15.0.28
+
+## 15.0.27
+
+## 15.0.26
+
 ## 15.0.25
 
 ## 15.0.24

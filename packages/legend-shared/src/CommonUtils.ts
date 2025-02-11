@@ -15,6 +15,7 @@
  */
 
 import {
+  clone,
   cloneDeep as deepClone,
   isEqual as deepEqual,
   findLast,
@@ -25,19 +26,21 @@ import {
   debounce,
   throttle,
   mergeWith,
-  toNumber,
   type DebouncedFunc,
   isObject,
 } from 'lodash-es';
+import { diff as deepDiff } from 'deep-object-diff';
 import { UnsupportedOperationError } from './error/ErrorUtils.js';
 import { format as prettyPrintObject } from 'pretty-format';
-import { assertTrue, guaranteeNonNullable } from './error/AssertionUtils.js';
+import { guaranteeNonNullable } from './error/AssertionUtils.js';
 
 // NOTE: We re-export lodash utilities like this so we centralize utility usage in our app
 // in case we want to swap out the implementation
 export {
+  clone,
   deepClone,
   deepEqual,
+  deepDiff,
   findLast,
   isEmpty,
   pickBy,
@@ -80,7 +83,7 @@ export type Clazz<T> = { new (...args: any[]): T };
  * we will use `Function` in this case, this is a very loose check and will lose some benefit of type checking
  * during compile time, so refrain from using it extensively
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-function-type
 export type GenericClazz<T> = { new (...args: any[]): T } | Function;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SuperGenericFunction = (...args: any) => any;
@@ -95,7 +98,7 @@ export const getSuperclass = <V>(
       `Cannot get superclass for non user-defined classes`,
     );
   }
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   const superclass = Object.getPrototypeOf(_class) as Function | null;
   /**
    * When it comes to inheritance, JavaScript only has one construct: objects.
@@ -189,7 +192,7 @@ export const sortObjectKeys = (value: PlainObject): PlainObject => {
   const _sort = (obj: unknown): unknown => {
     if (Array.isArray(obj)) {
       return obj.map(sortObjectKeys);
-    } else if (typeof obj === 'object') {
+    } else if (typeof obj === 'object' && obj !== null) {
       const oldObj = obj as PlainObject;
       const newObj: PlainObject = {};
       Object.keys(oldObj)
@@ -205,7 +208,7 @@ export const sortObjectKeys = (value: PlainObject): PlainObject => {
 };
 
 export const parseNumber = (val: string): number => {
-  const num = toNumber(val);
+  const num = Number(val);
   if (isNaN(num)) {
     throw new Error(`Can't parse number '${val}'`);
   }
@@ -245,26 +248,12 @@ export const generateEnumerableNameFromToken = (
   return `${token}_${maxCounter + 1}`;
 };
 
-/**
- * NOTE: These are small helpers to workaround Typescript strictness check with the flag --noUncheckedIndexedAccess enabled
- */
-export const getNullableFirstEntry = <T>(array: T[]): T | undefined =>
-  array.length ? array[0] : undefined;
-export const getNullableLastEntry = <T>(array: T[]): T | undefined =>
-  array.length ? array[array.length - 1] : undefined;
-export const getNullableEntry = <T>(array: T[], idx: number): T | undefined => {
-  if (idx < 0 || idx >= array.length) {
-    return undefined;
-  }
-  return array.length > idx ? array[idx] : undefined;
-};
-export const getNonNullableEntry = <T>(
-  array: T[],
+export const at = <T>(
+  list: T[],
   idx: number,
   message?: string | undefined,
 ): T => {
-  assertTrue(0 <= idx && idx < array.length, `Index out of bound: ${idx}`);
-  return guaranteeNonNullable(array[idx], message);
+  return guaranteeNonNullable(list.at(idx), message);
 };
 
 /**
@@ -297,6 +286,10 @@ export const promisify = <T>(func: () => T): Promise<T> =>
       }
     }, 0),
   );
+
+export function sleep(duration: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, duration));
+}
 
 export const addUniqueEntry = <T>(
   array: T[],

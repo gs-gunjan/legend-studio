@@ -17,24 +17,29 @@
 import {
   type V1_Multiplicity,
   type V1_PureModelContextData,
-  V1_multiplicityModelSchema,
   type V1_DatasetSpecification,
   type PureProtocolProcessorPlugin,
+  V1_multiplicityModelSchema,
   V1_deserializeDatasetSpecification,
   V1_pureModelContextDataPropSchema,
+  V1_MappingModelCoverageAnalysisResult,
 } from '@finos/legend-graph';
 import {
+  type PlainObject,
   SerializationFactory,
   optionalCustom,
-  type PlainObject,
   UnsupportedOperationError,
   customListWithSchema,
   usingConstantValueSchema,
   isString,
   isNonNullable,
   optionalCustomUsingModelSchema,
+  usingModelSchema,
+  serializeMap,
+  deserializeMap,
 } from '@finos/legend-shared';
 import {
+  type ModelSchema,
   createModelSchema,
   custom,
   deserialize,
@@ -42,8 +47,8 @@ import {
   object,
   optional,
   primitive,
+  serialize,
   SKIP,
-  type ModelSchema,
 } from 'serializr';
 import type { V1_DataSpaceSupportInfo } from '../../model/packageableElements/dataSpace/V1_DSL_DataSpace_DataSpace.js';
 import { V1_deserializeSupportInfo } from '../../transformation/pureProtocol/V1_DSL_DataSpace_ProtocolHelper.js';
@@ -81,7 +86,26 @@ class V1_DataSpaceExecutionContextAnalysisResult {
   mapping!: string;
   defaultRuntime!: string;
   compatibleRuntimes!: string[];
+  /**
+   * @deprecated
+   */
+  mappingModelCoverageAnalysisResult?: V1_MappingModelCoverageAnalysisResult;
   datasets: V1_DatasetSpecification[] = [];
+  runtimeMetadata?: V1_DataSpaceExecutionContextRuntimeMetadata;
+}
+
+class V1_DataSpaceExecutionContextRuntimeMetadata {
+  storePath?: string;
+  connectionPath?: string;
+  connectionType?: string;
+
+  static readonly serialization = new SerializationFactory(
+    createModelSchema(V1_DataSpaceExecutionContextRuntimeMetadata, {
+      storePath: optional(primitive()),
+      connectionPath: optional(primitive()),
+      connectionType: optional(primitive()),
+    }),
+  );
 }
 
 const V1_dataSpaceExecutionContextAnalysisResultModelSchema = (
@@ -98,9 +122,17 @@ const V1_dataSpaceExecutionContextAnalysisResultModelSchema = (
     ),
     defaultRuntime: primitive(),
     description: optional(primitive()),
+    mappingModelCoverageAnalysisResult: optional(
+      usingModelSchema(
+        V1_MappingModelCoverageAnalysisResult.serialization.schema,
+      ),
+    ),
     mapping: primitive(),
     name: primitive(),
     title: optional(primitive()),
+    runtimeMetadata: usingModelSchema(
+      V1_DataSpaceExecutionContextRuntimeMetadata.serialization.schema,
+    ),
   });
 
 export class V1_DataSpaceBasicDocumentationEntry {
@@ -239,41 +271,147 @@ export class V1_DataSpaceDiagramAnalysisResult {
 }
 
 export abstract class V1_DataSpaceExecutableInfo {
+  id?: string;
+  executionContextKey?: string;
   query!: string;
 }
 
+const V1_DATA_SPACE_TEMPLATE_EXECUTABLE_INFO_TYPE = 'templateExecutableInfo';
+const V1_DATA_SPACE_FUNCTION_POINTER_EXECUTABLE_INFO_TYPE =
+  'functionPointerExecutableInfo';
 const V1_DATA_SPACE_SERVICE_EXECUTABLE_INFO_TYPE = 'service';
+const V1_DATA_SPACE_MULTI_EXECUTION_SERVICE_EXECUTABLE_INFO_TYPE =
+  'multiExecutionService';
+
+export class V1_DataSpaceTemplateExecutableInfo extends V1_DataSpaceExecutableInfo {}
+
+export class V1_DataSpaceFunctionPointerExecutableInfo extends V1_DataSpaceExecutableInfo {
+  function!: string;
+}
+
+const V1_DataSpaceTemplateExecutableInfoModelSchema =
+  (): ModelSchema<V1_DataSpaceTemplateExecutableInfo> =>
+    createModelSchema(V1_DataSpaceTemplateExecutableInfo, {
+      _type: usingConstantValueSchema(
+        V1_DATA_SPACE_TEMPLATE_EXECUTABLE_INFO_TYPE,
+      ),
+      id: primitive(),
+      executionContextKey: primitive(),
+      query: primitive(),
+    });
+
+const V1_DataSpaceFunctionPointerExecutableInfoModelSchema =
+  (): ModelSchema<V1_DataSpaceFunctionPointerExecutableInfo> =>
+    createModelSchema(V1_DataSpaceFunctionPointerExecutableInfo, {
+      _type: usingConstantValueSchema(
+        V1_DATA_SPACE_FUNCTION_POINTER_EXECUTABLE_INFO_TYPE,
+      ),
+      id: primitive(),
+      executionContextKey: primitive(),
+      function: primitive(),
+      query: primitive(),
+    });
 
 export class V1_DataSpaceServiceExecutableInfo extends V1_DataSpaceExecutableInfo {
   pattern!: string;
   mapping?: string | undefined;
   runtime?: string | undefined;
-
-  static readonly serialization = new SerializationFactory(
-    createModelSchema(V1_DataSpaceServiceExecutableInfo, {
-      _type: usingConstantValueSchema(
-        V1_DATA_SPACE_SERVICE_EXECUTABLE_INFO_TYPE,
-      ),
-      mapping: optional(primitive()),
-      pattern: primitive(),
-      query: primitive(),
-      runtime: optional(primitive()),
-    }),
-  );
+  datasets: V1_DatasetSpecification[] = [];
 }
 
+const V1_dataSpaceServiceExecutableInfoModelSchema = (
+  plugins: PureProtocolProcessorPlugin[],
+): ModelSchema<V1_DataSpaceServiceExecutableInfo> =>
+  createModelSchema(V1_DataSpaceServiceExecutableInfo, {
+    _type: usingConstantValueSchema(V1_DATA_SPACE_SERVICE_EXECUTABLE_INFO_TYPE),
+    datasets: list(
+      custom(
+        () => SKIP,
+        (val: PlainObject<V1_DatasetSpecification>) =>
+          V1_deserializeDatasetSpecification(val, plugins),
+      ),
+    ),
+    id: optional(primitive()),
+    executionContextKey: optional(primitive()),
+    mapping: optional(primitive()),
+    pattern: primitive(),
+    query: primitive(),
+    runtime: optional(primitive()),
+  });
+
+export class V1_DataSpaceMultiExecutionServiceKeyedExecutableInfo {
+  key!: string;
+  mapping?: string | undefined;
+  runtime?: string | undefined;
+  datasets: V1_DatasetSpecification[] = [];
+}
+
+const V1_dataSpaceMultiExecutionServiceKeyedExecutableInfoModelSchema = (
+  plugins: PureProtocolProcessorPlugin[],
+): ModelSchema<V1_DataSpaceMultiExecutionServiceKeyedExecutableInfo> =>
+  createModelSchema(V1_DataSpaceMultiExecutionServiceKeyedExecutableInfo, {
+    datasets: list(
+      custom(
+        () => SKIP,
+        (val: PlainObject<V1_DatasetSpecification>) =>
+          V1_deserializeDatasetSpecification(val, plugins),
+      ),
+    ),
+    id: optional(primitive()),
+    executionContextKey: optional(primitive()),
+    key: primitive(),
+    mapping: optional(primitive()),
+    runtime: optional(primitive()),
+  });
+
+export class V1_DataSpaceMultiExecutionServiceExecutableInfo extends V1_DataSpaceExecutableInfo {
+  pattern!: string;
+  keyedExecutableInfos: V1_DataSpaceMultiExecutionServiceKeyedExecutableInfo[] =
+    [];
+}
+
+const V1_dataSpaceMultiExecutionServiceExecutableInfoModelSchema = (
+  plugins: PureProtocolProcessorPlugin[],
+): ModelSchema<V1_DataSpaceMultiExecutionServiceExecutableInfo> =>
+  createModelSchema(V1_DataSpaceMultiExecutionServiceExecutableInfo, {
+    _type: usingConstantValueSchema(
+      V1_DATA_SPACE_MULTI_EXECUTION_SERVICE_EXECUTABLE_INFO_TYPE,
+    ),
+    keyedExecutableInfoList: list(
+      usingModelSchema(
+        V1_dataSpaceMultiExecutionServiceKeyedExecutableInfoModelSchema(
+          plugins,
+        ),
+      ),
+    ),
+    pattern: primitive(),
+  });
+
 const V1_deserializeDataSpaceExecutableInfo = (
+  plugins: PureProtocolProcessorPlugin[],
   json: PlainObject<V1_DataSpaceExecutableInfo>,
 ): V1_DataSpaceExecutableInfo => {
   switch (json._type) {
+    case V1_DATA_SPACE_TEMPLATE_EXECUTABLE_INFO_TYPE:
+      return deserialize(V1_DataSpaceTemplateExecutableInfoModelSchema(), json);
+    case V1_DATA_SPACE_FUNCTION_POINTER_EXECUTABLE_INFO_TYPE:
+      return deserialize(
+        V1_DataSpaceFunctionPointerExecutableInfoModelSchema(),
+        json,
+      );
     case V1_DATA_SPACE_SERVICE_EXECUTABLE_INFO_TYPE:
       return deserialize(
-        V1_DataSpaceServiceExecutableInfo.serialization.schema,
+        V1_dataSpaceServiceExecutableInfoModelSchema(plugins),
+        json,
+      );
+    case V1_DATA_SPACE_MULTI_EXECUTION_SERVICE_EXECUTABLE_INFO_TYPE:
+      return deserialize(
+        V1_dataSpaceMultiExecutionServiceExecutableInfoModelSchema(plugins),
         json,
       );
     default:
       throw new UnsupportedOperationError(
-        `Can't deserialize data space executable info of type '${json._type}'`,
+        `Can't deserialize data product executable info of type '${json._type}'`,
       );
   }
 };
@@ -324,7 +462,7 @@ const V1_deserializeDataSpaceExecutableResult = (
       );
     default:
       throw new UnsupportedOperationError(
-        `Can't deserialize data space executable result of type '${json._type}'`,
+        `Can't deserialize data product executable result of type '${json._type}'`,
       );
   }
 };
@@ -332,26 +470,22 @@ const V1_deserializeDataSpaceExecutableResult = (
 export class V1_DataSpaceExecutableAnalysisResult {
   title!: string;
   description?: string | undefined;
-  executable!: string;
+  executable?: string;
   info?: V1_DataSpaceExecutableInfo | undefined;
   result!: V1_DataSpaceExecutableResult;
-  datasets: V1_DatasetSpecification[] = [];
 }
 
 const V1_dataSpaceExecutableAnalysisResultModelSchema = (
   plugins: PureProtocolProcessorPlugin[],
 ): ModelSchema<V1_DataSpaceExecutableAnalysisResult> =>
   createModelSchema(V1_DataSpaceExecutableAnalysisResult, {
-    datasets: list(
-      custom(
-        () => SKIP,
-        (val: PlainObject<V1_DatasetSpecification>) =>
-          V1_deserializeDatasetSpecification(val, plugins),
-      ),
-    ),
-    executable: primitive(),
+    executable: optional(primitive()),
     description: optional(primitive()),
-    info: optionalCustom(() => SKIP, V1_deserializeDataSpaceExecutableInfo),
+    info: optionalCustom(
+      () => SKIP,
+      (val: PlainObject<V1_DataSpaceExecutableInfo>) =>
+        V1_deserializeDataSpaceExecutableInfo(plugins, val),
+    ),
     result: custom(() => SKIP, V1_deserializeDataSpaceExecutableResult),
     title: primitive(),
   });
@@ -378,6 +512,11 @@ export class V1_DataSpaceAnalysisResult {
 
   executables: V1_DataSpaceExecutableAnalysisResult[] = [];
   diagrams: V1_DataSpaceDiagramAnalysisResult[] = [];
+
+  mappingToMappingCoverageResult?: Map<
+    string,
+    V1_MappingModelCoverageAnalysisResult
+  >;
 }
 
 const V1_dataSpaceAnalysisResultModelSchema = (
@@ -417,6 +556,24 @@ const V1_dataSpaceAnalysisResultModelSchema = (
     ),
     executables: customListWithSchema(
       V1_dataSpaceExecutableAnalysisResultModelSchema(plugins),
+    ),
+    mappingToMappingCoverageResult: optional(
+      custom(
+        (val) =>
+          serializeMap(val, (_val) =>
+            serialize(
+              V1_MappingModelCoverageAnalysisResult.serialization.schema,
+              _val,
+            ),
+          ),
+        (val) =>
+          deserializeMap(val, (_val) =>
+            deserialize(
+              V1_MappingModelCoverageAnalysisResult.serialization.schema,
+              _val,
+            ),
+          ),
+      ),
     ),
   });
 

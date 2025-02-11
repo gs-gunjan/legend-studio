@@ -82,7 +82,7 @@
       height: 100%;
       width: 100%;
       padding: 1rem;
-      overflow: overlay;
+      overflow: auto;
     }
   }
 
@@ -94,7 +94,7 @@
     height: 2.8rem;
     z-index: 1;
     display: flex;
-    overflow-x: overlay;
+    overflow-x: auto;
     overflow-y: hidden;
   }
 
@@ -145,7 +145,7 @@
     &__header__tabs {
       display: flex;
       height: 100%;
-      overflow-x: overlay;
+      overflow-x: auto;
     }
 
     &__header__tab {
@@ -308,6 +308,34 @@
 
   &__explorer-tree__node__label {
     color: inherit;
+    text-indent: 0.5rem;
+  }
+
+  &__node__sub-type,
+  &__node__type {
+    @include flexVCenter;
+  }
+
+  &__node__sub-type__label,
+  &__node__type__label {
+    @include flexVCenter;
+
+    margin-left: 0.5rem;
+    border-radius: 0.2rem;
+    font-size: 1.2rem;
+    padding: 0 0.5rem;
+    height: 1.6rem;
+  }
+
+  &__node__type__label {
+    background: var(--color-dark-grey-350);
+    color: var(--color-light-grey-200);
+  }
+
+  &__node__sub-type__label {
+    background: var(--color-yellow-400);
+    color: var(--color-dark-grey-250);
+    padding-right: 0.5rem;
   }
 }
 

@@ -34,15 +34,21 @@ import {
   TEST_DATA__filterQueryWithSubtypeWithExistsChain,
   TEST_DATA__simpleProjectionWithOutPreviewLimit,
   TEST_DATA__simpleProjectionWithPreviewLimit,
+  TEST_DATA__simpleFromFunction,
+  TEST_DATA__lambda_postFilterQueryWithRightValAsCol,
+  TEST_DATA__simpleProjectionWithSlice,
+  TEST_DATA_simpleTypedRelationProjection,
+  TEST_DATA__projectionWithPercentileAggregation,
+  TEST_DATA__projectionWithWAVGAggregation,
 } from './TEST_DATA__QueryBuilder_Generic.js';
-import TEST_DATA__ComplexRelationalModel from './TEST_DATA__QueryBuilder_Model_ComplexRelational.json';
-import TEST_DATA__ComplexM2MModel from './TEST_DATA__QueryBuilder_Model_ComplexM2M.json';
-import TEST_DATA__M2MWithInheritance from './TEST_DATA__QueryBuilder_Model_M2MWithInheritance.json';
-import TEST_DATA__COVIDDataSimpleModel from './TEST_DATA__QueryBuilder_Model_COVID.json';
-import TEST_DATA__SimpleM2MModel from './TEST_DATA__QueryBuilder_Model_SimpleM2M.json';
-import TEST_DATA__PostFilterModel from './TEST_DATA__QueryBuilder_Model_PostFilter.json';
-import TEST_DATA__BindingM2MModel from './TEST_DATA__QueryBuilder_Model_BindingM2M.json';
-import TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M from './TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M.json';
+import TEST_DATA__ComplexRelationalModel from './TEST_DATA__QueryBuilder_Model_ComplexRelational.json' with { type: 'json' };
+import TEST_DATA__ComplexM2MModel from './TEST_DATA__QueryBuilder_Model_ComplexM2M.json' with { type: 'json' };
+import TEST_DATA__M2MWithInheritance from './TEST_DATA__QueryBuilder_Model_M2MWithInheritance.json' with { type: 'json' };
+import TEST_DATA__COVIDDataSimpleModel from './TEST_DATA__QueryBuilder_Model_COVID.json' with { type: 'json' };
+import TEST_DATA__SimpleM2MModel from './TEST_DATA__QueryBuilder_Model_SimpleM2M.json' with { type: 'json' };
+import TEST_DATA__PostFilterModel from './TEST_DATA__QueryBuilder_Model_PostFilter.json' with { type: 'json' };
+import TEST_DATA__BindingM2MModel from './TEST_DATA__QueryBuilder_Model_BindingM2M.json' with { type: 'json' };
+import TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M from './TEST_DATA__QueryBuilder_Model_SimpleIdentityM2M.json' with { type: 'json' };
 import {
   TEST_DATA__lambda_simpleSingleConditionFilterWithParameter,
   TEST_DATA__lambda_enumerationOperatorFilter,
@@ -54,10 +60,16 @@ import {
   TEST_DATA__lambda_setOperatorFilter,
   TEST_DATA__lambda_simpleSingleConditionFilter,
   TEST_DATA_lambda_dateTimeCapabilityFilterWithYesterday,
+  TEST_DATA__lambda_isOperatorFilterForDate,
+  TEST_DATA__lambda_filterWithRightSidePropertyExpression,
 } from './TEST_DATA__QueryBuilder_Roundtrip_TestFilterQueries.js';
 import {
   TEST_DATA__lambda_input_filterWithExists,
   lambda_output_filterWithExists,
+  TEST_DATA__lambda_filterWithSingleExists,
+  TEST_DATA__lambda_filterWithNestedExists,
+  TEST_DATA__lambda_filterWithMultipleGroupConditionsInExists,
+  TEST_DATA__lambda_filterWithTwoExistsInSingleGroupCondition,
 } from './TEST_DATA__QueryBuilder_TestFilterQueriesWithExists.js';
 import {
   TEST_DATA__lambda_input_graphFetchWithFullPathFunctions,
@@ -81,6 +93,9 @@ import {
   TEST_DATA__lambda_aggregationPostFilter,
   TEST_DATA__lambda_derivationPostFilter,
   TEST_DATA_lambda__dateTimeCapabilityPostFilterWithToday,
+  TEST_DATA__lambda_postFilterWithRightValAsColEnums,
+  TEST_DATA_lambda__postFilterOnAggregatedColWithDerivation,
+  TEST_DATA__lambda_postFilterWithRightValAsWindowFunctionCol,
 } from './TEST_DATA__QueryBuilder_Roundtrip_TestPostFilterQueries.js';
 import { INTERNAL__BasicQueryBuilderState } from '../QueryBuilderState.js';
 import {
@@ -113,7 +128,7 @@ import {
   TEST_DATA_lambda_watermark_Parameter,
 } from './TEST_DATA__QueryBuilder_Roundtrip_Watermark.js';
 import {
-  TEST_DATA__lambda_ContantExpression_MultiConstantVAriables,
+  TEST_DATA__lambda_ContantExpression_MultiConstantAndCalculatedVariables,
   TEST_DATA__lambda_ContantExpression_Simple,
   TEST_DATA__lambda_ContantExpression_SimpleUsedAsVariable,
 } from './TEST_DATA__QueryBuilder_ConstantExpression.js';
@@ -126,12 +141,24 @@ import {
   TEST__LegendApplicationPluginManager,
   TEST__getGenericApplicationConfig,
 } from '../__test-utils__/QueryBuilderStateTestUtils.js';
-import TEST_DATA_SimpleCalendarModel from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_Calendar.json';
+import TEST_DATA_SimpleCalendarModel from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_Calendar.json' with { type: 'json' };
 import {
   TEST_DATA__simpleDerivationWithCalendarAggregation,
   TEST_DATA__simpleProjectionWithCalendarAggregation,
 } from './TEST_DATA__QueryBuilder_Calendar.js';
 import { DEFAULT_LIMIT } from '../QueryBuilderResultState.js';
+import TEST_DATA__QueryBuilder_Model_SimpleRelational from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_SimpleRelational.json' with { type: 'json' };
+import TEST_MilestoningModel from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_Milestoning.json' with { type: 'json' };
+import {
+  TEST_DATA__simpleGetAllVersionsInRangeWithBusinessTemporalClass,
+  TEST_DATA__simpleGetAllVersionsInRangeWithProcessingTemporalClass,
+  TEST_DATA__simpleGetAllVersionsWithBiTemporalClass,
+  TEST_DATA__simpleGetAllVersionsWithBusinessTemporalClass,
+  TEST_DATA__simpleGetAllVersionsWithProcessingTemporalClass,
+  TEST_DATA__simpleProjectionWithBusinessMilestonedColumn,
+} from './TEST_DATA__QueryBuilder_Milestoning.js';
+import TEST_DATA__QueryBuilder_Model_SimpleRelationalWithDates from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_SimpleRelationalWithDates.json' with { type: 'json' };
+import { QueryBuilderAdvancedWorkflowState } from '../query-workflow/QueryBuilderWorkFlowState.js';
 
 type RoundtripTestCase = [
   string,
@@ -186,13 +213,39 @@ const calendarAggregationCtx = {
   entities: TEST_DATA_SimpleCalendarModel,
 };
 
+const existsCtx = {
+  entities: TEST_DATA__QueryBuilder_Model_SimpleRelational,
+};
+
+const milestoningCtx = {
+  entities: TEST_MilestoningModel,
+};
+
+const filtersCtx = {
+  entities: TEST_DATA__QueryBuilder_Model_SimpleRelationalWithDates,
+};
+
 const cases: RoundtripTestCase[] = [
   // projection
   ['Simple projection', projectionCtx, TEST_DATA__simpleProjection, undefined],
+
+  [
+    'Simple typed projection (relation)',
+    projectionCtx,
+    TEST_DATA_simpleTypedRelationProjection,
+    undefined,
+  ],
+
   [
     'Simple projection with subType',
     projectionCtx,
     TEST_DATA__simpleProjectionWithSubtype,
+    undefined,
+  ],
+  [
+    'Simple TDS function with from() function',
+    projectionCtx,
+    TEST_DATA__simpleFromFunction,
     undefined,
   ],
   [
@@ -224,6 +277,19 @@ const cases: RoundtripTestCase[] = [
     projectionCtx,
     TEST_DATA__lambda_output_projectionWithFullPathFunctions,
     TEST_DATA__lambda_input_projectionWithFullPathFunctions,
+  ],
+  // aggregation
+  [
+    'Projection column with precentile aggregation',
+    projectionCtx,
+    TEST_DATA__projectionWithPercentileAggregation,
+    undefined,
+  ],
+  [
+    'Projection column with wavg aggregation',
+    projectionCtx,
+    TEST_DATA__projectionWithWAVGAggregation,
+    undefined,
   ],
   // graph fetch
   ['Simple graph fetch', graphFetchCtx, TEST_DATA__simpleGraphFetch, undefined],
@@ -304,6 +370,12 @@ const cases: RoundtripTestCase[] = [
     'Simple filter with parameter',
     relationalFilterCtx,
     TEST_DATA__lambda_simpleSingleConditionFilterWithParameter,
+    undefined,
+  ],
+  [
+    'Filter with ProperyExpressionState as right condition',
+    relationalFilterCtx,
+    TEST_DATA__lambda_filterWithRightSidePropertyExpression,
     undefined,
   ],
   // group condition
@@ -418,6 +490,30 @@ const cases: RoundtripTestCase[] = [
     'Post-filter with result set modifier',
     postFilterCtx,
     TEST_DATA__lambda_derivationPostFilter,
+    undefined,
+  ],
+  [
+    'Post-filter with on aggregation column with derivation col',
+    postFilterCtx,
+    TEST_DATA_lambda__postFilterOnAggregatedColWithDerivation,
+    undefined,
+  ],
+  [
+    'Post-filter with right condition as tds col',
+    filtersCtx,
+    TEST_DATA__lambda_postFilterQueryWithRightValAsCol,
+    undefined,
+  ],
+  [
+    'Post-filter with left and right val as tds cols with enums',
+    postFilterCtx,
+    TEST_DATA__lambda_postFilterWithRightValAsColEnums,
+    undefined,
+  ],
+  [
+    'Post-filter with right condition as window function col',
+    postFilterCtx,
+    TEST_DATA__lambda_postFilterWithRightValAsWindowFunctionCol,
     undefined,
   ],
   // date compabilty, today(), yesterday() etc
@@ -585,9 +681,9 @@ const cases: RoundtripTestCase[] = [
     undefined,
   ],
   [
-    'Constant expression with multi string instance',
+    'Constant expression with multi string instance + calculated constants',
     olapGroupbyCtx,
-    TEST_DATA__lambda_ContantExpression_MultiConstantVAriables,
+    TEST_DATA__lambda_ContantExpression_MultiConstantAndCalculatedVariables,
     undefined,
   ],
   // externalize
@@ -621,6 +717,80 @@ const cases: RoundtripTestCase[] = [
     TEST_DATA__simpleDerivationWithCalendarAggregation,
     undefined,
   ],
+  [
+    'Simple filter with single exists()',
+    existsCtx,
+    TEST_DATA__lambda_filterWithSingleExists,
+    undefined,
+  ],
+  [
+    'Simple filter with nested exists()',
+    existsCtx,
+    TEST_DATA__lambda_filterWithNestedExists,
+    undefined,
+  ],
+  [
+    'Simple filter with multiple group conditions in exists()',
+    existsCtx,
+    TEST_DATA__lambda_filterWithMultipleGroupConditionsInExists,
+    undefined,
+  ],
+  [
+    'Simple filter with two exists() in single group condition',
+    existsCtx,
+    TEST_DATA__lambda_filterWithTwoExistsInSingleGroupCondition,
+    undefined,
+  ],
+  [
+    'Simple filter with in operator for date primitive type',
+    calendarAggregationCtx,
+    TEST_DATA__lambda_isOperatorFilterForDate,
+    undefined,
+  ],
+  [
+    'Simple milestoned projection query with milestoning parameters as constants',
+    milestoningCtx,
+    TEST_DATA__simpleProjectionWithBusinessMilestonedColumn,
+    undefined,
+  ],
+  [
+    'Simple getAllVersions() with processing temporal class',
+    milestoningCtx,
+    TEST_DATA__simpleGetAllVersionsWithProcessingTemporalClass,
+    undefined,
+  ],
+
+  [
+    'Simple getAllVersions() with bi temporal class',
+    milestoningCtx,
+    TEST_DATA__simpleGetAllVersionsWithBiTemporalClass,
+    undefined,
+  ],
+  [
+    'Simple getAllVersions() with business temporal class',
+    milestoningCtx,
+    TEST_DATA__simpleGetAllVersionsWithBusinessTemporalClass,
+    undefined,
+  ],
+  [
+    'Simple getAllVersionsInRange() with processing temporal class',
+    milestoningCtx,
+    TEST_DATA__simpleGetAllVersionsInRangeWithProcessingTemporalClass,
+    undefined,
+  ],
+  [
+    'Simple getAllVersionsInRange() with business temporal class',
+    milestoningCtx,
+    TEST_DATA__simpleGetAllVersionsInRangeWithBusinessTemporalClass,
+    undefined,
+  ],
+  // slice()
+  [
+    'Simple projection with slice',
+    projectionCtx,
+    TEST_DATA__simpleProjectionWithSlice,
+    undefined,
+  ],
 ];
 
 describe(
@@ -651,6 +821,8 @@ describe(
         const queryBuilderState = new INTERNAL__BasicQueryBuilderState(
           applicationStore,
           graphManagerState,
+          QueryBuilderAdvancedWorkflowState.INSTANCE,
+          undefined,
         );
         // do the check using input and output lambda
         const rawLambda = inputLambda ?? lambda;
@@ -672,7 +844,6 @@ test(
   integrationTest(
     'Query builder lambda processing roundtrip test with exporting result',
   ),
-
   async () => {
     const context = projectionCtx;
     const { entities } = context;
@@ -680,7 +851,6 @@ test(
     pluginManager
       .usePresets([
         new Core_GraphManagerPreset(),
-
         new QueryBuilder_GraphManagerPreset(),
       ])
       .install();
@@ -693,8 +863,9 @@ test(
     await TEST__buildGraphWithEntities(graphManagerState, entities);
     const queryBuilderState = new INTERNAL__BasicQueryBuilderState(
       applicationStore,
-
       graphManagerState,
+      QueryBuilderAdvancedWorkflowState.INSTANCE,
+      undefined,
     );
     queryBuilderState.resultState.setPreviewLimit(DEFAULT_LIMIT);
     const rawLambda = TEST_DATA__simpleProjectionWithOutPreviewLimit;

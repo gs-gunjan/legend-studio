@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import packageJson from '../../package.json';
+import packageJson from '../../package.json' with { type: 'json' };
 import type { LegendApplicationPluginManager } from '../application/LegendApplicationPluginManager.js';
 import { LEGEND_APPLICATION_SETTING_CONFIG } from '../__lib__/LegendApplicationSetting.js';
 import {
@@ -30,8 +30,7 @@ import {
   collectSettingConfigurationEntriesFromConfig,
   type SettingConfigurationEntry,
 } from './SettingService.js';
-import { configure as configureMobx } from 'mobx';
-import { configureComponents } from '@finos/legend-art';
+import { configureResizablePanelComponents } from '@finos/legend-art';
 
 export class Core_LegendApplicationPlugin extends LegendApplicationPlugin {
   static NAME = packageJson.extensions.applicationPlugin;
@@ -49,17 +48,8 @@ export class Core_LegendApplicationPlugin extends LegendApplicationPlugin {
   override getExtraApplicationSetups(): LegendApplicationSetup[] {
     return [
       async (applicationStore) => {
-        // configure `mobx`
-        configureMobx({
-          // Force state modification to be done via actions
-          // Otherwise, warning will be shown in development mode
-          // However, no warning will shown in production mode
-          // See https://mobx.js.org/configuration.html#enforceactions
-          enforceActions: 'observed',
-        });
-
         // configure UI components
-        configureComponents();
+        configureResizablePanelComponents();
       },
     ];
   }

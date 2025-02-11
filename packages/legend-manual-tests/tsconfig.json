@@ -7,6 +7,7 @@
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.json"],
   "references": [
+    { "path": "../legend-application" },
     { "path": "../legend-art" },
     { "path": "../legend-shared" },
     { "path": "../legend-graph" },
@@ -14,8 +15,11 @@
     { "path": "../legend-extension-dsl-data-space" },
     { "path": "../legend-extension-dsl-diagram" },
     { "path": "../legend-extension-dsl-persistence" },
-    { "path": "../legend-extension-dsl-mastery" },
     { "path": "../legend-extension-dsl-text" },
-    { "path": "../legend-extension-store-service-store" }
+    { "path": "../legend-extension-dsl-data-quality" },
+    { "path": "../legend-extension-store-service-store" },
+    { "path": "../legend-extension-store-service-store" },
+    { "path": "../legend-application-query" },
+    { "path": "../legend-storage" }
   ]
 }

@@ -76,6 +76,12 @@ export const dBConnection_setQuoteIdentifiers = action(
   },
 );
 
+export const dBConnection_setQueryTimeOut = action(
+  (con: DatabaseConnection, val: number | undefined): void => {
+    con.queryTimeOutInSeconds = val;
+  },
+);
+
 export const relationDbConnection_setLocalMode = action(
   (con: RelationalDatabaseConnection, val: boolean | undefined): void => {
     con.localMode = val;
@@ -273,6 +279,18 @@ export const localH2DatasourceSpecification_setTestDataSetupCsv = action(
     v.testDataSetupCsv = val;
   },
 );
+export const snowflakeDatasourceSpec_setTempTableDb = action(
+  (spec: SnowflakeDatasourceSpecification, val: string | undefined): void => {
+    spec.tempTableDb = val;
+  },
+);
+
+export const snowflakeDatasourceSpec_setTempTableSchema = action(
+  (spec: SnowflakeDatasourceSpecification, val: string | undefined): void => {
+    spec.tempTableSchema = val;
+  },
+);
+
 export const snowflakeDatasourceSpec_setAccountName = action(
   (spec: SnowflakeDatasourceSpecification, val: string): void => {
     spec.accountName = val;

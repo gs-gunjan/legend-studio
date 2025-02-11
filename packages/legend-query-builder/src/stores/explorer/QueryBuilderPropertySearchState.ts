@@ -23,14 +23,16 @@ import {
   PRIMITIVE_TYPE,
   CORE_PURE_PATH,
   PURE_DOC_TAG,
+  Enumeration,
 } from '@finos/legend-graph';
 import {
+  type FuzzySearchEngineSortFunctionArg,
   ActionState,
   FuzzySearchEngine,
   addUniqueEntry,
   deleteEntry,
   guaranteeNonNullable,
-  FuzzySearchAdvancedConfigState,
+  isNonNullable,
 } from '@finos/legend-shared';
 import {
   observable,
@@ -46,13 +48,20 @@ import {
   QUERY_BUILDER_PROPERTY_SEARCH_MAX_NODES,
 } from '../QueryBuilderConfig.js';
 import {
+  type QueryBuilderExplorerTreeNodeData,
   getQueryBuilderPropertyNodeData,
   getQueryBuilderSubTypeNodeData,
-  type QueryBuilderExplorerTreeNodeData,
   QueryBuilderExplorerTreePropertyNodeData,
   QueryBuilderExplorerTreeSubTypeNodeData,
+  cloneQueryBuilderExplorerTreeNodeData,
+  QueryBuilderExplorerTreeRootNodeData,
 } from './QueryBuilderExplorerState.js';
 import type { QueryBuilderState } from '../QueryBuilderState.js';
+import { QueryBuilderFuzzySearchAdvancedConfigState } from './QueryBuilderFuzzySearchAdvancedConfigState.js';
+import {
+  prettyPropertyNameForSubType,
+  prettyPropertyNameFromNodeId,
+} from '../../components/explorer/QueryBuilderPropertySearchPanel.js';
 
 export class QueryBuilderPropertySearchState {
   queryBuilderState: QueryBuilderState;
@@ -68,11 +77,13 @@ export class QueryBuilderPropertySearchState {
    * is that we could interact with the searched nodes, i.e. drag them to
    * various panels to create filter, fetch-structure, etc.
    */
-  indexedExplorerTreeNodes: QueryBuilderExplorerTreeNodeData[] = [];
+  indexedExplorerTreeNodeMap: Map<string, QueryBuilderExplorerTreeNodeData> =
+    new Map();
 
   // search
   searchEngine: FuzzySearchEngine<QueryBuilderExplorerTreeNodeData>;
-  searchConfigurationState: FuzzySearchAdvancedConfigState;
+  searchConfigurationState: QueryBuilderFuzzySearchAdvancedConfigState;
+  initializationState = ActionState.create();
   searchState = ActionState.create();
   searchText = '';
   searchResults: QueryBuilderExplorerTreeNodeData[] = [];
@@ -82,8 +93,10 @@ export class QueryBuilderPropertySearchState {
   showSearchConfigurationMenu = false;
 
   // filter
+  includeOneMany = false;
   typeFilters = [
     QUERY_BUILDER_PROPERTY_SEARCH_TYPE.CLASS,
+    QUERY_BUILDER_PROPERTY_SEARCH_TYPE.ENUMERATION,
     QUERY_BUILDER_PROPERTY_SEARCH_TYPE.STRING,
     QUERY_BUILDER_PROPERTY_SEARCH_TYPE.BOOLEAN,
     QUERY_BUILDER_PROPERTY_SEARCH_TYPE.NUMBER,
@@ -92,29 +105,37 @@ export class QueryBuilderPropertySearchState {
 
   constructor(queryBuilderState: QueryBuilderState) {
     makeObservable(this, {
-      indexedExplorerTreeNodes: observable,
+      indexedExplorerTreeNodeMap: observable,
       searchText: observable,
       searchResults: observable,
       isOverSearchLimit: observable,
       isSearchPanelOpen: observable,
       isSearchPanelHidden: observable,
       showSearchConfigurationMenu: observable,
+      includeOneMany: observable,
       typeFilters: observable,
+      indexedExplorerTreeNodes: computed,
       filteredSearchResults: computed,
       search: action,
       resetSearch: action,
+      setSearchResults: action,
+      setIsOverSearchLimit: action,
       setSearchText: action,
       setShowSearchConfigurationMenu: action,
       setIsSearchPanelOpen: action,
       setIsSearchPanelHidden: action,
+      setIncludeOneMany: action,
+      setFilterOnlyType: action,
       toggleFilterForType: action,
       initialize: action,
     });
 
     this.queryBuilderState = queryBuilderState;
-    this.searchConfigurationState = new FuzzySearchAdvancedConfigState(
-      (): void => this.search(),
-    );
+    this.searchConfigurationState =
+      new QueryBuilderFuzzySearchAdvancedConfigState(
+        async (): Promise<void> => this.search(),
+        this.queryBuilderState.applicationStore.alertUnhandledError,
+      );
     this.searchEngine = new FuzzySearchEngine(this.indexedExplorerTreeNodes);
   }
 
@@ -130,6 +151,14 @@ export class QueryBuilderPropertySearchState {
     this.showSearchConfigurationMenu = val;
   }
 
+  setSearchResults(val: QueryBuilderExplorerTreeNodeData[]): void {
+    this.searchResults = val;
+  }
+
+  setIsOverSearchLimit(val: boolean): void {
+    this.isOverSearchLimit = val;
+  }
+
   setSearchText(val: string): void {
     this.searchText = val;
   }
@@ -137,7 +166,20 @@ export class QueryBuilderPropertySearchState {
   resetSearch(): void {
     this.searchText = '';
     this.searchResults = [];
+    this.indexedExplorerTreeNodes.forEach((node) => {
+      if (!(node instanceof QueryBuilderExplorerTreeRootNodeData)) {
+        node.setIsOpen(false);
+      }
+    });
     this.searchState.complete();
+  }
+
+  setIncludeOneMany(val: boolean): void {
+    this.includeOneMany = val;
+  }
+
+  setFilterOnlyType(val: QUERY_BUILDER_PROPERTY_SEARCH_TYPE): void {
+    this.typeFilters = [val];
   }
 
   toggleFilterForType(val: QUERY_BUILDER_PROPERTY_SEARCH_TYPE): void {
@@ -148,46 +190,105 @@ export class QueryBuilderPropertySearchState {
     }
   }
 
-  search(): void {
-    if (!this.searchText) {
-      this.searchResults = [];
-      return;
+  isNodeMultiple(node: QueryBuilderExplorerTreeNodeData): boolean {
+    // Check if node or any ancestors are one-many nodes.
+    let currNode: QueryBuilderExplorerTreeNodeData | undefined = node;
+    while (currNode) {
+      if (
+        (currNode instanceof QueryBuilderExplorerTreeSubTypeNodeData &&
+          (currNode.multiplicity.upperBound === undefined ||
+            currNode.multiplicity.upperBound > 1)) ||
+        (currNode instanceof QueryBuilderExplorerTreePropertyNodeData &&
+          (currNode.property.multiplicity.upperBound === undefined ||
+            currNode.property.multiplicity.upperBound > 1))
+      ) {
+        return true;
+      }
+      currNode =
+        currNode instanceof QueryBuilderExplorerTreePropertyNodeData ||
+        currNode instanceof QueryBuilderExplorerTreeSubTypeNodeData
+          ? this.indexedExplorerTreeNodeMap.get(currNode.parentId)
+          : undefined;
     }
+    return false;
+  }
+
+  async search(): Promise<void> {
+    if (!this.searchText) {
+      this.setSearchResults([]);
+    }
+
     this.searchState.inProgress();
 
-    // NOTE: performanced of fuzzy search is impacted by the number of indexed entries and the length
-    // of the search pattern, so to a certain extent this could become laggy. If this becomes too inconvenient
-    // for the users, we might need to use another fuzzy-search implementation, or have appropriate search
-    // policy, e.g. limit length of search text, etc.
-    //
-    // See https://github.com/farzher/fuzzysort
-    const searchResults = Array.from(
-      this.searchEngine
-        .search(
-          this.searchConfigurationState.generateSearchText(
-            this.searchText.toLowerCase(),
-          ),
-          {
-            // NOTE: search for limit + 1 item so we can know if there are more search results
-            limit: QUERY_BUILDER_PROPERTY_SEARCH_RESULTS_LIMIT + 1,
-          },
+    this.indexedExplorerTreeNodes.forEach((node) => {
+      if (!(node instanceof QueryBuilderExplorerTreeRootNodeData)) {
+        node.setIsOpen(false);
+      }
+    });
+
+    // Perform the search in a setTimeout so we can execute it asynchronously and
+    // show the loading indicator while search is in progress.
+    return new Promise((resolve) =>
+      setTimeout(() => {
+        // NOTE: performanced of fuzzy search is impacted by the number of indexed entries and the length
+        // of the search pattern, so to a certain extent this could become laggy. If this becomes too inconvenient
+        // for the users, we might need to use another fuzzy-search implementation, or have appropriate search
+        // policy, e.g. limit length of search text, etc.
+        //
+        // See https://github.com/farzher/fuzzysort
+
+        const classNodes: Map<string, QueryBuilderExplorerTreeNodeData> =
+          new Map();
+
+        const searchResults = Array.from(
+          this.searchEngine
+            .search(
+              this.searchConfigurationState.generateSearchText(
+                this.searchText.toLowerCase(),
+              ),
+              {
+                // NOTE: search for limit + 1 item so we can know if there are more search results
+                limit: QUERY_BUILDER_PROPERTY_SEARCH_RESULTS_LIMIT + 1,
+              },
+            )
+            .values(),
         )
-        .values(),
-    ).map((result) => result.item);
+          .map((result) => result.item)
+          .map((node) => {
+            if (node.type instanceof Class) {
+              classNodes.set(node.id, node);
+            }
+            return node;
+          })
+          .filter((node) => {
+            // Filter out nodes if their parent class node is already in the results.
+            if (
+              (node instanceof QueryBuilderExplorerTreePropertyNodeData ||
+                node instanceof QueryBuilderExplorerTreeSubTypeNodeData) &&
+              classNodes.has(node.parentId)
+            ) {
+              return false;
+            }
+            return true;
+          });
 
-    // check if the search results exceed the limit
-    if (searchResults.length > QUERY_BUILDER_PROPERTY_SEARCH_RESULTS_LIMIT) {
-      this.isOverSearchLimit = true;
-      this.searchResults = searchResults.slice(
-        0,
-        QUERY_BUILDER_PROPERTY_SEARCH_RESULTS_LIMIT,
-      );
-    } else {
-      this.isOverSearchLimit = false;
-      this.searchResults = searchResults;
-    }
+        // check if the search results exceed the limit
+        if (
+          searchResults.length > QUERY_BUILDER_PROPERTY_SEARCH_RESULTS_LIMIT
+        ) {
+          this.setIsOverSearchLimit(true);
+          this.setSearchResults(
+            searchResults.slice(0, QUERY_BUILDER_PROPERTY_SEARCH_RESULTS_LIMIT),
+          );
+        } else {
+          this.setIsOverSearchLimit(false);
+          this.setSearchResults(searchResults);
+        }
 
-    this.searchState.complete();
+        this.searchState.complete();
+        resolve();
+      }, 0),
+    );
   }
 
   /**
@@ -198,49 +299,106 @@ export class QueryBuilderPropertySearchState {
    * this process is often not the performance bottleneck, else, we would need to make this
    * asynchronous and block the UI while waiting.
    */
-  initialize(): void {
-    this.indexedExplorerTreeNodes = [];
+  async initialize(): Promise<void> {
+    this.initializationState.inProgress();
 
-    let currentLevelPropertyNodes: QueryBuilderExplorerTreeNodeData[] = [];
-    let nextLevelPropertyNodes: QueryBuilderExplorerTreeNodeData[] = [];
+    // Perform the initialization in a setTimeout so we can execute it asynchronously and
+    // show the loading indicator while initialization is in progress.
+    return new Promise((resolve) =>
+      setTimeout(() => {
+        const treeData =
+          this.queryBuilderState.explorerState.nonNullableTreeData;
+        const rootNodeMap = new Map(
+          treeData.rootIds
+            .map((rootId) => treeData.nodes.get(rootId))
+            .filter(isNonNullable)
+            .map((rootNode) => [rootNode.id, rootNode]),
+        );
+        this.indexedExplorerTreeNodeMap = new Map();
 
-    Array.from(
-      this.queryBuilderState.explorerState.nonNullableTreeData.nodes.values(),
-    )
-      .slice(1)
-      .forEach((node) => {
-        if (node.mappingData.mapped && !node.isPartOfDerivedPropertyBranch) {
-          currentLevelPropertyNodes.push(node);
-          this.indexedExplorerTreeNodes.push(node);
-        }
-      });
+        let currentLevelPropertyNodes: QueryBuilderExplorerTreeNodeData[] = [];
+        let nextLevelPropertyNodes: QueryBuilderExplorerTreeNodeData[] = [];
 
-    // ensure we don't navigate more nodes than the limit so we could
-    // keep the initialization/indexing time within acceptable range
-    const NODE_LIMIT =
-      this.indexedExplorerTreeNodes.length +
-      QUERY_BUILDER_PROPERTY_SEARCH_MAX_NODES;
-    const addNode = (node: QueryBuilderExplorerTreeNodeData): void =>
-      runInAction(() => {
-        if (this.indexedExplorerTreeNodes.length > NODE_LIMIT) {
-          return;
-        }
-        this.indexedExplorerTreeNodes.push(node);
-      });
+        // Get all the children of the root node(s)
+        Array.from(
+          treeData.rootIds
+            .map((rootId) =>
+              treeData.nodes
+                .get(rootId)
+                ?.childrenIds.map((childId) => treeData.nodes.get(childId)),
+            )
+            .flat()
+            .filter(isNonNullable)
+            .filter((node) =>
+              node.mappingData.mapped &&
+              this.searchConfigurationState.includeSubTypes
+                ? true
+                : node instanceof QueryBuilderExplorerTreePropertyNodeData,
+            ),
+        ).forEach((node) => {
+          if (node.mappingData.mapped && !node.isPartOfDerivedPropertyBranch) {
+            const clonedNode = cloneQueryBuilderExplorerTreeNodeData(node);
+            currentLevelPropertyNodes.push(clonedNode);
+            this.indexedExplorerTreeNodeMap.set(clonedNode.id, clonedNode);
+          }
+        });
 
-    // limit the depth of navigation to keep the initialization/indexing
-    // time within acceptable range
-    let currentDepth = 1;
-    while (
-      currentLevelPropertyNodes.length &&
-      currentDepth <= QUERY_BUILDER_PROPERTY_SEARCH_MAX_DEPTH
-    ) {
-      const node = currentLevelPropertyNodes.shift();
-      if (node) {
-        if (node.childrenIds.length) {
+        // ensure we don't navigate more nodes than the limit so we could
+        // keep the initialization/indexing time within acceptable range
+        const NODE_LIMIT =
+          this.indexedExplorerTreeNodeMap.size +
+          QUERY_BUILDER_PROPERTY_SEARCH_MAX_NODES;
+        const addNode = (node: QueryBuilderExplorerTreeNodeData): void =>
+          runInAction(() => {
+            if (this.indexedExplorerTreeNodeMap.size > NODE_LIMIT) {
+              return;
+            }
+            const clonedNode = cloneQueryBuilderExplorerTreeNodeData(node);
+            this.indexedExplorerTreeNodeMap.set(clonedNode.id, clonedNode);
+          });
+
+        // helper function to check if a node has the same type as one of its
+        // ancestor nodes. This allows us to avoid including circular dependencies
+        // in the indexed nodes list.
+        const nodeHasSameTypeAsAncestor = (
+          node: QueryBuilderExplorerTreeNodeData,
+        ): boolean => {
           if (
+            node instanceof QueryBuilderExplorerTreePropertyNodeData ||
+            node instanceof QueryBuilderExplorerTreeSubTypeNodeData
+          ) {
+            let ancestor =
+              this.indexedExplorerTreeNodeMap.get(node.parentId) ??
+              rootNodeMap.get(node.parentId);
+            while (ancestor) {
+              if (node.type === ancestor.type) {
+                return true;
+              }
+              ancestor =
+                ancestor instanceof QueryBuilderExplorerTreePropertyNodeData ||
+                ancestor instanceof QueryBuilderExplorerTreeSubTypeNodeData
+                  ? (this.indexedExplorerTreeNodeMap.get(ancestor.parentId) ??
+                    rootNodeMap.get(ancestor.parentId))
+                  : undefined;
+            }
+          }
+          return false;
+        };
+
+        // limit the depth of navigation to keep the initialization/indexing
+        // time within acceptable range
+        let currentDepth = 1;
+        while (
+          currentLevelPropertyNodes.length &&
+          currentDepth <= QUERY_BUILDER_PROPERTY_SEARCH_MAX_DEPTH
+        ) {
+          const node = currentLevelPropertyNodes.shift();
+          if (
+            node?.mappingData.mapped &&
+            node.childrenIds.length &&
             (node instanceof QueryBuilderExplorerTreePropertyNodeData ||
-              node instanceof QueryBuilderExplorerTreeSubTypeNodeData) &&
+              (this.searchConfigurationState.includeSubTypes &&
+                node instanceof QueryBuilderExplorerTreeSubTypeNodeData)) &&
             node.type instanceof Class
           ) {
             (node instanceof QueryBuilderExplorerTreeSubTypeNodeData
@@ -258,136 +416,217 @@ export class QueryBuilderPropertySearchState {
                 ),
               );
               if (
-                propertyTreeNodeData?.mappingData.mapped &&
-                !propertyTreeNodeData.isPartOfDerivedPropertyBranch
+                propertyTreeNodeData &&
+                propertyTreeNodeData.mappingData.mapped &&
+                !propertyTreeNodeData.isPartOfDerivedPropertyBranch &&
+                !nodeHasSameTypeAsAncestor(propertyTreeNodeData)
               ) {
                 nextLevelPropertyNodes.push(propertyTreeNodeData);
                 addNode(propertyTreeNodeData);
               }
             });
-            node.type._subclasses.forEach((subclass) => {
-              const subTypeTreeNodeData = getQueryBuilderSubTypeNodeData(
-                subclass,
-                node,
-                guaranteeNonNullable(
-                  this.queryBuilderState.explorerState
-                    .mappingModelCoverageAnalysisResult,
-                ),
-              );
-              nextLevelPropertyNodes.push(subTypeTreeNodeData);
-              addNode(subTypeTreeNodeData);
-            });
+            if (this.searchConfigurationState.includeSubTypes) {
+              node.type._subclasses.forEach((subclass) => {
+                const subTypeTreeNodeData = getQueryBuilderSubTypeNodeData(
+                  subclass,
+                  node,
+                  guaranteeNonNullable(
+                    this.queryBuilderState.explorerState
+                      .mappingModelCoverageAnalysisResult,
+                  ),
+                );
+                if (
+                  subTypeTreeNodeData.mappingData.mapped &&
+                  !nodeHasSameTypeAsAncestor(subTypeTreeNodeData)
+                ) {
+                  nextLevelPropertyNodes.push(subTypeTreeNodeData);
+                  addNode(subTypeTreeNodeData);
+                }
+              });
+            }
+          }
+
+          // when we done processing one depth, we will do check on the depth and the total
+          // number of indexed nodes to figure out if we should proceed further
+          if (
+            !currentLevelPropertyNodes.length &&
+            this.indexedExplorerTreeNodeMap.size < NODE_LIMIT
+          ) {
+            currentLevelPropertyNodes = nextLevelPropertyNodes;
+            nextLevelPropertyNodes = [];
+            currentDepth++;
           }
         }
-      }
 
-      // when we done processing one depth, we will do check on the depth and the total
-      // number of indexed nodes to figureo ut if we should proceed further
-      if (
-        !currentLevelPropertyNodes.length &&
-        this.indexedExplorerTreeNodes.length < NODE_LIMIT
-      ) {
-        currentLevelPropertyNodes = nextLevelPropertyNodes;
-        nextLevelPropertyNodes = [];
-        currentDepth++;
+        // indexing
+        this.searchEngine = new FuzzySearchEngine(
+          this.indexedExplorerTreeNodes,
+          {
+            includeScore: true,
+            shouldSort: true,
+            // Ignore location when computing the search score
+            // See https://fusejs.io/concepts/scoring-theory.html
+            ignoreLocation: true,
+            // This specifies the point the search gives up
+            // `0.0` means exact match where `1.0` would match anything
+            // We set a relatively low threshold to filter out irrelevant results
+            threshold: 0.2,
+            keys: [
+              {
+                name: 'label',
+                weight: 4,
+              },
+              {
+                name: 'path',
+                weight: 2,
+                getFn: (node) => {
+                  const parentNode =
+                    node instanceof QueryBuilderExplorerTreePropertyNodeData ||
+                    node instanceof QueryBuilderExplorerTreeSubTypeNodeData
+                      ? this.indexedExplorerTreeNodeMap.get(node.parentId)
+                      : undefined;
+
+                  const fullPath = parentNode
+                    ? parentNode instanceof
+                      QueryBuilderExplorerTreeSubTypeNodeData
+                      ? prettyPropertyNameForSubType(node.id)
+                      : prettyPropertyNameFromNodeId(node.id)
+                    : '';
+
+                  return fullPath;
+                },
+              },
+              ...(this.searchConfigurationState.includeDocumentation
+                ? [
+                    {
+                      name: 'taggedValues',
+                      weight: 2,
+                      // aggregate the property documentation, do not account for class documentation
+                      getFn: (node: QueryBuilderExplorerTreeNodeData) =>
+                        node instanceof QueryBuilderExplorerTreePropertyNodeData
+                          ? node.property.taggedValues
+                              .filter(
+                                (taggedValue) =>
+                                  taggedValue.tag.ownerReference.value.path ===
+                                    CORE_PURE_PATH.PROFILE_DOC &&
+                                  taggedValue.tag.value.value === PURE_DOC_TAG,
+                              )
+                              .map((taggedValue) => taggedValue.value)
+                              .join('\n')
+                          : '',
+                    },
+                  ]
+                : []),
+            ],
+            sortFn: (
+              a: FuzzySearchEngineSortFunctionArg,
+              b: FuzzySearchEngineSortFunctionArg,
+            ) => {
+              // If 2 items have similar scores, we should prefer the one that is
+              // less deeply nested.
+              const similarScores = Math.abs(a.score - b.score) <= 0.1;
+              if (similarScores) {
+                const aPathLength: number | undefined =
+                  a.item[0] && Object.hasOwn(a.item[0], 'v')
+                    ? (
+                        a.item[0] as {
+                          v: string;
+                        }
+                      ).v.split('/').length
+                    : undefined;
+                const bPathLength: number | undefined =
+                  b.item[0] && Object.hasOwn(b.item[0], 'v')
+                    ? (
+                        b.item[0] as {
+                          v: string;
+                        }
+                      ).v.split('/').length
+                    : undefined;
+                if (aPathLength !== undefined && bPathLength !== undefined) {
+                  return aPathLength - bPathLength;
+                }
+              }
+              return a.score - b.score;
+            },
+            // extended search allows for exact word match through single quote
+            // See https://fusejs.io/examples.html#extended-search
+            useExtendedSearch: true,
+          },
+        );
+
+        this.initializationState.complete();
+        resolve();
+      }, 0),
+    );
+  }
+
+  get indexedExplorerTreeNodes(): QueryBuilderExplorerTreeNodeData[] {
+    return Array.from(this.indexedExplorerTreeNodeMap.values());
+  }
+
+  isNodeIncludedInFilter(node: QueryBuilderExplorerTreeNodeData): boolean {
+    if (!this.includeOneMany && this.isNodeMultiple(node)) {
+      return false;
+    }
+    if (this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.CLASS)) {
+      if (node.type instanceof Class) {
+        return true;
       }
     }
-
-    // indexing
-    this.searchEngine = new FuzzySearchEngine(this.indexedExplorerTreeNodes, {
-      includeScore: true,
-      shouldSort: true,
-      // Ignore location when computing the search score
-      // See https://fusejs.io/concepts/scoring-theory.html
-      ignoreLocation: true,
-      // This specifies the point the search gives up
-      // `0.0` means exact match where `1.0` would match anything
-      // We set a relatively low threshold to filter out irrelevant results
-      threshold: 0.2,
-      keys: [
-        {
-          name: 'label',
-          weight: 4,
-        },
-        {
-          name: 'taggedValues',
-          weight: 2,
-          // aggregate the property documentation, do not account for class documentation
-          getFn: (node: QueryBuilderExplorerTreeNodeData) =>
-            node instanceof QueryBuilderExplorerTreePropertyNodeData
-              ? node.property.taggedValues
-                  .filter(
-                    (taggedValue) =>
-                      taggedValue.tag.ownerReference.value.path ===
-                        CORE_PURE_PATH.PROFILE_DOC &&
-                      taggedValue.tag.value.value === PURE_DOC_TAG,
-                  )
-                  .map((taggedValue) => taggedValue.value)
-                  .join('\n')
-              : '',
-        },
-      ],
-      // extended search allows for exact word match through single quote
-      // See https://fusejs.io/examples.html#extended-search
-      useExtendedSearch: true,
-    });
+    if (
+      this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.ENUMERATION)
+    ) {
+      if (node.type instanceof Enumeration) {
+        return true;
+      }
+    }
+    if (this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.STRING)) {
+      if (node.type === PrimitiveType.STRING) {
+        return true;
+      }
+    }
+    if (this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.NUMBER)) {
+      if (
+        node.type instanceof PrimitiveType &&
+        (
+          [
+            PRIMITIVE_TYPE.NUMBER,
+            PRIMITIVE_TYPE.DECIMAL,
+            PRIMITIVE_TYPE.INTEGER,
+            PRIMITIVE_TYPE.FLOAT,
+          ] as string[]
+        ).includes(node.type.name)
+      ) {
+        return true;
+      }
+    }
+    if (this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.BOOLEAN)) {
+      if (node.type === PrimitiveType.BOOLEAN) {
+        return true;
+      }
+    }
+    if (this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.DATE)) {
+      if (
+        node.type instanceof PrimitiveType &&
+        (
+          [
+            PRIMITIVE_TYPE.DATE,
+            PRIMITIVE_TYPE.DATETIME,
+            PRIMITIVE_TYPE.STRICTDATE,
+            PRIMITIVE_TYPE.STRICTTIME,
+            PRIMITIVE_TYPE.LATESTDATE,
+          ] as string[]
+        ).includes(node.type.name)
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   get filteredSearchResults(): QueryBuilderExplorerTreeNodeData[] {
-    return this.searchResults.filter((node) => {
-      if (this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.CLASS)) {
-        if (node.type instanceof Class) {
-          return true;
-        }
-      }
-      if (
-        this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.STRING)
-      ) {
-        if (node.type === PrimitiveType.STRING) {
-          return true;
-        }
-      }
-      if (
-        this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.NUMBER)
-      ) {
-        if (
-          node.type instanceof PrimitiveType &&
-          (
-            [
-              PRIMITIVE_TYPE.NUMBER,
-              PRIMITIVE_TYPE.DECIMAL,
-              PRIMITIVE_TYPE.INTEGER,
-              PRIMITIVE_TYPE.FLOAT,
-            ] as string[]
-          ).includes(node.type.name)
-        ) {
-          return true;
-        }
-      }
-      if (
-        this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.BOOLEAN)
-      ) {
-        if (node.type === PrimitiveType.BOOLEAN) {
-          return true;
-        }
-      }
-      if (this.typeFilters.includes(QUERY_BUILDER_PROPERTY_SEARCH_TYPE.DATE)) {
-        if (
-          node.type instanceof PrimitiveType &&
-          (
-            [
-              PRIMITIVE_TYPE.DATE,
-              PRIMITIVE_TYPE.DATETIME,
-              PRIMITIVE_TYPE.STRICTDATE,
-              PRIMITIVE_TYPE.STRICTTIME,
-              PRIMITIVE_TYPE.LATESTDATE,
-            ] as string[]
-          ).includes(node.type.name)
-        ) {
-          return true;
-        }
-      }
-      return false;
-    });
+    return this.searchResults.filter((node) =>
+      this.isNodeIncludedInFilter(node),
+    );
   }
 }

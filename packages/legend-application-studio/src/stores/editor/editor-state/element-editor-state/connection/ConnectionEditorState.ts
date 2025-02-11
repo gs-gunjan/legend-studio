@@ -27,7 +27,6 @@ import {
   type PackageableElement,
   type Connection,
   type ValidationIssue,
-  type AuthenticationStrategy,
   type DatasourceSpecification,
   PackageableConnection,
   JsonModelConnection,
@@ -57,6 +56,7 @@ import {
   isStubbed_PackageableElement,
   type PostProcessor,
   MapperPostProcessor,
+  type AuthenticationStrategy,
 } from '@finos/legend-graph';
 import type { DSL_Mapping_LegendStudioApplicationPlugin_Extension } from '../../../../extensions/DSL_Mapping_LegendStudioApplicationPlugin_Extension.js';
 import {
@@ -87,15 +87,16 @@ export enum RELATIONAL_DATABASE_TAB_TYPE {
   POST_PROCESSORS = 'Post Processors',
 }
 
+// Please do not change these values unless they change in the backend
 export enum CORE_DATASOURCE_SPEC_TYPE {
-  STATIC = 'Static',
-  H2_LOCAL = 'H2 Local',
-  H2_EMBEDDED = 'H2 Embedded',
-  DATABRICKS = 'Databricks',
-  SNOWFLAKE = 'Snowflake',
-  REDSHIFT = 'Redshift',
-  BIGQUERY = 'Big Query',
-  SPANNER = 'Spanner',
+  STATIC = 'static',
+  H2_LOCAL = 'h2Local',
+  H2_EMBEDDED = 'h2Embedded',
+  DATABRICKS = 'databricks',
+  SNOWFLAKE = 'snowflake',
+  REDSHIFT = 'redshift',
+  BIGQUERY = 'bigQuery',
+  SPANNER = 'spanner',
   TRINO = 'Trino',
 }
 
@@ -103,17 +104,18 @@ export enum POST_PROCESSOR_TYPE {
   MAPPER = 'Mapper',
 }
 
+// Please do not change these values unless they change in the backend
 export enum CORE_AUTHENTICATION_STRATEGY_TYPE {
-  DELEGATED_KERBEROS = 'Delegated Kerberos',
-  H2_DEFAULT = 'H2 Default',
-  SNOWFLAKE_PUBLIC = 'Snowflake Public',
-  GCP_APPLICATION_DEFAULT_CREDENTIALS = 'GCP Application Default Credentials',
-  API_TOKEN = 'API Token',
-  OAUTH = 'OAuth',
-  USERNAME_PASSWORD = 'Username Password',
-  GCP_WORKLOAD_IDENTITY_FEDERATION = 'GCP Workload Identity Federation',
-  MIDDLE_TIER_USERNAME_PASSWORD = 'Middle-tier Username Password',
-  TRINO_DELEGATED_KERBEROS = 'Trino Delegated Kerberos',
+  DELEGATED_KERBEROS = 'delegatedKerberos',
+  H2_DEFAULT = 'h2Default',
+  SNOWFLAKE_PUBLIC = 'snowflakePublic',
+  GCP_APPLICATION_DEFAULT_CREDENTIALS = 'gcpApplicationDefaultCredentials',
+  API_TOKEN = 'apiToken',
+  OAUTH = 'oauth',
+  USERNAME_PASSWORD = 'userNamePassword',
+  GCP_WORKLOAD_IDENTITY_FEDERATION = 'gcpWorkloadIdentityFederation',
+  MIDDLE_TIER_USERNAME_PASSWORD = 'middleTierUserNamePassword',
+  TRINO_DELEGATED_KERBEROS = 'TrinoDelegatedKerberosAuth',
 }
 
 export class RelationalDatabaseConnectionValueState extends ConnectionValueState {
@@ -121,7 +123,6 @@ export class RelationalDatabaseConnectionValueState extends ConnectionValueState
   localMode = false;
   selectedTab = RELATIONAL_DATABASE_TAB_TYPE.GENERAL;
   postProcessorState: PostProcessorEditorState | undefined;
-
   constructor(
     editorStore: EditorStore,
     connection: RelationalDatabaseConnection,
@@ -131,13 +132,12 @@ export class RelationalDatabaseConnectionValueState extends ConnectionValueState
       localMode: observable,
       selectedTab: observable,
       postProcessorState: observable,
-      selectedDatasourceSpecificationType: computed,
-      selectedAuthenticationStrategyType: computed,
+      selectedValidDatasources: computed,
+      connection: observable,
       setLocalMode: action,
       setSelectedTab: action,
       selectPostProcessor: action,
     });
-
     this.connection = connection;
   }
 
@@ -188,8 +188,9 @@ export class RelationalDatabaseConnectionValueState extends ConnectionValueState
     return `${this.connection.type} connection`;
   }
 
-  get selectedDatasourceSpecificationType(): string | undefined {
-    const spec = this.connection.datasourceSpecification;
+  selectedDatasourceSpecificationType(
+    spec: DatasourceSpecification,
+  ): string | undefined {
     if (spec instanceof StaticDatasourceSpecification) {
       return CORE_DATASOURCE_SPEC_TYPE.STATIC;
     } else if (spec instanceof EmbeddedH2DatasourceSpecification) {
@@ -225,6 +226,42 @@ export class RelationalDatabaseConnectionValueState extends ConnectionValueState
       }
     }
     return undefined;
+  }
+
+  get selectedValidDatasources(): string[] {
+    return (
+      this.editorStore.graphState.findRelationalDatabaseTypeConfiguration(
+        this.connection.type,
+      )?.compatibleDataSources ??
+      (Object.values(CORE_DATASOURCE_SPEC_TYPE) as string[]).concat(
+        this.editorStore.pluginManager
+          .getApplicationPlugins()
+          .flatMap(
+            (plugin) =>
+              (
+                plugin as STO_Relational_LegendStudioApplicationPlugin_Extension
+              ).getExtraDatasourceSpecificationTypes?.() ?? [],
+          ),
+      )
+    );
+  }
+
+  get selectedValidAuthenticationStrategies(): string[] {
+    return (
+      this.editorStore.graphState.findRelationalDatabaseTypeConfiguration(
+        this.connection.type,
+      )?.compatibleAuthStrategies ??
+      (Object.values(CORE_AUTHENTICATION_STRATEGY_TYPE) as string[]).concat(
+        this.editorStore.pluginManager
+          .getApplicationPlugins()
+          .flatMap(
+            (plugin) =>
+              (
+                plugin as STO_Relational_LegendStudioApplicationPlugin_Extension
+              ).getExtraAuthenticationStrategyTypes?.() ?? [],
+          ),
+      )
+    );
   }
 
   changeDatasourceSpec(type: string): void {
@@ -314,8 +351,9 @@ export class RelationalDatabaseConnectionValueState extends ConnectionValueState
     );
   }
 
-  get selectedAuthenticationStrategyType(): string | undefined {
-    const auth = this.connection.authenticationStrategy;
+  selectedAuthenticationStrategyType(
+    auth: AuthenticationStrategy,
+  ): string | undefined {
     if (auth instanceof DelegatedKerberosAuthenticationStrategy) {
       return CORE_AUTHENTICATION_STRATEGY_TYPE.DELEGATED_KERBEROS;
     } else if (auth instanceof DefaultH2AuthenticationStrategy) {

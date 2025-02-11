@@ -32,11 +32,15 @@ import {
   assertType,
   StopWatch,
   filterByType,
+  assertTrue,
 } from '@finos/legend-shared';
 import { ElementEditorState } from './ElementEditorState.js';
 import {
   type CompilationError,
   type PackageableElement,
+  type ExecutionResult,
+  type RawExecutionPlan,
+  type ExecutionResultWithMetadata,
   GRAPH_MANAGER_EVENT,
   LAMBDA_PIPE,
   ParserError,
@@ -44,13 +48,13 @@ import {
   RawLambda,
   buildSourceInformationSourceId,
   isStubbed_PackageableElement,
-  type ExecutionResult,
-  type RawExecutionPlan,
   reportGraphAnalytics,
   buildLambdaVariableExpressions,
   VariableExpression,
   observe_ValueSpecification,
   generateFunctionPrettyName,
+  RawVariableExpression,
+  type FunctionActivator,
 } from '@finos/legend-graph';
 import {
   ExecutionPlanState,
@@ -63,12 +67,15 @@ import {
   buildExecutionParameterValues,
   getExecutionQueryFromRawLambda,
 } from '@finos/legend-query-builder';
-import { FunctionActivatorBuilderState } from './FunctionActivatorBuilderState.js';
+import { FunctionActivatorState } from './FunctionActivatorState.js';
+import { FunctionTestableState } from './function-activator/testable/FunctionTestableState.js';
 
 export enum FUNCTION_EDITOR_TAB {
   DEFINITION = 'DEFINITION',
   TAGGED_VALUES = 'TAGGED_VALUES',
   STEREOTYPES = 'STEREOTYPES',
+  TEST_SUITES = 'TEST_SUITES',
+  LAMBDAS = 'LAMBDAS',
 }
 
 export class FunctionDefinitionEditorState extends LambdaEditorState {
@@ -122,10 +129,11 @@ export class FunctionDefinitionEditorState extends LambdaEditorState {
     }
   }
 
-  *convertLambdaObjectToGrammarString(
-    pretty: boolean,
-    firstLoad?: boolean,
-  ): GeneratorFn<void> {
+  *convertLambdaObjectToGrammarString(options?: {
+    pretty?: boolean | undefined;
+    preserveCompilationError?: boolean | undefined;
+    firstLoad?: boolean | undefined;
+  }): GeneratorFn<void> {
     if (!isStubbed_PackageableElement(this.functionElement)) {
       this.isConvertingFunctionBodyToString = true;
       try {
@@ -138,7 +146,7 @@ export class FunctionDefinitionEditorState extends LambdaEditorState {
         const isolatedLambdas =
           (yield this.editorStore.graphManagerState.graphManager.lambdasToPureCode(
             lambdas,
-            pretty,
+            options?.pretty,
           )) as Map<string, string>;
         const grammarText = isolatedLambdas.get(this.lambdaId);
         if (grammarText) {
@@ -162,8 +170,10 @@ export class FunctionDefinitionEditorState extends LambdaEditorState {
         }
         // `firstLoad` flag is used in the first rendering of the function editor (in a `useEffect`)
         // This flag helps block editing while the JSON is converting to text and to avoid reseting parser/compiler error in reveal error
-        if (!firstLoad) {
-          this.clearErrors();
+        if (!options?.firstLoad) {
+          this.clearErrors({
+            preserveCompilationError: options?.preserveCompilationError,
+          });
         }
         this.isConvertingFunctionBodyToString = false;
       } catch (error) {
@@ -238,7 +248,8 @@ export class FunctionParametersState extends LambdaParametersState {
 
 export class FunctionEditorState extends ElementEditorState {
   readonly functionDefinitionEditorState: FunctionDefinitionEditorState;
-  readonly activatorBuilderState: FunctionActivatorBuilderState;
+  readonly activatorPromoteState: FunctionActivatorState;
+  readonly functionTestableEditorState: FunctionTestableState;
 
   selectedTab: FUNCTION_EDITOR_TAB;
 
@@ -247,7 +258,7 @@ export class FunctionEditorState extends ElementEditorState {
   executionResult?: ExecutionResult | undefined; // NOTE: stored as lossless JSON string
   executionPlanState: ExecutionPlanState;
   parametersState: FunctionParametersState;
-  funcRunPromise: Promise<ExecutionResult> | undefined = undefined;
+  funcRunPromise: Promise<ExecutionResultWithMetadata> | undefined = undefined;
 
   constructor(editorStore: EditorStore, element: PackageableElement) {
     super(editorStore, element);
@@ -268,6 +279,7 @@ export class FunctionEditorState extends ElementEditorState {
       generatePlan: flow,
       handleRunFunc: flow,
       cancelFuncRun: flow,
+      updateFunctionWithQuery: flow,
     });
 
     assertType(
@@ -280,12 +292,13 @@ export class FunctionEditorState extends ElementEditorState {
       element,
       this.editorStore,
     );
-    this.activatorBuilderState = new FunctionActivatorBuilderState(this);
+    this.activatorPromoteState = new FunctionActivatorState(this);
     this.executionPlanState = new ExecutionPlanState(
       this.editorStore.applicationStore,
       this.editorStore.graphManagerState,
     );
     this.parametersState = new FunctionParametersState(this);
+    this.functionTestableEditorState = new FunctionTestableState(this);
   }
 
   override get label(): string {
@@ -300,6 +313,15 @@ export class FunctionEditorState extends ElementEditorState {
       this.element,
       ConcreteFunctionDefinition,
       'Element inside function editor state must be a function',
+    );
+  }
+
+  get activators(): FunctionActivator[] {
+    const allActivators =
+      this.editorStore.graphManagerState.graph.functionActivators;
+    return allActivators.filter(
+      (activator: FunctionActivator) =>
+        activator.function.value === this.element,
     );
   }
 
@@ -332,6 +354,32 @@ export class FunctionEditorState extends ElementEditorState {
     this.functionDefinitionEditorState.setCompilationError(undefined);
   }
 
+  *updateFunctionWithQuery(val: RawLambda): GeneratorFn<void> {
+    const lambdaParam = val.parameters ? (val.parameters as object[]) : [];
+    const parameters = lambdaParam
+      .map((param) =>
+        this.editorStore.graphManagerState.graphManager.buildRawValueSpecification(
+          param,
+          this.editorStore.graphManagerState.graph,
+        ),
+      )
+      .map((rawValueSpec) =>
+        guaranteeType(rawValueSpec, RawVariableExpression),
+      );
+    assertTrue(
+      Array.isArray(val.body),
+      `Query body expected to be a list of expressions`,
+    );
+    this.functionElement.expressionSequence = val.body as object[];
+    this.functionElement.parameters = parameters;
+    yield flowResult(
+      this.functionDefinitionEditorState.convertLambdaObjectToGrammarString({
+        pretty: true,
+        firstLoad: true,
+      }),
+    );
+  }
+
   reprocess(
     newElement: ConcreteFunctionDefinition,
     editorStore: EditorStore,
@@ -352,7 +400,9 @@ export class FunctionEditorState extends ElementEditorState {
     this.executionResult = executionResult;
   };
 
-  setFuncRunPromise = (promise: Promise<ExecutionResult> | undefined): void => {
+  setFuncRunPromise = (
+    promise: Promise<ExecutionResultWithMetadata> | undefined,
+  ): void => {
     this.funcRunPromise = promise;
   };
 
@@ -417,7 +467,7 @@ export class FunctionEditorState extends ElementEditorState {
             rawPlan,
             this.editorStore.graphManagerState.graph,
           );
-        this.executionPlanState.setPlan(plan);
+        this.executionPlanState.initialize(plan);
       } catch {
         // do nothing
       }
@@ -500,9 +550,9 @@ export class FunctionEditorState extends ElementEditorState {
         report,
       );
       this.setFuncRunPromise(promise);
-      const result = (yield promise) as ExecutionResult;
+      const result = (yield promise) as ExecutionResultWithMetadata;
       if (this.funcRunPromise === promise) {
-        this.setExecutionResult(result);
+        this.setExecutionResult(result.executionResult);
         this.parametersState.setParameters([]);
         // report
         report.timings =

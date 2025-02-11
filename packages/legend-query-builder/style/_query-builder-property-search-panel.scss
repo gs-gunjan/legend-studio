@@ -19,16 +19,13 @@
 .query-builder-property-search-panel {
   height: 50vh;
   width: 40vw;
+  max-width: 1000px;
 
   // make sure we cancel the effect of the `pointer-events: none` set
   // on the container of the panel so we could interact with the panel
   pointer-events: all;
 
   &__container {
-    // NOTE: since we use a popover for the panel, we need to
-    // disable click-away trap so we could mimic the behavior of
-    // popper. See the note on the usage of popover for virtual
-    // assistant panel for more details
     pointer-events: none;
 
     &__root {
@@ -40,28 +37,39 @@
     }
   }
 
-  &__node__container:hover {
-    background: var(--color-dark-blue-shade-100);
+  &__node__container {
+    height: fit-content;
+    border: 1px solid var(--color-dark-blue-shade-100);
 
-    svg {
-      color: var(--color-light-grey-400);
+    &:hover {
+      background: var(--color-dark-blue-shade-100);
+
+      svg {
+        color: var(--color-light-grey-400);
+      }
     }
   }
 
   &__content {
-    height: calc(100% - 4.4rem);
+    height: 100%;
     overflow-y: auto;
   }
 
-  &__filter__element {
-    @include flexVCenter;
-
-    cursor: pointer;
+  &__node__icon {
+    width: 5rem;
+    min-width: 5rem;
   }
 
-  &__node__icon {
-    width: 4rem;
-    min-width: 4rem;
+  &__expand-icon {
+    @include flexCenter;
+
+    width: 1.7rem;
+    min-width: 1.7rem;
+    height: 1.4rem;
+
+    svg {
+      color: var(--color-light-grey-200);
+    }
   }
 
   &__type-icon {
@@ -72,36 +80,47 @@
     height: 1.4rem;
   }
 
-  &__node__label {
-    @include ellipsisTextOverflow;
+  &__node__content {
+    width: calc(100% - 10rem);
+  }
 
-    height: 2rem;
-    line-height: 2rem;
+  &__node__label {
+    height: fit-content;
+    padding-top: 0.25rem;
+    line-height: 1.75rem;
     min-width: 0;
     color: var(--color-light-grey-400);
     user-select: none;
+    white-space: normal;
+
+    &--highlight {
+      color: var(--color-light-grey-100);
+      font-weight: bold;
+    }
   }
 
-  &__node__label--with-action {
-    width: calc(100% - 2rem);
-  }
+  &__node__doc {
+    @include ellipsisTextOverflow;
 
-  &__node__label__multiple {
-    display: inline-flex;
-    font-weight: 700;
-    font-size: 1.6rem;
-    font-family: 'Roboto Mono', monospace;
     height: 2rem;
-    line-height: 2rem;
-    margin-left: 0.5rem;
-    color: var(--color-yellow-200);
-    vertical-align: text-top;
+    line-height: 1.8rem;
+    font-size: 1.2rem;
+    min-width: 0;
+    color: var(--color-dark-grey-400);
+    user-select: none;
+
+    &--highlight {
+      color: var(--color-dark-grey-500);
+      font-weight: bold;
+    }
   }
 
   &__node__actions {
     display: flex;
     height: 2rem;
     padding-right: 0.5rem;
+    width: 5rem;
+    min-width: 5rem;
   }
 
   &__node__action {
@@ -125,7 +144,7 @@
   }
 
   &__node__info {
-    cursor: help;
+    cursor: pointer;
   }
 
   &__header {
@@ -141,99 +160,6 @@
     height: 2.8rem;
     width: 2.8rem;
     margin-left: 0.5rem;
-  }
-
-  &__input {
-    font-size: 1.3rem;
-    height: 2.8rem;
-    padding-right: 2.8rem;
-    padding-left: 1rem;
-    width: 100%;
-    background: var(--color-dark-grey-85);
-    border-radius: 0.2rem;
-    border: 0.1rem solid var(--color-dark-grey-200);
-
-    &__container {
-      @include flexCenter;
-
-      position: relative;
-      height: 2.8rem;
-      width: 100%;
-    }
-
-    &--searching {
-      padding-right: 9rem; // account for the count badge
-    }
-
-    &__search__count {
-      @include flexCenter;
-
-      position: absolute;
-      right: 5.3rem;
-      border-radius: 0.8rem;
-      height: 1.6rem;
-      padding: 0 0.5rem;
-      font-size: 1.1rem;
-      font-weight: 700;
-      background: var(--color-yellow-100);
-      color: var(--color-dark-grey-280);
-      user-select: none;
-      cursor: default;
-    }
-
-    &__search__icon {
-      @include flexCenter;
-
-      position: absolute;
-      right: 0.3rem;
-      height: 2.8rem;
-      width: 2.8rem;
-
-      svg {
-        color: var(--color-light-shade-100);
-      }
-    }
-
-    &__search__config__trigger {
-      @include flexCenter;
-
-      position: absolute;
-      right: 3.1rem;
-      height: 2.8rem;
-      width: 1.8rem;
-      cursor: pointer;
-
-      svg {
-        color: var(--color-dark-grey-400);
-      }
-
-      &--toggled svg,
-      &:hover svg {
-        color: var(--color-dark-grey-500);
-      }
-
-      &--active svg,
-      &--active:hover svg {
-        color: var(--color-blue-150);
-      }
-    }
-
-    &__clear-btn {
-      @include flexCenter;
-
-      position: absolute;
-      right: 0.3rem;
-      height: 2.8rem;
-      width: 2.8rem;
-
-      svg {
-        color: var(--color-dark-grey-400);
-      }
-
-      &:hover svg {
-        color: var(--color-dark-grey-500);
-      }
-    }
   }
 
   &__form {
@@ -252,15 +178,10 @@
       cursor: default;
     }
 
-    &__section__toggler {
+    &__section__toggler__btn {
       @include flexVCenter;
 
-      cursor: pointer;
-    }
-
-    &__section__toggler__btn {
       align-self: flex-start;
-      padding-top: 0.2rem;
 
       svg {
         font-size: 2rem;
@@ -276,6 +197,13 @@
       &[disabled]:hover svg {
         cursor: not-allowed;
         color: var(--color-dark-grey-250);
+      }
+
+      &__container {
+        @include flexVCenter;
+
+        padding-top: 0.4rem;
+        justify-content: space-between;
       }
     }
 
@@ -298,19 +226,48 @@
     }
 
     &__section__toggler__prompt {
-      word-break: break-word;
+      word-break: normal;
+      overflow-wrap: anywhere;
       margin-left: 0.8rem;
       color: var(--color-light-grey-400);
-      line-height: 2rem;
+      height: 2.2rem;
+      line-height: 2.4rem;
       cursor: pointer;
+    }
+
+    &__section__toggler__only-btn {
+      color: var(--color-blue-40);
+      font-size: 1.2rem;
+      height: 2.2rem;
+      line-height: 2.2rem;
+
+      &:hover {
+        text-decoration: underline;
+      }
     }
   }
 
-  &__config,
   &__results {
     height: 100%;
-    padding: 1rem;
     overflow-y: auto;
+  }
+
+  &__config {
+    padding: 1rem;
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  &__search-mode__options {
+    padding: 0;
+
+    .mui-radio-group__group {
+      height: fit-content;
+
+      .mui-radio-group__group__item__radio-btn--checked svg {
+        color: var(--color-blue-150);
+      }
+    }
   }
 
   &__result-placeholder {
@@ -325,6 +282,17 @@
     &__placeholder {
       color: var(--color-dark-grey-300);
       margin-top: 1rem;
+    }
+  }
+
+  &__tagged-values__tooltip {
+    display: inline-flex;
+    margin-left: 0.5rem;
+    color: var(--color-dark-grey-500);
+    cursor: default;
+
+    &:hover {
+      color: var(--color-light-grey-400);
     }
   }
 }

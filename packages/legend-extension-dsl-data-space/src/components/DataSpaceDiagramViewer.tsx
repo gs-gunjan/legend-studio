@@ -23,7 +23,7 @@ import {
   ContextMenu,
   CustomSelectorInput,
   DescriptionIcon,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentDivider,
   MenuContentItem,
@@ -38,6 +38,7 @@ import {
   ZoomOutIcon,
   clsx,
   useResizeDetector,
+  createFilter,
 } from '@finos/legend-art';
 import { type DataSpaceViewerState } from '../stores/DataSpaceViewerState.js';
 import { observer } from 'mobx-react-lite';
@@ -50,7 +51,7 @@ import {
   DiagramRenderer,
 } from '@finos/legend-extension-dsl-diagram/application';
 import { DataSpaceWikiPlaceholder } from './DataSpacePlaceholder.js';
-import { getNonNullableEntry } from '@finos/legend-shared';
+import { at } from '@finos/legend-shared';
 import { DataSpaceMarkdownTextViewer } from './DataSpaceMarkdownTextViewer.js';
 import { useCommands } from '@finos/legend-application';
 import {
@@ -67,16 +68,16 @@ const DataSpaceDiagramCanvas = observer(
       dataSpaceViewerState: DataSpaceViewerState;
       diagram: Diagram;
     }
-  >(function DataSpaceDiagramCanvas(props, ref) {
+  >(function DataSpaceDiagramCanvas(props, _ref) {
     const { dataSpaceViewerState, diagram } = props;
     const diagramViewerState = dataSpaceViewerState.diagramViewerState;
-    const diagramCanvasRef = ref as React.MutableRefObject<HTMLDivElement>;
+    const ref = _ref as React.RefObject<HTMLDivElement>;
     const descriptionText = diagramViewerState.currentDiagram?.description;
 
     const { width, height } = useResizeDetector<HTMLDivElement>({
       refreshMode: 'debounce',
       refreshRate: 50,
-      targetRef: diagramCanvasRef,
+      targetRef: ref,
     });
 
     useEffect(() => {
@@ -84,11 +85,11 @@ const DataSpaceDiagramCanvas = observer(
     }, [diagramViewerState, diagramViewerState.currentDiagram]);
 
     useEffect(() => {
-      const renderer = new DiagramRenderer(diagramCanvasRef.current, diagram);
+      const renderer = new DiagramRenderer(ref.current, diagram);
       diagramViewerState.setDiagramRenderer(renderer);
       diagramViewerState.setupDiagramRenderer();
       renderer.render({ initial: true });
-    }, [diagramCanvasRef, diagramViewerState, diagram]);
+    }, [ref, diagramViewerState, diagram]);
 
     useEffect(() => {
       if (diagramViewerState.isDiagramRendererInitialized) {
@@ -202,7 +203,7 @@ const DataSpaceDiagramCanvas = observer(
           </div>
         )}
         <div
-          ref={diagramCanvasRef}
+          ref={ref}
           className={clsx(
             'diagram-canvas',
             diagramViewerState.diagramCursorClass,
@@ -235,6 +236,7 @@ const buildDiagramOption = (
 const DataSpaceDiagramViewerHeader = observer(
   (props: { dataSpaceViewerState: DataSpaceViewerState }) => {
     const { dataSpaceViewerState } = props;
+    const applicationStore = dataSpaceViewerState.applicationStore;
     const diagramViewerState = dataSpaceViewerState.diagramViewerState;
     const diagramOptions =
       dataSpaceViewerState.dataSpaceAnalysisResult.diagrams.map(
@@ -248,6 +250,11 @@ const DataSpaceDiagramViewerHeader = observer(
         diagramViewerState.setCurrentDiagram(option.value);
       }
     };
+    const diagramFilterOption = createFilter({
+      ignoreCase: true,
+      ignoreAccents: false,
+      stringify: (option: { data: DiagramOption }) => option.data.value.title,
+    });
     const createModeSwitcher =
       (
         editMode: DIAGRAM_INTERACTION_MODE,
@@ -275,7 +282,11 @@ const DataSpaceDiagramViewerHeader = observer(
             onChange={onDiagramOptionChange}
             value={selectedDiagramOption}
             placeholder="Search for a diagram"
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
+            filterOption={diagramFilterOption}
           />
           <div className="data-space__viewer__diagram-viewer__header__navigation__pager">
             <input
@@ -293,7 +304,7 @@ const DataSpaceDiagramViewerHeader = observer(
                   return;
                 }
                 diagramViewerState.setCurrentDiagram(
-                  getNonNullableEntry(
+                  at(
                     dataSpaceViewerState.dataSpaceAnalysisResult.diagrams,
                     value - 1,
                   ),
@@ -428,7 +439,7 @@ const DataSpaceDiagramViewerHeader = observer(
                 </button>
               </div>
               <div className="data-space__viewer__diagram-viewer__header__group__separator" />
-              <DropdownMenu
+              <ControlledDropdownMenu
                 className="data-space__viewer__diagram-viewer__header__group data-space__viewer__diagram-viewer__header__dropdown"
                 title="Zoom..."
                 content={
@@ -463,7 +474,7 @@ const DataSpaceDiagramViewerHeader = observer(
                 <div className="data-space__viewer__diagram-viewer__header__dropdown__trigger data-space__viewer__diagram-viewer__header__zoomer__dropdown__trigger">
                   <CaretDownIcon />
                 </div>
-              </DropdownMenu>
+              </ControlledDropdownMenu>
             </>
           )}
         </div>
@@ -601,7 +612,7 @@ export const DataSpaceDiagramViewer = observer(
               </div>
             </div>
           )}
-          {analysisResult.diagrams.length <= 0 && (
+          {!analysisResult.diagrams.length && (
             <DataSpaceWikiPlaceholder message="(not specified)" />
           )}
         </div>

@@ -17,6 +17,7 @@
 import {
   LambdaFunction,
   type Class,
+  type Type,
   type GraphManagerState,
   type RawLambda,
   type SetImplementation,
@@ -44,6 +45,8 @@ import {
   getAllClassDerivedProperties,
   PropertyGraphFetchTree,
   PropertyExplicitReference,
+  type ObserverContext,
+  Database,
 } from '@finos/legend-graph';
 import {
   buildGetAllFunction,
@@ -60,8 +63,11 @@ import {
 import {
   assertErrorThrown,
   assertTrue,
+  filterByType,
   guaranteeNonNullable,
 } from '@finos/legend-shared';
+import type { DSL_Data_LegendStudioApplicationPlugin_Extension } from '../../../../../extensions/DSL_Data_LegendStudioApplicationPlugin_Extension.js';
+import { testSuite_addTest } from '../../../../../graph-modifier/Testable_GraphModifierHelper.js';
 
 export const createGraphFetchRawLambda = (
   mainClass: Class,
@@ -88,7 +94,7 @@ export const createGraphFetchRawLambda = (
 };
 
 export const createStoreBareModelStoreData = (
-  _class: Class,
+  _class: Type,
   editorStore: EditorStore,
 ): StoreTestData => {
   const modelStoreData = createBareModelStoreData(_class, editorStore);
@@ -98,6 +104,27 @@ export const createStoreBareModelStoreData = (
     ModelStore.INSTANCE,
   );
   return testData;
+};
+
+export const isRelationalStoreTestData = (val: StoreTestData): boolean =>
+  val.store.value instanceof Database;
+
+export const isRelationalMappingTest = (val: MappingTest): boolean => {
+  if (!val.storeTestData.length) {
+    return false;
+  }
+  return val.storeTestData.some((e) => isRelationalStoreTestData(e));
+};
+
+export const isRelationalMappingTestSuite = (
+  val: MappingTestSuite,
+): boolean => {
+  if (!val.tests.length) {
+    return false;
+  }
+  return val.tests
+    .filter(filterByType(MappingTest))
+    .some((e) => isRelationalMappingTest(e));
 };
 
 export const generateStoreTestDataFromSetImpl = (
@@ -137,13 +164,28 @@ export const generateStoreTestDataFromSetImpl = (
       return createStoreBareModelStoreData(srcClass.value, editorStore);
     }
   }
+  const extraStoreDataCreators = editorStore.pluginManager
+    .getApplicationPlugins()
+    .flatMap(
+      (plugin) =>
+        (
+          plugin as DSL_Data_LegendStudioApplicationPlugin_Extension
+        ).getExtraStoreTestDataCreators?.() ?? [],
+    );
+  for (const creator of extraStoreDataCreators) {
+    const embeddedData = creator(setImpl);
+    if (embeddedData) {
+      return embeddedData;
+    }
+  }
   return undefined;
 };
 
 export const createBareMappingTest = (
   id: string,
   storeTestData: StoreTestData | undefined,
-  suite?: MappingTestSuite | undefined,
+  observerContext: ObserverContext,
+  suite: MappingTestSuite,
 ): MappingTest => {
   const mappingTest = new MappingTest();
   mappingTest.id = id;
@@ -151,10 +193,10 @@ export const createBareMappingTest = (
   mappingTest.assertions = [
     createDefaultEqualToJSONTestAssertion(DEFAULT_TEST_ASSERTION_ID),
   ];
-  if (suite) {
-    mappingTest.__parent = suite;
-    suite.tests.push(mappingTest);
-  }
+
+  mappingTest.__parent = suite;
+  testSuite_addTest(suite, mappingTest, observerContext);
+
   const assertion = createDefaultEqualToJSONTestAssertion(`expectedAssertion`);
   mappingTest.assertions = [assertion];
   assertion.parentTest = mappingTest;

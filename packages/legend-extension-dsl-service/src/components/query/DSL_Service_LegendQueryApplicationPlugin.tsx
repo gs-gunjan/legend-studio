@@ -14,100 +14,122 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../package.json';
+import packageJson from '../../../package.json' with { type: 'json' };
 import {
-  type QueryEditorActionConfiguration,
   LegendQueryApplicationPlugin,
   ExistingQueryEditorStore,
+  QueryBuilderActionConfig_QueryApplication,
 } from '@finos/legend-application-query';
-import { ArrowCircleUpIcon } from '@finos/legend-art';
+import { ArrowCircleUpIcon, RocketIcon } from '@finos/legend-art';
 import { generateQueryProductionizerRoute } from '../../__lib__/studio/DSL_Service_LegendStudioNavigation.js';
 import { StoreProjectData } from '@finos/legend-server-depot';
 import { parseProjectIdentifier } from '@finos/legend-storage';
 import { buildUrl } from '@finos/legend-shared';
-import { ServiceRegisterAction } from './ServiceRegisterModal.js';
+import { ServiceRegisterModal } from './ServiceRegisterModal.js';
+import type { QueryBuilderMenuActionConfiguration } from '@finos/legend-query-builder';
 
 export class DSL_Service_LegendQueryApplicationPlugin extends LegendQueryApplicationPlugin {
   constructor() {
     super(packageJson.extensions.applicationQueryPlugin, packageJson.version);
   }
 
-  override getExtraQueryEditorActionConfigurations(): QueryEditorActionConfiguration[] {
+  getExtraQueryBuilderExportMenuActionConfigurations?(): QueryBuilderMenuActionConfiguration[] {
     return [
       {
-        key: 'productionize-query',
-        renderer: (editorStore, queryBuilderState) => {
-          const openQueryProductionizer = async (): Promise<void> => {
-            if (!(editorStore instanceof ExistingQueryEditorStore)) {
-              return;
-            }
-            // fetch project data
-            const project = StoreProjectData.serialization.fromJson(
-              await editorStore.depotServerClient.getProject(
-                editorStore.lightQuery.groupId,
-                editorStore.lightQuery.artifactId,
-              ),
-            );
+        key: 'export-as-productionized-query',
+        title: 'Productionize query...',
+        label: 'Productionized Query',
+        onClick: (queryBuilderState): void => {
+          if (
+            queryBuilderState.workflowState.actionConfig instanceof
+            QueryBuilderActionConfig_QueryApplication
+          ) {
+            const editorStore =
+              queryBuilderState.workflowState.actionConfig.editorStore;
+            const openQueryProductionizer = async (): Promise<void> => {
+              if (!(editorStore instanceof ExistingQueryEditorStore)) {
+                return;
+              }
+              // fetch project data
+              const project = StoreProjectData.serialization.fromJson(
+                await editorStore.depotServerClient.getProject(
+                  editorStore.lightQuery.groupId,
+                  editorStore.lightQuery.artifactId,
+                ),
+              );
 
-            // find the matching SDLC instance
-            const projectIDPrefix = parseProjectIdentifier(
-              project.projectId,
-            ).prefix;
-            const matchingSDLCEntry =
-              editorStore.applicationStore.config.studioInstances.find(
-                (entry) => entry.sdlcProjectIDPrefix === projectIDPrefix,
-              );
-            if (matchingSDLCEntry) {
-              editorStore.applicationStore.navigationService.navigator.goToAddress(
-                buildUrl([
-                  editorStore.applicationStore.config.studioApplicationUrl,
-                  generateQueryProductionizerRoute(editorStore.lightQuery.id),
-                ]),
-                { ignoreBlocking: true },
-              );
-            } else {
-              editorStore.applicationStore.notificationService.notifyWarning(
-                `Can't find the corresponding SDLC instance to productionize the query`,
-              );
-            }
-          };
+              // find the matching SDLC instance
+              const projectIDPrefix = parseProjectIdentifier(
+                project.projectId,
+              ).prefix;
+              const matchingSDLCEntry =
+                editorStore.applicationStore.config.studioInstances.find(
+                  (entry) => entry.sdlcProjectIDPrefix === projectIDPrefix,
+                );
+              if (matchingSDLCEntry) {
+                editorStore.applicationStore.navigationService.navigator.goToAddress(
+                  buildUrl([
+                    editorStore.applicationStore.config.studioApplicationUrl,
+                    generateQueryProductionizerRoute(editorStore.lightQuery.id),
+                  ]),
+                  { ignoreBlocking: true },
+                );
+              } else {
+                editorStore.applicationStore.notificationService.notifyWarning(
+                  `Can't find the corresponding SDLC instance to productionize the query`,
+                );
+              }
+            };
 
-          const proceed = (): void => {
             queryBuilderState.changeDetectionState.alertUnsavedChanges(() => {
               openQueryProductionizer().catch(
                 editorStore.applicationStore.alertUnhandledError,
               );
             });
-          };
-
-          return (
-            <button
-              className="query-editor__header__action btn--dark"
-              tabIndex={-1}
-              onClick={proceed}
-              disabled={!(editorStore instanceof ExistingQueryEditorStore)}
-              title={
-                !(editorStore instanceof ExistingQueryEditorStore)
-                  ? 'Please save your query first before productionizing'
-                  : 'Productionize query...'
-              }
-            >
-              <ArrowCircleUpIcon className="query-editor__header__action__icon--productionize" />
-              <div className="query-editor__header__action__label">
-                Productionize Query
-              </div>
-            </button>
-          );
+          }
         },
+        icon: <ArrowCircleUpIcon />,
       },
       {
-        key: 'register-service',
-        renderer: (editorStore, queryBuilderState) => (
-          <ServiceRegisterAction
-            editorStore={editorStore}
-            queryBuilderState={queryBuilderState}
-          />
-        ),
+        key: 'export-as-dev-service',
+        title: 'Register query as service',
+        label: 'DEV Service',
+        onClick: (queryBuilderState): void => {
+          if (
+            queryBuilderState.workflowState.actionConfig instanceof
+            QueryBuilderActionConfig_QueryApplication
+          ) {
+            const editorStore =
+              queryBuilderState.workflowState.actionConfig.editorStore;
+            editorStore.setShowRegisterServiceModal(true);
+          }
+        },
+        icon: <RocketIcon />,
+        renderExtraComponent: (
+          queryBuilderState,
+        ): React.ReactNode | undefined => {
+          if (
+            queryBuilderState.workflowState.actionConfig instanceof
+            QueryBuilderActionConfig_QueryApplication
+          ) {
+            const editorStore =
+              queryBuilderState.workflowState.actionConfig.editorStore;
+            return (
+              <>
+                {editorStore.showRegisterServiceModal && (
+                  <ServiceRegisterModal
+                    editorStore={editorStore}
+                    onClose={(): void =>
+                      editorStore.setShowRegisterServiceModal(false)
+                    }
+                    queryBuilderState={queryBuilderState}
+                  />
+                )}
+              </>
+            );
+          }
+          return undefined;
+        },
       },
     ];
   }

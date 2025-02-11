@@ -19,7 +19,7 @@ import { observer } from 'mobx-react-lite';
 import {
   type SelectComponent,
   compareLabelFn,
-  DropdownMenu,
+  ControlledDropdownMenu,
   NonBlockingDialog,
   createFilter,
   CustomSelectorInput,
@@ -40,6 +40,7 @@ import {
 
 export const ProjectSearchCommand = observer(() => {
   const editorStore = useEditorStore();
+  const applicationStore = editorStore.applicationStore;
   const selectorRef = useRef<SelectComponent>(null);
   const closeModal = (): void => editorStore.setShowSearchElementCommand(false);
   const types = editorStore.getSupportedElementTypes();
@@ -66,8 +67,9 @@ export const ProjectSearchCommand = observer(() => {
   const filterOption = createFilter({
     ignoreCase: true,
     ignoreAccents: false,
-    stringify: (option: PackageableElementOption<PackageableElement>): string =>
-      option.value.path,
+    stringify: (option: {
+      data: PackageableElementOption<PackageableElement>;
+    }): string => option.data.value.path,
   });
   const openElement = (
     val: PackageableElementOption<PackageableElement> | null,
@@ -98,9 +100,14 @@ export const ProjectSearchCommand = observer(() => {
       classes={{ container: 'search-modal__container' }}
       PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
     >
-      <Modal darkMode={true} className="search-modal">
+      <Modal
+        darkMode={
+          !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+        }
+        className="search-modal"
+      >
         <div className="project-search-command">
-          <DropdownMenu
+          <ControlledDropdownMenu
             className="project-search-command__type"
             title="Choose Element Type..."
             content={
@@ -133,9 +140,9 @@ export const ProjectSearchCommand = observer(() => {
             <div className="project-search-command__type__selector">
               <CaretDownIcon />
             </div>
-          </DropdownMenu>
+          </ControlledDropdownMenu>
           <CustomSelectorInput
-            ref={selectorRef}
+            inputRef={selectorRef}
             className="project-search-command__input"
             options={options}
             onChange={openElement}
@@ -144,9 +151,14 @@ export const ProjectSearchCommand = observer(() => {
               elementType ? elementType.toLowerCase() : 'elements'
             } by path`}
             escapeClearsValue={true}
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
             formatOptionLabel={getPackageableElementOptionFormatter({
-              darkMode: true,
+              darkMode:
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled,
             })}
           />
         </div>

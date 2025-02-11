@@ -19,27 +19,24 @@ concurrency:
 jobs:
   check-code:
     name: Run Code Checks
-    # Disable usage of large runner on default branch of forks
-    # NOTE: temporarily disable large runner
-    # runs-on: ${{ (github.repository != 'finos/legend-studio' && github.ref == 'refs/heads/master') && 'ubuntu-latest' || 'ubuntu-latest-4-cores' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3.5.3
+        uses: actions/checkout@v4.2.2
       - name: Get Yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
       - name: Setup Yarn cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.2.0
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: ${{ runner.os }}-yarn-
       - name: Setup Node
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.2.0
         with:
-          node-version: 16
+          node-version: 21
       - name: Install dependencies
         run: yarn
       # NOTE: we need this step to build the code before linting
@@ -50,27 +47,24 @@ jobs:
 
   check-codebase-maintenance:
     name: Run Codebase Maintenance Checks
-    # Disable usage of large runner on default branch of forks
-    # NOTE: temporarily disable large runners
-    # runs-on: ${{ (github.repository != 'finos/legend-studio' && github.ref == 'refs/heads/master') && 'ubuntu-latest' || 'ubuntu-latest-4-cores' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3.5.3
+        uses: actions/checkout@v4.2.2
       - name: Get Yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
       - name: Setup Yarn cache
-        uses: actions/cache@v3.3.1
+        uses: actions/cache@v4.2.0
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: ${{ runner.os }}-yarn-
       - name: Setup Node
-        uses: actions/setup-node@v3.6.0
+        uses: actions/setup-node@v4.2.0
         with:
-          node-version: 16
+          node-version: 21
       - name: Install dependencies
         run: yarn
       - name: Check package manifests
@@ -86,5 +80,5 @@ jobs:
         env:
           # Typedoc build could consume a large amount of memory
           # See https://github.com/TypeStrong/typedoc/issues/1606
-          NODE_OPTIONS: '--max_old_space_size=4096'
+          NODE_OPTIONS: '--max-old-space-size=4096'
         run: yarn build:ts && yarn build:doc

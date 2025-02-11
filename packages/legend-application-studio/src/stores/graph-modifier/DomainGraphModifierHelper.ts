@@ -27,8 +27,6 @@ import {
   type GenericTypeReference,
   type TaggedValue,
   type StereotypeReference,
-  GenericType,
-  type Type,
   type Multiplicity,
   type Stereotype,
   type Tag,
@@ -48,7 +46,15 @@ import {
   type Unit,
   type RawLambda,
   type Association,
+  type INTERNAL__UnknownFunctionActivator,
+  type FunctionStoreTestData,
+  type ObserverContext,
+  type FunctionParameterValue,
+  type FunctionTest,
+  type FunctionTestSuite,
   type AggregationKind,
+  type EmbeddedData,
+  GenericType,
   Class,
   observe_Enum,
   observe_DerivedProperty,
@@ -61,12 +67,13 @@ import {
   observe_TaggedValue,
   observe_Constraint,
   observe_GenericType,
-  observe_Type,
   observe_Unit,
   observe_RawLambda,
   isStubbed_PackageableElement,
   getOtherAssociatedProperty,
-  type INTERNAL__UnknownFunctionActivator,
+  observe_EmbeddedData,
+  observe_FunctionTestSuite,
+  observe_FunctionParameterValue,
 } from '@finos/legend-graph';
 
 // --------------------------------------------- Packageable Element -------------------------------------
@@ -356,9 +363,9 @@ export const function_addParameter = action(
     addUniqueEntry(_func.parameters, observe_RawVariableExpression(val));
   },
 );
-export const function_setReturnType = action(
-  (_func: ConcreteFunctionDefinition, val: Type): void => {
-    packageableElementReference_setValue(_func.returnType, observe_Type(val));
+export const function_setReturnGenericType = action(
+  (_func: ConcreteFunctionDefinition, val: GenericType): void => {
+    setGenericTypeReferenceValue(_func.returnType, observe_GenericType(val));
   },
 );
 export const function_setReturnMultiplicity = action(
@@ -380,6 +387,66 @@ export const function_swapParameters = action(
 export const INTERNAL__UnknownFunctionActivator_setContent = action(
   (metamodel: INTERNAL__UnknownFunctionActivator, val: PlainObject) => {
     metamodel.content = val;
+  },
+);
+
+export const functionTestable_setEmbeddedData = action(
+  (
+    store: FunctionStoreTestData,
+    embeddedData: EmbeddedData,
+    observerContext: ObserverContext,
+  ): void => {
+    store.data = observe_EmbeddedData(embeddedData, observerContext);
+  },
+);
+
+export const functionTestable_deleteDataStore = action(
+  (suite: FunctionTestSuite, val: FunctionStoreTestData): void => {
+    deleteEntry(suite.testData ?? [], val);
+  },
+);
+
+export const function_addTestSuite = action(
+  (
+    _func: ConcreteFunctionDefinition,
+    val: FunctionTestSuite,
+    context: ObserverContext,
+  ): void => {
+    addUniqueEntry(_func.tests, observe_FunctionTestSuite(val, context));
+  },
+);
+
+export const function_setParameterValueSpec = action(
+  (parameterValue: FunctionParameterValue, val: object) => {
+    parameterValue.value = val;
+  },
+);
+
+export const function_setParameterValues = action(
+  (test: FunctionTest, values: FunctionParameterValue[]) => {
+    test.parameters = values.map(observe_FunctionParameterValue);
+  },
+);
+
+export const function_deleteParameterValue = action(
+  (test: FunctionTest, value: FunctionParameterValue) => {
+    deleteEntry(test.parameters ?? [], value);
+  },
+);
+
+export const function_addParameterValue = action(
+  (test: FunctionTest, value: FunctionParameterValue) => {
+    if (test.parameters) {
+      test.parameters.push(observe_FunctionParameterValue(value));
+    } else {
+      test.parameters = [observe_FunctionParameterValue(value)];
+    }
+  },
+);
+
+export const function_setParameterName = action(
+  (parameterValue: FunctionParameterValue, val: string) => {
+    parameterValue.name = val;
   },
 );
 

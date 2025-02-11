@@ -21,7 +21,8 @@ import type { V1_TaggedValue } from '../../model/packageableElements/domain/V1_T
 import {
   V1_stereotypePtrModelSchema,
   V1_taggedValueModelSchema,
-} from '../../transformation/pureProtocol/serializationHelpers/V1_DomainSerializationHelper.js';
+} from '../../transformation/pureProtocol/serializationHelpers/V1_CoreSerializationHelper.js';
+import type { QuerySearchSortBy } from '../../../../../action/query/QuerySearchSpecification.js';
 
 export class V1_QueryProjectCoordinates {
   groupId!: string;
@@ -35,26 +36,49 @@ export class V1_QueryProjectCoordinates {
   );
 }
 
+export class V1_QuerySearchTermSpecification {
+  searchTerm!: string;
+  exactMatchName: boolean | undefined;
+  includeOwner: boolean | undefined;
+
+  static readonly serialization = new SerializationFactory(
+    createModelSchema(V1_QuerySearchTermSpecification, {
+      searchTerm: primitive(),
+      exactMatchName: optional(primitive()),
+      includeOwner: optional(primitive()),
+    }),
+    {
+      deserializeNullAsUndefined: true,
+    },
+  );
+}
+
 export class V1_QuerySearchSpecification {
-  searchTerm?: string | undefined;
+  searchTermSpecification?: V1_QuerySearchTermSpecification | undefined;
   projectCoordinates?: V1_QueryProjectCoordinates[] | undefined;
   taggedValues?: V1_TaggedValue[] | undefined;
   stereotypes?: V1_StereotypePtr[] | undefined;
   limit?: number | undefined;
   showCurrentUserQueriesOnly?: boolean | undefined;
+  combineTaggedValuesCondition?: boolean | undefined;
+  sortByOption?: QuerySearchSortBy;
 
   static readonly serialization = new SerializationFactory(
     createModelSchema(V1_QuerySearchSpecification, {
+      combineTaggedValuesCondition: optional(primitive()),
       limit: optional(primitive()),
       projectCoordinates: optional(
         list(usingModelSchema(V1_QueryProjectCoordinates.serialization.schema)),
       ),
-      searchTerm: optional(primitive()),
+      searchTermSpecification: optional(
+        usingModelSchema(V1_QuerySearchTermSpecification.serialization.schema),
+      ),
       showCurrentUserQueriesOnly: optional(primitive()),
       stereotypes: optional(
         list(usingModelSchema(V1_stereotypePtrModelSchema)),
       ),
       taggedValues: optional(list(usingModelSchema(V1_taggedValueModelSchema))),
+      sortByOption: optional(primitive()),
     }),
     {
       deserializeNullAsUndefined: true,

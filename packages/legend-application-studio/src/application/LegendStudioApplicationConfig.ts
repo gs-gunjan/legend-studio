@@ -27,12 +27,14 @@ import {
   assertNonNullable,
   guaranteeNonEmptyString,
   SerializationFactory,
+  usingModelSchema,
 } from '@finos/legend-shared';
 import {
   LegendApplicationConfig,
   type LegendApplicationConfigurationInput,
   type LegendApplicationConfigurationData,
 } from '@finos/legend-application';
+import { QueryBuilderConfig } from '@finos/legend-query-builder';
 
 export class ServiceRegistrationEnvironmentConfig {
   env!: string;
@@ -60,6 +62,12 @@ class LegendStudioApplicationCoreOptions {
   projectCreationGroupIdSuggestion = 'org.finos.legend.*';
 
   /**
+   * This flag is for any feature that is not production ready.
+   * Used to iterate over features until they are ready for production.
+   */
+  NonProductionFeatureFlag = false;
+
+  /**
    * Indicates if we should keep section index and do not rewrite/flatten the paths shortened by section
    * imports.
    *
@@ -69,12 +77,6 @@ class LegendStudioApplicationCoreOptions {
   TEMPORARY__preserveSectionIndex = false;
 
   /**
-   * This flag can be removed when the support for function activator is official
-   * See https://github.com/finos/legend-engine/pull/1815
-   */
-  TEMPORARY__enableFunctionActivatorSupport = false;
-
-  /**
    * This flag can be removed when the support for local connection is official
    * Right now it's done to support the SnowflakeApp creation demo
    * See https://github.com/finos/legend-engine/pull/1819
@@ -82,21 +84,10 @@ class LegendStudioApplicationCoreOptions {
   TEMPORARY__enableLocalConnectionBuilder = false;
 
   /**
-   * This flag can be removed when the support for raw SQL execution is official
-   * See https://github.com/finos/legend-engine/pull/1841
+   * This flag enables creating a sandbox project via engine.
+   * Remove this flag once workflow is finalized.
    */
-  TEMPORARY__enableRawSQLExecutor = false;
-
-  /**
-   * This flag can be removed when the support the new service registration input collector mechanism is official
-   */
-  TEMPORARY__enableNewServiceRegistrationInputCollectorMechanism = false;
-
-  /**
-   * Indicates whether we should render the new mapping testable editor or the deprecated legacy editor.
-   * This flag will be removed once the editor for testable editor is agreed on.
-   */
-  TEMPORARY__enableMappingTestableEditor = false;
+  TEMPORARY__enableCreationOfSandboxProjects = false;
 
   /**
    * Provides service registration environment configs.
@@ -110,17 +101,24 @@ class LegendStudioApplicationCoreOptions {
   TEMPORARY__serviceRegistrationConfig: ServiceRegistrationEnvironmentConfig[] =
     [];
 
+  /**
+   * Config specific to query builder
+   */
+  queryBuilderConfig: QueryBuilderConfig | undefined;
+
   private static readonly serialization = new SerializationFactory(
     createModelSchema(LegendStudioApplicationCoreOptions, {
       enableGraphBuilderStrictMode: optional(primitive()),
       projectCreationGroupIdSuggestion: optional(primitive()),
       TEMPORARY__preserveSectionIndex: optional(primitive()),
-      TEMPORARY__enableFunctionActivatorSupport: optional(primitive()),
-      TEMPORARY__enableRawSQLExecutor: optional(primitive()),
+      TEMPORARY__enableCreationOfSandboxProjects: optional(primitive()),
       TEMPORARY__enableLocalConnectionBuilder: optional(primitive()),
-      TEMPORARY__enableMappingTestableEditor: optional(primitive()),
+      NonProductionFeatureFlag: optional(primitive()),
       TEMPORARY__serviceRegistrationConfig: list(
         object(ServiceRegistrationEnvironmentConfig),
+      ),
+      queryBuilderConfig: optional(
+        usingModelSchema(QueryBuilderConfig.serialization.schema),
       ),
     }),
   );
@@ -143,6 +141,8 @@ export interface LegendStudioApplicationConfigurationData
     queryUrl?: string;
   };
   query?: { url: string };
+  showcase?: { url: string };
+  pct?: { reportUrl: string };
 }
 
 export class LegendStudioApplicationConfig extends LegendApplicationConfig {
@@ -152,8 +152,10 @@ export class LegendStudioApplicationConfig extends LegendApplicationConfig {
   readonly engineQueryServerUrl?: string | undefined;
   readonly depotServerUrl: string;
   readonly sdlcServerUrl: string;
-  readonly SDLCServerBaseHeaders?: RequestHeaders | undefined;
-  readonly queryApplicationUrl: string | undefined;
+  readonly sdlcServerBaseHeaders?: RequestHeaders | undefined;
+  readonly queryApplicationUrl?: string | undefined;
+  readonly showcaseServerUrl?: string | undefined;
+  readonly pctReportUrl?: string | undefined;
 
   constructor(
     input: LegendApplicationConfigurationInput<LegendStudioApplicationConfigurationData>,
@@ -200,12 +202,26 @@ export class LegendStudioApplicationConfig extends LegendApplicationConfig {
         `Can't configure application: 'sdlc.url' field is missing or empty`,
       ),
     );
-    this.SDLCServerBaseHeaders = input.configData.sdlc.baseHeaders;
+    this.sdlcServerBaseHeaders = input.configData.sdlc.baseHeaders;
 
     // query
     if (input.configData.query?.url) {
       this.queryApplicationUrl = LegendApplicationConfig.resolveAbsoluteUrl(
         input.configData.query.url,
+      );
+    }
+
+    // showcase
+    if (input.configData.showcase?.url) {
+      this.showcaseServerUrl = LegendApplicationConfig.resolveAbsoluteUrl(
+        input.configData.showcase.url,
+      );
+    }
+
+    // pct
+    if (input.configData.pct?.reportUrl) {
+      this.pctReportUrl = LegendApplicationConfig.resolveAbsoluteUrl(
+        input.configData.pct.reportUrl,
       );
     }
 

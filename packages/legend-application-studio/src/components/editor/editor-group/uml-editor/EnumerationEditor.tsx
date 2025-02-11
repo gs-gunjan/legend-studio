@@ -42,7 +42,7 @@ import {
   LockIcon,
   FireIcon,
   StickArrowCircleRightIcon,
-  PanelDnDEntryDragHandle,
+  PanelEntryDragHandle,
   DragPreviewLayer,
   useDragPreviewLayer,
   PanelDropZone,
@@ -165,9 +165,9 @@ const EnumBasicEditor = observer(
         placeholder={<div className="dnd__placeholder--light"></div>}
         className="enum-basic-editor__container"
       >
-        <PanelDnDEntryDragHandle
-          dropTargetConnector={handleRef}
-          isBeingDragged={isBeingDragged}
+        <PanelEntryDragHandle
+          dragSourceConnector={handleRef}
+          isDragging={isBeingDragged}
         />
 
         <div className="enum-basic-editor">
@@ -266,7 +266,7 @@ const EnumEditor = observer(
       },
       [_enum, isReadOnly],
     );
-    const [{ isTaggedValueDragOver }, dropTaggedValueRef] = useDrop<
+    const [{ isTaggedValueDragOver }, taggedValueDropConnector] = useDrop<
       ElementDragSource,
       void,
       { isTaggedValueDragOver: boolean }
@@ -293,7 +293,7 @@ const EnumEditor = observer(
       },
       [_enum, isReadOnly],
     );
-    const [{ isStereotypeDragOver }, dropStereotypeRef] = useDrop<
+    const [{ isStereotypeDragOver }, stereotypeDropConnector] = useDrop<
       ElementDragSource,
       void,
       { isStereotypeDragOver: boolean }
@@ -358,7 +358,7 @@ const EnumEditor = observer(
             {selectedTab === UML_EDITOR_TAB.TAGGED_VALUES && (
               <PanelDropZone
                 isDragOver={isTaggedValueDragOver && !isReadOnly}
-                dropTargetConnector={dropTaggedValueRef}
+                dropTargetConnector={taggedValueDropConnector}
               >
                 <PanelContentLists>
                   <TaggedValueDragPreviewLayer />
@@ -377,7 +377,7 @@ const EnumEditor = observer(
             {selectedTab === UML_EDITOR_TAB.STEREOTYPES && (
               <PanelDropZone
                 isDragOver={isStereotypeDragOver && !isReadOnly}
-                dropTargetConnector={dropStereotypeRef}
+                dropTargetConnector={stereotypeDropConnector}
               >
                 <PanelContentLists>
                   <StereotypeDragPreviewLayer />
@@ -487,7 +487,7 @@ export const EnumerationEditor = observer(
       },
       [enumeration, isReadOnly],
     );
-    const [{ isTaggedValueDragOver }, dropTaggedValueRef] = useDrop<
+    const [{ isTaggedValueDragOver }, taggedValueDropConnector] = useDrop<
       ElementDragSource,
       void,
       { isTaggedValueDragOver: boolean }
@@ -514,7 +514,7 @@ export const EnumerationEditor = observer(
       },
       [enumeration, isReadOnly],
     );
-    const [{ isStereotypeDragOver }, dropStereotypeRef] = useDrop<
+    const [{ isStereotypeDragOver }, stereotypeDropConnector] = useDrop<
       ElementDragSource,
       void,
       { isStereotypeDragOver: boolean }
@@ -651,7 +651,7 @@ export const EnumerationEditor = observer(
                 {selectedTab === UML_EDITOR_TAB.TAGGED_VALUES && (
                   <PanelDropZone
                     isDragOver={isTaggedValueDragOver && !isReadOnly}
-                    dropTargetConnector={dropTaggedValueRef}
+                    dropTargetConnector={taggedValueDropConnector}
                   >
                     <PanelContentLists>
                       <TaggedValueDragPreviewLayer />
@@ -670,7 +670,7 @@ export const EnumerationEditor = observer(
                 {selectedTab === UML_EDITOR_TAB.STEREOTYPES && (
                   <PanelDropZone
                     isDragOver={isStereotypeDragOver && !isReadOnly}
-                    dropTargetConnector={dropStereotypeRef}
+                    dropTargetConnector={stereotypeDropConnector}
                   >
                     <PanelContentLists>
                       <StereotypeDragPreviewLayer />

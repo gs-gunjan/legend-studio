@@ -1,5 +1,165 @@
 # @finos/legend-server-sdlc
 
+## 5.3.48
+
+## 5.3.47
+
+## 5.3.46
+
+## 5.3.45
+
+## 5.3.44
+
+## 5.3.43
+
+## 5.3.42
+
+## 5.3.41
+
+## 5.3.40
+
+## 5.3.39
+
+## 5.3.38
+
+## 5.3.37
+
+## 5.3.36
+
+## 5.3.35
+
+## 5.3.34
+
+## 5.3.33
+
+## 5.3.32
+
+## 5.3.31
+
+## 5.3.30
+
+## 5.3.29
+
+## 5.3.28
+
+## 5.3.27
+
+## 5.3.26
+
+## 5.3.25
+
+## 5.3.24
+
+## 5.3.23
+
+## 5.3.22
+
+## 5.3.21
+
+## 5.3.20
+
+## 5.3.19
+
+## 5.3.18
+
+## 5.3.17
+
+## 5.3.16
+
+## 5.3.15
+
+## 5.3.14
+
+## 5.3.13
+
+## 5.3.12
+
+## 5.3.11
+
+## 5.3.10
+
+## 5.3.9
+
+## 5.3.8
+
+## 5.3.7
+
+## 5.3.6
+
+## 5.3.5
+
+## 5.3.4
+
+## 5.3.3
+
+### Patch Changes
+
+- [#2881](https://github.com/finos/legend-studio/pull/2881) [`4ae25db2e`](https://github.com/finos/legend-studio/commit/4ae25db2ee616cc1032a0bf39adc9a162e1d19b6) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add ability to create sandbox projects
+
+## 5.3.2
+
+## 5.3.1
+
+## 5.3.0
+
+### Minor Changes
+
+- [#2734](https://github.com/finos/legend-studio/pull/2734) [`21d6469f6`](https://github.com/finos/legend-studio/commit/21d6469f6f79dd237a1029d31805d893bcbe7c82) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add `runDependencyTests` to project configuration to run dependency tests.
+
+## 5.2.3
+
+## 5.2.2
+
+## 5.2.1
+
+## 5.2.0
+
+### Minor Changes
+
+- [#2555](https://github.com/finos/legend-studio/pull/2555) [`99cb86a04`](https://github.com/finos/legend-studio/commit/99cb86a04894a5fae77e3e576840c2423eac2c8d) ([@gayathrir11](https://github.com/gayathrir11)) - Support patch release
+
+## 5.1.3
+
+## 5.1.2
+
+### Patch Changes
+
+- [#2551](https://github.com/finos/legend-studio/pull/2551) [`a93c63148`](https://github.com/finos/legend-studio/commit/a93c63148c5fdb4b0802a6f42d9ba195cb55dde2) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add labels to `Review`.
+
+## 5.1.1
+
+## 5.1.0
+
+### Minor Changes
+
+- [#2544](https://github.com/finos/legend-studio/pull/2544) [`48625ea12`](https://github.com/finos/legend-studio/commit/48625ea124653fc80e592ea7dda8e98e5b43ee3a) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add SDLCServerClient project access apis to get project access role and authorizable roles.
+
+## 5.0.28
+
+## 5.0.27
+
+## 5.0.26
+
+## 5.0.25
+
+## 5.0.24
+
+## 5.0.23
+
+## 5.0.22
+
+## 5.0.21
+
+## 5.0.20
+
+## 5.0.19
+
+## 5.0.18
+
+### Patch Changes
+
+- [#2371](https://github.com/finos/legend-studio/pull/2371) [`6a1fad74c`](https://github.com/finos/legend-studio/commit/6a1fad74cae4cfafe93be9c5326fde280f241baf) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add `ProjectType` with MANAGED and EMBEDDED types to Project Configuration.
+
 ## 5.0.17
 
 ## 5.0.16

@@ -38,14 +38,24 @@ const TEST_DATA__MissingClassInDiagram = [
             lowerBound: 0,
           },
           name: 'fullName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
     },

@@ -17,19 +17,35 @@
 // application
 export * from './__lib__/QueryBuilderTelemetryHelper.js';
 export * from './__lib__/QueryBuilderEvent.js';
-
+export {
+  QueryBuilderExplorerState,
+  QueryBuilderExplorerPreviewDataState,
+} from './stores/explorer/QueryBuilderExplorerState.js';
 export { QueryBuilder_GraphManagerPreset } from './graph-manager/QueryBuilder_GraphManagerPreset.js';
-
+export { QueryBuilderConfig } from './graph-manager/QueryBuilderConfig.js';
 export { QUERY_BUILDER_TEST_ID } from './__lib__/QueryBuilderTesting.js';
+export { dragAndDrop } from './components/__test-utils__/QueryBuilderComponentTestUtils.js';
 export {
   type CheckEntitlementEditorRender,
   QueryBuilder_LegendApplicationPlugin,
 } from './components/QueryBuilder_LegendApplicationPlugin.js';
 export { QueryBuilderNavigationBlocker } from './components/QueryBuilderNavigationBlocker.js';
+export { QueryDataCubeViewer } from './components/data-cube/QueryBuilderDataCube.js';
 export { QueryBuilder } from './components/QueryBuilder.js';
 export { QUERY_BUILDER_COMPONENT_ELEMENT_ID } from './components/QueryBuilderComponentElement.js';
-export { QueryBuilderState } from './stores/QueryBuilderState.js';
-
+export {
+  type QueryableSourceInfo as QuerySDLC,
+  type QueryBuilderExtraFunctionAnalysisInfo,
+  QueryBuilderState,
+  QUERY_BUILDER_LAMBDA_WRITER_MODE,
+  INTERNAL__BasicQueryBuilderState,
+} from './stores/QueryBuilderState.js';
+export { QueryChatState } from './stores/QueryChatState.js';
+export {
+  getTDSColumnDerivedProperyFromType,
+  buildTDSSortTypeExpression,
+} from './stores/fetch-structure/tds/QueryBuilderTDSHelper.js';
+export { type ExportDataInfo } from './stores/QueryBuilderResultState.js';
 export { QueryBuilderPropertySearchState } from './stores/explorer/QueryBuilderPropertySearchState.js';
 export {
   QueryBuilderClassSelector,
@@ -37,12 +53,22 @@ export {
   getRuntimeOptionFormatter,
 } from './components/QueryBuilderSideBar.js';
 export { ClassQueryBuilderState } from './stores/workflows/ClassQueryBuilderState.js';
+export { FunctionQueryBuilderState } from './stores/workflows/FunctionQueryBuilderState.js';
 export { MappingQueryBuilderState } from './stores/workflows/MappingQueryBuilderState.js';
 export {
   type ServiceExecutionContext,
   ServiceQueryBuilderState,
 } from './stores/workflows/ServiceQueryBuilderState.js';
-export { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from './graph/QueryBuilderMetaModelConst.js';
+export {
+  TDS_COLUMN_GETTER,
+  COLUMN_SORT_TYPE,
+  QUERY_BUILDER_SUPPORTED_FUNCTIONS,
+  QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS,
+} from './graph/QueryBuilderMetaModelConst.js';
+export {
+  TEST__LegendApplicationPluginManager,
+  TEST__getGenericApplicationConfig,
+} from './stores/__test-utils__/QueryBuilderStateTestUtils.js';
 export { getQueryBuilderGraphManagerExtension } from './graph-manager/protocol/pure/QueryBuilder_PureGraphManagerExtension.js';
 export type { ServiceExecutionAnalysisResult } from './graph-manager/action/analytics/ServiceExecutionAnalysis.js';
 export type { MappingRuntimeCompatibilityAnalysisResult } from './graph-manager/action/analytics/MappingRuntimeCompatibilityAnalysis.js';
@@ -58,7 +84,22 @@ export {
   QueryBuilderDiffViewState,
   QueryBuilderChangeDetectionState,
 } from './stores/QueryBuilderChangeDetectionState.js';
-
+export { QueryBuilderResultValues } from './components/result/QueryBuilderResultPanel.js';
+export { getTDSColumnCustomizations } from './components/result/tds/QueryBuilderTDSSimpleGridResult.js';
+export { getFilterTDSColumnCustomizations } from './components/result/tds/QueryBuilderTDSGridResult.js';
+export {
+  QueryBuilderTaggedValueInfoTooltip,
+  QueryBuilderPropertyInfoTooltip,
+  QueryBuilderDerivationInfoTooltip,
+} from './components/shared/QueryBuilderPropertyInfoTooltip.js';
+export { QueryBuilderRootClassInfoTooltip } from './components/shared/QueryBuilderRootClassInfoTooltip.js';
+export {
+  renderPropertyTypeIcon,
+  checkForDeprecatedNode,
+  getQueryBuilderExplorerTreeNodeSortRank,
+  QueryBuilderSubclassInfoTooltip,
+} from './components/explorer/QueryBuilderExplorerPanel.js';
+export { QueryBuilderActionConfig } from './stores/query-workflow/QueryBuilderWorkFlowState.js';
 // ------------------------------------------- Shared components -------------------------------------------
 
 export * from './components/shared/LambdaEditor.js';
@@ -82,3 +123,14 @@ export * from './stores/QueryBuilder_LegendApplicationPlugin_Extension.js';
 
 export * from './stores/data-access/DataAccessState.js';
 export * from './components/data-access/DataAccessOverview.js';
+export * from './stores/query-workflow/QueryBuilderWorkFlowState.js';
+export * from './stores/explorer/QueryBuilderExplorerState.js';
+export * from './stores/explorer/QueryBuilderPropertySearchState.js';
+export * from './stores/explorer/QueryFunctionsExplorerState.js';
+export * from './components/filter/QueryBuilderFilterPanel.js';
+export * from './stores/filter/QueryBuilderFilterValueSpecificationBuilder.js';
+export * from './stores/QueryBuilderValueSpecificationHelper.js';
+export * from './stores/filter/QueryBuilderFilterState.js';
+export * from './stores/filter/QueryBuilderFilterStateBuilder.js';
+export * from './stores/data-cube/QueryBuilderDataCubeEngine.js';
+export * from './stores/data-cube/QueryBuilderDataCubeViewerState.js';

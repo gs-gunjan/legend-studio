@@ -16,12 +16,12 @@
 
 import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import type { ServicePureExecutionState } from '../../../../stores/editor/editor-state/element-editor-state/service/ServiceExecutionState.js';
+import { ServicePureExecutionState } from '../../../../stores/editor/editor-state/element-editor-state/service/ServiceExecutionState.js';
 import {
   Dialog,
   PanelLoadingIndicator,
   PlayIcon,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   CaretDownIcon,
   MenuContentItem,
@@ -30,15 +30,21 @@ import {
   Modal,
   ModalBody,
   ModalFooter,
+  ModalFooterButton,
   ModalHeader,
 } from '@finos/legend-art';
-import { assertErrorThrown } from '@finos/legend-shared';
+import {
+  assertErrorThrown,
+  guaranteeNonNullable,
+  returnUndefOnError,
+} from '@finos/legend-shared';
 import { flowResult } from 'mobx';
 import { useEditorStore } from '../../EditorStoreProvider.js';
 import {
-  isStubbed_PackageableElement,
-  isStubbed_RawLambda,
+  type Service,
   KeyedExecutionParameter,
+  MultiExecutionParameters,
+  PureExecution,
 } from '@finos/legend-graph';
 import {
   type QueryBuilderState,
@@ -47,20 +53,28 @@ import {
   QueryBuilderTextEditorMode,
   QueryLoaderDialog,
   ExecutionPlanViewer,
+  QueryBuilderAdvancedWorkflowState,
+  QueryBuilderActionConfig,
 } from '@finos/legend-query-builder';
 import { ProjectViewerEditorMode } from '../../../../stores/project-view/ProjectViewerEditorMode.js';
 import { useLegendStudioApplicationStore } from '../../../LegendStudioFrameworkProvider.js';
-import { SNAPSHOT_VERSION_ALIAS } from '@finos/legend-server-depot';
-import type { ProjectGAVCoordinates } from '@finos/legend-storage';
 import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+  SNAPSHOT_ALIAS,
+  SNAPSHOT_VERSION_ALIAS,
+} from '@finos/legend-server-depot';
+import type { ProjectGAVCoordinates } from '@finos/legend-storage';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 import { EXTERNAL_APPLICATION_NAVIGATION__generateServiceQueryCreatorUrl } from '../../../../__lib__/LegendStudioNavigation.js';
+import type { EditorStore } from '../../../../stores/editor/EditorStore.js';
+import { pureExecution_setFunction } from '../../../../stores/graph-modifier/DSL_Service_GraphModifierHelper.js';
+import { ServiceEditorState } from '../../../../stores/editor/editor-state/element-editor-state/service/ServiceEditorState.js';
+import { openDataCube } from '../../../../stores/editor/data-cube/LegendStudioDataCubeHelper.js';
 
 const ServiceExecutionResultViewer = observer(
   (props: { executionState: ServicePureExecutionState }) => {
     const { executionState } = props;
+    const applicationStore = executionState.editorStore.applicationStore;
     // execution
     const executionResultText = executionState.executionResultText;
     const closeExecutionResultViewer = (): void =>
@@ -76,7 +90,12 @@ const ServiceExecutionResultViewer = observer(
           paper: 'editor-modal__content',
         }}
       >
-        <Modal darkMode={true} className="editor-modal">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="editor-modal"
+        >
           <ModalHeader title="Execution Result" />
           <ModalBody>
             <CodeEditor
@@ -86,12 +105,12 @@ const ServiceExecutionResultViewer = observer(
             />
           </ModalBody>
           <ModalFooter>
-            <button
-              className="btn modal__footer__close-btn btn--dark"
+            <ModalFooterButton
+              className="modal__footer__close-btn"
               onClick={closeExecutionResultViewer}
-            >
-              Close
-            </button>
+              text="Close"
+              type="secondary"
+            />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -115,91 +134,84 @@ export const ServiceExecutionQueryEditor = observer(
       applicationStore.guardUnhandledError(async () => {
         const selectedExecutionState =
           executionState.selectedExecutionContextState;
-        if (selectedExecutionState?.executionContext.mapping === undefined) {
-          applicationStore.notificationService.notifyError(
-            'Editing query without runtime and mapping is unsupported via query builder, please leverage the text mode to edit query',
-          );
-          executionState.setOpeningQueryEditor(false);
-        } else {
-          const mapping = selectedExecutionState.executionContext.mapping.value;
-          if (!isStubbed_PackageableElement(mapping)) {
-            await flowResult(
-              embeddedQueryBuilderState.setEmbeddedQueryBuilderConfiguration({
-                setupQueryBuilderState: (): QueryBuilderState => {
-                  const queryBuilderState = new ServiceQueryBuilderState(
-                    embeddedQueryBuilderState.editorStore.applicationStore,
-                    embeddedQueryBuilderState.editorStore.graphManagerState,
-                    service,
-                    undefined,
-                    selectedExecutionState.executionContext instanceof
-                    KeyedExecutionParameter
-                      ? selectedExecutionState.executionContext.key
-                      : undefined,
-                  );
-                  queryBuilderState.initializeWithQuery(
-                    executionState.execution.func,
-                  );
-                  if (openInTextMode) {
-                    queryBuilderState.textEditorState.openModal(
-                      QueryBuilderTextEditorMode.TEXT,
-                    );
-                  }
-                  return queryBuilderState;
-                },
-                actionConfigs: [
-                  {
-                    key: 'save-query-btn',
-                    renderer: (
-                      queryBuilderState: QueryBuilderState,
-                    ): React.ReactNode => {
-                      const save = applicationStore.guardUnhandledError(
-                        async () => {
-                          try {
-                            const rawLambda = queryBuilderState.buildQuery();
-                            await flowResult(
-                              executionState.queryState.updateLamba(rawLambda),
-                            );
-                            applicationStore.notificationService.notifySuccess(
-                              `Service query is updated`,
-                            );
-                            embeddedQueryBuilderState.setEmbeddedQueryBuilderConfiguration(
-                              undefined,
-                            );
-                          } catch (error) {
-                            assertErrorThrown(error);
-                            applicationStore.notificationService.notifyError(
-                              `Can't save query: ${error.message}`,
-                            );
-                          }
-                        },
-                      );
-
-                      return (
-                        <button
-                          className="query-builder__dialog__header__custom-action"
-                          tabIndex={-1}
-                          disabled={isReadOnly}
-                          onClick={save}
-                        >
-                          Save Query
-                        </button>
-                      );
+        await flowResult(
+          embeddedQueryBuilderState.setEmbeddedQueryBuilderConfiguration({
+            setupQueryBuilderState: async (): Promise<QueryBuilderState> => {
+              const sourceInfo = {
+                service: service.path,
+                ...editorStore.editorMode.getSourceInfo(),
+              };
+              const queryBuilderState = new ServiceQueryBuilderState(
+                embeddedQueryBuilderState.editorStore.applicationStore,
+                embeddedQueryBuilderState.editorStore.graphManagerState,
+                QueryBuilderAdvancedWorkflowState.INSTANCE,
+                QueryBuilderActionConfig.INSTANCE,
+                service,
+                undefined,
+                selectedExecutionState?.executionContext instanceof
+                KeyedExecutionParameter
+                  ? selectedExecutionState.executionContext.key
+                  : undefined,
+                undefined,
+                undefined,
+                embeddedQueryBuilderState.editorStore.applicationStore.config.options.queryBuilderConfig,
+                sourceInfo,
+              );
+              queryBuilderState.initializeWithQuery(
+                executionState.execution.func,
+              );
+              if (openInTextMode) {
+                queryBuilderState.textEditorState.openModal(
+                  QueryBuilderTextEditorMode.TEXT,
+                );
+              }
+              return queryBuilderState;
+            },
+            actionConfigs: [
+              {
+                key: 'save-query-btn',
+                renderer: (
+                  queryBuilderState: QueryBuilderState,
+                ): React.ReactNode => {
+                  const save = applicationStore.guardUnhandledError(
+                    async () => {
+                      try {
+                        const rawLambda = queryBuilderState.buildQuery();
+                        await flowResult(
+                          executionState.queryState.updateLamba(rawLambda),
+                        );
+                        applicationStore.notificationService.notifySuccess(
+                          `Service query is updated`,
+                        );
+                        embeddedQueryBuilderState.setEmbeddedQueryBuilderConfiguration(
+                          undefined,
+                        );
+                      } catch (error) {
+                        assertErrorThrown(error);
+                        applicationStore.notificationService.notifyError(
+                          `Can't save query: ${error.message}`,
+                        );
+                      }
                     },
-                  },
-                ],
-                disableCompile: isStubbed_RawLambda(
-                  executionState.queryState.query,
-                ),
-              }),
-            );
-            executionState.setOpeningQueryEditor(false);
-            return;
-          }
-          applicationStore.notificationService.notifyWarning(
-            'Please specify a mapping and a runtime for the execution context to edit with query builder',
-          );
-          executionState.setOpeningQueryEditor(false);
-        }
+                  );
+
+                  return (
+                    <button
+                      className="query-builder__dialog__header__custom-action"
+                      tabIndex={-1}
+                      disabled={isReadOnly}
+                      onClick={save}
+                    >
+                      Save Query
+                    </button>
+                  );
+                },
+              },
+            ],
+            disableCompile: true,
+          }),
+        );
+        executionState.setOpeningQueryEditor(false);
       });
 
     const importQuery = (): void =>
@@ -223,6 +235,11 @@ export const ServiceExecutionQueryEditor = observer(
     const debugPlanGeneration = applicationStore.guardUnhandledError(() =>
       flowResult(executionState.generatePlan(true)),
     );
+
+    const openServiceCubeViewer =
+      editorStore.applicationStore.guardUnhandledError(async () => {
+        await openDataCube(service, editorStore);
+      });
 
     const openQueryInLegendQuery = (): void => {
       if (!applicationStore.config.queryApplicationUrl) {
@@ -249,6 +266,8 @@ export const ServiceExecutionQueryEditor = observer(
           };
         }
       } else {
+        const currentWorkSpaceId =
+          editorStore.sdlcState.currentWorkspace?.workspaceId;
         projectGAV = {
           groupId:
             editorStore.projectConfigurationEditorState
@@ -256,7 +275,11 @@ export const ServiceExecutionQueryEditor = observer(
           artifactId:
             editorStore.projectConfigurationEditorState
               .currentProjectConfiguration.artifactId,
-          versionId: SNAPSHOT_VERSION_ALIAS,
+          versionId: editorStore.sdlcState.projectPublishedVersions.includes(
+            `${currentWorkSpaceId}-${SNAPSHOT_ALIAS}`,
+          )
+            ? `${currentWorkSpaceId}-${SNAPSHOT_ALIAS}`
+            : SNAPSHOT_VERSION_ALIAS,
         };
       }
       applicationStore.navigationService.navigator.visitAddress(
@@ -272,9 +295,9 @@ export const ServiceExecutionQueryEditor = observer(
 
     // convert to string
     useEffect(() => {
-      flowResult(queryState.convertLambdaObjectToGrammarString(true)).catch(
-        applicationStore.alertUnhandledError,
-      );
+      flowResult(
+        queryState.convertLambdaObjectToGrammarString({ pretty: true }),
+      ).catch(applicationStore.alertUnhandledError);
     }, [applicationStore, queryState]);
 
     return (
@@ -298,7 +321,7 @@ export const ServiceExecutionQueryEditor = observer(
                   Edit Query
                 </div>
               </button>
-              <DropdownMenu
+              <ControlledDropdownMenu
                 className="btn__dropdown-combo__dropdown-btn"
                 content={
                   <MenuContent>
@@ -316,7 +339,7 @@ export const ServiceExecutionQueryEditor = observer(
                 }}
               >
                 <CaretDownIcon />
-              </DropdownMenu>
+              </ControlledDropdownMenu>
             </div>
             <div className="btn__dropdown-combo btn__dropdown-combo--primary">
               {executionState.isRunningQuery ? (
@@ -346,7 +369,7 @@ export const ServiceExecutionQueryEditor = observer(
                       Run Query
                     </div>
                   </button>
-                  <DropdownMenu
+                  <ControlledDropdownMenu
                     className="btn__dropdown-combo__dropdown-btn"
                     disabled={executionIsRunning}
                     content={
@@ -371,11 +394,24 @@ export const ServiceExecutionQueryEditor = observer(
                     }}
                   >
                     <CaretDownIcon />
-                  </DropdownMenu>
+                  </ControlledDropdownMenu>
                 </>
               )}
             </div>
-            <DropdownMenu
+            <div className="btn__dropdown-combo btn__dropdown-combo--primary">
+              <button
+                className="btn__dropdown-combo__label"
+                onClick={openServiceCubeViewer}
+                title="Data Cube (BETA)"
+                disabled={executionIsRunning}
+                tabIndex={-1}
+              >
+                <div className="btn__dropdown-combo__label__title">
+                  Data Cube
+                </div>
+              </button>
+            </div>
+            <ControlledDropdownMenu
               className="btn__dropdown-combo"
               disabled={executionIsRunning}
               content={
@@ -408,7 +444,7 @@ export const ServiceExecutionQueryEditor = observer(
               <div className="btn__dropdown-combo__dropdown-btn">
                 <CaretDownIcon />
               </div>
-            </DropdownMenu>
+            </ControlledDropdownMenu>
           </div>
         </div>
         <div className="panel__content property-mapping-editor__entry__container">
@@ -449,3 +485,101 @@ export const ServiceExecutionQueryEditor = observer(
     );
   },
 );
+
+export const queryService = async (
+  service: Service,
+  editorStore: EditorStore,
+): Promise<void> => {
+  const embeddedQueryBuilderState = editorStore.embeddedQueryBuilderState;
+  const applicationStore = editorStore.applicationStore;
+  const execution =
+    service.execution instanceof PureExecution ? service.execution : undefined;
+  const selectedExec =
+    execution instanceof MultiExecutionParameters
+      ? execution.singleExecutionParameters[0]?.key
+      : undefined;
+  const sourceInfo = {
+    service: service.path,
+    ...editorStore.editorMode.getSourceInfo(),
+  };
+  await flowResult(
+    embeddedQueryBuilderState.setEmbeddedQueryBuilderConfiguration({
+      setupQueryBuilderState: async (): Promise<QueryBuilderState> => {
+        const queryBuilderState = new ServiceQueryBuilderState(
+          embeddedQueryBuilderState.editorStore.applicationStore,
+          embeddedQueryBuilderState.editorStore.graphManagerState,
+          QueryBuilderAdvancedWorkflowState.INSTANCE,
+          QueryBuilderActionConfig.INSTANCE,
+          service,
+          undefined,
+          selectedExec,
+          undefined,
+          undefined,
+          embeddedQueryBuilderState.editorStore.applicationStore.config.options.queryBuilderConfig,
+          sourceInfo,
+        );
+        if (execution) {
+          queryBuilderState.initializeWithQuery(execution.func);
+        }
+        return queryBuilderState;
+      },
+      actionConfigs: [
+        {
+          key: 'save-query-btn',
+          renderer: (queryBuilderState: QueryBuilderState): React.ReactNode => {
+            const save = applicationStore.guardUnhandledError(async () => {
+              try {
+                const rawLambda = queryBuilderState.buildQuery();
+                const serviceState = returnUndefOnError(() =>
+                  editorStore.tabManagerState.getCurrentEditorState(
+                    ServiceEditorState,
+                  ),
+                );
+                if (
+                  serviceState?.service === service &&
+                  serviceState.executionState instanceof
+                    ServicePureExecutionState
+                ) {
+                  await flowResult(
+                    serviceState.executionState.queryState.updateLamba(
+                      rawLambda,
+                    ),
+                  );
+                } else {
+                  pureExecution_setFunction(
+                    guaranteeNonNullable(
+                      execution,
+                      'Service execution expected to be a pure execution',
+                    ),
+                    rawLambda,
+                  );
+                }
+                applicationStore.notificationService.notifySuccess(
+                  `Service query is updated`,
+                );
+                embeddedQueryBuilderState.setEmbeddedQueryBuilderConfiguration(
+                  undefined,
+                );
+              } catch (error) {
+                assertErrorThrown(error);
+                applicationStore.notificationService.notifyError(
+                  `Can't save query: ${error.message}`,
+                );
+              }
+            });
+            return (
+              <button
+                className="query-builder__dialog__header__custom-action"
+                tabIndex={-1}
+                disabled={editorStore.disableGraphEditing}
+                onClick={save}
+              >
+                Save Query
+              </button>
+            );
+          },
+        },
+      ],
+    }),
+  );
+};

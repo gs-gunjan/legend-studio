@@ -70,7 +70,123 @@
   }
 }
 
+.mui-stepper {
+  height: 4rem;
+  background-color: var(--color-dark-grey-250);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: scroll;
+  padding-top: 0.7rem;
+
+  &__step {
+    &__step-label {
+      &__label {
+        padding: 0 0.5rem;
+        color: var(--color-light-grey-100);
+        font-size: 1.1rem;
+        cursor: default;
+        margin-right: 0.5rem;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+.mui-card:first-child {
+  margin-left: 0;
+}
+
+.mui-card:last-child {
+  margin-right: 0;
+}
+
+.mui-card {
+  background-color: var(--color-dark-grey-400);
+  width: 16rem;
+  height: 24rem;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  flex: 1 1 auto;
+  margin: 0 1.5rem;
+  border-radius: 1rem;
+
+  &__media {
+    margin-top: 2rem;
+    margin-left: 2rem;
+    size: 2rem;
+  }
+
+  &__header {
+    margin-top: 1rem;
+    font-weight: 500;
+    height: 20%;
+    font-size: 2rem;
+    color: white;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  &__content {
+    font-size: 1.5rem;
+    color: white;
+    height: 80%;
+    overflow-y: scroll;
+    flex: 1 1 auto;
+  }
+
+  &:hover {
+    background: var(--color-dark-grey-500);
+    cursor: pointer;
+  }
+
+  &__card-action {
+    color: var(--color-light-blue-50);
+    height: 100%;
+    padding: 0;
+    margin-bottom: 1.5vh;
+
+    &__label {
+      margin-right: 0.5rem;
+      font-size: min(1.5vw, 1.5vh);
+    }
+
+    &__content {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  }
+}
+
+.mui-card--disable {
+  background-color: var(--color-dark-grey-100) !important;
+  cursor: not-allowed !important;
+  border: none !important;
+}
+
+.mui-card--active {
+  background: var(--color-dark-grey-500);
+  border: 0.2rem solid var(--color-light-blue-200);
+}
+
+.mui-card--stable {
+  background-color: var(--color-dark-grey-85) !important;
+  border: none !important;
+}
+
 // override global style
+
+.MuiSnackbarContent-root {
+  font-size: 1.2rem;
+}
+
+.MuiSvgIcon-root {
+  color: var(--color-dark-grey-500);
+  font-size: 2.5rem;
+}
 
 .MuiDialog-root {
   margin-top: 3.4rem;
@@ -94,4 +210,20 @@
 
 .MuiTooltip-tooltipPlacementTop {
   margin: 0.5rem 0;
+}
+
+.MuiCardContent-root {
+  height: 70%;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  flex: 1 auto;
+  padding: 0;
+  margin-left: 2rem;
+}
+
+.MuiCardActions-root {
+  height: 20%;
+  margin-left: 1rem;
+  padding: 0;
 }

@@ -23,7 +23,7 @@ import {
   OpenPreviewIcon,
   LockIcon,
   CaretDownIcon,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentItem,
   MarkdownTextViewer,
@@ -38,10 +38,8 @@ import {
 } from '../../stores/studio/DSL_Text_GraphModifierHelper.js';
 import { TEXT_TYPE } from '../../graph/helpers/DSL_Text_Helper.js';
 import { DSL_TEXT_LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../__lib__/studio/DSL_Text_LegendStudioApplicationNavigationContext.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 
 const getTextElementEditorLanguage = (
   type: string | undefined,
@@ -68,7 +66,9 @@ export const TextElementEditor = observer(() => {
   const changeType =
     (val: TEXT_TYPE): (() => void) =>
     (): void => {
-      !isReadOnly && text_setType(textElement, val);
+      if (!isReadOnly) {
+        text_setType(textElement, val);
+      }
     };
   const changeContent = (val: string): void =>
     text_setContent(textElement, val);
@@ -93,7 +93,7 @@ export const TextElementEditor = observer(() => {
               <LockIcon />
             </div>
           )}
-          <DropdownMenu
+          <ControlledDropdownMenu
             className="text-element-editor__header__configs__type"
             disabled={isReadOnly}
             content={
@@ -121,7 +121,7 @@ export const TextElementEditor = observer(() => {
             <div className="text-element-editor__header__configs__type__icon">
               <CaretDownIcon />
             </div>
-          </DropdownMenu>
+          </ControlledDropdownMenu>
           {isPreviewSupported ? (
             <button
               title={showPreview ? `Hide Preview` : `Show Preview`}
@@ -152,10 +152,10 @@ export const TextElementEditor = observer(() => {
             {showPreview && (
               <ResizablePanel minSize={300}>
                 <div className="text-element-editor__preview">
-                  {MarkdownTextViewer({
-                    value: { value: textElement.content },
-                    className: `text-element-editor__preview__markdown`,
-                  })}
+                  <MarkdownTextViewer
+                    value={{ value: textElement.content }}
+                    className="text-element-editor__preview__markdown"
+                  />
                 </div>
               </ResizablePanel>
             )}

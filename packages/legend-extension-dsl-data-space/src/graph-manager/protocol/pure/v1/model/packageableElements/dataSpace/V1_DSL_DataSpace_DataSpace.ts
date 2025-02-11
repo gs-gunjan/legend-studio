@@ -17,11 +17,13 @@
 import { hashArray, type Hashable } from '@finos/legend-shared';
 import { DATA_SPACE_HASH_STRUCTURE } from '../../../../../../../graph/DSL_DataSpace_HashUtils.js';
 import {
-  V1_PackageableElement,
+  type V1_RawLambda,
   type V1_PackageableElementPointer,
   type V1_PackageableElementVisitor,
   type V1_StereotypePtr,
   type V1_TaggedValue,
+  V1_PackageableElement,
+  type V1_DataElementReference,
 } from '@finos/legend-graph';
 
 export class V1_DataSpaceExecutionContext implements Hashable {
@@ -30,6 +32,7 @@ export class V1_DataSpaceExecutionContext implements Hashable {
   description?: string | undefined;
   mapping!: V1_PackageableElementPointer;
   defaultRuntime!: V1_PackageableElementPointer;
+  testData: V1_DataElementReference | undefined;
 
   get hashCode(): string {
     return hashArray([
@@ -39,6 +42,7 @@ export class V1_DataSpaceExecutionContext implements Hashable {
       this.description ?? '',
       this.mapping.path,
       this.defaultRuntime.path,
+      this.testData ?? '',
     ]);
   }
 }
@@ -56,17 +60,55 @@ export class V1_DataSpaceElementPointer implements Hashable {
   }
 }
 
-export class V1_DataSpaceExecutable implements Hashable {
+export abstract class V1_DataSpaceExecutable implements Hashable {
+  id?: string;
+  executionContextKey?: string | undefined;
   title!: string;
   description?: string | undefined;
-  executable!: V1_PackageableElementPointer;
 
   get hashCode(): string {
     return hashArray([
       DATA_SPACE_HASH_STRUCTURE.DATA_SPACE_EXECUTABLE,
+      this.id,
       this.title,
       this.description ?? '',
+      this.executionContextKey ?? '',
+    ]);
+  }
+}
+
+export class V1_DataSpacePackageableElementExecutable
+  extends V1_DataSpaceExecutable
+  implements Hashable
+{
+  executable!: V1_PackageableElementPointer;
+
+  override get hashCode(): string {
+    return hashArray([
+      DATA_SPACE_HASH_STRUCTURE.DATA_SPACE_PACKAGEABLE_ELEMENT_EXECUTABLE,
+      this.id,
+      this.title,
+      this.description ?? '',
+      this.executionContextKey ?? '',
       this.executable.path,
+    ]);
+  }
+}
+
+export class V1_DataSpaceTemplateExecutable
+  extends V1_DataSpaceExecutable
+  implements Hashable
+{
+  query!: V1_RawLambda;
+
+  override get hashCode(): string {
+    return hashArray([
+      DATA_SPACE_HASH_STRUCTURE.DATA_SPACE_TEMPLATE_EXECUTABLE,
+      this.id,
+      this.title,
+      this.description ?? '',
+      this.query,
+      this.executionContextKey ?? '',
     ]);
   }
 }

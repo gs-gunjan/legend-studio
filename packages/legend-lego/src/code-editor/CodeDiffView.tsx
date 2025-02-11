@@ -29,10 +29,17 @@ import {
 } from '@finos/legend-shared';
 import {
   CODE_EDITOR_LANGUAGE,
-  disposeDiffCodeEditor,
+  CODE_EDITOR_THEME,
   getBaseCodeEditorOptions,
-} from './CodeEditorUtils.js';
-import { CODE_EDITOR_THEME } from './CodeEditorTheme.js';
+} from '@finos/legend-code-editor';
+
+export const disposeDiffCodeEditor = (
+  editor: monacoEditorAPI.IStandaloneDiffEditor,
+): void => {
+  editor.dispose();
+  editor.getOriginalEditor().getModel()?.dispose();
+  editor.getModifiedEditor().getModel()?.dispose();
+};
 
 export const CodeDiffView = observer(
   (props: {
@@ -53,7 +60,10 @@ export const CodeDiffView = observer(
         const element = editorRef.current;
         const _editor = monacoEditorAPI.createDiffEditor(element, {
           ...getBaseCodeEditorOptions(),
-          theme: CODE_EDITOR_THEME.DEFAULT_DARK,
+          theme: applicationStore.layoutService
+            .TEMPORARY__isLightColorThemeEnabled
+            ? CODE_EDITOR_THEME.BUILT_IN__VSCODE_LIGHT
+            : CODE_EDITOR_THEME.DEFAULT_DARK,
           readOnly: true,
         });
         setEditor(_editor);
@@ -94,8 +104,8 @@ const formatJSONLikeValue = (value: unknown, lossless: boolean): string =>
         ? tryToFormatLosslessJSONString(value)
         : tryToFormatJSONString(value)
       : lossless
-      ? stringifyLosslessJSON(value, undefined, DEFAULT_TAB_SIZE)
-      : JSON.stringify(value, undefined, DEFAULT_TAB_SIZE)
+        ? stringifyLosslessJSON(value, undefined, DEFAULT_TAB_SIZE)
+        : JSON.stringify(value, undefined, DEFAULT_TAB_SIZE)
     : '';
 
 export const JSONDiffView = observer(

@@ -51,8 +51,8 @@ import {
 } from '../../../../stores/editor/editor-state/element-editor-state/mapping/MappingEditorState.js';
 import { MappingElementState } from '../../../../stores/editor/editor-state/element-editor-state/mapping/MappingElementState.js';
 import { MappingExplorer } from './MappingExplorer.js';
-import { DEPRECATED__MappingTestEditor } from './DEPRECATED__MappingTestEditor.js';
-import { DEPRECATED__MappingTestState } from '../../../../stores/editor/editor-state/element-editor-state/mapping/DEPRECATED__MappingTestState.js';
+import { DEPRECATED__MappingTestEditor } from './legacy/DEPRECATED__MappingTestEditor.js';
+import { DEPRECATED__MappingTestState } from '../../../../stores/editor/editor-state/element-editor-state/mapping/legacy/DEPRECATED__MappingTestState.js';
 import { MappingTestsExplorer } from './MappingTestsExplorer.js';
 import { LEGEND_STUDIO_TEST_ID } from '../../../../__lib__/LegendStudioTesting.js';
 import { MappingExecutionState } from '../../../../stores/editor/editor-state/element-editor-state/mapping/MappingExecutionState.js';
@@ -73,6 +73,9 @@ import {
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../../__lib__/LegendStudioApplicationNavigationContext.js';
 import type { MappingEditorTabState } from '../../../../stores/editor/editor-state/element-editor-state/mapping/MappingTabManagerState.js';
 import { MappingTestableEditor } from './MappingTestableEditor.js';
+import { DocumentationLink } from '@finos/legend-lego/application';
+import { LEGEND_STUDIO_DOCUMENTATION_KEY } from '../../../../__lib__/LegendStudioDocumentation.js';
+import { MappingTestMigrationTool } from './legacy/MappingTestMigrationTool.js';
 
 export const MappingEditorSplashScreen: React.FC = () => {
   const logoWidth = 280;
@@ -146,7 +149,7 @@ const getMappingElementTargetIcon = (
   return <PURE_UnknownElementTypeIcon />;
 };
 
-const _MappingEditor = observer(() => {
+const MappingClassMappingEditor = observer(() => {
   const editorStore = useEditorStore();
   const applicationStore = useApplicationStore();
   const mappingEditorState =
@@ -217,13 +220,7 @@ const _MappingEditor = observer(() => {
   );
 
   return (
-    <div
-      className={clsx('mapping-editor', {
-        mapping__theme__dark:
-          editorStore.applicationStore.config.options
-            .TEMPORARY__enableMappingTestableEditor,
-      })}
-    >
+    <div className={clsx('mapping-editor', 'mapping__theme__dark')}>
       <ResizablePanelGroup orientation="vertical">
         <ResizablePanel size={300} minSize={300}>
           <div className="mapping-editor__side-bar">
@@ -345,7 +342,7 @@ const _MappingEditor = observer(() => {
   );
 });
 
-export const MappingEditorWithTestable = observer(() => {
+export const MappingEditor = observer(() => {
   const editorStore = useEditorStore();
   const mappingEditorState =
     editorStore.tabManagerState.getCurrentEditorState(MappingEditorState);
@@ -357,7 +354,10 @@ export const MappingEditorWithTestable = observer(() => {
     (): void =>
       mappingEditorState.setSelectedTab(tab);
   return (
-    <div className="service-editor">
+    <div
+      data-testid={LEGEND_STUDIO_TEST_ID.MAPPING_EDITOR}
+      className="service-editor"
+    >
       <div className="panel">
         <div className="panel__header">
           <div className="panel__header__title">
@@ -381,32 +381,34 @@ export const MappingEditorWithTestable = observer(() => {
                 })}
               >
                 {prettyCONSTName(tab)}
+                {tab === MAPPING_EDITOR_TAB.TEST_SUITES && (
+                  <DocumentationLink
+                    documentationKey={
+                      LEGEND_STUDIO_DOCUMENTATION_KEY.QUESTION_HOW_TO_WRITE_A_MAPPING_TEST
+                    }
+                  />
+                )}
               </div>
             ))}
           </div>
         </div>
         <div className="panel__content service-editor__content">
           {selectedTab === MAPPING_EDITOR_TAB.CLASS_MAPPINGS && (
-            <_MappingEditor />
+            <MappingClassMappingEditor />
           )}
-          {selectedTab === MAPPING_EDITOR_TAB.BETA_TEST_SUITES && (
+          {selectedTab === MAPPING_EDITOR_TAB.TEST_SUITES && (
             <MappingTestableEditor
               mappingTestableState={mappingEditorState.mappingTestableState}
+            />
+          )}
+          {mappingEditorState.migrationState && (
+            <MappingTestMigrationTool
+              mappingEditorState={mappingEditorState}
+              migrationState={mappingEditorState.migrationState}
             />
           )}
         </div>
       </div>
     </div>
   );
-});
-
-export const MappingEditor = observer(() => {
-  const editorStore = useEditorStore();
-  const withTestableEditor =
-    editorStore.applicationStore.config.options
-      .TEMPORARY__enableMappingTestableEditor;
-  if (!withTestableEditor) {
-    return <_MappingEditor />;
-  }
-  return <MappingEditorWithTestable />;
 });

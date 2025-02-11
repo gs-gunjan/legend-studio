@@ -15,9 +15,9 @@
  */
 
 @forward 'base/variables';
-@forward 'base/normalize';
 @forward 'base/fonts';
 @forward 'base/common';
+@forward 'base/divider';
 @forward 'base/button';
 @forward 'base/panel';
 @forward 'base/input';
@@ -32,6 +32,7 @@
 @forward 'components/selector-input';
 @forward 'components/tree-view';
 @forward 'components/markdown-viewer';
+@forward 'components/cubes-loading-indicator';
 
 // Reset (override library styles)
 @forward 'reset/mui';

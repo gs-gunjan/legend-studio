@@ -5,13 +5,22 @@
     // core
     { "path": "packages/legend-shared/tsconfig.build.json" },
     { "path": "packages/legend-storage/tsconfig.build.json" },
-    { "path": "packages/legend-server-sdlc/tsconfig.build.json" },
-    { "path": "packages/legend-server-depot/tsconfig.build.json" },
     { "path": "packages/legend-graph/tsconfig.build.json" },
     { "path": "packages/legend-query-builder/tsconfig.build.json" },
+    { "path": "packages/legend-data-cube/tsconfig.build.json" },
     { "path": "packages/legend-art/tsconfig.build.json" },
+    { "path": "packages/legend-code-editor/tsconfig.build.json" },
     { "path": "packages/legend-lego/tsconfig.build.json" },
     { "path": "packages/legend-application/tsconfig.build.json" },
+    // sdlc
+    { "path": "packages/legend-server-sdlc/tsconfig.build.json" },
+    // depot
+    { "path": "packages/legend-server-depot/tsconfig.build.json" },
+    // showcase
+    { "path": "packages/legend-server-showcase/tsconfig.build.json" },
+    {
+      "path": "packages/legend-server-showcase-deployment/tsconfig.build.json"
+    },
     // studio
     { "path": "packages/legend-application-studio/tsconfig.build.json" },
     {
@@ -22,25 +31,40 @@
     {
       "path": "packages/legend-application-query-bootstrap/tsconfig.build.json"
     },
+    // query
+    { "path": "packages/legend-application-data-cube/tsconfig.build.json" },
+    {
+      "path": "packages/legend-application-data-cube-bootstrap/tsconfig.build.json"
+    },
     // pure ide
     { "path": "packages/legend-application-pure-ide/tsconfig.build.json" },
+    // repl
+    { "path": "packages/legend-application-repl/tsconfig.build.json" },
     // extensions
     { "path": "packages/legend-extension-assortment/tsconfig.build.json" },
     { "path": "packages/legend-extension-tracer-zipkin/tsconfig.build.json" },
     { "path": "packages/legend-extension-dsl-text/tsconfig.build.json" },
     { "path": "packages/legend-extension-dsl-diagram/tsconfig.build.json" },
     { "path": "packages/legend-extension-dsl-data-space/tsconfig.build.json" },
+    {
+      "path": "packages/legend-extension-dsl-data-space-studio/tsconfig.build.json"
+    },
     { "path": "packages/legend-extension-dsl-service/tsconfig.build.json" },
     {
       "path": "packages/legend-extension-dsl-persistence/tsconfig.build.json"
     },
-    { "path": "packages/legend-extension-dsl-mastery/tsconfig.build.json" },
     {
       "path": "packages/legend-extension-store-service-store/tsconfig.build.json"
     },
     { "path": "packages/legend-extension-store-flat-data/tsconfig.build.json" },
     {
       "path": "packages/legend-extension-store-relational/tsconfig.build.json"
+    },
+    {
+      "path": "packages/legend-vscode-extension-dependencies/tsconfig.build.json"
+    },
+    {
+      "path": "packages/legend-extension-dsl-data-quality/tsconfig.build.json"
     },
     // fixtures
     { "path": "fixtures/legend-mock-server/tsconfig.build.json" }

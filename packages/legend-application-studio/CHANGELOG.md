@@ -1,5 +1,852 @@
 # @finos/legend-application-studio
 
+## 28.18.94
+
+## 28.18.93
+
+## 28.18.92
+
+## 28.18.91
+
+## 28.18.90
+
+## 28.18.89
+
+## 28.18.88
+
+## 28.18.87
+
+## 28.18.86
+
+### Patch Changes
+
+- [#3837](https://github.com/finos/legend-studio/pull/3837) [`a851990`](https://github.com/finos/legend-studio/commit/a8519901c85cdd5f6f2200ee6eea0fe5a7ed2a88) ([@gs-rpant1729](https://github.com/gs-rpant1729)) - Support Relation Function class mapping in Studio.
+
+## 28.18.85
+
+## 28.18.84
+
+## 28.18.83
+
+## 28.18.82
+
+### Patch Changes
+
+- [#3813](https://github.com/finos/legend-studio/pull/3813) [`2f5a670`](https://github.com/finos/legend-studio/commit/2f5a6705e5767cbb4e7ea41812729d40b392ffa5) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Cache tab manager opened tabs
+
+## 28.18.81
+
+## 28.18.80
+
+## 28.18.79
+
+## 28.18.78
+
+### Patch Changes
+
+- [#3794](https://github.com/finos/legend-studio/pull/3794) [`0aafaa7`](https://github.com/finos/legend-studio/commit/0aafaa7e249e2cf06ab8412d4be6aed9965a5dfc) ([@kelly-thai](https://github.com/kelly-thai)) - Fixing bug where 'View Project' and 'View SDLC Project' were not working when right clicking on explorer tree
+
+## 28.18.77
+
+### Patch Changes
+
+- [#3788](https://github.com/finos/legend-studio/pull/3788) [`0cb9701`](https://github.com/finos/legend-studio/commit/0cb97012611d686014fd926c7b182f2adf9283d9) ([@aziemchawdhary-gs](https://github.com/aziemchawdhary-gs)) - Support primtive types as source of Pure mappings
+
+## 28.18.76
+
+## 28.18.75
+
+## 28.18.74
+
+## 28.18.73
+
+## 28.18.72
+
+## 28.18.71
+
+## 28.18.70
+
+## 28.18.69
+
+## 28.18.68
+
+## 28.18.67
+
+## 28.18.66
+
+## 28.18.65
+
+## 28.18.64
+
+## 28.18.63
+
+### Patch Changes
+
+- [#3710](https://github.com/finos/legend-studio/pull/3710) [`58df540`](https://github.com/finos/legend-studio/commit/58df540c31c8293bb3d23de36edf8a56e5d0cc4b) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add query timeout to database connection
+
+## 28.18.62
+
+## 28.18.61
+
+## 28.18.60
+
+## 28.18.59
+
+## 28.18.58
+
+## 28.18.57
+
+## 28.18.56
+
+## 28.18.55
+
+## 28.18.54
+
+## 28.18.53
+
+## 28.18.52
+
+## 28.18.51
+
+### Patch Changes
+
+- [#3649](https://github.com/finos/legend-studio/pull/3649) [`eb47276`](https://github.com/finos/legend-studio/commit/eb47276e446c5291fe94a5fff8f0e7cdfbf0533a) ([@travisstebbins](https://github.com/travisstebbins)) - Fix project setup view button
+
+## 28.18.50
+
+## 28.18.49
+
+## 28.18.48
+
+## 28.18.47
+
+## 28.18.46
+
+## 28.18.45
+
+### Patch Changes
+
+- [#3612](https://github.com/finos/legend-studio/pull/3612) [`5f661e5`](https://github.com/finos/legend-studio/commit/5f661e5c223d08b3d4c9cec5b550ad1fa93d1c52) ([@kelly-thai](https://github.com/kelly-thai)) - Successfully deployed activators will now receive a pop-up alert that includes the link to the deployed activator.
+
+- [#3614](https://github.com/finos/legend-studio/pull/3614) [`b475c57`](https://github.com/finos/legend-studio/commit/b475c57fc4737d127d43d73aa93163da0b1fdc8e) ([@kelly-thai](https://github.com/kelly-thai)) - Added a new tab for Lambdas in function editor that displays all the lambdas for that function as well as navigation to those lambdas.
+
+## 28.18.44
+
+### Patch Changes
+
+- [#3602](https://github.com/finos/legend-studio/pull/3602) [`b452026`](https://github.com/finos/legend-studio/commit/b45202646258dff30e5b38dbf06db76ad92bcc7e) ([@kelly-thai](https://github.com/kelly-thai)) - Changed ownership form on function activators so that the ownership type will default to deployment, and if it is of type user list a button has been added to change directly to deployment. There is no longer a dropdown and only a textbox for the deployment ID.
+
+## 28.18.43
+
+### Patch Changes
+
+- [#3598](https://github.com/finos/legend-studio/pull/3598) [`b5b32c7`](https://github.com/finos/legend-studio/commit/b5b32c782dfb59bbe9286e9f8fa5acf6e95f3ffc) ([@kelly-thai](https://github.com/kelly-thai)) - Adding ability to add stereotypes and tagged values to function activators. New tabs have been added to the activator form and changes from text mode will be reflected as well.
+
+## 28.18.42
+
+## 28.18.41
+
+## 28.18.40
+
+## 28.18.39
+
+## 28.18.38
+
+## 28.18.37
+
+## 28.18.36
+
+### Patch Changes
+
+- [#3546](https://github.com/finos/legend-studio/pull/3546) [`ca407e7`](https://github.com/finos/legend-studio/commit/ca407e77e566c17bae0689adaebbd0c5bf3b81b6) ([@Yasirmod17](https://github.com/Yasirmod17)) - Fix Typo
+
+## 28.18.35
+
+## 28.18.34
+
+## 28.18.33
+
+## 28.18.32
+
+## 28.18.31
+
+## 28.18.30
+
+## 28.18.29
+
+## 28.18.28
+
+## 28.18.27
+
+### Patch Changes
+
+- [#3498](https://github.com/finos/legend-studio/pull/3498) [`a28e377`](https://github.com/finos/legend-studio/commit/a28e377905c62014ee8101949e5d464f4ba3b57d) ([@kelly-thai](https://github.com/kelly-thai)) - Adding a sidebar on the right hand side of studio to display showcases, with resizable and button functionality as well as saving the state of it in local storage so that users can refresh the page and it will remain opened/closed.
+
+## 28.18.26
+
+## 28.18.25
+
+## 28.18.24
+
+## 28.18.23
+
+## 28.18.22
+
+## 28.18.21
+
+## 28.18.20
+
+## 28.18.19
+
+### Patch Changes
+
+- [#3445](https://github.com/finos/legend-studio/pull/3445) [`ffdcd1b`](https://github.com/finos/legend-studio/commit/ffdcd1b1826eab8e6891fb82548818aa6680996b) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add Release Log/Notification to studio.
+  Improve error message for commiting with snapshot dependencies.
+
+## 28.18.18
+
+## 28.18.17
+
+## 28.18.16
+
+## 28.18.15
+
+### Patch Changes
+
+- [#3425](https://github.com/finos/legend-studio/pull/3425) [`66b7195`](https://github.com/finos/legend-studio/commit/66b71959d2a314405bd857a137a24c268486817e) ([@travisstebbins](https://github.com/travisstebbins)) - Fix bug with unwrapping executionResult from ExecutionResultWithMetadata
+
+## 28.18.14
+
+## 28.18.13
+
+## 28.18.12
+
+## 28.18.11
+
+## 28.18.10
+
+## 28.18.9
+
+## 28.18.8
+
+## 28.18.7
+
+### Patch Changes
+
+- [#3371](https://github.com/finos/legend-studio/pull/3371) [`9c343c7`](https://github.com/finos/legend-studio/commit/9c343c780f117a258fa62ee820603941773816a9) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add support for snowflake temp table and schema specification in relational connection.
+
+## 28.18.6
+
+## 28.18.5
+
+## 28.18.4
+
+## 28.18.3
+
+## 28.18.2
+
+## 28.18.1
+
+### Patch Changes
+
+- [#3337](https://github.com/finos/legend-studio/pull/3337) [`c9fb799`](https://github.com/finos/legend-studio/commit/c9fb7994e5c8d89622faa0a3b761eedd2d8562e1) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Use exact search on first filtering of load projects.
+
+## 28.18.0
+
+### Minor Changes
+
+- [#3265](https://github.com/finos/legend-studio/pull/3265) [`beb5599`](https://github.com/finos/legend-studio/commit/beb5599ea58831487321c4bcaf08a19ac8f9af75) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add debug option in mapping tests which shows execution plan and debug log + error when generating exec plan.
+
+## 28.17.18
+
+## 28.17.17
+
+## 28.17.16
+
+## 28.17.15
+
+## 28.17.14
+
+## 28.17.13
+
+### Patch Changes
+
+- [#3285](https://github.com/finos/legend-studio/pull/3285) [`2dd80ef`](https://github.com/finos/legend-studio/commit/2dd80efd96c6cdaf8e3923c1d7587f1cabfbffaf) ([@travisstebbins](https://github.com/travisstebbins)) - Fix typo in component prop name
+
+## 28.17.12
+
+## 28.17.11
+
+### Patch Changes
+
+- [#3279](https://github.com/finos/legend-studio/pull/3279) [`f314481`](https://github.com/finos/legend-studio/commit/f314481604d7e63c1570294c84a61549eb905c3d) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Make store in connection metamodel optional.
+
+## 28.17.10
+
+## 28.17.9
+
+## 28.17.8
+
+## 28.17.7
+
+## 28.17.6
+
+### Patch Changes
+
+- [#3238](https://github.com/finos/legend-studio/pull/3238) [`54862a7`](https://github.com/finos/legend-studio/commit/54862a73a432f35577c542b429f66854d3894d7f) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix showcase explorer panel scroll bar
+
+## 28.17.5
+
+## 28.17.4
+
+## 28.17.3
+
+## 28.17.2
+
+## 28.17.1
+
+## 28.17.0
+
+### Minor Changes
+
+- [#3189](https://github.com/finos/legend-studio/pull/3189) [`85fd2ed`](https://github.com/finos/legend-studio/commit/85fd2ed3f03acb1734b770e2924f5e8f82040438) ([@PaulWorkStuff](https://github.com/PaulWorkStuff)) - Handle unknown entity type
+
+## 28.16.26
+
+## 28.16.25
+
+## 28.16.24
+
+### Patch Changes
+
+- [#3155](https://github.com/finos/legend-studio/pull/3155) [`98dc893`](https://github.com/finos/legend-studio/commit/98dc893935497060ab6a5c26cd20f18c4dbc7d42) ([@travisstebbins](https://github.com/travisstebbins)) - Sort selectors for IsolatedQueryDatabase component
+
+- [#3094](https://github.com/finos/legend-studio/pull/3094) [`1289579`](https://github.com/finos/legend-studio/commit/12895798774e0123463a96d94799bc676020ec1f) ([@travisstebbins](https://github.com/travisstebbins)) - Update Testable code to pass new enableInitializingDefaultValue param to buildDefaultInstanceValue function
+
+- [#3146](https://github.com/finos/legend-studio/pull/3146) [`45fd4af`](https://github.com/finos/legend-studio/commit/45fd4afe2484a1ac8eecd9f06668fc7094137b52) ([@travisstebbins](https://github.com/travisstebbins)) - Update query builder setup to use text instead of icons
+
+## 28.16.23
+
+## 28.16.22
+
+## 28.16.21
+
+## 28.16.20
+
+## 28.16.19
+
+## 28.16.18
+
+## 28.16.17
+
+## 28.16.16
+
+### Patch Changes
+
+- [#3103](https://github.com/finos/legend-studio/pull/3103) [`2071deb70`](https://github.com/finos/legend-studio/commit/2071deb70aac956efa7e042a887f2d83b2895ca2) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - add error indicator for invalid artifactId
+
+- [#3105](https://github.com/finos/legend-studio/pull/3105) [`93a0c3876`](https://github.com/finos/legend-studio/commit/93a0c387663e659ef6d6a9a2a4c4f335dfd7be2e) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add an info icon to elucidate the meaning of the class's properties
+
+## 28.16.15
+
+## 28.16.14
+
+## 28.16.13
+
+## 28.16.12
+
+## 28.16.11
+
+## 28.16.10
+
+## 28.16.9
+
+### Patch Changes
+
+- [#3046](https://github.com/finos/legend-studio/pull/3046) [`de2945713`](https://github.com/finos/legend-studio/commit/de2945713111d47798406033e70128e307c04bf4) ([@travisstebbins](https://github.com/travisstebbins)) - Handle long project names in explorer
+
+## 28.16.8
+
+## 28.16.7
+
+## 28.16.6
+
+### Patch Changes
+
+- [#3019](https://github.com/finos/legend-studio/pull/3019) [`13bd7ad50`](https://github.com/finos/legend-studio/commit/13bd7ad500a6133b136c5b6ae0ef98e95f16d7da) ([@travisstebbins](https://github.com/travisstebbins)) - Fix query light mode inconsistencies
+
+## 28.16.5
+
+## 28.16.4
+
+## 28.16.3
+
+## 28.16.2
+
+## 28.16.1
+
+## 28.16.0
+
+### Minor Changes
+
+- [#2999](https://github.com/finos/legend-studio/pull/2999) [`58aa24644`](https://github.com/finos/legend-studio/commit/58aa246443117c20e4e5e32cf294cb89063abbce) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Execute service post validation
+
+## 28.15.12
+
+## 28.15.11
+
+## 28.15.10
+
+### Patch Changes
+
+- [#2977](https://github.com/finos/legend-studio/pull/2977) [`09a8094ae`](https://github.com/finos/legend-studio/commit/09a8094aee79d28ebe65bb62207c4784066534ca) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Enhance SQL Playground grid
+
+## 28.15.9
+
+## 28.15.8
+
+## 28.15.7
+
+## 28.15.6
+
+### Patch Changes
+
+- [#2946](https://github.com/finos/legend-studio/pull/2946) [`880066812`](https://github.com/finos/legend-studio/commit/88006681272341159dc952887317aebc834af28b) ([@janeenyamak1](https://github.com/janeenyamak1)) - Enable and support hosted service
+
+## 28.15.5
+
+### Patch Changes
+
+- [#2959](https://github.com/finos/legend-studio/pull/2959) [`75d25e499`](https://github.com/finos/legend-studio/commit/75d25e499a1179ef08e0b20fe89adcab681b723a) ([@PaulWorkStuff](https://github.com/PaulWorkStuff)) - Show JSON content for unknown entity in JSON view
+
+## 28.15.4
+
+### Patch Changes
+
+- [#2939](https://github.com/finos/legend-studio/pull/2939) [`2a544332a`](https://github.com/finos/legend-studio/commit/2a544332ac776e61cfcf41e75a62c58f9b00b813) ([@janeenyamak1](https://github.com/janeenyamak1)) - Add ownership to snowflake app
+
+## 28.15.3
+
+## 28.15.2
+
+## 28.15.1
+
+## 28.15.0
+
+### Minor Changes
+
+- [#2923](https://github.com/finos/legend-studio/pull/2923) [`f557af7b1`](https://github.com/finos/legend-studio/commit/f557af7b1ce0bfe879703c0ada0bd038bbec86c5) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Enable ServiceWork in Studio and Query Application Launching.
+
+## 28.14.9
+
+## 28.14.8
+
+## 28.14.7
+
+### Patch Changes
+
+- [#2906](https://github.com/finos/legend-studio/pull/2906) [`273d1d28f`](https://github.com/finos/legend-studio/commit/273d1d28f842ccfaaf5f97a8c5664eede4fc38d0) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Check sandbox access before creating sandbox project.
+
+- [#2840](https://github.com/finos/legend-studio/pull/2840) [`0e376262b`](https://github.com/finos/legend-studio/commit/0e376262b3bd65bb7fee4a170e7235136b9c2c7e) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Remove Type From native App metamodel
+
+## 28.14.6
+
+## 28.14.5
+
+## 28.14.4
+
+### Patch Changes
+
+- [#2892](https://github.com/finos/legend-studio/pull/2892) [`0c295a30a`](https://github.com/finos/legend-studio/commit/0c295a30ac37a9aeb2b3e6eac332c389279f23ab) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Go to snapshot version of a workspace if there is one when creating an Ad-hoc query
+
+- [#2887](https://github.com/finos/legend-studio/pull/2887) [`ddc1b9d2c`](https://github.com/finos/legend-studio/commit/ddc1b9d2cf551bec8908cb2c293e1350f122d190) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix zoom in/out css issues for landing page and splash screen
+
+## 28.14.3
+
+### Patch Changes
+
+- [#2881](https://github.com/finos/legend-studio/pull/2881) [`4ae25db2e`](https://github.com/finos/legend-studio/commit/4ae25db2ee616cc1032a0bf39adc9a162e1d19b6) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add ability to create sandbox projects
+
+## 28.14.2
+
+### Patch Changes
+
+- [#2877](https://github.com/finos/legend-studio/pull/2877) [`2aed15179`](https://github.com/finos/legend-studio/commit/2aed151796f60392995be873037850c3d58cd7b1) ([@janeenyamak1](https://github.com/janeenyamak1)) - Add option to generate OpenApi during service registration
+
+## 28.14.1
+
+## 28.14.0
+
+### Minor Changes
+
+- [#2862](https://github.com/finos/legend-studio/pull/2862) [`6ecf5906f`](https://github.com/finos/legend-studio/commit/6ecf5906f872161d2582a9ede4482fb929af362d) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Move setting of errors/wordWrap and warnings into useEffect in GrammarTextEditor
+
+### Patch Changes
+
+- [#2863](https://github.com/finos/legend-studio/pull/2863) [`725583359`](https://github.com/finos/legend-studio/commit/72558335936a3956b66bbd619710f33b72a50d34) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add basic support for go to element (Ctlr + B). Clean up buttons from icons in text mode.
+
+## 28.13.15
+
+## 28.13.14
+
+### Patch Changes
+
+- [#2850](https://github.com/finos/legend-studio/pull/2850) [`24799bfcf`](https://github.com/finos/legend-studio/commit/24799bfcff705e0011aa8ff18163d70da7cf8295) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add telemetry logging for showcase projects.
+
+## 28.13.13
+
+### Patch Changes
+
+- [#2821](https://github.com/finos/legend-studio/pull/2821) [`b0ce7db86`](https://github.com/finos/legend-studio/commit/b0ce7db86b0c5366a2bc5eb687747f6d2cf2c24b) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add mapping migration tool with to migrate legacy mapping test to new framework.
+
+## 28.13.12
+
+## 28.13.11
+
+## 28.13.10
+
+## 28.13.9
+
+## 28.13.8
+
+## 28.13.7
+
+### Patch Changes
+
+- [#2805](https://github.com/finos/legend-studio/pull/2805) [`3a7a0a6f6`](https://github.com/finos/legend-studio/commit/3a7a0a6f6676d4b63b9bda4682bff83fb410506b) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Improve Studio landing page and splash screen
+
+## 28.13.6
+
+### Patch Changes
+
+- [#2815](https://github.com/finos/legend-studio/pull/2815) [`01c73d6de`](https://github.com/finos/legend-studio/commit/01c73d6deb3042e081e76c8c9fd61f5b4b403035) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Remove function activator type for snowflakeApp from UI
+
+## 28.13.5
+
+### Patch Changes
+
+- [#2804](https://github.com/finos/legend-studio/pull/2804) [`c5954ebaa`](https://github.com/finos/legend-studio/commit/c5954ebaab8015fac6f05e0466641510578b7c53) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Minor function activator improvements
+
+## 28.13.4
+
+### Patch Changes
+
+- [#2800](https://github.com/finos/legend-studio/pull/2800) [`bd598f8d6`](https://github.com/finos/legend-studio/commit/bd598f8d667b287725c9c8e0c3612b2a79f630e6) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Remove runtime store index check + hard non empty string checks on connections to match engine compiler.
+
+## 28.13.3
+
+### Patch Changes
+
+- [#2792](https://github.com/finos/legend-studio/pull/2792) [`5cf2330f1`](https://github.com/finos/legend-studio/commit/5cf2330f117ee2f4548ff561e57f7114fd6e5cba) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Remove `Activator` button in function editor
+
+## 28.13.2
+
+## 28.13.1
+
+## 28.13.0
+
+### Minor Changes
+
+- [#2775](https://github.com/finos/legend-studio/pull/2775) [`a4036a6da`](https://github.com/finos/legend-studio/commit/a4036a6da36b88056a9ee30ab5846af3e9e59c18) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Handle multi service executions using exec env.
+
+### Patch Changes
+
+- [#2770](https://github.com/finos/legend-studio/pull/2770) [`3b9f2334f`](https://github.com/finos/legend-studio/commit/3b9f2334f690c5fc0e587cbcaffbf1c8ac7c9a25) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support function activator workflow
+
+## 28.12.1
+
+## 28.12.0
+
+### Minor Changes
+
+- [#2760](https://github.com/finos/legend-studio/pull/2760) [`07664090d`](https://github.com/finos/legend-studio/commit/07664090d33239fbab4beb8f0a24d45c9e6d9d08) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add `LegendStudioUserDataHelper` to store legend studio user data in browser.
+
+- [#2760](https://github.com/finos/legend-studio/pull/2760) [`07664090d`](https://github.com/finos/legend-studio/commit/07664090d33239fbab4beb8f0a24d45c9e6d9d08) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add dependencies testable view in global test runner.
+
+## 28.11.4
+
+## 28.11.3
+
+## 28.11.2
+
+## 28.11.1
+
+## 28.11.0
+
+### Minor Changes
+
+- [#2734](https://github.com/finos/legend-studio/pull/2734) [`21d6469f6`](https://github.com/finos/legend-studio/commit/21d6469f6f79dd237a1029d31805d893bcbe7c82) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Allow running dependency tests on build pipeline using project config.
+
+## 28.10.2
+
+## 28.10.1
+
+## 28.10.0
+
+### Minor Changes
+
+- [#2705](https://github.com/finos/legend-studio/pull/2705) [`89428545c`](https://github.com/finos/legend-studio/commit/89428545c6f3fbd49c58deb60af7fe22f7c04067) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Enable query from connection workflow
+
+### Patch Changes
+
+- [#2709](https://github.com/finos/legend-studio/pull/2709) [`897d43371`](https://github.com/finos/legend-studio/commit/897d4337182c5c891cc3d3491884fd32394b2a1a) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add Copy Button next to launch for showcase to copy showcase grammar. Add keyboard shortcut F7 to show showcases. Add open showcases to splash screen. Add showcase icon to activity panel.
+
+- [#2708](https://github.com/finos/legend-studio/pull/2708) [`532fbc82e`](https://github.com/finos/legend-studio/commit/532fbc82ecabb17b7939a75394e871f3e684fb12) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Hide showcase projects in development from tree.
+
+## 28.9.0
+
+### Minor Changes
+
+- [#2698](https://github.com/finos/legend-studio/pull/2698) [`fe4551640`](https://github.com/finos/legend-studio/commit/fe45516404a2f0bdd9e4faacb40d6b88b4aad856) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Enhance viewer modes to show all supported status icons such as terminal, compilation generation etc.
+
+- [#2698](https://github.com/finos/legend-studio/pull/2698) [`fe4551640`](https://github.com/finos/legend-studio/commit/fe45516404a2f0bdd9e4faacb40d6b88b4aad856) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add `/studio/showcase` route to showcase project viewer.
+
+## 28.8.0
+
+### Minor Changes
+
+- [#2680](https://github.com/finos/legend-studio/pull/2680) [`4cd67547f`](https://github.com/finos/legend-studio/commit/4cd67547f44e77750c5aea79ce8408808eef6071) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - **BREAKING** remove `TEMPORARY__enableRawSQLExecutor` and include raw executor as a default feature.
+
+- [#2676](https://github.com/finos/legend-studio/pull/2676) [`f813d192e`](https://github.com/finos/legend-studio/commit/f813d192e2ccb60474d204a00ef3f5636e529e22) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add preview data to databse builder from connection.
+
+### Patch Changes
+
+- [#2686](https://github.com/finos/legend-studio/pull/2686) [`9c25a0159`](https://github.com/finos/legend-studio/commit/9c25a01590db489c2f5257da9d162fa2aeb90fd1) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Query Database using model generation.
+
+- [#2688](https://github.com/finos/legend-studio/pull/2688) [`6bc2a3cde`](https://github.com/finos/legend-studio/commit/6bc2a3cdec3195267bcb90f94e8a4ae0cbeefed7) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Handle more than one compatible connections in query db.
+
+## 28.7.1
+
+## 28.7.0
+
+### Minor Changes
+
+- [#2666](https://github.com/finos/legend-studio/pull/2666) [`d1c0756ba`](https://github.com/finos/legend-studio/commit/d1c0756baaeb5e1250c690956813308041a043f0) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add authorized actions and access role checks in create/commit reviews + create version
+
+### Patch Changes
+
+- [#2670](https://github.com/finos/legend-studio/pull/2670) [`2294346f0`](https://github.com/finos/legend-studio/commit/2294346f024cdffa5904321055c2b59bec61265c) ([@Yasirmod17](https://github.com/Yasirmod17)) - Bypass owner size check for services using ownership
+
+- [#2663](https://github.com/finos/legend-studio/pull/2663) [`03c3c495e`](https://github.com/finos/legend-studio/commit/03c3c495eac3222d485bfff0ad2317b77a2e62cf) ([@siaka-Akash](https://github.com/siaka-Akash)) - fixed dataGeneration for milestoned class
+
+## 28.6.0
+
+### Minor Changes
+
+- [#2606](https://github.com/finos/legend-studio/pull/2606) [`8460bc2a5`](https://github.com/finos/legend-studio/commit/8460bc2a5ea29d11eac501b85f87f9765e869443) ([@Yasirmod17](https://github.com/Yasirmod17)) - Service Element Ownership Uplift
+
+## 28.5.9
+
+### Patch Changes
+
+- [#2648](https://github.com/finos/legend-studio/pull/2648) [`b27267f04`](https://github.com/finos/legend-studio/commit/b27267f04ec011ffbccc5cb81b17f85f44a61a0b) ([@AFine-gs](https://github.com/AFine-gs)) - Add developer option to set dev protocol version
+
+## 28.5.8
+
+### Patch Changes
+
+- [#2643](https://github.com/finos/legend-studio/pull/2643) [`ddaf77c4c`](https://github.com/finos/legend-studio/commit/ddaf77c4c7b6ba56fc1b314049450f3b4b353ddd) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add tests for testing project viewer mode to increase stability
+
+## 28.5.7
+
+## 28.5.6
+
+## 28.5.5
+
+## 28.5.4
+
+### Patch Changes
+
+- [#2542](https://github.com/finos/legend-studio/pull/2542) [`4e37a901e`](https://github.com/finos/legend-studio/commit/4e37a901ea05a8da0eff46fa762828a2329373dd) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Enable choose runtime when creating a new service
+
+- [#2627](https://github.com/finos/legend-studio/pull/2627) [`eada42c72`](https://github.com/finos/legend-studio/commit/eada42c72a3a62585a21b596ffa74ae7b349b0c7) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - minor improvement - pretty pure grammar
+
+- [#2626](https://github.com/finos/legend-studio/pull/2626) [`52b18c884`](https://github.com/finos/legend-studio/commit/52b18c884338a54cde65e805be8dc977598e0fed) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - use pretty pure grammar in entity diff view
+
+- [#2628](https://github.com/finos/legend-studio/pull/2628) [`d3217adef`](https://github.com/finos/legend-studio/commit/d3217adefda1cb636c757c2e5b5f1dfd4f663266) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add database config with target package to build model/mapping from database.
+
+## 28.5.3
+
+### Patch Changes
+
+- [#2620](https://github.com/finos/legend-studio/pull/2620) [`292066eaa`](https://github.com/finos/legend-studio/commit/292066eaae08b06be938fe5b2f4f2f3082604e1c) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Improve getAvailableTables for seed data input to include more runtime types and included stores.
+
+## 28.5.2
+
+## 28.5.1
+
+## 28.5.0
+
+### Minor Changes
+
+- [#2555](https://github.com/finos/legend-studio/pull/2555) [`99cb86a04`](https://github.com/finos/legend-studio/commit/99cb86a04894a5fae77e3e576840c2423eac2c8d) ([@gayathrir11](https://github.com/gayathrir11)) - Support patch release
+
+## 28.4.4
+
+### Patch Changes
+
+- [#2588](https://github.com/finos/legend-studio/pull/2588) [`617e6dd94`](https://github.com/finos/legend-studio/commit/617e6dd9419200ac4f221507a7faed85ef4cde33) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - render service test data with different function forms of `getRuntimeWithModelQueryConnection`
+
+## 28.4.3
+
+## 28.4.2
+
+## 28.4.1
+
+### Patch Changes
+
+- [#2492](https://github.com/finos/legend-studio/pull/2492) [`e3f48d05d`](https://github.com/finos/legend-studio/commit/e3f48d05d6975a5c6e14f6e0e523e01ec89571de) ([@mohamed-abead](https://github.com/mohamed-abead)) - Added the code to auto-fold components upon the form mode to text switch, and added an extension mechanism to get Auto-Folding candidates.
+
+## 28.4.0
+
+### Minor Changes
+
+- [#2570](https://github.com/finos/legend-studio/pull/2570) [`aada85b52`](https://github.com/finos/legend-studio/commit/aada85b524ce21856f73bc8d160afce362d0ca1a) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add `queryBuidlerConfig` and add config to `LegendQueryApplicationConfig` and `LegendStudioApplicationConfig`. Disable QueryChat with `TEMPORARY__disableQueryBuilderChat` flag.
+
+## 28.3.5
+
+### Patch Changes
+
+- [#2562](https://github.com/finos/legend-studio/pull/2562) [`1892f9d7c`](https://github.com/finos/legend-studio/commit/1892f9d7cdadd569988f9ad30bd5c6edd191e835) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - support generate test data with seed data input
+
+- [#2561](https://github.com/finos/legend-studio/pull/2561) [`753e0eb46`](https://github.com/finos/legend-studio/commit/753e0eb4687ab3d642b3dfc3321ae00641d2af13) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add right click `Query...` for service.
+
+## 28.3.4
+
+## 28.3.3
+
+### Patch Changes
+
+- [#2543](https://github.com/finos/legend-studio/pull/2543) [`a15914d9f`](https://github.com/finos/legend-studio/commit/a15914d9fa6c04a1a09bf7842b2f8b06ac3b701e) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Default to only showing tables in the source dropdown when drag and drop store to mapping source
+
+## 28.3.2
+
+### Patch Changes
+
+- [#2538](https://github.com/finos/legend-studio/pull/2538) [`8960e7b82`](https://github.com/finos/legend-studio/commit/8960e7b8225da76de452ccf4829d552660132210) ([@hardikmaheshwari](https://github.com/hardikmaheshwari)) - Remove execution context editor for inline service queries
+
+## 28.3.1
+
+## 28.3.0
+
+### Minor Changes
+
+- [#2513](https://github.com/finos/legend-studio/pull/2513) [`c4adb7fdc`](https://github.com/finos/legend-studio/commit/c4adb7fdc7871ec7e3f871bff85b2227dbcae087) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - **BREAKING CHANGES** Group new element dropdown by category
+
+## 28.2.7
+
+### Patch Changes
+
+- [#2524](https://github.com/finos/legend-studio/pull/2524) [`6ca491d29`](https://github.com/finos/legend-studio/commit/6ca491d2953a1aea6c5a8bbab8fbd2b1b66d9d09) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add a button in dev-tools tab to download project grammar with/without dependency projects
+
+## 28.2.6
+
+## 28.2.5
+
+### Patch Changes
+
+- [#2515](https://github.com/finos/legend-studio/pull/2515) [`e1eb01b25`](https://github.com/finos/legend-studio/commit/e1eb01b25026f4a5543ca1a4a83a804af7e07a3c) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix a bug where failing to generate function signature as the name of ConcreteFunctionDefinition after saving query as a function
+
+## 28.2.4
+
+### Patch Changes
+
+- [#2497](https://github.com/finos/legend-studio/pull/2497) [`fe3cda274`](https://github.com/finos/legend-studio/commit/fe3cda274192425c45373e96d79351b250bbc769) ([@yash0024](https://github.com/yash0024)) - Added support to fetch valid Database Authentication Flows from the backend, displaying a warning on selecting invalid Database Authentication Flows in Text mode
+
+## 28.2.3
+
+### Patch Changes
+
+- [#2498](https://github.com/finos/legend-studio/pull/2498) [`1021a6ccb`](https://github.com/finos/legend-studio/commit/1021a6ccbea7ef9ef00a54d17d648182a0512ce3) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - pass in executable query to the TestDataGeneration API
+
+## 28.2.2
+
+### Patch Changes
+
+- [#2495](https://github.com/finos/legend-studio/pull/2495) [`b98d44d0e`](https://github.com/finos/legend-studio/commit/b98d44d0eb35af2625d328a964b3d39be6beb940) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Pass in executable query to the TestDataGeneration API
+
+## 28.2.1
+
+### Patch Changes
+
+- [#2487](https://github.com/finos/legend-studio/pull/2487) [`246fa969e`](https://github.com/finos/legend-studio/commit/246fa969e5a540d66939f81a557a3cc9a9ab98c6) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - support generating schemas/tables from query without authentication
+
+## 28.2.0
+
+### Minor Changes
+
+- [#2444](https://github.com/finos/legend-studio/pull/2444) [`7f4c5c03d`](https://github.com/finos/legend-studio/commit/7f4c5c03db01e2f5adaa529926c46eb1129825cd) ([@gayathrir11](https://github.com/gayathrir11)) - Remove handling of legacy dependencies
+
+- [#2417](https://github.com/finos/legend-studio/pull/2417) [`e788d13e9`](https://github.com/finos/legend-studio/commit/e788d13e97d4f0e620a70ad4fbac88378df11f30) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Edit supported lambdas (from() lambdas) in function editor via embedded query builder.
+
+## 28.1.4
+
+## 28.1.3
+
+## 28.1.2
+
+## 28.1.1
+
+## 28.1.0
+
+### Minor Changes
+
+- [#2455](https://github.com/finos/legend-studio/pull/2455) [`05fa748a4`](https://github.com/finos/legend-studio/commit/05fa748a49d0a4dc76a441f14c570b05a2927099) ([@jake-kim1](https://github.com/jake-kim1)) - Support generating models from relational database.
+
+## 28.0.5
+
+## 28.0.4
+
+## 28.0.3
+
+## 28.0.2
+
+## 28.0.1
+
+## 28.0.0
+
+### Major Changes
+
+- [#2433](https://github.com/finos/legend-studio/pull/2433) [`ee14b1c3a`](https://github.com/finos/legend-studio/commit/ee14b1c3adae154e8d6e9701a24b9c7d08d029a9) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Renamed `getExtraEditorExtensionStateCreators()` and `EditorExtensionStateCreator` to `getExtraEditorExtensionStateBuilders()` and `EditorExtensionStateBuilder` respectively. Renamed `getExtraTestRunnerTabConfigurations()` and `TestRunnerTabConfiguration` to `getExtraTestRunnerViewConfigurations()` and `TestRunnerViewConfiguration` respectively.
+
+## 27.1.11
+
+### Patch Changes
+
+- [#2432](https://github.com/finos/legend-studio/pull/2432) [`e87dea1d2`](https://github.com/finos/legend-studio/commit/e87dea1d2ce3315c58a362420854919d7158057c) ([@gayathrir11](https://github.com/gayathrir11)) - Remove `TEMPORARY__enableNewServiceRegistrationInputCollectorMechanism` from the studio config.
+
+## 27.1.10
+
+## 27.1.9
+
+## 27.1.8
+
+## 27.1.7
+
+## 27.1.6
+
+## 27.1.5
+
+## 27.1.4
+
+### Patch Changes
+
+- [#1704](https://github.com/finos/legend-studio/pull/1704) [`8e25a9357`](https://github.com/finos/legend-studio/commit/8e25a9357aff4ca97978fe56454c7fd060b4df8a) ([@gayathrir11](https://github.com/gayathrir11)) - Fix clearing of compilation errors when we expand the lambda editor ([#1703](https://github.com/finos/legend-studio/issues/1703)).
+
+## 27.1.3
+
+### Patch Changes
+
+- [#2371](https://github.com/finos/legend-studio/pull/2371) [`6a1fad74c`](https://github.com/finos/legend-studio/commit/6a1fad74cae4cfafe93be9c5326fde280f241baf) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Enable switching to/from EMBEDDED and MANAGED project types. Disable platform version configuration and releasing for EMBEDDED project types.
+
+## 27.1.2
+
+### Patch Changes
+
+- [#2365](https://github.com/finos/legend-studio/pull/2365) [`f1dc0d520`](https://github.com/finos/legend-studio/commit/f1dc0d520ae2fc380659221961f319a1524527b3) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Enhance function editor to run function other than execution results.
+
+- [#2369](https://github.com/finos/legend-studio/pull/2369) [`5540660e8`](https://github.com/finos/legend-studio/commit/5540660e8fbc4e7a3b0fe9370629f83548bb33c1) ([@gs-gunjan](https://github.com/gs-gunjan)) - Implementing trigger to run manual jobs in a workflow
+
 ## 27.1.1
 
 ### Patch Changes

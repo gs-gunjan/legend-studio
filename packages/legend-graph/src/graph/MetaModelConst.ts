@@ -63,11 +63,12 @@ export enum PRIMITIVE_TYPE {
 export enum ATOMIC_TEST_TYPE {
   Service_Test = 'serviceTest',
   Mapping_Test = 'mappingTest',
+  Function_Test = 'functionTest',
 }
 
 // NOTE: the list of auto-import are kept in `m3.pure` file in `finos/legend-pure`,
-// this includes a more extensive list of packges which contain native functions, classes, etc.
-// See https://github.com/finos/legend-pure/blob/master/legend-pure-m3-core/src/main/resources/platform/pure/m3.pure
+// this includes a more extensive list of packages which contain native functions, classes, etc.
+// See https://github.com/finos/legend-pure/blob/master/legend-pure-core/legend-pure-m3-core/src/main/resources/platform/pure/grammar/m3.pure
 export const AUTO_IMPORTS = [
   // 'meta::pure::metamodel',
   'meta::pure::metamodel::type',
@@ -103,6 +104,7 @@ export enum CORE_PURE_PATH {
   // type
   ANY = 'meta::pure::metamodel::type::Any',
   NIL = 'meta::pure::metamodel::type::Nil',
+  RELATION = 'meta::pure::metamodel::relation::Relation',
 
   // profile
   PROFILE_DOC = 'meta::pure::profiles::doc',
@@ -126,6 +128,9 @@ export enum CORE_PURE_PATH {
   GENERATION_SPECIFICATION = 'meta::pure::generation::metamodel::GenerationSpecification',
   SECTION_INDEX = 'meta::pure::metamodel::section::SectionIndex',
   DATA_ELEMENT = 'meta::pure::data::DataElement',
+  SNOWFLAKE_APP = 'meta::external::function::activator::snowflakeApp::SnowflakeApp',
+  HOSTED_SERVICE = 'meta::external::function::activator::hostedService::HostedService',
+  TABULAR_RESULT = 'meta::pure::mapping::Result',
 }
 
 export const PURE_DOC_TAG = 'doc';
@@ -142,8 +147,8 @@ export enum MILESTONING_VERSION_PROPERTY_SUFFIX {
   ALL_VERSIONS_IN_RANGE = 'AllVersionsInRange',
 }
 
-export const MILESTONING_START_DATE_PARAMETER_NAME = 'start';
-export const MILESTONING_END_DATE_PARAMETER_NAME = 'end';
+export const MILESTONING_START_DATE_PARAMETER_NAME = 'startDate';
+export const MILESTONING_END_DATE_PARAMETER_NAME = 'endDate';
 export const PROCESSING_DATE_MILESTONING_PROPERTY_NAME = 'processingDate';
 export const BUSINESS_DATE_MILESTONING_PROPERTY_NAME = 'businessDate';
 
@@ -152,8 +157,13 @@ export enum PackageableElementPointerType {
   STORE = 'STORE',
   MAPPING = 'MAPPING',
   RUNTIME = 'RUNTIME',
+  FUNCTION = 'FUNCTION',
   FILE_GENERATION = 'FILE_GENERATION',
   SERVICE = 'SERVICE',
+  DATA = 'DATA',
+  ENUMERATION = 'ENUMERATION',
+  ASSOCIATION = 'ASSOCIATION',
+  BINDING = 'BINDING',
 }
 
 export enum SUPPORTED_FUNCTIONS {
@@ -167,3 +177,9 @@ export const DATE_TIME_FORMAT_WITH_MILLISECONDS =
   "yyyy-MM-dd'T'HH:mm:ss.SSSxxxx";
 export const DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssxxxx";
 export const DATE_FORMAT = 'yyyy-MM-dd';
+
+// Generation Const
+export const DEFAULT_GENERATION_PACKAGE = 'generated';
+// Query
+export const QUERY_PROFILE_TAG_CLASS = 'class';
+export const QUERY_PROFILE_PATH = 'meta::pure::profiles::query';

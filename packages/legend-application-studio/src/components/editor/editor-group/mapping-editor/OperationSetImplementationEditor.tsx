@@ -91,7 +91,8 @@ export const OperationSetImplementationEditor = observer(
       )
       .map((si) => ({ value: si, label: si.id.value }));
     const filterOption = createFilter({
-      stringify: (option: SetImplementationOption): string => option.label,
+      stringify: (option: { data: SetImplementationOption }): string =>
+        option.data.label,
     });
     const addParameter = (): void =>
       operationMapping_addParameter(
@@ -151,7 +152,7 @@ export const OperationSetImplementationEditor = observer(
       },
       [setImplementation],
     );
-    const [{ isDragOver }, dropRef] = useDrop<
+    const [{ isDragOver }, dropConnector] = useDrop<
       MappingElementDragSource,
       void,
       { isDragOver: boolean }
@@ -220,7 +221,7 @@ export const OperationSetImplementationEditor = observer(
           </PanelHeader>
           <PanelDropZone
             isDragOver={isDragOver && !isReadOnly}
-            dropTargetConnector={dropRef}
+            dropTargetConnector={dropConnector}
           >
             <PanelContent>
               {setImplementation.parameters.map((param) => (
@@ -235,7 +236,7 @@ export const OperationSetImplementationEditor = observer(
                       onChange={changeParamater(param)}
                       filterOption={filterOption}
                       value={{
-                        value: param,
+                        value: param.setImplementation.value,
                         label: param.setImplementation.value.id.value,
                       }}
                       placeholder="Select parameter ID"

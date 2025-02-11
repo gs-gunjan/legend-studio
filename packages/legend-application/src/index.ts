@@ -15,7 +15,7 @@
  */
 
 export * from './stores/ApplicationConfig.js';
-
+export * from './components/BrowserEnvironmentProvider.js';
 export * from './application/LegendApplication.js';
 export * from './application/LegendApplicationConfig.js';
 export * from './application/LegendApplicationPluginManager.js';
@@ -30,6 +30,7 @@ export * from './components/ApplicationStoreProvider.js';
 export * from './components/ApplicationFrameworkProvider.js';
 export * from './components/useApplicationNavigationContext.js';
 export * from './components/useCommands.js';
+export * from './components/ReleaseNotesManager.js';
 export {
   forceDispatchKeyboardEvent,
   BackdropContainer,
@@ -43,6 +44,7 @@ export {
   type NavigationLocation,
   type NavigationZone,
 } from './stores/navigation/NavigationService.js';
+export { downloadStream } from './util/DownloadHelperServiceWorker.js';
 export * from './stores/storage/ApplicationStorage.js';
 export * from './stores/storage/StorageService.js';
 export * from './stores/SettingService.js';
@@ -54,6 +56,7 @@ export * from './stores/event/IframeEventNotifierPlugin.js';
 export * from './stores/TelemetryService.js';
 export * from './stores/NotificationService.js';
 export * from './stores/AlertService.js';
+export * from './stores/ReleaseNotesService.js';
 export * from './stores/AssistantService.js';
 export * from './stores/ApplicationNavigationContextService.js';
 export * from './stores/LegendApplicationPlugin.js';

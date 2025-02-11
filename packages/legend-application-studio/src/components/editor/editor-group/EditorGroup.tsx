@@ -18,7 +18,7 @@ import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   clsx,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentItem,
   PlusIcon,
@@ -50,7 +50,7 @@ import { ServiceEditorState } from '../../../stores/editor/editor-state/element-
 import { ProjectConfigurationEditorState } from '../../../stores/editor/editor-state/project-configuration-editor-state/ProjectConfigurationEditorState.js';
 import { ProjectConfigurationEditor } from './project-configuration-editor/ProjectConfigurationEditor.js';
 import { ElementGenerationEditor } from './element-generation-editor/ElementGenerationEditor.js';
-import { FunctionEditor } from './FunctionEditor.js';
+import { FunctionEditor } from './function-activator/FunctionEditor.js';
 import { ElementNativeView } from './element-generation-editor/ElementNativeView.js';
 import { ServiceEditor } from './service-editor/ServiceEditor.js';
 import { PackageableRuntimeEditor } from './RuntimeEditor.js';
@@ -73,10 +73,21 @@ import { PackageableDataEditorState } from '../../../stores/editor/editor-state/
 import { DataElementEditor } from './data-editor/DataElementEditor.js';
 import { ElementXTGenerationEditor } from './element-generation-editor/ElementXTGenerationEditor.js';
 import { TabManager, type TabState } from '@finos/legend-lego/application';
-import { INTERNAL__UnknownFunctionActivatorEdtiorState } from '../../../stores/editor/editor-state/element-editor-state/INTERNAL__UnknownFunctionActivatorEditorState.js';
-import { INTERNAL__UnknownFunctionActivatorEdtior } from './INTERNAL__UnknownFunctionActivatorEdtior.js';
+import { INTERNAL__UnknownFunctionActivatorEdtiorState } from '../../../stores/editor/editor-state/element-editor-state/function-activator/INTERNAL__UnknownFunctionActivatorEditorState.js';
+import { INTERNAL__UnknownFunctionActivatorEdtior } from './function-activator/INTERNAL__UnknownFunctionActivatorEdtior.js';
 import { getElementIcon } from '../../ElementIconUtils.js';
 import { ArtifactGenerationViewerState } from '../../../stores/editor/editor-state/ArtifactGenerationViewerState.js';
+import { QueryConnectionWorflowEditor } from './end-to-end-flow-editor/ConnectionToQueryWorkflowEditor.js';
+import { QueryConnectionEndToEndWorkflowEditorState } from '../../../stores/editor/editor-state/end-to-end-workflow-state/QueryConnectionEndToEndWorkflowEditorState.js';
+import { SnowflakeAppFunctionActivatorEdtiorState } from '../../../stores/editor/editor-state/element-editor-state/function-activator/SnowflakeAppFunctionActivatorEditorState.js';
+import { SnowflakeAppFunctionActivatorEditor } from './function-activator/SnowflakeAppFunctionActivatorEditor.js';
+import {
+  ShowcaseCard,
+  RuleEngagementCard,
+  DocumentationCard,
+} from '../../workspace-setup/WorkspaceSetup.js';
+import { HostedServiceFunctionActivatorEditorState } from '../../../stores/editor/editor-state/element-editor-state/function-activator/HostedServiceFunctionActivatorEditorState.js';
+import { HostedServiceFunctionActivatorEditor } from './function-activator/HostedServiceFunctionActivatorEditor.js';
 
 export const ViewerEditorGroupSplashScreen: React.FC = () => {
   const commandListWidth = 300;
@@ -119,7 +130,6 @@ export const EditorGroupSplashScreen: React.FC = () => {
   const commandListHeight = 180;
   const [showCommandList, setShowCommandList] = useState(false);
   const { ref, width, height } = useResizeDetector<HTMLDivElement>();
-
   useEffect(() => {
     setShowCommandList(
       (width ?? 0) > commandListWidth && (height ?? 0) > commandListHeight,
@@ -133,44 +143,67 @@ export const EditorGroupSplashScreen: React.FC = () => {
           'editor-group__splash-screen__content--hidden': !showCommandList,
         })}
       >
-        <div className="editor-group__splash-screen__content__item">
-          <div className="editor-group__splash-screen__content__item__label">
-            Open or Search for an Element
+        <div className="editor-group__splash-screen__content__cards">
+          <div className="editor-group__splash-screen__content__cards__container">
+            <RuleEngagementCard />
+            <ShowcaseCard hideDocumentation={true} />
+            <DocumentationCard />
           </div>
-          <div className="editor-group__splash-screen__content__item__hot-keys">
-            <div className="hotkey__key">Ctrl</div>
-            <div className="hotkey__plus">
-              <PlusIcon />
+        </div>
+        <div className="editor-group__splash-screen__content__divider"></div>
+        <div className="editor-group__splash-screen__content__actions">
+          <div className="editor-group__splash-screen__content__header">
+            Essential Keyboard Shortcuts
+          </div>
+          <div className="editor-group__splash-screen__content__items">
+            <div className="editor-group__splash-screen__content__item">
+              <div className="editor-group__splash-screen__content__item__label">
+                Open or Search for an Element
+              </div>
+              <div className="editor-group__splash-screen__content__item__hot-keys">
+                <div className="hotkey__key">Ctrl</div>
+                <div className="hotkey__plus">
+                  <PlusIcon />
+                </div>
+                <div className="hotkey__key">P</div>
+              </div>
             </div>
-            <div className="hotkey__key">P</div>
-          </div>
-        </div>
-        <div className="editor-group__splash-screen__content__item">
-          <div className="editor-group__splash-screen__content__item__label">
-            Push Local Changes
-          </div>
-          <div className="editor-group__splash-screen__content__item__hot-keys">
-            <div className="hotkey__key">Ctrl</div>
-            <div className="hotkey__plus">
-              <PlusIcon />
+            <div className="editor-group__splash-screen__content__item">
+              <div className="editor-group__splash-screen__content__item__label">
+                Push Local Changes
+              </div>
+              <div className="editor-group__splash-screen__content__item__hot-keys">
+                <div className="hotkey__key">Ctrl</div>
+                <div className="hotkey__plus">
+                  <PlusIcon />
+                </div>
+                <div className="hotkey__key">S</div>
+              </div>
             </div>
-            <div className="hotkey__key">S</div>
-          </div>
-        </div>
-        <div className="editor-group__splash-screen__content__item">
-          <div className="editor-group__splash-screen__content__item__label">
-            Toggle Hackermode
-          </div>
-          <div className="editor-group__splash-screen__content__item__hot-keys">
-            <div className="hotkey__key">F8</div>
-          </div>
-        </div>
-        <div className="editor-group__splash-screen__content__item">
-          <div className="editor-group__splash-screen__content__item__label">
-            Compile
-          </div>
-          <div className="editor-group__splash-screen__content__item__hot-keys">
-            <div className="hotkey__key">F9</div>
+            <div className="editor-group__splash-screen__content__item">
+              <div className="editor-group__splash-screen__content__item__label">
+                Open Showcases
+              </div>
+              <div className="editor-group__splash-screen__content__item__hot-keys">
+                <div className="hotkey__key">F7</div>
+              </div>
+            </div>
+            <div className="editor-group__splash-screen__content__item">
+              <div className="editor-group__splash-screen__content__item__label">
+                Go To Text Mode
+              </div>
+              <div className="editor-group__splash-screen__content__item__hot-keys">
+                <div className="hotkey__key">F8</div>
+              </div>
+            </div>
+            <div className="editor-group__splash-screen__content__item">
+              <div className="editor-group__splash-screen__content__item__label">
+                Compile
+              </div>
+              <div className="editor-group__splash-screen__content__item__hot-keys">
+                <div className="hotkey__key">F9</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -189,14 +222,13 @@ export const EditorGroup = observer(() => {
     currentTabState instanceof ElementEditorState
       ? editorStore.graphState.graphGenerationState.externalFormatState.externalFormatDescriptions
           .filter((f) => f.supportsSchemaGeneration)
-          .slice()
-          .sort((a, b): number => a.name.localeCompare(b.name))
+          .toSorted((a, b): number => a.name.localeCompare(b.name))
       : [];
   const generationViewModes = (
     currentTabState instanceof ElementEditorState
-      ? editorStore.graphState.graphGenerationState.globalFileGenerationState.fileGenerationConfigurations
-          .slice()
-          .sort((a, b): number => a.label.localeCompare(b.label))
+      ? editorStore.graphState.graphGenerationState.globalFileGenerationState.fileGenerationConfigurations.toSorted(
+          (a, b): number => a.label.localeCompare(b.label),
+        )
       : []
   ).filter(
     (file) =>
@@ -256,6 +288,20 @@ export const EditorGroup = observer(() => {
             currentTabState instanceof GenerationSpecificationEditorState
           ) {
             return <GenerationSpecificationEditor key={currentTabState.uuid} />;
+          } else if (
+            currentTabState instanceof SnowflakeAppFunctionActivatorEdtiorState
+          ) {
+            return (
+              <SnowflakeAppFunctionActivatorEditor key={currentTabState.uuid} />
+            );
+          } else if (
+            currentTabState instanceof HostedServiceFunctionActivatorEditorState
+          ) {
+            return (
+              <HostedServiceFunctionActivatorEditor
+                key={currentTabState.uuid}
+              />
+            );
           } else if (currentTabState instanceof UnsupportedElementEditorState) {
             return <UnsupportedElementEditor key={currentTabState.uuid} />;
           } else if (
@@ -315,6 +361,17 @@ export const EditorGroup = observer(() => {
       return <ModelImporter />;
     } else if (currentTabState instanceof ProjectConfigurationEditorState) {
       return <ProjectConfigurationEditor />;
+    } else if (
+      currentTabState instanceof QueryConnectionEndToEndWorkflowEditorState
+    ) {
+      return (
+        <QueryConnectionWorflowEditor
+          connectionToQueryWorkflowState={
+            editorStore.globalEndToEndWorkflowState
+              .queryToConnectionWorkflowEditorState
+          }
+        />
+      );
     }
     // TODO: create an editor for unsupported tab
     return null;
@@ -326,9 +383,9 @@ export const EditorGroup = observer(() => {
         <div className="diff-tab">
           <div className="diff-tab__element-icon">
             {editorState.element ? (
-              getElementIcon(editorState.element, editorStore, {
+              (getElementIcon(editorState.element, editorStore, {
                 returnEmptyForUnknown: true,
-              }) ?? <GenericTextFileIcon />
+              }) ?? <GenericTextFileIcon />)
             ) : (
               <GenericTextFileIcon />
             )}
@@ -363,9 +420,9 @@ export const EditorGroup = observer(() => {
       <div className="editor-group__header__tab">
         <div className="editor-group__header__tab__icon">
           {editorState instanceof ElementEditorState ? (
-            getElementIcon(editorState.element, editorStore, {
+            (getElementIcon(editorState.element, editorStore, {
               returnEmptyForUnknown: true,
-            }) ?? <GenericTextFileIcon />
+            }) ?? <GenericTextFileIcon />)
           ) : (
             <GenericTextFileIcon />
           )}
@@ -411,7 +468,7 @@ export const EditorGroup = observer(() => {
         </div>
         <div className="editor-group__header__actions">
           {currentTabState instanceof ElementEditorState && (
-            <DropdownMenu
+            <ControlledDropdownMenu
               className="editor-group__view-mode__type"
               title="View as..."
               content={
@@ -507,10 +564,10 @@ export const EditorGroup = observer(() => {
                 {currentTabState.generationModeState?.label ??
                   currentTabState.editMode}
               </div>
-            </DropdownMenu>
+            </ControlledDropdownMenu>
           )}
           {currentTabState instanceof EntityDiffViewState && (
-            <DropdownMenu
+            <ControlledDropdownMenu
               className="editor-group__view-mode__type"
               title="View as..."
               content={
@@ -546,7 +603,7 @@ export const EditorGroup = observer(() => {
               <div className="editor-group__view-mode__type__label">
                 {currentTabState.diffMode}
               </div>
-            </DropdownMenu>
+            </ControlledDropdownMenu>
           )}
         </div>
       </div>

@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-import {
-  type Multiplicity,
-  type Mapping,
-  type PackageableRuntime,
-  type PureModel,
-  type DatasetSpecification,
+import type {
+  Multiplicity,
+  Mapping,
+  PackageableRuntime,
+  PureModel,
+  DatasetSpecification,
+  MappingModelCoverageAnalysisResult,
+  FunctionAnalysisInfo,
 } from '@finos/legend-graph';
 import { prettyCONSTName, uuid } from '@finos/legend-shared';
 import type { DataSpaceSupportInfo } from '../../../graph/metamodel/pure/model/packageableElements/dataSpace/DSL_DataSpace_DataSpace.js';
@@ -32,8 +34,14 @@ export class DataSpaceExecutionContextAnalysisResult {
   mapping!: Mapping;
   defaultRuntime!: PackageableRuntime;
   compatibleRuntimes!: PackageableRuntime[];
-  // TODO: mapping coverage analysis
   datasets: DatasetSpecification[] = [];
+  runtimeMetadata?: DataSpaceExecutionContextRuntimeMetadata;
+}
+
+export class DataSpaceExecutionContextRuntimeMetadata {
+  storePath?: string;
+  connectionPath?: string;
+  connectionType?: string;
 }
 
 export class DataSpaceTaggedValueInfo {
@@ -125,13 +133,35 @@ export class DataSpaceDiagramAnalysisResult {
 }
 
 export abstract class DataSpaceExecutableInfo {
+  id!: string;
+  executionContextKey!: string;
   query!: string;
+}
+
+export class DataSpaceTemplateExecutableInfo extends DataSpaceExecutableInfo {}
+
+export class DataSpaceFunctionPointerExecutableInfo extends DataSpaceExecutableInfo {
+  function!: string;
 }
 
 export class DataSpaceServiceExecutableInfo extends DataSpaceExecutableInfo {
   pattern!: string;
   mapping?: string | undefined;
   runtime?: string | undefined;
+  datasets: DatasetSpecification[] = [];
+}
+
+export class DataSpaceMultiExecutionServiceExecutableInfo extends DataSpaceExecutableInfo {
+  pattern!: string;
+  keyedExecutableInfos: DataSpaceMultiExecutionServiceKeyedExecutableInfo[] =
+    [];
+}
+
+export class DataSpaceMultiExecutionServiceKeyedExecutableInfo {
+  key!: string;
+  mapping?: string | undefined;
+  runtime?: string | undefined;
+  datasets: DatasetSpecification[] = [];
 }
 
 export abstract class DataSpaceExecutableResult {}
@@ -158,10 +188,9 @@ export class DataSpaceExecutableAnalysisResult {
 
   title!: string;
   description?: string | undefined;
-  executable!: string;
+  executable?: string;
   info?: DataSpaceExecutableInfo | undefined;
   result!: DataSpaceExecutableResult;
-  datasets: DatasetSpecification[] = [];
 }
 
 export class DataSpaceAnalysisResult {
@@ -187,6 +216,14 @@ export class DataSpaceAnalysisResult {
   executables: DataSpaceExecutableAnalysisResult[] = [];
 
   supportInfo?: DataSpaceSupportInfo | undefined;
+
+  mappingToMappingCoverageResult?: Map<
+    string,
+    MappingModelCoverageAnalysisResult
+  >;
+
+  functionInfos?: Map<string, FunctionAnalysisInfo>;
+  dependencyFunctionInfos?: Map<string, FunctionAnalysisInfo>;
 
   get displayName(): string {
     return this.title ?? prettyCONSTName(this.name);

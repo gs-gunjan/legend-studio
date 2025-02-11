@@ -16,11 +16,29 @@
 
 import type { LegendApplicationPlugin } from '@finos/legend-application';
 import type { QueryBuilderState } from './QueryBuilderState.js';
-import type { QuerySearchSpecification } from '@finos/legend-graph';
+import type { QuerySearchSpecification, RawLambda } from '@finos/legend-graph';
 import type {
   DataAccessState,
   DatasetAccessInfo,
 } from './data-access/DataAccessState.js';
+
+export type CuratedTemplateQuery = {
+  id: string;
+  title: string;
+  description: string | undefined;
+  query: RawLambda;
+  executionContextKey: string;
+};
+
+export type CuratedTemplateQuerySpecification = {
+  getCuratedTemplateQueries(
+    queryBuilderState: QueryBuilderState,
+  ): CuratedTemplateQuery[];
+  loadCuratedTemplateQuery(
+    templateQuery: CuratedTemplateQuery,
+    queryBuilderState: QueryBuilderState,
+  ): Promise<void>;
+};
 
 export type LoadQueryFilterOption = {
   key: string;
@@ -45,12 +63,66 @@ export type QueryExportUsageConfiguration = {
   renderer(): React.ReactNode;
 };
 
+export type WarehouseEntitlementRender = {
+  renderer: (dataAccessState: DataAccessState) => React.ReactNode;
+};
+
+export type QueryChatRenderer = (
+  queryBuilderState: QueryBuilderState,
+) => React.ReactNode;
+
+export type TemplateQueryPanelContentRenderer = (
+  queryBuilderState: QueryBuilderState,
+) => React.ReactNode;
+
+export type QueryBuilderHeaderActionConfiguration = {
+  key: string;
+  category: number;
+  renderer: (
+    queryBuilderState: QueryBuilderState,
+  ) => React.ReactNode | undefined;
+};
+
+export type QueryBuilderMenuActionConfiguration = {
+  key: string;
+  title?: string;
+  disableFunc?: (queryBuilderState: QueryBuilderState) => boolean;
+  label: string;
+  onClick: (queryBuilderState: QueryBuilderState) => void;
+  icon?: React.ReactNode;
+  renderExtraComponent?: (
+    queryBuilderState: QueryBuilderState,
+  ) => React.ReactNode;
+};
+
+export type QueryBuilderPropagateExecutionContextChangeHelper = (
+  queryBuilderState: QueryBuilderState,
+  isGraphBuildingNotRequired?: boolean,
+) => (() => Promise<void>) | undefined;
+
 export interface QueryBuilder_LegendApplicationPlugin_Extension
   extends LegendApplicationPlugin {
+  /**
+   * Get the list of template query specifications
+   */
+  getCuratedTemplateQuerySpecifications?(): CuratedTemplateQuerySpecification[];
+
   /**
    * Get the list of filter options for query loader.
    */
   getExtraLoadQueryFilterOptions?(): LoadQueryFilterOption[];
+
+  /**
+   * Get the list of filter options related to template query
+   */
+  getQueryFilterOptionsRelatedToTemplateQuery?(): (
+    queryBuilderState: QueryBuilderState,
+  ) => string[];
+
+  /**
+   * Get the list of warehouse entitlement configurations
+   */
+  getWarehouseEntitlementRenders?(): WarehouseEntitlementRender[];
 
   /**
    * Get the list of dataset entitlement access report action configurations.
@@ -61,4 +133,39 @@ export interface QueryBuilder_LegendApplicationPlugin_Extension
    * Get the list of query usage configurations
    */
   getExtraQueryUsageConfigurations?(): QueryExportUsageConfiguration[];
+
+  /**
+   * Get the list of query chat configurations
+   */
+  getExtraQueryChatRenderers?(): QueryChatRenderer[];
+
+  /**
+   * Get the list of template query panel content render
+   */
+  getExtraTemplateQueryPanelContentRenderer?(): TemplateQueryPanelContentRenderer[];
+
+  /**
+   * Get the list of action configurations
+   */
+  getExtraQueryBuilderHeaderActionConfigurations?(): QueryBuilderHeaderActionConfiguration[];
+
+  /**
+   * Get the list of action configurations
+   */
+  getExtraQueryBuilderHeaderTitleConfigurations?(): QueryBuilderHeaderActionConfiguration[];
+
+  /**
+   * Get the list of help menu action configurations
+   */
+  getExtraQueryBuilderHelpMenuActionConfigurations?(): QueryBuilderMenuActionConfiguration[];
+
+  /**
+   * Get the list of export menu action configurations
+   */
+  getExtraQueryBuilderExportMenuActionConfigurations?(): QueryBuilderMenuActionConfiguration[];
+
+  /**
+   * Get the list of Query Builder Propagate Execution Context Change Helper
+   */
+  getExtraQueryBuilderPropagateExecutionContextChangeHelper?(): QueryBuilderPropagateExecutionContextChangeHelper[];
 }

@@ -44,12 +44,15 @@ import {
   observe_Measure,
   observe_Package,
   observe_Profile,
+  observe_HostedService,
   observe_SectionIndex,
+  observe_SnowflakeApp,
 } from './DomainObserverHelper.js';
 import {
   type ObserverContext,
   skipObservedWithContext,
   observe_INTERNAL__UnknownPackageableElement,
+  observe_INTERNAL__UnknownElement,
 } from './CoreObserverHelper.js';
 import {
   observe_FileGenerationSpecification,
@@ -71,6 +74,9 @@ import { observe_ExecutionEnvironmentInstance } from './DSL_ExecutionEnvironment
 import type { INTERNAL__UnknownPackageableElement } from '../../../graph/metamodel/pure/packageableElements/INTERNAL__UnknownPackageableElement.js';
 import type { INTERNAL__UnknownFunctionActivator } from '../../../graph/metamodel/pure/packageableElements/function/INTERNAL__UnknownFunctionActivator.js';
 import type { INTERNAL__UnknownStore } from '../../../graph/metamodel/pure/packageableElements/store/INTERNAL__UnknownStore.js';
+import type { SnowflakeApp } from '../../../graph/metamodel/pure/packageableElements/function/SnowflakeApp.js';
+import type { INTERNAL__UnknownElement } from '../../../graph/metamodel/pure/packageableElements/INTERNAL__UnknownElement.js';
+import type { HostedService } from '../../../graph/metamodel/pure/packageableElements/function/HostedService.js';
 
 class PackageableElementObserver implements PackageableElementVisitor<void> {
   observerContext: ObserverContext;
@@ -91,6 +97,10 @@ class PackageableElementObserver implements PackageableElementVisitor<void> {
     }
   }
 
+  visit_INTERNAL__UnknownElement(element: INTERNAL__UnknownElement): void {
+    observe_INTERNAL__UnknownElement(element);
+  }
+
   visit_INTERNAL__UnknownPackageableElement(
     element: INTERNAL__UnknownPackageableElement,
   ): void {
@@ -101,6 +111,14 @@ class PackageableElementObserver implements PackageableElementVisitor<void> {
     element: INTERNAL__UnknownFunctionActivator,
   ): void {
     observe_INTERNAL__UnknownFunctionActivator(element);
+  }
+
+  visit_SnowflakeApp(element: SnowflakeApp): void {
+    observe_SnowflakeApp(element);
+  }
+
+  visit_HostedService(element: HostedService): void {
+    observe_HostedService(element);
   }
 
   visit_INTERNAL__UnknownStore(element: INTERNAL__UnknownStore): void {
@@ -140,7 +158,7 @@ class PackageableElementObserver implements PackageableElementVisitor<void> {
   }
 
   visit_ConcreteFunctionDefinition(element: ConcreteFunctionDefinition): void {
-    observe_ConcreteFunctionDefinition(element);
+    observe_ConcreteFunctionDefinition(element, this.observerContext);
   }
 
   visit_FlatData(element: FlatData): void {

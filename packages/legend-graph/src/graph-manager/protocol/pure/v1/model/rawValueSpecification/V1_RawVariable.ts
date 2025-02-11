@@ -22,18 +22,29 @@ import {
 } from '../../model/rawValueSpecification/V1_RawValueSpecification.js';
 import type { V1_Multiplicity } from '../../model/packageableElements/domain/V1_Multiplicity.js';
 
+export class V1_RawRawType {
+  fullPath!: string;
+}
+
+export class V1_RawGenericType {
+  rawType!: V1_RawRawType;
+  multiplicityArguments: V1_Multiplicity[] = [];
+  typeArguments: V1_RawGenericType[] = [];
+  typeVariableValues: unknown[] = [];
+}
+
 export class V1_RawVariable
   extends V1_RawValueSpecification
   implements Hashable
 {
-  class!: string;
+  genericType!: V1_RawGenericType;
   name!: string;
   multiplicity!: V1_Multiplicity;
 
   get hashCode(): string {
     return hashArray([
       CORE_HASH_STRUCTURE.RAW_VARIABLE,
-      this.class,
+      this.genericType.rawType.fullPath,
       this.name,
       this.multiplicity,
     ]);

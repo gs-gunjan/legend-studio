@@ -24,8 +24,8 @@ import {
   TEST_DATA_malformedFilterExpressionWithSubtype,
   TEST_DATA__malformedTodayFunction,
 } from './TEST_DATA__QueryBuilder_Failure.js';
-import TEST_DATA__ComplexRelationalModel from './TEST_DATA__QueryBuilder_Model_ComplexRelational.json';
-import TEST_DATA__PostFilterModel from './TEST_DATA__QueryBuilder_Model_PostFilter.json';
+import TEST_DATA__ComplexRelationalModel from './TEST_DATA__QueryBuilder_Model_ComplexRelational.json' with { type: 'json' };
+import TEST_DATA__PostFilterModel from './TEST_DATA__QueryBuilder_Model_PostFilter.json' with { type: 'json' };
 import { integrationTest } from '@finos/legend-shared/test';
 import type { Entity } from '@finos/legend-storage';
 import { create_RawLambda } from '@finos/legend-graph';
@@ -36,11 +36,18 @@ import {
 import { QueryBuilder_GraphManagerPreset } from '../../graph-manager/QueryBuilder_GraphManagerPreset.js';
 import { ApplicationStore } from '@finos/legend-application';
 import { INTERNAL__BasicQueryBuilderState } from '../QueryBuilderState.js';
-import { act } from 'react-dom/test-utils';
 import {
   TEST__LegendApplicationPluginManager,
   TEST__getGenericApplicationConfig,
 } from '../__test-utils__/QueryBuilderStateTestUtils.js';
+import TEST_MilestoningModel from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_Milestoning.json' with { type: 'json' };
+import {
+  TEST_DATA__simpleGetAllVersionsInRangeWithBiTemporalClass,
+  TEST_DATA__simpleGetAllVersionsInRangeWithNonTemporalClass,
+  TEST_DATA__simpleGetAllVersionsWithNonTemporalClass,
+} from './TEST_DATA__QueryBuilder_Milestoning.js';
+import { QueryBuilderAdvancedWorkflowState } from '../query-workflow/QueryBuilderWorkFlowState.js';
+import { act } from '@testing-library/react';
 
 type TestCase = [
   string,
@@ -57,6 +64,10 @@ const relationalCtx = {
 
 const postFilterCtx = {
   entities: TEST_DATA__PostFilterModel,
+};
+
+const milestoningCtx = {
+  entities: TEST_MilestoningModel,
 };
 
 const cases: TestCase[] = [
@@ -102,6 +113,24 @@ const cases: TestCase[] = [
     TEST_DATA__malformedTodayFunction,
     `Can't find expression builder for function 'meta::pure::functions::date::todayyy': no compatible function expression builder available from plugins`,
   ],
+  [
+    'GetAllVersionsInRange() with bitemporal class',
+    milestoningCtx,
+    TEST_DATA__simpleGetAllVersionsInRangeWithBiTemporalClass,
+    `Can't process getAllVersionsInRange() expression: getAllVersionInRange() expects source class to be processing temporal or business temporal milestoned`,
+  ],
+  [
+    'GetAllVersionsInRange() with non-temporal class',
+    milestoningCtx,
+    TEST_DATA__simpleGetAllVersionsInRangeWithNonTemporalClass,
+    `Can't process getAllVersionsInRange() expression: getAllVersionInRange() expects source class to be processing temporal or business temporal milestoned`,
+  ],
+  [
+    'GetAllVersions() with non-temporal class',
+    milestoningCtx,
+    TEST_DATA__simpleGetAllVersionsWithNonTemporalClass,
+    `Can't process getAllVersions() expression: getAllVersions() expects source class to be milestoned`,
+  ],
 ];
 
 describe(
@@ -131,6 +160,8 @@ describe(
         const queryBuilderState = new INTERNAL__BasicQueryBuilderState(
           applicationStore,
           graphManagerState,
+          QueryBuilderAdvancedWorkflowState.INSTANCE,
+          undefined,
         );
         await act(async () => {
           queryBuilderState.initializeWithQuery(

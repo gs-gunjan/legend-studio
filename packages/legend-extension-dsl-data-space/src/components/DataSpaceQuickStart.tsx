@@ -34,6 +34,7 @@ import {
   type DataSpaceExecutableAnalysisResult,
   type DataSpaceExecutableTDSResultColumn,
   DataSpaceServiceExecutableInfo,
+  DataSpaceMultiExecutionServiceExecutableInfo,
 } from '../graph-manager/action/analytics/DataSpaceAnalysis.js';
 import { DataSpaceMarkdownTextViewer } from './DataSpaceMarkdownTextViewer.js';
 import type { DSL_DataSpace_LegendApplicationPlugin_Extension } from '../stores/DSL_DataSpace_LegendApplicationPlugin_Extension.js';
@@ -46,8 +47,8 @@ import {
 import {
   CODE_EDITOR_LANGUAGE,
   CODE_EDITOR_THEME,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+} from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 import {
   DATA_SPACE_VIEWER_ACTIVITY_MODE,
   generateAnchorForActivity,
@@ -115,11 +116,16 @@ const DataSpaceExecutableTDSResultView = observer(
 
     const openServiceQuery = (): void => {
       if (
-        executableAnalysisResult.info instanceof DataSpaceServiceExecutableInfo
+        executableAnalysisResult.info instanceof
+          DataSpaceServiceExecutableInfo ||
+        executableAnalysisResult.info instanceof
+          DataSpaceMultiExecutionServiceExecutableInfo
       ) {
-        dataSpaceViewerState.openServiceQuery(
-          executableAnalysisResult.executable,
-        );
+        if (executableAnalysisResult.executable) {
+          dataSpaceViewerState.openServiceQuery(
+            executableAnalysisResult.executable,
+          );
+        }
       }
     };
     const columnSpecifications = tdsResult.columns;
@@ -143,6 +149,8 @@ const DataSpaceExecutableTDSResultView = observer(
       extractTDSExecutableActionConfigurations.find(
         (config) => config.key === selectedTab,
       );
+    const darkMode =
+      !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled;
 
     return (
       <div className="data-space__viewer__quickstart__item__content">
@@ -271,7 +279,16 @@ const DataSpaceExecutableTDSResultView = observer(
         </div>
         <div className="data-space__viewer__quickstart__item__content__tab__content">
           {selectedTab === TDS_EXECUTABLE_ACTION_TAB.COLUMN_SPECS && (
-            <div className="data-space__viewer__quickstart__tds__column-specs data-space__viewer__grid ag-theme-balham-dark">
+            <div
+              className={clsx(
+                'data-space__viewer__quickstart__tds__column-specs',
+                'data-space__viewer__grid',
+                {
+                  'ag-theme-balham': !darkMode,
+                  'ag-theme-balham-dark': darkMode,
+                },
+              )}
+            >
               <DataGrid
                 rowData={columnSpecifications}
                 gridOptions={{

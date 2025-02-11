@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../package.json';
+import packageJson from '../../../package.json' with { type: 'json' };
 import {
   UnsupportedElementEditorState,
   UnsupportedInstanceSetImplementationState,
@@ -54,6 +54,10 @@ import {
   type MappingElementSource,
   type ConnectionTypeOption,
   type PureGrammarConnectionLabeler,
+  type EmbeddedDataTypeFromConnectionMatcher,
+  type StoreTestDataCreators,
+  type EmbeddedDataCloner,
+  PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY,
 } from '@finos/legend-application-studio';
 import { SwaggerIcon } from '@finos/legend-art';
 import {
@@ -61,7 +65,9 @@ import {
   type EmbeddedData,
   type PackageableElement,
   type Store,
+  type SetImplementation,
   PackageableElementExplicitReference,
+  StoreTestData,
 } from '@finos/legend-graph';
 import { ServiceStore } from '../../graph/metamodel/pure/model/packageableElements/store/serviceStore/model/STO_ServiceStore_ServiceStore.js';
 import { RootServiceInstanceSetImplementation } from '../../graph/metamodel/pure/model/packageableElements/store/serviceStore/mapping/STO_ServiceStore_RootServiceInstanceSetImplementation.js';
@@ -83,9 +89,8 @@ import {
   ServiceStoreConnectionEditor,
   NewServiceStoreConnectionDriver,
 } from './ServiceStoreElementEditor.js';
-import type { DocumentationEntry } from '@finos/legend-application';
-import { prettyCONSTName } from '@finos/legend-shared';
-import type { PureGrammarTextSuggestion } from '@finos/legend-lego/code-editor';
+import { prettyCONSTName, type DocumentationEntry } from '@finos/legend-shared';
+import type { PureGrammarTextSuggestion } from '@finos/legend-code-editor';
 
 const SERVICE_STORE_ELEMENT_TYPE = 'SERVICE_STORE';
 const SERVICE_STORE_ELEMENT_PROJECT_EXPLORER_DND_TYPE =
@@ -137,6 +142,15 @@ export class STO_ServiceStore_LegendStudioApplicationPlugin
 
   getExtraSupportedElementTypes(): string[] {
     return [SERVICE_STORE_ELEMENT_TYPE];
+  }
+
+  getExtraSupportedElementTypesWithCategory?(): Map<string, string[]> {
+    const elementTypesWithCategoryMap = new Map<string, string[]>();
+    elementTypesWithCategoryMap.set(
+      PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.STORE,
+      [SERVICE_STORE_ELEMENT_TYPE],
+    );
+    return elementTypesWithCategoryMap;
   }
 
   getExtraElementClassifiers(): ElementClassifier[] {
@@ -236,7 +250,7 @@ export class STO_ServiceStore_LegendStudioApplicationPlugin
 
   getExtraMappingElementSourceExtractors(): MappingElementSourceExtractor[] {
     return [
-      (mappingElement: MappingElement): MappingElementSource | undefined => {
+      (mappingElement: MappingElement): MappingElementSource => {
         if (mappingElement instanceof RootServiceInstanceSetImplementation) {
           return mappingElement.class.value;
         }
@@ -483,6 +497,49 @@ export class STO_ServiceStore_LegendStudioApplicationPlugin
         if (embeddedDataType === SERVICE_STORE_EMBEDDED_DATA_TYPE) {
           const serviceStoreEmbeddedData = new ServiceStoreEmbeddedData();
           return serviceStoreEmbeddedData;
+        }
+        return undefined;
+      },
+    ];
+  }
+
+  getExtraEmbeddedDataCloners(): EmbeddedDataCloner[] {
+    return [
+      (embeddedData: EmbeddedData): EmbeddedData | undefined => {
+        if (embeddedData instanceof ServiceStoreEmbeddedData) {
+          const serviceStoreEmbeddedData = new ServiceStoreEmbeddedData();
+          // TODO walk embedded data and clone
+          return serviceStoreEmbeddedData;
+        }
+        return undefined;
+      },
+    ];
+  }
+
+  getExtraEmbeddedDataTypeFromConnectionMatchers(): EmbeddedDataTypeFromConnectionMatcher[] {
+    return [
+      (connection: Connection): string | undefined => {
+        if (connection instanceof ServiceStoreConnection) {
+          return SERVICE_STORE_EMBEDDED_DATA_TYPE;
+        }
+        return undefined;
+      },
+    ];
+  }
+
+  getExtraStoreTestDataCreators(): StoreTestDataCreators[] {
+    return [
+      (setImpl: SetImplementation): StoreTestData | undefined => {
+        if (setImpl instanceof RootServiceInstanceSetImplementation) {
+          const storeTestData = new StoreTestData();
+          storeTestData.data = new ServiceStoreEmbeddedData();
+          const serviceMapping = setImpl.servicesMapping[0];
+          if (serviceMapping) {
+            storeTestData.store = PackageableElementExplicitReference.create(
+              serviceMapping.service.owner,
+            );
+          }
+          return storeTestData;
         }
         return undefined;
       },

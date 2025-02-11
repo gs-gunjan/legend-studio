@@ -25,7 +25,7 @@ import {
 } from '../../../stores/editor/editor-state/ModelImporterState.js';
 import { prettyCONSTName } from '@finos/legend-shared';
 import {
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentItem,
   CaretDownIcon,
@@ -51,10 +51,8 @@ import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../__lib
 import { SCHEMA_SET_TAB_TYPE } from '../../../stores/editor/editor-state/element-editor-state/external-format/DSL_ExternalFormat_SchemaSetEditorState.js';
 import { SchemaSetModelGenerationEditor } from './external-format-editor/DSL_ExternalFormat_SchemaSetModelGenerationEditor.js';
 import { SchemaSetGeneralEditor } from './external-format-editor/DSL_ExternalFormat_SchemaSetElementEditor.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 
 const ExternalFormatModelImporterEditor = observer(
   (props: { externalFormatState: ExternalFormatModelImporterState }) => {
@@ -230,7 +228,7 @@ export const ModelImporter = observer(() => {
     <Panel className="model-loader">
       <PanelHeader className="model-loader__header">
         <div className="model-loader__header__configs">
-          <DropdownMenu
+          <ControlledDropdownMenu
             className="model-loader__header__configs__type"
             content={
               <MenuContent className="model-loader__header__configs__type__menu">
@@ -317,7 +315,7 @@ export const ModelImporter = observer(() => {
             <div className="model-loader__header__configs__type__icon">
               <CaretDownIcon />
             </div>
-          </DropdownMenu>
+          </ControlledDropdownMenu>
           {modelImportEditorState.allowHardReplace && (
             <div
               className="model-loader__header__configs__edit-mode"

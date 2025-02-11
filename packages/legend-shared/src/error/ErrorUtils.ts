@@ -62,8 +62,8 @@ export class EnrichedError extends Error {
       overideMessage
         ? overideMessage
         : error instanceof Error
-        ? error.message
-        : error,
+          ? error.message
+          : error,
     );
     this.name = name;
     // if the material used to make this error is also an error, we maintain the stack trace and
@@ -91,8 +91,8 @@ export class EnrichedError extends Error {
 
 /**
  * Signals that a method has been invoked at an illegal or
- * inappropriate time.  In other words, the environment or
- * application is not in an appropriate state for the requested
+ * inappropriate point at runtime. In other words, the environment
+ * or application is not in an appropriate state for the requested
  * operation.
  */
 export class IllegalStateError extends EnrichedError {

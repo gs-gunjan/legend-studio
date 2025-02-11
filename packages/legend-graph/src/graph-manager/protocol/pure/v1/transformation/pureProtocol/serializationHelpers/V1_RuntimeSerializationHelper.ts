@@ -38,10 +38,13 @@ import {
   V1_LegacyRuntime,
   V1_RuntimePointer,
   V1_StoreConnections,
+  V1_ConnectionStores,
+  V1_SingleConnectionEngineRuntime,
 } from '../../../model/packageableElements/runtime/V1_Runtime.js';
 import {
   V1_serializeConnectionValue,
   V1_deserializeConnectionValue,
+  V1_connectionPointerModelSchema,
 } from './V1_ConnectionSerializationHelper.js';
 import type { PureProtocolProcessorPlugin } from '../../../../PureProtocolProcessorPlugin.js';
 
@@ -51,6 +54,7 @@ export enum V1_RuntimeType {
   RUNTIME_POINTER = 'runtimePointer',
   LEGACY_RUNTIME = 'legacyRuntime',
   ENGINE_RUNTIME = 'engineRuntime',
+  SINGLE_ENGINE_RUNTIME = 'localEngineRuntime',
 }
 
 export const V1_runtimePointerModelSchema = createModelSchema(
@@ -86,12 +90,25 @@ export const V1_setupEngineRuntimeSerialization = (
     ),
     id: primitive(),
   });
+  createModelSchema(V1_ConnectionStores, {
+    connectionPointer: usingModelSchema(V1_connectionPointerModelSchema),
+    storePointers: list(
+      usingModelSchema(V1_packageableElementPointerModelSchema),
+    ),
+  });
   createModelSchema(V1_StoreConnections, {
     store: usingModelSchema(V1_packageableElementPointerModelSchema),
     storeConnections: list(object(V1_IdentifiedConnection)),
   });
   createModelSchema(V1_EngineRuntime, {
     _type: usingConstantValueSchema(V1_RuntimeType.ENGINE_RUNTIME),
+    connectionStores: list(object(V1_ConnectionStores)),
+    connections: list(object(V1_StoreConnections)),
+    mappings: list(usingModelSchema(V1_packageableElementPointerModelSchema)),
+  });
+  createModelSchema(V1_SingleConnectionEngineRuntime, {
+    _type: usingConstantValueSchema(V1_RuntimeType.SINGLE_ENGINE_RUNTIME),
+    connectionStores: list(object(V1_ConnectionStores)),
     connections: list(object(V1_StoreConnections)),
     mappings: list(usingModelSchema(V1_packageableElementPointerModelSchema)),
   });
@@ -127,6 +144,24 @@ export const V1_deserializeRuntime = (
   }
 };
 
+export const V1_serializeRuntimeValue = (
+  protocol: V1_EngineRuntime,
+): PlainObject<V1_EngineRuntime> => {
+  if (protocol instanceof V1_SingleConnectionEngineRuntime) {
+    return serialize(V1_SingleConnectionEngineRuntime, protocol);
+  }
+  return serialize(V1_EngineRuntime, protocol);
+};
+
+export const V1_deserializeRuntimeValue = (
+  json: PlainObject<V1_Runtime>,
+): V1_EngineRuntime => {
+  if (json._type === V1_RuntimeType.SINGLE_ENGINE_RUNTIME) {
+    return deserialize(V1_SingleConnectionEngineRuntime, json);
+  }
+  return deserialize(V1_EngineRuntime, json);
+};
+
 export const V1_packageableRuntimeModelSchema = createModelSchema(
   V1_PackageableRuntime,
   {
@@ -136,8 +171,8 @@ export const V1_packageableRuntimeModelSchema = createModelSchema(
     name: primitive(),
     package: primitive(),
     runtimeValue: custom(
-      (val) => serialize(V1_EngineRuntime, val),
-      (val) => deserialize(V1_EngineRuntime, val),
+      (val) => V1_serializeRuntimeValue(val),
+      (val) => V1_deserializeRuntimeValue(val),
     ),
   },
 );

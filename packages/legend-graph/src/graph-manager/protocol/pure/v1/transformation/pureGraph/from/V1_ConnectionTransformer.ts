@@ -148,6 +148,8 @@ const transformSnowflakeDatasourceSpecification = (
   source.organization = metamodel.organization;
   source.accountType = metamodel.accountType;
   source.role = metamodel.role;
+  source.tempTableDb = metamodel.tempTableDb;
+  source.tempTableSchema = metamodel.tempTableSchema;
   return source;
 };
 
@@ -361,6 +363,7 @@ export const V1_transformRelationalDatabaseConnection = (
   connection.databaseType = connection.type;
   connection.timeZone = metamodel.timeZone;
   connection.quoteIdentifiers = metamodel.quoteIdentifiers;
+  connection.queryTimeOutInSeconds = metamodel.queryTimeOutInSeconds;
   if (metamodel.postProcessors.length) {
     connection.postProcessors = metamodel.postProcessors.map((postprocessor) =>
       V1_transformPostProcessor(postprocessor, context),
@@ -369,7 +372,7 @@ export const V1_transformRelationalDatabaseConnection = (
   return connection;
 };
 
-const transformConnectionPointer = (
+export const V1_transformConnectionPointer = (
   metamodel: ConnectionPointer,
 ): V1_ConnectionPointer => {
   const connection = new V1_ConnectionPointer();
@@ -448,13 +451,13 @@ class ConnectionTransformer implements ConnectionVisitor<V1_Connection> {
     connection: INTERNAL__UnknownConnection,
   ): V1_Connection {
     const protocol = new V1_INTERNAL__UnknownConnection();
-    protocol.store = connection.store.valueForSerialization ?? '';
+    protocol.store = connection.store?.valueForSerialization;
     protocol.content = connection.content;
     return protocol;
   }
 
   visit_ConnectionPointer(connection: ConnectionPointer): V1_Connection {
-    return transformConnectionPointer(connection);
+    return V1_transformConnectionPointer(connection);
   }
 
   visit_ModelChainConnection(connection: ModelChainConnection): V1_Connection {

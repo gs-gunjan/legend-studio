@@ -44,7 +44,7 @@ import {
   createFilter,
   CustomSelectorInput,
   KeyboardIcon,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentDivider,
   MenuContentItem,
@@ -152,6 +152,7 @@ const DiagramEditorContextMenu = observer(
 const DiagramRendererHotkeyInfosModal = observer(
   (props: { open: boolean; onClose: () => void }) => {
     const { open, onClose } = props;
+    const applicationStore = useApplicationStore();
     return (
       <Dialog
         open={open}
@@ -163,7 +164,9 @@ const DiagramRendererHotkeyInfosModal = observer(
         }}
       >
         <Modal
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
           className="modal--scrollable diagram-editor__hotkeys__dialog"
         >
           <ModalHeader title="Diagram Hotkeys" />
@@ -736,10 +739,10 @@ const DiagramEditorInlineClassRenamerContent = observer(
     const classCreationValidationErrorMessage = !isClassNameNonEmpty
       ? `Class name cannot be empty`
       : !isClassNameValid
-      ? `Class name is not valid`
-      : !isClassNameUnique
-      ? `Element of the same name already existed`
-      : undefined;
+        ? `Class name is not valid`
+        : !isClassNameUnique
+          ? `Element of the same name already existed`
+          : undefined;
     const canRenameClass =
       isClassNameNonEmpty && isClassNameValid && isClassNameUnique;
 
@@ -855,12 +858,12 @@ const DiagramEditorInlineClassCreatorContent = observer(
     const classCreationValidationErrorMessage = !isClassPathNonEmpty
       ? `Class path cannot be empty`
       : !isNotTopLevelClass
-      ? `Creating top level class is not allowed`
-      : !isValidPath
-      ? `Class path is not valid`
-      : !isClassUnique
-      ? `Class already existed`
-      : undefined;
+        ? `Creating top level class is not allowed`
+        : !isValidPath
+          ? `Class path is not valid`
+          : !isClassUnique
+            ? `Class already existed`
+            : undefined;
     const canCreateClass =
       isClassPathNonEmpty && isNotTopLevelClass && isValidPath && isClassUnique;
 
@@ -986,8 +989,8 @@ const DiagramEditorInlinePropertyMultiplicityEditor = observer(
         upper === MULTIPLICITY_INFINITE
           ? undefined
           : typeof upper === 'number'
-          ? upper
-          : parseInt(upper, 10);
+            ? upper
+            : parseInt(upper, 10);
       if (!isNaN(lBound) && (uBound === undefined || !isNaN(uBound))) {
         updateValue(
           editorStore.graphManagerState.graph.getMultiplicity(lBound, uBound),
@@ -1037,6 +1040,7 @@ const DiagramEditorInlinePropertyEditorContent = observer(
   }) => {
     const { inlinePropertyEditorState } = props;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const diagramEditorState = inlinePropertyEditorState.diagramEditorState;
     const isReadOnly = diagramEditorState.isReadOnly;
     const propertyNameInputRef = useRef<HTMLInputElement>(null);
@@ -1071,8 +1075,8 @@ const DiagramEditorInlinePropertyEditorContent = observer(
     const propertyTypeFilterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: PackageableElementOption<Type>): string =>
-        option.value.path,
+      stringify: (option: { data: PackageableElementOption<Type> }): string =>
+        option.data.value.path,
     });
     const selectedPropertyType = {
       value: currentPropertyType,
@@ -1110,7 +1114,10 @@ const DiagramEditorInlinePropertyEditorContent = observer(
             onChange={changePropertyType}
             value={selectedPropertyType}
             placeholder="Choose a type..."
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
             filterOption={propertyTypeFilterOption}
           />
         )}
@@ -1179,26 +1186,26 @@ const DiagramEditorDiagramCanvas = observer(
     {
       diagramEditorState: DiagramEditorState;
     }
-  >(function DiagramEditorDiagramCanvas(props, ref) {
+  >(function DiagramEditorDiagramCanvas(props, _ref) {
     const { diagramEditorState } = props;
-    const diagramCanvasRef = ref as React.MutableRefObject<HTMLDivElement>;
+    const ref = _ref as React.RefObject<HTMLDivElement>;
     const isReadOnly = diagramEditorState.isReadOnly;
 
     const { width, height } = useResizeDetector<HTMLDivElement>({
       refreshMode: 'debounce',
       refreshRate: 50,
-      targetRef: diagramCanvasRef,
+      targetRef: ref,
     });
 
     useEffect(() => {
       const renderer = new DiagramRenderer(
-        diagramCanvasRef.current,
+        ref.current,
         diagramEditorState.diagram,
       );
       diagramEditorState.setRenderer(renderer);
       diagramEditorState.setupRenderer();
       renderer.render({ initial: true });
-    }, [diagramCanvasRef, diagramEditorState]);
+    }, [ref, diagramEditorState]);
 
     useEffect(() => {
       // since after the diagram render is initialized, we start
@@ -1245,11 +1252,11 @@ const DiagramEditorDiagramCanvas = observer(
       }),
       [handleDrop],
     );
-    dropConnector(diagramCanvasRef);
+    dropConnector(ref);
 
     return (
       <div
-        ref={diagramCanvasRef}
+        ref={ref}
         className={clsx(
           'diagram-canvas diagram-editor__canvas',
           diagramEditorState.diagramCursorClass,
@@ -1394,7 +1401,7 @@ const DiagramEditorHeader = observer(
             <DistributeVerticalIcon className="diagram-editor__icon--aligner" />
           </button>
         </div>
-        <DropdownMenu
+        <ControlledDropdownMenu
           className="diagram-editor__header__dropdown"
           title="Zoom..."
           content={
@@ -1429,7 +1436,7 @@ const DiagramEditorHeader = observer(
           <div className="diagram-editor__header__dropdown__trigger diagram-editor__header__zoomer__dropdown__trigger">
             <CaretDownIcon />
           </div>
-        </DropdownMenu>
+        </ControlledDropdownMenu>
         <div className="diagram-editor__header__actions">
           <button
             className={clsx('diagram-editor__header__action', {

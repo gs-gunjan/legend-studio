@@ -30,8 +30,12 @@ export enum LEGEND_STUDIO_TEST_ID {
   EXPLORER_TREES = 'explorer-trees',
   EXPLORER_CONTEXT_MENU = 'explorer__context-menu',
 
+  FUNCTION_EDITOR = 'function-editor',
+
   TEST_RUNNER = 'test-runner',
   BULK_REGISTRATION = 'bulk-service-registration',
+
+  END_TO_END_WORKFLOW = 'end-to-end-workflow',
 
   STATUS_BAR = 'status-bar',
   EDITOR__STATUS_BAR__RIGHT = 'editor__status-bar__right',
@@ -46,6 +50,7 @@ export enum LEGEND_STUDIO_TEST_ID {
   CLASS_FORM_EDITOR = 'class-form-editor',
   ENUMERATION_EDITOR = 'enumeration-editor',
   ASSOCIATION_EDITOR = 'association-editor',
+  MAPPING_EDITOR = 'mapping-editor',
   UML_ELEMENT_EDITOR__TABS_HEADER = 'uml-element-editor__tabs__header',
   PROPERTY_BASIC_EDITOR__TYPE__LABEL_HOVER = 'property-basic-editor__type__label--hover',
 

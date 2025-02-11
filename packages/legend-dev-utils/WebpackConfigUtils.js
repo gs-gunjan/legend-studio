@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import * as sass from 'sass';
 import { resolve, join } from 'path';
 import { existsSync } from 'fs';
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
@@ -40,7 +39,13 @@ export const getEnvInfo = (env, arg) => ({
  * This method gets the base Webpack config for bundling either top-level
  * webapp with HTML entry points or library.
  */
-const getBaseWebpackConfig = (env, arg, dirname, { babelConfigPath }) => {
+export const getBaseWebpackConfig = (
+  env,
+  arg,
+  dirname,
+  { babelConfigPath },
+  useRelativePath,
+) => {
   if (!dirname) {
     throw new Error(`\`dirname\` is required to build Webpack config`);
   }
@@ -74,8 +79,8 @@ const getBaseWebpackConfig = (env, arg, dirname, { babelConfigPath }) => {
           // See https://webpack.js.org/configuration/devtool/
           false
       : enableSourceMap
-      ? 'source-map'
-      : false,
+        ? 'source-map'
+        : false,
     watchOptions: {
       ignored: /node_modules/,
     },
@@ -120,6 +125,11 @@ const getBaseWebpackConfig = (env, arg, dirname, { babelConfigPath }) => {
           use: [
             {
               loader: MiniCssExtractPlugin.loader,
+              options: useRelativePath
+                ? {
+                    publicPath: '../',
+                  }
+                : {},
             },
             {
               // Helps resolve @import and url() like import/require()
@@ -141,17 +151,10 @@ const getBaseWebpackConfig = (env, arg, dirname, { babelConfigPath }) => {
                 sourceMap: enableSourceMap,
               },
             },
-            {
-              loader: require.resolve('sass-loader'),
-              options: {
-                implementation: sass,
-                sourceMap: enableSourceMap,
-              },
-            },
           ].filter(Boolean),
         },
         {
-          test: /\.(?:woff2?|ttf|otf|eot|svg|png|gif)$/,
+          test: /\.(?:woff2?|ttf|otf|eot|svg|png|gif|wasm)$/,
           type: 'asset/resource',
         },
       ],
@@ -159,8 +162,9 @@ const getBaseWebpackConfig = (env, arg, dirname, { babelConfigPath }) => {
     optimization: isEnvDevelopment
       ? {
           // Keep runtime chunk minimal by enabling runtime chunk
-          // See https://webpack.js.org/guides/build-performance/#minimal-entry-chunk
-          runtimeChunk: true,
+          // and make sure we handle multiple entry points correctly
+          // See https://github.com/webpack/webpack-dev-server/issues/2792#issuecomment-806983882
+          runtimeChunk: 'single',
           // Avoid extra optimization step, turning off split-chunk optimization
           // See https://webpack.js.org/guides/build-performance/#avoid-extra-optimization-steps
           removeAvailableModules: false,
@@ -226,30 +230,53 @@ export const getWebAppBaseWebpackConfig = (
     appConfig,
     babelConfigPath,
     enableReactFastRefresh,
+    // service work config : { fileName: string, import: string }
+    serviceWorkerConfig,
   },
 ) => {
   if (!dirname) {
     throw new Error(`\`dirname\` is required to build Webpack config`);
   }
   const { isEnvDevelopment, isEnvProduction } = getEnvInfo(env, arg);
-  const baseConfig = getBaseWebpackConfig(env, arg, dirname, {
-    babelConfigPath,
-  });
+  const baseConfig = getBaseWebpackConfig(
+    env,
+    arg,
+    dirname,
+    {
+      babelConfigPath,
+    },
+    appConfig.useRelativePath,
+  );
   validateAppConfig(appConfig, dirname);
 
   // NOTE: due to routes like `/v1.0.0` (with '.'), to refer to static resources, we move all static content to `/static`
   const staticPath = 'static';
 
+  /** @type {import('webpack').Configuration} */
   const config = {
     ...baseConfig,
-    entry: { index: mainEntryPath },
+    entry: {
+      index: mainEntryPath,
+      ...(serviceWorkerConfig
+        ? {
+            'service-worker': {
+              filename: serviceWorkerConfig.filename,
+              import: serviceWorkerConfig.import,
+            },
+          }
+        : {}),
+    },
     output: {
       ...baseConfig.output,
       path: join(dirname, `dist${appConfig.baseUrl}`),
       assetModuleFilename: `${staticPath}/${
         isEnvDevelopment ? '[name].[ext]' : '[name].[contenthash:8].[ext]'
       }`,
-      publicPath: isEnvDevelopment ? '/' : appConfig.baseUrl,
+      publicPath: isEnvDevelopment
+        ? '/'
+        : appConfig.useRelativePath
+          ? './'
+          : appConfig.baseUrl,
       filename: `${staticPath}/${
         isEnvDevelopment ? '[name].js' : '[name].[contenthash:8].js'
       }`,
@@ -261,6 +288,8 @@ export const getWebAppBaseWebpackConfig = (
         // See https://github.com/openzipkin/zipkin-js/issues/465
         os: false,
         url: false,
+        path: false,
+        fs: false,
       },
       alias: {
         ...baseConfig.resolve.alias,
@@ -292,6 +321,15 @@ export const getWebAppBaseWebpackConfig = (
         // NOTE: there is a bug that the line '[HMR] Waiting for update signal from WDS...' is not suppressed
         // See https://github.com/webpack/webpack-dev-server/issues/2166
         logging: 'warn',
+        overlay: {
+          // NOTE: hide some runtime errors which can be somewhat too noisy
+          // See https://stackoverflow.com/questions/49384120/resizeobserver-loop-limit-exceeded
+          // See https://github.com/w3c/csswg-drafts/issues/5023
+          runtimeErrors: (error) => {
+            console.debug(`[DEV] Unhandled Runtime Error:`, error);
+            return false;
+          },
+        },
       },
       ...(appConfig.devServer ?? {}),
     },
@@ -301,7 +339,7 @@ export const getWebAppBaseWebpackConfig = (
             cacheGroups: {
               defaultVendors: {
                 test: /node_modules/,
-                chunks: 'initial',
+                chunks: (chunkFilename) => chunkFilename !== 'service-worker',
                 name: 'vendor',
                 priority: -10,
                 enforce: true,
@@ -367,11 +405,13 @@ export const getWebAppBaseWebpackConfig = (
           'snippet',
           'snippetController2',
           'suggest',
-          'wordHighlighter',
           'gotoSymbol',
         ],
       }),
     ].filter(Boolean),
+    experiments: {
+      asyncWebAssembly: true,
+    },
   };
   return config;
 };

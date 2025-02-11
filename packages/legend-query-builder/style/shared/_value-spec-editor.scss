@@ -30,7 +30,7 @@
     @include flexCenter;
     @include flexConstantDimension;
 
-    height: 2.8rem;
+    align-self: normal;
     width: 2.8rem;
     background: var(--color-dark-grey-200);
     border-radius: 0 50% 50% 0;
@@ -47,6 +47,52 @@
 
   &__enum-selector {
     width: 100%;
+  }
+
+  &__enum-collection-selector,
+  &__primitive-collection-selector {
+    width: 100%;
+    display: flex;
+
+    .selector-input--dark__control,
+    .selector-input__control {
+      height: fit-content;
+      width: 100%;
+
+      .selector-input--dark__input,
+      .selector-input__input {
+        height: 2.2rem;
+
+        input {
+          height: 2.2rem;
+          line-height: 2.2rem;
+        }
+      }
+
+      .selector-input--dark__value-container--is-multi,
+      .selector-input__value-container--is-multi {
+        overflow: auto;
+        height: fit-content;
+        max-height: 6.6rem;
+      }
+
+      .selector-input--dark__placeholder,
+      .selector-input__placeholder {
+        width: fit-content;
+        max-width: 100%;
+      }
+    }
+  }
+
+  &__enum-collection-selector--error,
+  &__primitive-collection-selector--error {
+    .selector-input--dark__input {
+      color: var(--color-red-200);
+    }
+
+    .selector-input__input {
+      color: var(--color-red-180);
+    }
   }
 
   ::-webkit-calendar-picker-indicator {
@@ -71,11 +117,25 @@
       height: 2.8rem;
       color: var(--color-light-grey-400);
       background: var(--color-dark-grey-100);
+      border: 0.1rem solid var(--color-dark-grey-300);
       font-size: 1.2rem;
+
+      &--error {
+        background: var(--color-red-500);
+        border-color: var(--color-red-300);
+      }
+    }
+
+    &__editable__display--content--error {
+      color: var(--color-red-200) !important;
     }
 
     &__options {
       min-width: 29rem;
+
+      .mui-radio-group__group {
+        height: 3rem;
+      }
     }
 
     &__absolute-date {
@@ -198,13 +258,13 @@
   }
 
   &__input {
-    height: 100%;
+    height: 2.8rem;
     max-width: 100%;
     width: 100%;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     padding: 0 0.5rem;
     background: var(--color-dark-grey-100);
-    border: 0.1rem solid var(--color-dark-grey-200);
+    border: 0.1rem solid var(--color-dark-grey-300);
     border-radius: 0;
     margin-bottom: 0;
   }
@@ -224,6 +284,11 @@
 
     &__input {
       padding-right: 2.8rem;
+
+      &--error {
+        background: var(--color-red-500);
+        border-color: var(--color-red-300);
+      }
     }
 
     &__actions {
@@ -295,23 +360,47 @@
   &__list-editor__preview {
     @include ellipsisTextOverflow;
 
-    line-height: 2.2rem;
+    line-height: 2.8rem;
     width: calc(100% - 1.8rem);
-    height: 2.2rem;
+    height: 2.8rem;
     font-size: 1.1rem;
     font-family: 'Roboto Mono', monospace;
     background: var(--color-dark-grey-250);
     padding-left: 0.5rem;
     color: var(--color-light-grey-300);
     cursor: pointer;
+
+    &--error {
+      background: var(--color-red-500);
+      border: 1px solid var(--color-red-300);
+    }
+  }
+
+  &__list-editor__copy-button {
+    @include flexCenter;
+
+    align-self: normal;
+    width: 2.7rem;
+    min-width: 2.7rem;
+    background: var(--color-dark-grey-200);
+
+    svg {
+      font-size: 1.2rem;
+      color: var(--color-light-grey-400);
+    }
+
+    &:hover svg {
+      color: var(--color-light-grey-200);
+    }
   }
 
   &__list-editor__save-button {
     @include flexCenter;
+    @include flexConstantDimension;
 
-    height: 2.8rem;
-    width: 2.8rem;
-    min-width: 2.8rem;
+    align-self: normal;
+    width: 2.7rem;
+    border-radius: 0 0.9rem 0.9rem 0;
 
     svg {
       font-size: 1.2rem;
@@ -321,7 +410,7 @@
   &__list-editor__expand-button {
     @include flexCenter;
 
-    height: 2.8rem;
+    align-self: normal;
     min-width: 2.8rem;
 
     svg {
@@ -342,7 +431,7 @@
   &__list-editor__edit-icon {
     @include flexCenter;
 
-    height: 2.2rem;
+    height: 2.8rem;
     width: 2.7rem;
     min-width: 2.7rem;
     background: var(--color-dark-grey-250);
@@ -354,18 +443,20 @@
     }
   }
 
+  &__editable__display--content--error {
+    color: var(--color-red-200) !important;
+  }
+
   &:hover &__list-editor__preview,
   &:hover &__list-editor__edit-icon {
     background: var(--color-dark-grey-300);
     color: var(--color-light-grey-100);
   }
 
-  .selector-input__indicators,
-  .selector-input__value-container {
+  .input--with-validation {
     height: 2.8rem;
   }
 
-  .selector-input__indicator-separator,
   .selector-input--dark__loading-indicator,
   .selector-menu--dark .selector-input--dark__loading-indicator,
   .selector-input--dark .selector-input--dark__loading-indicator {

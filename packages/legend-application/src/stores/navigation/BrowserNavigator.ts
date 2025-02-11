@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import type { History } from 'history';
 import {
   addQueryParametersToUrl,
   getQueryParameterValue,
   getQueryParameters,
   guaranteeNonNullable,
+  noop,
   sanitizeURL,
   stringifyQueryParams,
 } from '@finos/legend-shared';
@@ -34,27 +34,20 @@ import {
 } from './NavigationService.js';
 import {
   Route,
-  Switch,
-  Redirect,
-  matchPath,
+  Routes,
+  matchRoutes,
   generatePath,
   useParams,
   useLocation,
+  type NavigateFunction,
 } from 'react-router';
 
 export { BrowserRouter } from 'react-router-dom';
-export { Route, Switch, Redirect, useParams, matchPath, generatePath };
+export { Route, Routes, useParams, matchRoutes, generatePath };
 export const useNavigationZone = (): NavigationZone => {
-  const location = useLocation() as { hash: string }; // TODO: this is a temporary hack until we upgrade react-router
+  const location = useLocation();
   return location.hash.substring(NAVIGATION_ZONE_PREFIX.length);
 };
-/**
- * This clashes between react-router (older version) and React typings, so this is the workaround
- * We will remove this when we move forward with our react-router upgrade
- * See https://github.com/finos/legend-studio/issues/688
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type TEMPORARY__ReactRouterComponentType = any;
 
 /**
  * Prefix URL patterns coming from extensions with `/extensions/`
@@ -63,8 +56,17 @@ export type TEMPORARY__ReactRouterComponentType = any;
 export const generateExtensionUrlPattern = (pattern: string): string =>
   `/extensions/${pattern}`.replace(/^\/extensions\/\//, '/extensions/');
 
+export function stripTrailingSlash(url: string): string {
+  let _url = url;
+  while (_url.endsWith('/')) {
+    _url = _url.slice(0, -1);
+  }
+  return _url;
+}
+
 export class BrowserNavigator implements ApplicationNavigator {
-  private readonly historyAPI: History;
+  private readonly navigate: NavigateFunction;
+  private readonly baseUrl: string;
   private _isNavigationBlocked = false;
   private _forceBypassNavigationBlocking = false;
   private _blockCheckers: (() => boolean)[] = [];
@@ -76,13 +78,14 @@ export class BrowserNavigator implements ApplicationNavigator {
       // NOTE: there is no way to customize the alert message for now since Chrome removed support for it due to security concerns
       // See https://developer.mozilla.org/en-US/docs/Web/API/WindowEventHandlers/onbeforeunload#Browser_compatibility
       event.returnValue = '';
+      event.preventDefault();
     }
   };
 
   onBlock?: ((onProceed: () => void) => void) | undefined;
   onNativePlatformNavigationBlock?: (() => void) | undefined;
 
-  constructor(historyApiClient: History) {
+  constructor(navigate: NavigateFunction, baseUrl: string) {
     makeObservable<BrowserNavigator, '_isNavigationBlocked'>(this, {
       _isNavigationBlocked: observable,
       isNavigationBlocked: computed,
@@ -90,7 +93,8 @@ export class BrowserNavigator implements ApplicationNavigator {
       unblockNavigation: action,
     });
 
-    this.historyAPI = historyApiClient;
+    this.navigate = navigate;
+    this.baseUrl = baseUrl;
   }
 
   private get window(): Window {
@@ -165,14 +169,14 @@ export class BrowserNavigator implements ApplicationNavigator {
   }
 
   generateAddress(location: NavigationLocation): string {
-    return (
-      this.window.location.origin +
-      this.historyAPI.createHref({ pathname: location })
-    );
+    return this.window.location.origin + this.baseUrl + location;
   }
 
   updateCurrentLocation(location: NavigationLocation): void {
-    this.historyAPI.push(location);
+    // `react-router` NavigateFunction returns promise and non-promise type, so we need to wrap it
+    // to avoid unhandled promise rejection if any. This might get resolved in the future.
+    // See https://github.com/remix-run/react-router/issues/12348
+    Promise.resolve(this.navigate(location)).catch(noop());
   }
 
   updateCurrentZone(zone: NavigationZone): void {
@@ -197,7 +201,7 @@ export class BrowserNavigator implements ApplicationNavigator {
   }
 
   getCurrentLocation(): NavigationLocation {
-    return this.historyAPI.location.pathname;
+    return this.window.location.pathname.substring(this.baseUrl.length);
   }
 
   getCurrentLocationParameters<
@@ -232,17 +236,29 @@ export class BrowserNavigator implements ApplicationNavigator {
     this.onBlock = onBlock;
     this.onNativePlatformNavigationBlock = onNativePlatformNavigationBlock;
 
-    // Here we attempt to cancel the effect of the back button
-    // See https://medium.com/codex/angular-guards-disabling-browsers-back-button-for-specific-url-fdf05d9fe155#4f13
-    // This makes the current location the last entry in the browser history and clears any forward history
-    this.window.history.pushState(null, '', this.getCurrentAddress());
-    // The popstate event is triggered every time the user clicks back/forward button, but the forward history
-    // has been cleared, and now if we go back, we call `history.forward()`, which go 1 page forward,
+    // Attempt to cancel the effect of the back button. The mechanism is as follows:
+    //
+    // This makes the current location the last entry in the browser history and clears any forward history.
+    // The popstate event is triggered every time the user clicks back/forward button, but since the forward
+    // history has been cleared, if we call, we call `history.forward()`, which go 1 page forward,
     // but there's no page forward, so effectively, the user remains on the same page
-    this.window.onpopstate = () => {
-      window.history.forward();
-      this.onNativePlatformNavigationBlock?.();
-    };
+    //
+    // NOTE: this approach ideal in that, technically the pop state event still can happen for a brief moment,
+    // and thus, unecesssary renderings are not avoidable.
+    // e.g. we're at route A, then navigate to B
+    // we hit back button, we will go back to route A and then immediately go back to B
+    // another exploit is user can hit the back button consecutively quickly and this would also break this
+    // workaround we have here.
+    //
+    // All in all, this is the kind of workaround that attempts to override browser capabilities
+    // should be avoided
+    if (this.onNativePlatformNavigationBlock) {
+      this.window.history.pushState(null, '', this.getCurrentAddress());
+      this.window.onpopstate = () => {
+        this.window.history.forward();
+        this.onNativePlatformNavigationBlock?.();
+      };
+    }
 
     // Block browser navigation: e.g. reload, setting `window.href` directly, etc.
     this._blockCheckers = blockCheckers;

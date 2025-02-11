@@ -34,14 +34,33 @@ export class QueryParameterValue {
   content!: string;
 }
 
+export abstract class QueryExecutionContext {}
+
+export class QueryExplicitExecutionContext extends QueryExecutionContext {
+  mapping!: PackageableElementReference<Mapping>;
+  runtime!: PackageableElementReference<PackageableRuntime>;
+}
+
+export class QueryDataSpaceExecutionContext extends QueryExecutionContext {
+  dataSpacePath!: string;
+  executionKey: string | undefined;
+}
+
+export interface QueryGridConfig {
+  columns: object[];
+  isPivotModeEnabled: boolean | undefined;
+  isLocalModeEnabled: boolean | undefined;
+  previewLimit?: number | undefined;
+  weightedColumnPairs?: Map<string, string> | undefined;
+}
+
 export class Query {
   name!: string;
   id!: string;
   versionId!: string;
+  originalVersionId?: string | undefined;
   groupId!: string;
   artifactId!: string;
-  mapping!: PackageableElementReference<Mapping>;
-  runtime!: PackageableElementReference<PackageableRuntime>;
   // We enforce a single owner, for collaboration on query, use Studio
   // if not owner is specified, any user can own the query
   // NOTE: the owner is managed automatically by the backend
@@ -54,19 +73,37 @@ export class Query {
 
   // Store query in text to be more compact and stable
   content!: string;
+  executionContext!: QueryExecutionContext;
+
+  /**
+   * mapping, runtime have been deprecated in favor of `V1_QueryExecutionContext`
+   * @deprecated
+   */
+  mapping?: PackageableElementReference<Mapping> | undefined;
+  /**
+   * mapping, runtime have been deprecated in favor of `V1_QueryExecutionContext`
+   * @deprecated
+   */
+  runtime?: PackageableElementReference<PackageableRuntime> | undefined;
 
   lastUpdatedAt?: number | undefined;
+  createdAt?: number | undefined;
+  lastOpenAt?: number | undefined;
   isCurrentUserQuery = false;
+  gridConfig?: QueryGridConfig | undefined;
 }
 
 export class LightQuery {
   name!: string;
   id!: string;
   versionId!: string;
+  originalVersionId?: string | undefined;
   groupId!: string;
   artifactId!: string;
   owner?: string | undefined;
   lastUpdatedAt?: number | undefined;
+  createdAt?: number | undefined;
+  lastOpenAt?: number | undefined;
 
   isCurrentUserQuery = false;
 }
@@ -78,8 +115,12 @@ export const toLightQuery = (query: Query): LightQuery => {
   lightQuery.groupId = query.groupId;
   lightQuery.artifactId = query.artifactId;
   lightQuery.versionId = query.versionId;
+  lightQuery.originalVersionId = query.originalVersionId;
   lightQuery.owner = query.owner;
   lightQuery.isCurrentUserQuery = query.isCurrentUserQuery;
+  lightQuery.lastOpenAt = query.lastOpenAt;
+  lightQuery.createdAt = query.createdAt;
+  lightQuery.lastUpdatedAt = query.lastUpdatedAt;
   return lightQuery;
 };
 
@@ -100,13 +141,29 @@ export const cloneQueryStereotype = (val: QueryStereotype): QueryStereotype => {
   return queryStereotype;
 };
 
+export abstract class QueryExecutionContextInfo {}
+
+export class QueryExplicitExecutionContextInfo extends QueryExecutionContextInfo {
+  mapping!: string;
+  runtime!: string;
+}
+
+export class QueryDataSpaceExecutionContextInfo extends QueryExecutionContextInfo {
+  dataSpacePath!: string;
+  executionKey: string | undefined;
+}
 export interface QueryInfo {
   name: string;
   id: string;
   versionId: string;
+  originalVersionId?: string | undefined;
   groupId: string;
   artifactId: string;
-  mapping: string;
-  runtime: string;
+  executionContext: QueryExecutionContextInfo;
+  mapping?: string | undefined;
+  runtime?: string | undefined;
   content: string;
+  isCurrentUserQuery: boolean;
+  taggedValues?: QueryTaggedValue[] | undefined;
+  defaultParameterValues?: QueryParameterValue[] | undefined;
 }

@@ -26,10 +26,15 @@ import {
   NewDataElementDriver,
   NewServiceDriver,
   CONNECTION_TYPE,
+  type RuntimeOption,
 } from '../../../stores/editor/NewElementState.js';
 import { Dialog, compareLabelFn, CustomSelectorInput } from '@finos/legend-art';
 import type { EditorStore } from '../../../stores/editor/EditorStore.js';
-import { prettyCONSTName } from '@finos/legend-shared';
+import {
+  guaranteeNonNullable,
+  prettyCONSTName,
+  toTitleCase,
+} from '@finos/legend-shared';
 import type { DSL_LegendStudioApplicationPlugin_Extension } from '../../../stores/LegendStudioApplicationPlugin.js';
 import { useEditorStore } from '../EditorStoreProvider.js';
 import {
@@ -118,6 +123,7 @@ const buildElementTypeOption = (type: string): ElementTypeSelectOption => ({
 
 const NewDataElementDriverEditor = observer(() => {
   const editorStore = useEditorStore();
+  const applicationStore = editorStore.applicationStore;
   const newDataELementDriver =
     editorStore.newElementState.getNewElementDriver(NewDataElementDriver);
   const selectedOption = newDataELementDriver.embeddedDataOption
@@ -155,7 +161,9 @@ const NewDataElementDriverEditor = observer(() => {
         options={options}
         onChange={onTypeSelectionChange}
         value={selectedOption}
-        darkMode={true}
+        darkMode={
+          !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+        }
       />
     </div>
   );
@@ -163,6 +171,7 @@ const NewDataElementDriverEditor = observer(() => {
 
 const NewRuntimeDriverEditor = observer(() => {
   const editorStore = useEditorStore();
+  const applicationStore = editorStore.applicationStore;
   const newRuntimeDriver = editorStore.newElementState.getNewElementDriver(
     NewPackageableRuntimeDriver,
   );
@@ -170,7 +179,9 @@ const NewRuntimeDriverEditor = observer(() => {
   const mapping = newRuntimeDriver.mapping;
   const mappingOptions =
     editorStore.graphManagerState.usableMappings.map(buildElementOption);
-  const selectedMappingOption = { label: mapping?.path ?? '', value: mapping };
+  const selectedMappingOption = mapping
+    ? { label: mapping.path, value: mapping }
+    : null;
   const onMappingSelectionChange = (
     val: PackageableElementOption<Mapping>,
   ): void => {
@@ -190,7 +201,9 @@ const NewRuntimeDriverEditor = observer(() => {
         options={mappingOptions}
         onChange={onMappingSelectionChange}
         value={selectedMappingOption}
-        darkMode={true}
+        darkMode={
+          !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+        }
       />
     </div>
   );
@@ -200,12 +213,12 @@ const NewPureModelConnectionDriverEditor = observer(
   (props: { newConnectionValueDriver: NewPureModelConnectionDriver }) => {
     const { newConnectionValueDriver } = props;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     // class
     const _class = newConnectionValueDriver.class;
     const classOptions = editorStore.graphManagerState.usableClasses
       .map(buildElementOption)
-      .slice()
-      .sort(compareLabelFn);
+      .toSorted(compareLabelFn);
     const selectedClassOption = _class
       ? { label: _class.path, value: _class }
       : null;
@@ -232,9 +245,14 @@ const NewPureModelConnectionDriverEditor = observer(
             options={classOptions}
             onChange={onClassSelectionChange}
             value={selectedClassOption}
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
             formatOptionLabel={getPackageableElementOptionFormatter({
-              darkMode: true,
+              darkMode:
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled,
             })}
           />
         </div>
@@ -261,6 +279,7 @@ const NewConnectionValueDriverEditor = observer(() => {
 
 const NewConnectionDriverEditor = observer(() => {
   const editorStore = useEditorStore();
+  const applicationStore = editorStore.applicationStore;
   const newConnectionDriver = editorStore.newElementState.getNewElementDriver(
     NewPackageableConnectionDriver,
   );
@@ -294,7 +313,7 @@ const NewConnectionDriverEditor = observer(() => {
 
   // store
   const store = newConnectionDriver.store;
-  let storeOptions: { label: string; value?: Store | undefined }[] = [
+  let storeOptions: { label: string; value: Store | undefined }[] = [
     { label: 'ModelStore', value: undefined },
   ];
   // TODO: we should think more about this and filter the store by the connection type
@@ -304,15 +323,20 @@ const NewConnectionDriverEditor = observer(() => {
   storeOptions = storeOptions.concat(
     editorStore.graphManagerState.usableStores
       .map(buildElementOption)
-      .slice()
-      .sort(compareLabelFn),
+      .toSorted(compareLabelFn),
   );
   const selectedStoreOption = {
     label: store.path,
     value: store,
   };
-  const onStoreSelectionChange = (val: { label: string; value: Store }): void =>
-    newConnectionDriver.setStore(val.value);
+  const onStoreSelectionChange = (val: {
+    label: string;
+    value: Store | undefined;
+  }): void => {
+    if (val.value) {
+      newConnectionDriver.setStore(val.value);
+    }
+  };
 
   return (
     <>
@@ -325,7 +349,9 @@ const NewConnectionDriverEditor = observer(() => {
           options={connectionOptions}
           onChange={onConnectionChange}
           value={currentConnectionTypeOption}
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
         />
       </div>
       <div className="panel__content__form__section__header__label">
@@ -337,7 +363,9 @@ const NewConnectionDriverEditor = observer(() => {
           options={storeOptions}
           onChange={onStoreSelectionChange}
           value={selectedStoreOption}
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
         />
       </div>
       <NewConnectionValueDriverEditor />
@@ -347,10 +375,17 @@ const NewConnectionDriverEditor = observer(() => {
 
 const NewServiceDriverEditor = observer(() => {
   const editorStore = useEditorStore();
+  const applicationStore = editorStore.applicationStore;
+  const runtimeSelectorPlaceholder = 'Choose a compatible runtime...';
   const newServiceDriver =
     editorStore.newElementState.getNewElementDriver(NewServiceDriver);
+  // runtime
+  const onRuntimeChange = (val: RuntimeOption | null): void => {
+    if (val) {
+      newServiceDriver.setRuntimeOption(val);
+    }
+  };
   // mapping
-  const currentMappingOption = newServiceDriver.mappingOption;
   const mappingOptions =
     editorStore.graphManagerState.usableMappings.map(buildElementOption);
   const onMappingChange = (
@@ -361,22 +396,50 @@ const NewServiceDriverEditor = observer(() => {
     } else {
       newServiceDriver.setMappingOption(val);
     }
+    //reset runtime
+    newServiceDriver.setRuntimeOption(
+      guaranteeNonNullable(newServiceDriver.runtimeOptions[0]),
+    );
   };
+
   return (
-    <div className="explorer__new-element-modal__driver">
-      <CustomSelectorInput
-        className="explorer__new-element-modal__driver__dropdown"
-        options={mappingOptions}
-        onChange={onMappingChange}
-        value={currentMappingOption}
-        darkMode={true}
-      />
-    </div>
+    <>
+      <div className="panel__content__form__section__header__label">
+        Mapping
+      </div>
+      <div className="explorer__new-element-modal__driver">
+        <CustomSelectorInput
+          className="explorer__new-element-modal__driver__dropdown"
+          options={mappingOptions}
+          onChange={onMappingChange}
+          value={newServiceDriver.mappingOption}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+        />
+      </div>
+      <div className="panel__content__form__section__header__label">
+        Runtime
+      </div>
+      <div className="explorer__new-element-modal__driver">
+        <CustomSelectorInput
+          className="explorer__new-element-modal__driver__dropdown"
+          options={newServiceDriver.runtimeOptions}
+          onChange={onRuntimeChange}
+          value={newServiceDriver.runtimeOption}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          placeholder={runtimeSelectorPlaceholder}
+        />
+      </div>
+    </>
   );
 });
 
 const NewFileGenerationDriverEditor = observer(() => {
   const editorStore = useEditorStore();
+  const applicationStore = editorStore.applicationStore;
   const newConnectionDriver = editorStore.newElementState.getNewElementDriver(
     NewFileGenerationDriver,
   );
@@ -397,7 +460,9 @@ const NewFileGenerationDriverEditor = observer(() => {
         options={options}
         onChange={onTypeSelectionChange}
         value={newConnectionDriver.typeOption}
-        darkMode={true}
+        darkMode={
+          !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+        }
       />
     </div>
   );
@@ -518,7 +583,10 @@ export const CreateNewLocalConnectionModal = observer(() => {
               onChange={handleTypeChange}
               value={selectedTypeOption}
               isClearable={false}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           )}
           <input
@@ -552,6 +620,7 @@ export const CreateNewElementModal = observer(() => {
   const applicationStore = useApplicationStore();
   const newElementState = editorStore.newElementState;
   const selectedPackage = newElementState.selectedPackage;
+  const elementLabel = getElementTypeLabel(editorStore, newElementState.type);
   // Name
   const name = newElementState.name;
   const handleNameChange: React.ChangeEventHandler<HTMLInputElement> = (
@@ -615,8 +684,8 @@ export const CreateNewElementModal = observer(() => {
         className="modal modal--dark search-modal"
       >
         <div className="modal__title">
-          {`Create a New ${
-            getElementTypeLabel(editorStore, newElementState.type) ?? 'element'
+          {`Create a new ${
+            elementLabel ? toTitleCase(elementLabel) : 'element'
           }`}
         </div>
         <div>
@@ -627,7 +696,10 @@ export const CreateNewElementModal = observer(() => {
               onChange={handleTypeChange}
               value={selectedTypeOption}
               isClearable={false}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           )}
           <input

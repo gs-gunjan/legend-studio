@@ -48,6 +48,7 @@ export enum V1_DatabaseType {
   Redshift = 'Redshift',
   Spanner = 'Spanner',
   Trino = 'Trino',
+  DuckDB = 'DuckDB',
 }
 
 export abstract class V1_DatabaseConnection extends V1_Connection {
@@ -56,6 +57,7 @@ export abstract class V1_DatabaseConnection extends V1_Connection {
   databaseType!: string;
   timeZone?: string | undefined;
   quoteIdentifiers?: boolean | undefined;
+  queryTimeOutInSeconds?: number | undefined;
   postProcessorWithParameter: unknown[] = [];
 }
 
@@ -82,6 +84,7 @@ export class V1_RelationalDatabaseConnection
       this.datasourceSpecification,
       this.authenticationStrategy,
       this.localMode?.toString() ?? '',
+      this.queryTimeOutInSeconds?.toString() ?? '',
       hashArray(this.postProcessors),
     ]);
   }

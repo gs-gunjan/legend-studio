@@ -26,10 +26,10 @@ import {
   assertNonEmptyString,
   guaranteeNonNullable,
   UnsupportedOperationError,
-  getNullableFirstEntry,
   assertTrue,
   URL_SEPARATOR,
   filterByType,
+  compareSemVerVersions,
 } from '@finos/legend-shared';
 import { LEGEND_STUDIO_APP_EVENT } from '../../../../../__lib__/LegendStudioEvent.js';
 import {
@@ -48,7 +48,6 @@ import {
   ActionAlertActionType,
   ActionAlertType,
 } from '@finos/legend-application';
-import { compareSemVerVersions } from '@finos/legend-storage';
 import { MASTER_SNAPSHOT_ALIAS } from '@finos/legend-server-depot';
 
 export const LATEST_PROJECT_REVISION = 'Latest Project Revision';
@@ -99,6 +98,7 @@ export class ServiceConfigState {
   enableModesWithVersioning: boolean;
   TEMPORARY__useStoreModel = false;
   TEMPORARY__useGenerateLineage = true;
+  TEMPORARY__useGenerateOpenApi = false;
 
   constructor(
     editorStore: EditorStore,
@@ -112,6 +112,7 @@ export class ServiceConfigState {
       enableModesWithVersioning: observable,
       TEMPORARY__useStoreModel: observable,
       TEMPORARY__useGenerateLineage: observable,
+      TEMPORARY__useGenerateOpenApi: observable,
       executionModes: computed,
       options: computed,
       versionOptions: computed,
@@ -220,8 +221,12 @@ export class ServiceConfigState {
     this.TEMPORARY__useGenerateLineage = val;
   }
 
+  setUseGenerateOpenApi(val: boolean): void {
+    this.TEMPORARY__useGenerateOpenApi = val;
+  }
+
   initialize(): void {
-    this.serviceEnv = getNullableFirstEntry(this.registrationOptions)?.env;
+    this.serviceEnv = this.registrationOptions[0]?.env;
     this.serviceExecutionMode = this.executionModes[0];
     this.updateVersion();
   }
@@ -296,6 +301,7 @@ export class ServiceRegistrationState extends ServiceConfigState {
           {
             TEMPORARY__useStoreModel: this.TEMPORARY__useStoreModel,
             TEMPORARY__useGenerateLineage: this.TEMPORARY__useGenerateLineage,
+            TEMPORARY__useGenerateOpenApi: this.TEMPORARY__useGenerateOpenApi,
           },
         )) as ServiceRegistrationSuccess;
       if (this.activatePostRegistration) {
@@ -354,7 +360,10 @@ export class ServiceRegistrationState extends ServiceConfigState {
       assertNonEmptyString(owner, `Service can't have an empty owner name`),
     );
     assertTrue(
-      this.service.owners.length >= MINIMUM_SERVICE_OWNERS,
+      Boolean(
+        this.service.ownership ??
+          this.service.owners.length >= MINIMUM_SERVICE_OWNERS,
+      ),
       `Service needs to have at least 2 owners in order to be registered`,
     );
     guaranteeNonNullable(

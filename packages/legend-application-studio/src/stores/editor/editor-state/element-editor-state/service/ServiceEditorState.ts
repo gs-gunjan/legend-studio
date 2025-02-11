@@ -38,15 +38,19 @@ import {
   Service,
   PureSingleExecution,
   PureMultiExecution,
+  DeploymentOwnership,
+  UserListOwnership,
   isStubbed_RawLambda,
   getValueSpecificationReturnType,
   type Type,
   resolveServiceQueryRawLambda,
+  PureExecution,
 } from '@finos/legend-graph';
 import { ServiceTestableState } from './testable/ServiceTestableState.js';
 import { User } from '@finos/legend-server-sdlc';
 import { ServicePostValidationsState } from './ServicePostValidationState.js';
 import { valueSpecReturnTDS } from '@finos/legend-query-builder';
+import { service_setOwnership } from '../../../../graph-modifier/DSL_Service_GraphModifierHelper.js';
 
 export enum SERVICE_TAB {
   GENERAL = 'GENERAL',
@@ -54,6 +58,11 @@ export enum SERVICE_TAB {
   TEST = 'TEST',
   REGISTRATION = 'REGISTRATION',
   POST_VALIDATION = 'POST_VALIDATION',
+}
+
+enum ServiceOwnershipType {
+  DEPLOYMENT_OWNERSHIP = 'deploymentOwnership',
+  USERLIST_OWNERSHIP = 'userListOwnership',
 }
 
 export const resolveServiceQueryValueSpec = (
@@ -100,6 +109,24 @@ export const isServiceQueryTDS = (
 };
 
 export const MINIMUM_SERVICE_OWNERS = 2;
+export const DeploymentOwnershipLabel = 'Deployment';
+export const UserlistOwnershipLabel = 'User List';
+export const OWNERSHIP_OPTIONS = [
+  {
+    label: DeploymentOwnershipLabel,
+    value: ServiceOwnershipType.DEPLOYMENT_OWNERSHIP,
+  },
+  {
+    label: UserlistOwnershipLabel,
+    value: ServiceOwnershipType.USERLIST_OWNERSHIP,
+  },
+];
+
+export type ServiceOwnerOption = {
+  label: string;
+  value: string;
+};
+
 export class ServiceEditorState extends ElementEditorState {
   executionState: ServiceExecutionState;
   registrationState: ServiceRegistrationState;
@@ -112,10 +139,12 @@ export class ServiceEditorState extends ElementEditorState {
 
     makeObservable(this, {
       executionState: observable,
+      selectedOwnership: computed,
       registrationState: observable,
       selectedTab: observable,
       postValidationState: observable,
       setSelectedTab: action,
+      setSelectedOwnership: action,
       resetExecutionState: action,
       openToTestTab: action,
       service: computed,
@@ -132,10 +161,13 @@ export class ServiceEditorState extends ElementEditorState {
         editorStore.sdlcServerClient.features.canCreateVersion,
     );
     this.testableState = new ServiceTestableState(editorStore, this);
-    const query = this.executionState.serviceExecutionParameters?.query;
+    const executionQuery =
+      this.service.execution instanceof PureExecution
+        ? this.service.execution.func
+        : undefined;
     // default to execution tab if query is defined
     this.selectedTab =
-      query && !isStubbed_RawLambda(query)
+      executionQuery && !isStubbed_RawLambda(executionQuery)
         ? SERVICE_TAB.EXECUTION
         : SERVICE_TAB.GENERAL;
     this.postValidationState = new ServicePostValidationsState(this);
@@ -147,6 +179,52 @@ export class ServiceEditorState extends ElementEditorState {
 
   openToTestTab(): void {
     this.selectedTab = SERVICE_TAB.TEST;
+  }
+
+  get selectedOwnership(): ServiceOwnerOption | undefined {
+    const ownership = this.service.ownership;
+    if (ownership instanceof DeploymentOwnership) {
+      return {
+        label: DeploymentOwnershipLabel,
+        value: ServiceOwnershipType.DEPLOYMENT_OWNERSHIP,
+      };
+    } else if (ownership instanceof UserListOwnership) {
+      return {
+        label: UserlistOwnershipLabel,
+        value: ServiceOwnershipType.USERLIST_OWNERSHIP,
+      };
+    }
+    return undefined;
+  }
+
+  setSelectedOwnership(o: ServiceOwnerOption): void {
+    switch (o.value) {
+      case ServiceOwnershipType.DEPLOYMENT_OWNERSHIP: {
+        service_setOwnership(
+          this.service,
+          new DeploymentOwnership('', this.service),
+        );
+        break;
+      }
+      case ServiceOwnershipType.USERLIST_OWNERSHIP: {
+        const currentUserId =
+          this.editorStore.graphManagerState.graphManager.TEMPORARY__getEngineConfig()
+            .currentUserId;
+        service_setOwnership(
+          this.service,
+          new UserListOwnership(
+            currentUserId ? [currentUserId] : [],
+            this.service,
+          ),
+        );
+        break;
+      }
+      default: {
+        this.editorStore.applicationStore.notificationService.notifyError(
+          'Unsupported ownership type',
+        );
+      }
+    }
   }
 
   resetExecutionState(): void {
@@ -171,7 +249,10 @@ export class ServiceEditorState extends ElementEditorState {
         this,
         execution,
       );
-    } else if (execution instanceof PureMultiExecution) {
+    } else if (
+      execution instanceof PureMultiExecution &&
+      execution.executionParameters
+    ) {
       return new MultiServicePureExecutionState(
         this.editorStore,
         this,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useApplicationStore } from '@finos/legend-application';
 import type {
@@ -41,83 +41,84 @@ import {
   DatasetEntitlementAccessRequestedReport,
   DatasetEntitlementUnsupportedReport,
 } from '@finos/legend-graph';
-import { Doughnut } from 'react-chartjs-2';
-import { getNullableFirstEntry } from '@finos/legend-shared';
+import { Chart as ChartJS, DoughnutController, ArcElement } from 'chart.js';
 import type { QueryBuilder_LegendApplicationPlugin_Extension } from '../../stores/QueryBuilder_LegendApplicationPlugin_Extension.js';
+
+ChartJS.register(DoughnutController, ArcElement);
 
 const DataAccessOverviewChart = observer(
   (props: { dataAccessState: DataAccessState }) => {
     const { dataAccessState } = props;
-    const applicationStore = useApplicationStore();
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const chartRef = useRef<ChartJS>(null);
     const entitlementCheckInfo = dataAccessState.entitlementCheckInfo;
     const total = entitlementCheckInfo.total;
-    const accessGrantedCount =
-      getNullableFirstEntry(entitlementCheckInfo.data)?.count ?? 0;
+    const accessGrantedCount = entitlementCheckInfo.data[0]?.count ?? 0;
     const accessGrantedPercentage =
-      getNullableFirstEntry(entitlementCheckInfo.data)?.percentage ?? 0;
+      entitlementCheckInfo.data[0]?.percentage ?? 0;
+
+    useEffect(() => {
+      if (canvasRef.current && !chartRef.current) {
+        chartRef.current = new ChartJS(canvasRef.current, {
+          type: 'doughnut',
+          data: {
+            labels: [],
+            datasets: [],
+          },
+          options: {
+            responsive: true,
+            resizeDelay: 0,
+            maintainAspectRatio: false,
+            cutout: '75%',
+          },
+        });
+      }
+
+      return () => {
+        chartRef.current?.destroy();
+        chartRef.current = null;
+      };
+    }, []);
+
+    useEffect(() => {
+      if (chartRef.current) {
+        chartRef.current.data = {
+          labels: entitlementCheckInfo.data.map((item) => item.label),
+          datasets: [
+            {
+              data: entitlementCheckInfo.data.map((item) => item.count),
+              backgroundColor: entitlementCheckInfo.data.map(
+                (item) => item.color,
+              ),
+              hoverBorderWidth: 0,
+              borderWidth: 0,
+            },
+          ],
+        };
+        chartRef.current.options = {
+          ...chartRef.current.options,
+          plugins: {
+            tooltip: {
+              enabled: entitlementCheckInfo.total !== 0,
+              usePointStyle: false,
+              boxPadding: 5,
+              callbacks: {
+                labelPointStyle: () => ({
+                  pointStyle: 'rectRounded',
+                  rotation: 0,
+                }),
+              },
+            },
+          },
+        };
+        chartRef.current.update('resize');
+      }
+    }, [entitlementCheckInfo]);
 
     return (
       <div className="data-access-overview__chart">
-        <div className="data-access-overview__chart__actions">
-          <button
-            className="data-access-overview__chart__actions__refresh-btn btn--dark"
-            tabIndex={-1}
-            title="Refresh"
-            onClick={() => {
-              dataAccessState
-                .refresh()
-                .catch(applicationStore.alertUnhandledError);
-            }}
-          >
-            <RefreshIcon />
-          </button>
-        </div>
-        {Boolean(
-          dataAccessState.datasets.find(
-            (dataset) =>
-              dataset.entitlementReport instanceof
-              DatasetEntitlementUnsupportedReport,
-          ),
-        ) && (
-          <div className="data-access-overview__chart__warning">
-            Use case is not fully supported!
-          </div>
-        )}
         <div className="data-access-overview__chart__container">
-          <Doughnut
-            data={{
-              labels: entitlementCheckInfo.data.map((item) => item.label),
-              datasets: [
-                {
-                  data: entitlementCheckInfo.data.map((item) => item.count),
-                  backgroundColor: entitlementCheckInfo.data.map(
-                    (item) => item.color,
-                  ),
-                  hoverBorderWidth: 0,
-                  borderWidth: 0,
-                },
-              ],
-            }}
-            options={{
-              responsive: true,
-              resizeDelay: 0,
-              maintainAspectRatio: false,
-              cutout: '75%',
-              plugins: {
-                tooltip: {
-                  enabled: total !== 0,
-                  usePointStyle: false,
-                  boxPadding: 5,
-                  callbacks: {
-                    labelPointStyle: () => ({
-                      pointStyle: 'rectRounded',
-                      rotation: 0,
-                    }),
-                  },
-                },
-              },
-            }}
-          />
+          <canvas ref={canvasRef} />
           <div className="data-access-overview__chart__stats">
             <div className="data-access-overview__chart__stats__percentage">
               {total === 0 ? 0 : accessGrantedPercentage}%
@@ -243,9 +244,17 @@ const AccessStatusCellRenderer = observer(
 const DataAccessOverviewGrid = observer(
   (props: { dataAccessState: DataAccessState }) => {
     const { dataAccessState } = props;
+    const darkMode =
+      !dataAccessState.applicationStore.layoutService
+        .TEMPORARY__isLightColorThemeEnabled;
 
     return (
-      <div className="data-access-overview__grid ag-theme-balham-dark">
+      <div
+        className={clsx('data-access-overview__grid', {
+          'ag-theme-balham': !darkMode,
+          'ag-theme-balham-dark': darkMode,
+        })}
+      >
         <DataGrid
           rowData={dataAccessState.datasets}
           gridOptions={{
@@ -302,6 +311,26 @@ export const DataAccessOverview = observer(
       // dataAccessState.intialize().catch(applicationStore.alertUnhandledError);
     }, [applicationStore, dataAccessState]);
 
+    const renderWarehouseEntitlementTab = (): React.ReactNode => {
+      const plugins = applicationStore.pluginManager
+        .getApplicationPlugins()
+        .flatMap(
+          (plugin) =>
+            (
+              plugin as QueryBuilder_LegendApplicationPlugin_Extension
+            ).getWarehouseEntitlementRenders?.() ?? [],
+        );
+      let warehouseEntitlementRender: React.ReactNode;
+      for (const plugin of plugins) {
+        warehouseEntitlementRender = plugin.renderer(dataAccessState);
+        if (warehouseEntitlementRender) {
+          break;
+        }
+      }
+      return warehouseEntitlementRender;
+    };
+    const warehouseEntitlementTab = renderWarehouseEntitlementTab();
+
     return (
       <div
         className={clsx('data-access-overview', {
@@ -314,8 +343,39 @@ export const DataAccessOverview = observer(
             dataAccessState.checkEntitlementsState.isInProgress
           }
         />
-        <DataAccessOverviewChart dataAccessState={dataAccessState} />
-        <DataAccessOverviewGrid dataAccessState={dataAccessState} />
+        <div className="data-access-overview__actions">
+          {Boolean(
+            dataAccessState.datasets.find(
+              (dataset) =>
+                dataset.entitlementReport instanceof
+                DatasetEntitlementUnsupportedReport,
+            ),
+          ) && (
+            <div className="data-access-overview__actions__warning">
+              Use case is not fully supported!
+            </div>
+          )}
+          <button
+            className="data-access-overview__actions__refresh-btn btn--dark"
+            tabIndex={-1}
+            title="Refresh"
+            onClick={() => {
+              dataAccessState
+                .refresh()
+                .catch(applicationStore.alertUnhandledError);
+            }}
+          >
+            <RefreshIcon />
+          </button>
+        </div>
+        <div className="data-access-overview__datasets">
+          <div className="data-access-overview__header">
+            DATASET ENTITLEMENTS
+          </div>
+          <DataAccessOverviewChart dataAccessState={dataAccessState} />
+          <DataAccessOverviewGrid dataAccessState={dataAccessState} />
+        </div>
+        {warehouseEntitlementTab}
       </div>
     );
   },

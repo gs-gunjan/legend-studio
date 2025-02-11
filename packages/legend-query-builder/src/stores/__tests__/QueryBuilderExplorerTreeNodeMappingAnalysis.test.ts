@@ -15,13 +15,14 @@
  */
 
 import { test, expect, describe } from '@jest/globals';
-import TEST_DATA__ComplexM2MModel from './TEST_DATA__QueryBuilder_Model_ComplexM2M.json';
-import TEST_DATA__SimpleRelationalInheritanceModel from './TEST_DATA__QueryBuilder_Model_SimpleRelationalInheritanceModel.json';
-import TEST_DATA__NestedSubTypeModel from './TEST_DATA__QueryBuilder_Model_NestedSubType.json';
-import TEST_DATA__COVIDDataSimpleModel from './TEST_DATA__QueryBuilder_Model_COVID.json';
-import TEST_DATA__AssociationMappingModel from './TEST_DATA__QueryBuilder_Model_AssociationMappingModel.json';
-import TEST_DATA__M2MAutoMapped from './TEST_DATA__QueryBuilder_Model_M2MAutoMapped.json';
-import TEST_DATA__RelationalInline from './TEST_DATA__QueryBuilder_Model_RelationalInline.json';
+import TEST_DATA__ComplexM2MModel from './TEST_DATA__QueryBuilder_Model_ComplexM2M.json' with { type: 'json' };
+import TEST_DATA__SimpleRelationalInheritanceModel from './TEST_DATA__QueryBuilder_Model_SimpleRelationalInheritanceModel.json' with { type: 'json' };
+import TEST_DATA__NestedSubTypeModel from './TEST_DATA__QueryBuilder_Model_NestedSubType.json' with { type: 'json' };
+import TEST_DATA__COVIDDataSimpleModel from './TEST_DATA__QueryBuilder_Model_COVID.json' with { type: 'json' };
+import TEST_DATA__AssociationMappingModel from './TEST_DATA__QueryBuilder_Model_AssociationMappingModel.json' with { type: 'json' };
+import TEST_DATA__M2MAutoMapped from './TEST_DATA__QueryBuilder_Model_M2MAutoMapped.json' with { type: 'json' };
+import TEST_DATA__RelationalInline from './TEST_DATA__QueryBuilder_Model_RelationalInline.json' with { type: 'json' };
+import TEST_DATA__QueryBuilder_Model_MultiClassNestedSubType from './TEST_DATA__QueryBuilder_Model_MultiClassNestedSubType.json' with { type: 'json' };
 import { type PlainObject } from '@finos/legend-shared';
 import {
   integrationTest,
@@ -32,10 +33,10 @@ import {
   Class,
   getAllClassDerivedProperties,
   getAllClassProperties,
-  type AbstractProperty,
   type GraphManagerState,
   type Mapping,
   type MappingModelCoverageAnalysisResult,
+  type AbstractProperty,
 } from '@finos/legend-graph';
 import { TEST__getTestGraphManagerState } from '@finos/legend-graph/test';
 import {
@@ -53,6 +54,8 @@ import {
   TEST_DATA__MappingData__Relational_Inheritance,
   TEST_DATA__MappingData_RelationalInline,
   TEST_DATA__Mappingdata__NestedSubtype,
+  TEST_DATA__Mappingdata__MultiMappedNestedSubtype,
+  TEST_DATA__Mappingdata__SimpleSubtype,
 } from './TEST_DATA__MappingData.js';
 import {
   TEST_DATA__ModelCoverageAnalysisResult_AssociationMapping,
@@ -62,8 +65,11 @@ import {
   TEST_DATA__ModelCoverageAnalysisResult_RelationalInline,
   TEST_DATA__ModelCoverageAnalysisResult_SimpleRelationalInheritance,
   TEST_DATA__ModelCoverageAnalysisResult_NestedSubtype,
+  TEST_DATA__ModelCoverageAnalysisResult_MultiMappedNestedSubtype,
+  TEST_DATA__ModelCoverageAnalysisResult_SimpleSubtype,
 } from './TEST_DATA__ModelCoverageAnalysisResult.js';
 import { TEST__LegendApplicationPluginManager } from '../__test-utils__/QueryBuilderStateTestUtils.js';
+import TEST_DATA_SimpleSubtypeModel from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_SimpleSubtype.json' with { type: 'json' };
 
 interface NodeMappingData {
   name: string;
@@ -160,6 +166,30 @@ const cases: TestCase[] = [
       entities: TEST_DATA__NestedSubTypeModel,
       rawMappingModelCoverageAnalysisResult:
         TEST_DATA__ModelCoverageAnalysisResult_NestedSubtype,
+    },
+  ],
+  [
+    'Multi Mapped Nested Subtype',
+    {
+      mappingPath: 'model::MyMapping',
+      classPath: 'model::Firm',
+      expectedMappingData: TEST_DATA__Mappingdata__MultiMappedNestedSubtype,
+      entities: TEST_DATA__QueryBuilder_Model_MultiClassNestedSubType,
+      maxDepth: 1,
+      rawMappingModelCoverageAnalysisResult:
+        TEST_DATA__ModelCoverageAnalysisResult_MultiMappedNestedSubtype,
+    },
+  ],
+  [
+    'Simple relational mapping when property mapping points to class mapping of subType',
+    {
+      mappingPath: 'model::NewMapping',
+      classPath: 'model::Firm',
+      expectedMappingData: TEST_DATA__Mappingdata__SimpleSubtype,
+      entities: TEST_DATA_SimpleSubtypeModel,
+      maxDepth: 3,
+      rawMappingModelCoverageAnalysisResult:
+        TEST_DATA__ModelCoverageAnalysisResult_SimpleSubtype,
     },
   ],
 ];

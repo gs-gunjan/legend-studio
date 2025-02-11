@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+const import_plugin = require('eslint-plugin-import');
+const typescript_eslint_plugin = require('@typescript-eslint/eslint-plugin');
+const typescript_eslint_parser = require('@typescript-eslint/parser');
+
+const OFF = 0;
+const WARN = 1;
 const ERROR = 2;
 
 const IMPORT_RULES = {
@@ -24,24 +30,44 @@ const IMPORT_RULES = {
 };
 
 const TYPESCRIPT_RULES = {
-  // NOTE: following rules are classified as `type-aware` linting rule, which has huge initial performance impact on linting
-  // They require parserServices to be generated so we have to specify 'parserOptions.project' property for @typescript-esint/parser
-  '@typescript-eslint/consistent-type-exports': [
+  '@typescript-eslint/prefer-nullish-coalescing': [
     ERROR,
-    { fixMixedExportsWithInlineTypeSpecifier: true },
+    {
+      ignoreConditionalTests: true,
+      ignoreTernaryTests: true,
+      ignoreMixedLogicalExpressions: true,
+    },
   ],
-  '@typescript-eslint/prefer-nullish-coalescing': ERROR,
   '@typescript-eslint/prefer-optional-chain': ERROR,
   '@typescript-eslint/no-unnecessary-condition': ERROR,
   '@typescript-eslint/no-unnecessary-type-assertion': ERROR,
-  '@typescript-eslint/no-throw-literal': ERROR,
+  '@typescript-eslint/only-throw-error': ERROR,
   '@typescript-eslint/no-unsafe-assignment': ERROR,
   '@typescript-eslint/no-floating-promises': ERROR,
   '@typescript-eslint/no-misused-promises': ERROR,
+
+  '@typescript-eslint/no-implied-eval': ERROR,
+  '@typescript-eslint/await-thenable': ERROR,
+
+  '@typescript-eslint/unbound-method': WARN,
+  '@typescript-eslint/no-redundant-type-constituents': WARN,
+  '@typescript-eslint/no-non-null-assertion': WARN,
+
+  // NOTE: since we turn on TS option --exactOptionalPropertyTypes, this rule mistakenly flags ?: ... | undefined as violation
+  // so we temporarily turn it off
+  // See https://github.com/typescript-eslint/typescript-eslint/issues/9203
+  '@typescript-eslint/no-duplicate-type-constituents': OFF,
+
+  // The following rules are recommended but we need to disable them since we deem them unecessarily strict
+  // See https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/src/configs/recommended-type-checked.ts
+  '@typescript-eslint/no-unsafe-argument': OFF,
+  '@typescript-eslint/no-unsafe-member-access': OFF,
+  '@typescript-eslint/no-unsafe-enum-comparison': OFF, // we compare enum with strings a lot for valid reasons so this rule should be disabled
+  '@typescript-eslint/no-unsafe-return': OFF, // we use `any` return type a lot for valid reasons so this rule should be disabled
 };
 
 /**
- * The following rules are computationally expensive and should be turned off during development for better DX.
+ * This plugin consists of rules which are computationally expensive and should be turned off during development for better DX.
  *
  * There are a few major sources of performance hit for ESLint:
  * 1. Typescript type-ware check
@@ -50,19 +76,29 @@ const TYPESCRIPT_RULES = {
  * 4. Wide file scope (e.g. accidentally include `node_modules`)
  * See https://github.com/typescript-eslint/typescript-eslint/blob/master/docs/getting-started/linting/FAQ.md#my-linting-feels-really-slow
  */
-const rules = {
-  ...IMPORT_RULES,
-  ...TYPESCRIPT_RULES,
-};
-
-const config = {
-  parser: '@typescript-eslint/parser',
-  parserOptions: { sourceType: 'module' },
-  plugins: ['@typescript-eslint'],
-  rules,
+const buildConfig = (tsconfigRootDir) => {
+  /** @type {import('eslint').Linter.Config} */
+  const config = {
+    files: ['**/*.{ts,tsx,cts}'],
+    languageOptions: {
+      parser: typescript_eslint_parser,
+      parserOptions: {
+        tsconfigRootDir,
+        projectService: true,
+      },
+    },
+    plugins: {
+      '@typescript-eslint': typescript_eslint_plugin,
+      import: import_plugin,
+    },
+    rules: {
+      ...IMPORT_RULES,
+      ...TYPESCRIPT_RULES,
+    },
+  };
+  return config;
 };
 
 module.exports = {
-  rules,
-  config,
+  buildConfig,
 };

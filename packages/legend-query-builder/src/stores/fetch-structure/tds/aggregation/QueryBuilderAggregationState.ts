@@ -25,7 +25,10 @@ import type { Type } from '@finos/legend-graph';
 import { DEFAULT_LAMBDA_VARIABLE_NAME } from '../../../QueryBuilderConfig.js';
 import type { QueryBuilderTDSState } from '../QueryBuilderTDSState.js';
 import type { QueryBuilderAggregateOperator } from './QueryBuilderAggregateOperator.js';
-import type { QueryBuilderProjectionColumnState } from '../projection/QueryBuilderProjectionColumnState.js';
+import {
+  QueryBuilderDerivationProjectionColumnState,
+  type QueryBuilderProjectionColumnState,
+} from '../projection/QueryBuilderProjectionColumnState.js';
 import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../../../QueryBuilderStateHashUtils.js';
 import { QueryBuilderTDSColumnState } from '../QueryBuilderTDSColumnState.js';
 import type { QueryBuilderAggregateCalendarFunction } from './QueryBuilderAggregateCalendarFunction.js';
@@ -58,6 +61,7 @@ export class QueryBuilderAggregateColumnState
       setLambdaParameterName: action,
       setOperator: action,
       setCalendarFunction: action,
+      handleUsedPostFilterType: action,
       hashCode: computed,
     });
 
@@ -88,8 +92,18 @@ export class QueryBuilderAggregateColumnState
     this.operator = val;
   }
 
-  getColumnType(): Type {
+  getColumnType(): Type | undefined {
     return this.operator.getReturnType(this);
+  }
+
+  handleUsedPostFilterType(type: Type): void {
+    if (
+      this.getColumnType() === undefined &&
+      this.projectionColumnState instanceof
+        QueryBuilderDerivationProjectionColumnState
+    ) {
+      this.projectionColumnState.setReturnType(type);
+    }
   }
 
   get hashCode(): string {
@@ -122,6 +136,8 @@ export class QueryBuilderAggregationState implements Hashable {
       addColumn: action,
       changeColumnAggregateOperator: action,
       disableCalendar: action,
+
+      allValidationIssues: computed,
       hashCode: computed,
     });
 
@@ -141,6 +157,7 @@ export class QueryBuilderAggregationState implements Hashable {
   changeColumnAggregateOperator(
     val: QueryBuilderAggregateOperator | undefined,
     projectionColumnState: QueryBuilderProjectionColumnState,
+    hideOperatorInColumnName?: boolean,
   ): void {
     const aggregateColumnState = this.columns.find(
       (column) => column.projectionColumnState === projectionColumnState,
@@ -153,14 +170,30 @@ export class QueryBuilderAggregationState implements Hashable {
         return;
       }
       if (aggregateColumnState) {
-        aggregateColumnState.setOperator(val);
+        if (!hideOperatorInColumnName) {
+          const colName =
+            aggregateColumnState.projectionColumnState.columnName.split(
+              `(${aggregateColumnState.operator.getLabel(
+                aggregateColumnState.projectionColumnState,
+              )})`,
+            )[0] ?? '';
+          aggregateColumnState.projectionColumnState.setColumnName(
+            `${colName} (${val.getLabel(projectionColumnState)})`,
+          );
+        }
+        aggregateColumnState.setOperator(val.getOperator);
       } else {
+        if (!hideOperatorInColumnName) {
+          projectionColumnState.setColumnName(
+            `${projectionColumnState.columnName} (${val.getLabel(projectionColumnState)})`,
+          );
+        }
         const newAggregateColumnState = new QueryBuilderAggregateColumnState(
           this,
           projectionColumnState,
-          val,
+          val.getOperator,
         );
-        newAggregateColumnState.setOperator(val);
+        newAggregateColumnState.setOperator(val.getOperator);
         this.addColumn(newAggregateColumnState);
 
         // automatically move the column to the end
@@ -176,11 +209,19 @@ export class QueryBuilderAggregationState implements Hashable {
       if (aggregateColumnState) {
         // automatically move the column to the last position before the aggregate columns
         // NOTE: `moveColumn` will take care of this placement calculation
+        if (!hideOperatorInColumnName) {
+          const colName =
+            aggregateColumnState.projectionColumnState.columnName.split(
+              `(${aggregateColumnState.operator.getLabel(
+                aggregateColumnState.projectionColumnState,
+              )})`,
+            )[0] ?? '';
+          aggregateColumnState.projectionColumnState.setColumnName(colName);
+        }
         this.tdsState.moveColumn(
           this.tdsState.projectionColumns.indexOf(projectionColumnState),
           0,
         );
-
         this.removeColumn(aggregateColumnState);
       }
     }
@@ -192,6 +233,10 @@ export class QueryBuilderAggregationState implements Hashable {
       column.setCalendarFunction(undefined);
       column.setHideCalendarColumnState(true);
     });
+  }
+
+  get allValidationIssues(): string[] {
+    return this.columns.map((col) => col.operator.allValidationIssues).flat();
   }
 
   get hashCode(): string {

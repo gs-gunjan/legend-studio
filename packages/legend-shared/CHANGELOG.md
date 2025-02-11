@@ -1,5 +1,141 @@
 # @finos/legend-shared
 
+## 11.0.3
+
+## 11.0.2
+
+## 11.0.1
+
+## 11.0.0
+
+### Major Changes
+
+- [#3806](https://github.com/finos/legend-studio/pull/3806) [`e6d29c3`](https://github.com/finos/legend-studio/commit/e6d29c3116d86f1d5f32254df90fe0b1929a9a0e) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Reduced verbosity in array/list access method: renamed `getNullableLastEntry()` to `last()` and `getNonNullableEntry()` to `at()`; removed `getNullableEntry()` and `getNullableFirstEntry()` in favor of `x[0]`.
+
+## 10.0.67
+
+## 10.0.66
+
+## 10.0.65
+
+## 10.0.64
+
+## 10.0.63
+
+## 10.0.62
+
+## 10.0.61
+
+## 10.0.60
+
+## 10.0.59
+
+## 10.0.58
+
+## 10.0.57
+
+## 10.0.56
+
+## 10.0.55
+
+## 10.0.54
+
+## 10.0.53
+
+## 10.0.52
+
+## 10.0.51
+
+### Patch Changes
+
+- [#3389](https://github.com/finos/legend-studio/pull/3389) [`496be89`](https://github.com/finos/legend-studio/commit/496be891d1716f3e016c09012e07fa116fd9e0ae) ([@travisstebbins](https://github.com/travisstebbins)) - Export new FuzzySearchEngineSortFunctionArg type
+
+## 10.0.50
+
+## 10.0.49
+
+## 10.0.48
+
+## 10.0.47
+
+## 10.0.46
+
+## 10.0.45
+
+## 10.0.44
+
+## 10.0.43
+
+## 10.0.42
+
+## 10.0.41
+
+## 10.0.40
+
+## 10.0.39
+
+## 10.0.38
+
+### Patch Changes
+
+- [#3198](https://github.com/finos/legend-studio/pull/3198) [`b60c5cf`](https://github.com/finos/legend-studio/commit/b60c5cf844d34d26e9d5f5421020907afaf061bc) ([@travisstebbins](https://github.com/travisstebbins)) - Add isNonEmptyString function
+
+## 10.0.37
+
+## 10.0.36
+
+### Patch Changes
+
+- [#3197](https://github.com/finos/legend-studio/pull/3197) [`aa65b0f`](https://github.com/finos/legend-studio/commit/aa65b0f4f58569484b215926974f916a712e1f56) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Move semver util to legend-shared
+
+## 10.0.35
+
+## 10.0.34
+
+### Patch Changes
+
+- [#3032](https://github.com/finos/legend-studio/pull/3032) [`61a95131c`](https://github.com/finos/legend-studio/commit/61a95131c5842445933785bbeb2167db127a0551) ([@travisstebbins](https://github.com/travisstebbins)) - Export lodash clone function
+
+## 10.0.33
+
+## 10.0.32
+
+## 10.0.31
+
+## 10.0.30
+
+### Patch Changes
+
+- [#2882](https://github.com/finos/legend-studio/pull/2882) [`b98f72496`](https://github.com/finos/legend-studio/commit/b98f724965369a675ce436906e4a930814381964) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Fix parsing bug in sortObjectKeys CommonUtils
+
+## 10.0.29
+
+## 10.0.28
+
+## 10.0.27
+
+## 10.0.26
+
+## 10.0.25
+
+## 10.0.24
+
+## 10.0.23
+
+## 10.0.22
+
+## 10.0.21
+
+## 10.0.20
+
+## 10.0.19
+
+## 10.0.18
+
+## 10.0.17
+
+## 10.0.16
+
 ## 10.0.15
 
 ## 10.0.14

@@ -178,6 +178,7 @@ const cases: TestCase[] = [
           parameters: [],
           property: 'fullName',
           subTrees: [],
+          subTypeTrees: [],
         },
       ],
       subTypeTrees: [],
@@ -198,6 +199,7 @@ const cases: TestCase[] = [
             parameters: [],
             property: 'fullName',
             subTrees: [],
+            subTypeTrees: [],
           },
         ],
         subTypeTrees: [],
@@ -227,7 +229,12 @@ const cases: TestCase[] = [
     },
     {
       _type: 'genericTypeInstance',
-      fullPath: 'Integer',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'Integer',
+        },
+      },
     },
   ],
 ];

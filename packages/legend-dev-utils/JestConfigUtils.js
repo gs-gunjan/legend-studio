@@ -28,13 +28,14 @@ export const getBaseConfig = ({
    */
   isGlobal,
 }) => {
+  /** @type {import('jest').Config} */
   const config = {
     transform: {
       // Since `babel-jest` will not do type checking for the test code.
       // We need to manually run `tsc`. Another option is to use `jest-runner-tsc`
       // which currently has certain performance limitation
       // See https://jestjs.io/docs/en/getting-started#using-typescript
-      '^.+\\.[jt]sx?$': [
+      '^.+\\.m?[jt]sx?$': [
         'babel-jest',
         {
           configFile: babelConfigPath,
@@ -101,6 +102,3 @@ export const getBaseConfig = ({
       }
     : config;
 };
-
-export const unitTest = (testName) => `[UNIT] ${testName}`;
-export const integrationTest = (testName) => `[INTEGRATION] ${testName}`;

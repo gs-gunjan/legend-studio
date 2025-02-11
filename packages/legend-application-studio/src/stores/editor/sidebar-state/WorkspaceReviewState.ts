@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { action, makeObservable, flowResult, observable, flow } from 'mobx';
+import {
+  action,
+  makeObservable,
+  flowResult,
+  observable,
+  flow,
+  computed,
+} from 'mobx';
 import type { EditorStore } from '../EditorStore.js';
 import type { EditorSDLCState } from '../EditorSDLCState.js';
 import { LEGEND_STUDIO_APP_EVENT } from '../../../__lib__/LegendStudioEvent.js';
@@ -36,6 +43,8 @@ import {
   Review,
   ReviewState,
   RevisionAlias,
+  AuthorizableProjectAction,
+  isProjectSandbox,
 } from '@finos/legend-server-sdlc';
 import { ActionAlertActionType } from '@finos/legend-application';
 
@@ -69,6 +78,8 @@ export class WorkspaceReviewState {
       isCreatingWorkspaceReview: observable,
       isCommittingWorkspaceReview: observable,
       isRecreatingWorkspaceAfterCommittingReview: observable,
+      canCreateReview: computed,
+      canMergeReview: computed,
       setReviewTitle: action,
       openReviewChange: action,
       refreshWorkspaceChanges: flow,
@@ -81,6 +92,18 @@ export class WorkspaceReviewState {
 
     this.editorStore = editorStore;
     this.sdlcState = sdlcState;
+  }
+
+  get canCreateReview(): boolean {
+    return this.sdlcState.userCanPerformAction(
+      AuthorizableProjectAction.SUBMIT_REVIEW,
+    );
+  }
+
+  get canMergeReview(): boolean {
+    return this.sdlcState.userCanPerformAction(
+      AuthorizableProjectAction.COMMIT_REVIEW,
+    );
   }
 
   setReviewTitle(val: string): void {
@@ -182,11 +205,15 @@ export class WorkspaceReviewState {
         )) as Revision;
       const reviews = (yield this.editorStore.sdlcServerClient.getReviews(
         this.sdlcState.activeProject.projectId,
-        ReviewState.OPEN,
-        [currentWorkspaceRevision.id, currentWorkspaceRevision.id],
-        undefined,
-        undefined,
-        1,
+        this.sdlcState.activePatch?.patchReleaseVersionId.id,
+        {
+          state: ReviewState.OPEN,
+          revisionIds: [
+            currentWorkspaceRevision.id,
+            currentWorkspaceRevision.id,
+          ],
+          limit: 1,
+        },
       )) as Review[];
       const review = reviews.find(
         (r) =>
@@ -232,6 +259,7 @@ export class WorkspaceReviewState {
       });
       yield this.editorStore.sdlcServerClient.createWorkspace(
         this.sdlcState.activeProject.projectId,
+        this.sdlcState.activePatch?.patchReleaseVersionId.id,
         this.sdlcState.activeWorkspace.workspaceId,
         this.sdlcState.activeWorkspace.workspaceType,
       );
@@ -261,6 +289,7 @@ export class WorkspaceReviewState {
     try {
       yield this.editorStore.sdlcServerClient.rejectReview(
         this.sdlcState.activeProject.projectId,
+        this.sdlcState.activePatch?.patchReleaseVersionId.id,
         this.workspaceReview.id,
       );
       this.workspaceReview = undefined;
@@ -295,7 +324,12 @@ export class WorkspaceReviewState {
       );
       return;
     }
-
+    if (isProjectSandbox(this.sdlcState.activeProject)) {
+      this.editorStore.applicationStore.notificationService.notifyWarning(
+        `Can't create review: Reviews for sandbox projects not suppoorted`,
+      );
+      return;
+    }
     this.isCreatingWorkspaceReview = true;
     try {
       const description =
@@ -304,6 +338,7 @@ export class WorkspaceReviewState {
       this.workspaceReview = Review.serialization.fromJson(
         (yield this.editorStore.sdlcServerClient.createReview(
           this.sdlcState.activeProject.projectId,
+          this.sdlcState.activePatch?.patchReleaseVersionId.id,
           {
             workspaceId: this.sdlcState.activeWorkspace.workspaceId,
             title,
@@ -363,6 +398,7 @@ export class WorkspaceReviewState {
     try {
       yield this.editorStore.sdlcServerClient.commitReview(
         this.sdlcState.activeProject.projectId,
+        this.sdlcState.activePatch?.patchReleaseVersionId.id,
         review.id,
         { message: `${review.title} [review]` },
       );
@@ -385,6 +421,7 @@ export class WorkspaceReviewState {
               this.editorStore.applicationStore.navigationService.navigator.goToLocation(
                 generateSetupRoute(
                   this.editorStore.sdlcState.activeProject.projectId,
+                  this.sdlcState.activePatch?.patchReleaseVersionId.id,
                 ),
                 {
                   ignoreBlocking: true,

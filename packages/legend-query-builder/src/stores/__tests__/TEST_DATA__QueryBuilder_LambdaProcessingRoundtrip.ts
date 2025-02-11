@@ -52,7 +52,12 @@ export const TEST_DATA__allFuncOnBusinessTemporalMilestonedClass = {
   parameters: [
     {
       _type: 'var',
-      class: 'StrictDate',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'StrictDate',
+        },
+      },
       name: 'businessDate',
       multiplicity: {
         lowerBound: '1',
@@ -83,7 +88,12 @@ export const TEST_DATA__allFuncOnProcessingTemporalMilestonedClass = {
   parameters: [
     {
       _type: 'var',
-      class: 'StrictDate',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'StrictDate',
+        },
+      },
       name: 'processingDate',
       multiplicity: {
         lowerBound: '1',
@@ -118,7 +128,12 @@ export const TEST_DATA__allFuncOnBiTemporalMilestonedClass = {
   parameters: [
     {
       _type: 'var',
-      class: 'StrictDate',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'StrictDate',
+        },
+      },
       name: 'processingDate',
       multiplicity: {
         lowerBound: '1',
@@ -127,7 +142,12 @@ export const TEST_DATA__allFuncOnBiTemporalMilestonedClass = {
     },
     {
       _type: 'var',
-      class: 'StrictDate',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'StrictDate',
+        },
+      },
       name: 'businessDate',
       multiplicity: {
         lowerBound: '1',
@@ -352,6 +372,86 @@ export const TEST_DATA__projectWithCols = {
   parameters: [],
 };
 
+export const TEST_DATA__projectWithSlice = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'slice',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'project',
+          parameters: [
+            {
+              _type: 'func',
+              function: 'getAll',
+              parameters: [
+                {
+                  _type: 'packageableElementPtr',
+                  fullPath: 'test::Person',
+                },
+              ],
+            },
+            {
+              _type: 'collection',
+              multiplicity: {
+                lowerBound: 1,
+                upperBound: 1,
+              },
+              values: [
+                {
+                  _type: 'lambda',
+                  body: [
+                    {
+                      _type: 'property',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                      property: 'lastName',
+                    },
+                  ],
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              _type: 'collection',
+              multiplicity: {
+                lowerBound: 1,
+                upperBound: 1,
+              },
+              values: [
+                {
+                  _type: 'string',
+                  value: 'Last Name',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          _type: 'integer',
+          value: 1,
+        },
+        {
+          _type: 'integer',
+          value: 20,
+        },
+      ],
+    },
+  ],
+  parameters: [],
+};
+
 export const TEST_DATA__simpleProjectionWithFilter = {
   _type: 'lambda',
   body: [
@@ -484,6 +584,41 @@ export const TEST_DATA__complexRelationalModel = [
       ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
+  },
+  {
+    path: 'simple::MyRuntime',
+    content: {
+      _type: 'runtime',
+      name: 'MyRuntime',
+      package: 'simple',
+      runtimeValue: {
+        _type: 'engineRuntime',
+        connections: [
+          {
+            store: {
+              path: 'apps::pure::studio::relational::tests::dbInc',
+              type: 'STORE',
+            },
+            storeConnections: [
+              {
+                connection: {
+                  _type: 'connectionPointer',
+                  connection: 'simple::H2Connection',
+                },
+                id: 'connection_1',
+              },
+            ],
+          },
+        ],
+        mappings: [
+          {
+            path: 'apps::pure::studio::relational::tests::simpleRelationalMappingInc',
+            type: 'MAPPING',
+          },
+        ],
+      },
+    },
+    classifierPath: 'meta::pure::runtime::PackageableRuntime',
   },
   {
     path: 'apps::pure::studio::relational::tests::dbInc',
@@ -663,7 +798,12 @@ export const TEST_DATA__temporalModel = [
             upperBound: 1,
           },
           name: 'firmID',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -671,7 +811,12 @@ export const TEST_DATA__temporalModel = [
             upperBound: 1,
           },
           name: 'date',
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
       ],
       stereotypes: [
@@ -704,7 +849,12 @@ export const TEST_DATA__temporalModel = [
             upperBound: 1,
           },
           name: 'firmID',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -712,7 +862,12 @@ export const TEST_DATA__temporalModel = [
             upperBound: 1,
           },
           name: 'date',
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
       ],
       stereotypes: [
@@ -745,7 +900,12 @@ export const TEST_DATA__temporalModel = [
             upperBound: 1,
           },
           name: 'firmID',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -753,7 +913,12 @@ export const TEST_DATA__temporalModel = [
             upperBound: 1,
           },
           name: 'date',
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
       ],
       stereotypes: [
@@ -896,6 +1061,7 @@ export const TEST_DATA__simpleGraphFetch = {
                     parameters: [],
                     property: 'fullName',
                     subTrees: [],
+                    subTypeTrees: [],
                   },
                 ],
                 subTypeTrees: [],
@@ -919,6 +1085,7 @@ export const TEST_DATA__simpleGraphFetch = {
                 parameters: [],
                 property: 'fullName',
                 subTrees: [],
+                subTypeTrees: [],
               },
             ],
             subTypeTrees: [],
@@ -972,20 +1139,24 @@ export const TEST_DATA__firmPersonGraphFetch = {
                         parameters: [],
                         property: 'fullName',
                         subTrees: [],
+                        subTypeTrees: [],
                       },
                     ],
+                    subTypeTrees: [],
                   },
                   {
                     _type: 'propertyGraphFetchTree',
                     parameters: [],
                     property: 'incType',
                     subTrees: [],
+                    subTypeTrees: [],
                   },
                   {
                     _type: 'propertyGraphFetchTree',
                     parameters: [],
                     property: 'name',
                     subTrees: [],
+                    subTypeTrees: [],
                   },
                 ],
                 subTypeTrees: [],
@@ -1014,20 +1185,24 @@ export const TEST_DATA__firmPersonGraphFetch = {
                     parameters: [],
                     property: 'fullName',
                     subTrees: [],
+                    subTypeTrees: [],
                   },
                 ],
+                subTypeTrees: [],
               },
               {
                 _type: 'propertyGraphFetchTree',
                 parameters: [],
                 property: 'incType',
                 subTrees: [],
+                subTypeTrees: [],
               },
               {
                 _type: 'propertyGraphFetchTree',
                 parameters: [],
                 property: 'name',
                 subTrees: [],
+                subTypeTrees: [],
               },
             ],
             subTypeTrees: [],
@@ -1081,14 +1256,17 @@ export const TEST_DATA__graphFetchWithDerivedProperty = {
                         parameters: [],
                         property: 'age',
                         subTrees: [],
+                        subTypeTrees: [],
                       },
                       {
                         _type: 'propertyGraphFetchTree',
                         parameters: [],
                         property: 'fullName',
                         subTrees: [],
+                        subTypeTrees: [],
                       },
                     ],
+                    subTypeTrees: [],
                   },
                 ],
                 subTypeTrees: [],
@@ -1117,14 +1295,17 @@ export const TEST_DATA__graphFetchWithDerivedProperty = {
                     parameters: [],
                     property: 'age',
                     subTrees: [],
+                    subTypeTrees: [],
                   },
                   {
                     _type: 'propertyGraphFetchTree',
                     parameters: [],
                     property: 'fullName',
                     subTrees: [],
+                    subTypeTrees: [],
                   },
                 ],
+                subTypeTrees: [],
               },
             ],
             subTypeTrees: [],
@@ -1182,6 +1363,7 @@ export const TEST_DATA__graphFetchWithDerivedPropertyWithParameter = {
                     ],
                     property: 'myName',
                     subTrees: [],
+                    subTypeTrees: [],
                   },
                 ],
                 subTypeTrees: [],
@@ -1214,6 +1396,7 @@ export const TEST_DATA__graphFetchWithDerivedPropertyWithParameter = {
                 ],
                 property: 'myName',
                 subTrees: [],
+                subTypeTrees: [],
               },
             ],
             subTypeTrees: [],
@@ -1353,7 +1536,12 @@ export const TEST_DATA__personWithParameter = {
   parameters: [
     {
       _type: 'var',
-      class: 'String',
+      genericType: {
+        rawType: {
+          _type: 'packageableType',
+          fullPath: 'String',
+        },
+      },
       name: 'firstName',
       multiplicity: {
         lowerBound: 1,
@@ -1361,6 +1549,112 @@ export const TEST_DATA__personWithParameter = {
       },
     },
   ],
+};
+
+export const TEST_DATA__fromWithPersonProject = {
+  _type: 'lambda',
+  body: [
+    {
+      _type: 'func',
+      function: 'from',
+      parameters: [
+        {
+          _type: 'func',
+          function: 'project',
+          parameters: [
+            {
+              _type: 'func',
+              function: 'getAll',
+              parameters: [
+                {
+                  _type: 'packageableElementPtr',
+                  fullPath: 'test::Person',
+                },
+              ],
+            },
+            {
+              _type: 'collection',
+              multiplicity: {
+                lowerBound: 2,
+                upperBound: 2,
+              },
+              values: [
+                {
+                  _type: 'lambda',
+                  body: [
+                    {
+                      _type: 'property',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                      property: 'firstName',
+                    },
+                  ],
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                },
+                {
+                  _type: 'lambda',
+                  body: [
+                    {
+                      _type: 'property',
+                      parameters: [
+                        {
+                          _type: 'var',
+                          name: 'x',
+                        },
+                      ],
+                      property: 'lastName',
+                    },
+                  ],
+                  parameters: [
+                    {
+                      _type: 'var',
+                      name: 'x',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              _type: 'collection',
+              multiplicity: {
+                lowerBound: 2,
+                upperBound: 2,
+              },
+              values: [
+                {
+                  _type: 'string',
+                  value: 'First Name',
+                },
+                {
+                  _type: 'string',
+                  value: 'Last Name',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          _type: 'packageableElementPtr',
+          fullPath:
+            'apps::pure::studio::relational::tests::simpleRelationalMappingInc',
+        },
+        {
+          _type: 'packageableElementPtr',
+          fullPath: 'simple::MyRuntime',
+        },
+      ],
+    },
+  ],
+  parameters: [],
 };
 
 export const TEST_DATA__personWithSubType = {
@@ -1399,7 +1693,12 @@ export const TEST_DATA__personWithSubType = {
                         },
                         {
                           _type: 'genericTypeInstance',
-                          fullPath: 'test::Person',
+                          genericType: {
+                            rawType: {
+                              _type: 'packageableType',
+                              fullPath: 'test::Person',
+                            },
+                          },
                         },
                       ],
                     },
@@ -1579,7 +1878,12 @@ export const TEST_DATA__M2MModel = [
             upperBound: 1,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
     },
@@ -1715,13 +2019,23 @@ export const TEST_DATA__M2MModel = [
           parameters: [
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
 
               name: 'suffix',
             },
             {
               _type: 'var',
-              class: 'String',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'String',
+                },
+              },
 
               name: 'prefix',
             },
@@ -1730,7 +2044,12 @@ export const TEST_DATA__M2MModel = [
             lowerBound: 1,
             upperBound: 1,
           },
-          returnType: 'String',
+          returnGenericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },

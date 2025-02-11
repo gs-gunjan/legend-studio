@@ -24,6 +24,7 @@ import {
   RawLambda,
   isStubbed_RawLambda,
   stub_RawLambda,
+  type PostValidationAssertionResult,
 } from '@finos/legend-graph';
 import type { ServiceEditorState } from './ServiceEditorState.js';
 import {
@@ -46,6 +47,7 @@ import {
   LogEvent,
   generateEnumerableNameFromToken,
   ActionState,
+  guaranteeNonNullable,
 } from '@finos/legend-shared';
 
 export class PostValidationAssertionState extends LambdaEditorState {
@@ -100,9 +102,10 @@ export class PostValidationAssertionState extends LambdaEditorState {
     }
   }
 
-  override *convertLambdaObjectToGrammarString(
-    pretty: boolean,
-  ): GeneratorFn<void> {
+  override *convertLambdaObjectToGrammarString(options?: {
+    pretty?: boolean | undefined;
+    preserveCompilationError?: boolean | undefined;
+  }): GeneratorFn<void> {
     if (!isStubbed_RawLambda(this.assertion.assertion)) {
       try {
         const lambdas = new Map<string, RawLambda>();
@@ -110,11 +113,13 @@ export class PostValidationAssertionState extends LambdaEditorState {
         const isolatedLambdas =
           (yield this.editorStore.graphManagerState.graphManager.lambdasToPureCode(
             lambdas,
-            pretty,
+            options?.pretty,
           )) as Map<string, string>;
         const grammarText = isolatedLambdas.get(this.lambdaId);
         this.setLambdaString(grammarText ?? '');
-        this.clearErrors();
+        this.clearErrors({
+          preserveCompilationError: options?.preserveCompilationError,
+        });
       } catch (error) {
         assertErrorThrown(error);
         this.editorStore.applicationStore.logService.error(
@@ -200,7 +205,10 @@ export class PostValidationParameterState extends LambdaEditorState {
     }
   }
 
-  *convertLambdaObjectToGrammarString(pretty: boolean): GeneratorFn<void> {
+  *convertLambdaObjectToGrammarString(options?: {
+    pretty?: boolean | undefined;
+    preserveCompilationError?: boolean | undefined;
+  }): GeneratorFn<void> {
     if (this.lambda.body) {
       try {
         const lambdas = new Map<string, RawLambda>();
@@ -211,11 +219,13 @@ export class PostValidationParameterState extends LambdaEditorState {
         const isolatedLambdas =
           (yield this.editorStore.graphManagerState.graphManager.lambdasToPureCode(
             lambdas,
-            pretty,
+            options?.pretty,
           )) as Map<string, string>;
         const grammarText = isolatedLambdas.get(this.lambdaId);
         this.setLambdaString(grammarText ?? '');
-        this.clearErrors();
+        this.clearErrors({
+          preserveCompilationError: options?.preserveCompilationError,
+        });
       } catch (error) {
         assertErrorThrown(error);
         this.editorStore.applicationStore.logService.error(
@@ -372,7 +382,9 @@ export class PostValidationState {
       this.servicePostValidationState.editorStore,
     );
     this.parametersState.push(_paramState);
-    yield flowResult(_paramState.convertLambdaObjectToGrammarString(false));
+    yield flowResult(
+      _paramState.convertLambdaObjectToGrammarString({ pretty: false }),
+    );
   }
 
   deleteParam(paramState: PostValidationParameterState): void {
@@ -402,7 +414,9 @@ export class PostValidationState {
       this.servicePostValidationState.editorStore,
     );
     this.assertionStates.push(aState);
-    yield flowResult(aState.convertLambdaObjectToGrammarString(false));
+    yield flowResult(
+      aState.convertLambdaObjectToGrammarString({ pretty: false }),
+    );
   }
 
   deleteAssertion(assertion: PostValidationAssertion): void {
@@ -420,15 +434,19 @@ export class ServicePostValidationsState {
   readonly serviceEditorState: ServiceEditorState;
   readonly editorStore: EditorStore;
   selectedPostValidationState: PostValidationState | undefined;
+  runningPostValidationAction = ActionState.create();
+  postValidationAssertionResults: PostValidationAssertionResult[] | undefined;
 
   constructor(serviceEditorState: ServiceEditorState) {
     makeObservable(this, {
       selectedPostValidationState: observable,
+      postValidationAssertionResults: observable,
       init: action,
       buildPostValidationState: action,
       addValidation: action,
       deleteValidation: action,
       changeValidation: action,
+      runVal: flow,
     });
     this.serviceEditorState = serviceEditorState;
     this.editorStore = serviceEditorState.editorStore;
@@ -477,5 +495,46 @@ export class ServicePostValidationsState {
   changeValidation(validation: PostValidation): void {
     this.selectedPostValidationState =
       this.buildPostValidationState(validation);
+  }
+
+  // Fetches validation results. Caller of validation should catch the error
+  async fetchValidationResult(): Promise<PostValidationAssertionResult[]> {
+    const validation = guaranteeNonNullable(
+      this.selectedPostValidationState?.validation,
+    );
+
+    return Promise.all(
+      validation.assertions.map(async (assertion) => {
+        const assertionId = guaranteeNonNullable(assertion.id);
+
+        const testResults =
+          await this.editorStore.graphManagerState.graphManager
+            .runServicePostValidations(
+              this.service,
+              this.editorStore.graphManagerState.graph,
+              assertionId,
+            )
+            .then((data: PostValidationAssertionResult) => data);
+
+        return guaranteeNonNullable(testResults);
+      }),
+    );
+  }
+
+  *runVal(): GeneratorFn<void> {
+    try {
+      this.runningPostValidationAction.inProgress();
+      this.postValidationAssertionResults = undefined;
+      this.postValidationAssertionResults = (yield flowResult(
+        this.fetchValidationResult(),
+      )) as PostValidationAssertionResult[];
+      this.runningPostValidationAction.complete();
+    } catch (error) {
+      assertErrorThrown(error);
+      this.editorStore.applicationStore.notificationService.notifyError(
+        `Error running validation: ${error.message}`,
+      );
+      this.runningPostValidationAction.fail();
+    }
   }
 }

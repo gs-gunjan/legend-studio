@@ -33,16 +33,15 @@ import { QueryBuilderTextEditorMode } from '../stores/QueryBuilderTextEditorStat
 import { flowResult } from 'mobx';
 import { useApplicationStore } from '@finos/legend-application';
 import { LambdaEditor } from './shared/LambdaEditor.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 
 export const QueryBuilderTextEditor = observer(
   (props: { queryBuilderState: QueryBuilderState }) => {
     const { queryBuilderState } = props;
     const applicationStore = useApplicationStore();
     const queryTextEditorState = queryBuilderState.textEditorState;
+    const isReadOnly = queryTextEditorState.isReadOnly;
     const close = applicationStore.guardUnhandledError(() =>
       flowResult(queryBuilderState.textEditorState.closeModal()),
     );
@@ -52,9 +51,32 @@ export const QueryBuilderTextEditor = observer(
       applicationStore.layoutService.setShowBackdrop(false);
     };
     const mode = queryTextEditorState.mode;
+    const isEditingPure =
+      mode === QueryBuilderTextEditorMode.TEXT && !isReadOnly;
+    const title =
+      mode === QueryBuilderTextEditorMode.TEXT
+        ? isReadOnly
+          ? 'Pure Query'
+          : 'Edit Pure Query'
+        : 'Pure Query Protocol';
+
+    const copyExpression = (): void => {
+      applicationStore.clipboardService
+        .copyTextToClipboard(queryTextEditorState.text ?? '')
+        .then(() =>
+          applicationStore.notificationService.notifySuccess(
+            'Query Copied',
+            undefined,
+            2500,
+          ),
+        )
+        .catch(applicationStore.alertUnhandledError);
+    };
     useEffect(() => {
       flowResult(
-        queryTextEditorState.convertLambdaObjectToGrammarString(true),
+        queryTextEditorState.convertLambdaObjectToGrammarString({
+          pretty: true,
+        }),
       ).catch(applicationStore.alertUnhandledError);
     }, [applicationStore, queryTextEditorState]);
 
@@ -69,7 +91,9 @@ export const QueryBuilderTextEditor = observer(
         }}
       >
         <Modal
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
           className={clsx('editor-modal query-builder-text-mode__modal', {
             'query-builder-text-mode__modal--has-error': Boolean(
               queryTextEditorState.parserError,
@@ -77,7 +101,7 @@ export const QueryBuilderTextEditor = observer(
           })}
         >
           <ModalHeader>
-            <div className="modal__title">Query</div>
+            <div className="modal__title">{title}</div>
             {queryTextEditorState.parserError && (
               <div className="modal__title__error-badge">
                 Failed to parse query
@@ -95,15 +119,22 @@ export const QueryBuilderTextEditor = observer(
                 backdrop__element: Boolean(queryTextEditorState.parserError),
               })}
             >
-              {mode === QueryBuilderTextEditorMode.TEXT && (
-                <LambdaEditor
-                  className="query-builder-text-mode__lambda-editor"
-                  disabled={queryTextEditorState.isConvertingLambdaToString}
-                  lambdaEditorState={queryTextEditorState}
-                  forceBackdrop={false}
-                  autoFocus={true}
-                />
-              )}
+              {mode === QueryBuilderTextEditorMode.TEXT &&
+                (isReadOnly ? (
+                  <CodeEditor
+                    language={CODE_EDITOR_LANGUAGE.PURE}
+                    inputValue={queryTextEditorState.fullLambdaString}
+                    isReadOnly={true}
+                  />
+                ) : (
+                  <LambdaEditor
+                    className="query-builder-text-mode__lambda-editor"
+                    disabled={queryTextEditorState.isConvertingLambdaToString}
+                    lambdaEditorState={queryTextEditorState}
+                    forceBackdrop={false}
+                    autoFocus={true}
+                  />
+                ))}
               {mode === QueryBuilderTextEditorMode.JSON && (
                 <CodeEditor
                   language={CODE_EDITOR_LANGUAGE.JSON}
@@ -126,33 +157,65 @@ export const QueryBuilderTextEditor = observer(
                 Compiling Query...
               </ModalFooterStatus>
             )}
-            {mode === QueryBuilderTextEditorMode.TEXT && (
-              <ModalFooterButton
-                className="btn--caution"
-                onClick={discardChanges}
-                text="Discard Changes"
-              />
+            {isEditingPure ? (
+              <>
+                <ModalFooterButton
+                  onClick={close}
+                  disabled={
+                    Boolean(queryTextEditorState.parserError) ||
+                    queryBuilderState.textEditorState.closingQueryState
+                      .isInProgress
+                  }
+                >
+                  {queryBuilderState.textEditorState.closingQueryState
+                    .isInProgress ? (
+                    <>
+                      <div className="loading-icon__container--spinning">
+                        <RefreshIcon />
+                        Proceeding
+                      </div>
+                    </>
+                  ) : (
+                    <> Proceed </>
+                  )}
+                </ModalFooterButton>
+                <ModalFooterButton
+                  className="btn--caution"
+                  onClick={discardChanges}
+                  type="secondary"
+                  text="Cancel"
+                />
+              </>
+            ) : (
+              <>
+                <ModalFooterButton
+                  formatText={false}
+                  onClick={copyExpression}
+                  text="Copy to Clipboard"
+                />
+                <ModalFooterButton
+                  onClick={close}
+                  disabled={
+                    Boolean(queryTextEditorState.parserError) ||
+                    queryBuilderState.textEditorState.closingQueryState
+                      .isInProgress
+                  }
+                  type="secondary"
+                >
+                  {queryBuilderState.textEditorState.closingQueryState
+                    .isInProgress ? (
+                    <>
+                      <div className="loading-icon__container--spinning">
+                        <RefreshIcon />
+                        Closing
+                      </div>
+                    </>
+                  ) : (
+                    <> Close </>
+                  )}
+                </ModalFooterButton>
+              </>
             )}
-            <button
-              className="btn btn--dark"
-              onClick={close}
-              disabled={
-                Boolean(queryTextEditorState.parserError) ||
-                queryBuilderState.textEditorState.closingQueryState.isInProgress
-              }
-            >
-              {queryBuilderState.textEditorState.closingQueryState
-                .isInProgress ? (
-                <>
-                  <div className="loading-icon__container--spinning">
-                    <RefreshIcon />
-                    Closing
-                  </div>
-                </>
-              ) : (
-                <> Close </>
-              )}
-            </button>
           </ModalFooter>
         </Modal>
       </Dialog>

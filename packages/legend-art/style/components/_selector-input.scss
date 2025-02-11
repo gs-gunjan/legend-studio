@@ -92,16 +92,11 @@
   }
 
   &__value-container {
-    @include flexVCenter;
-
     height: 2.6rem;
     padding: 0 0.5rem;
   }
 
-  &__placeholder,
   &__single-value {
-    @include flexVCenter;
-
     margin-left: 0;
     margin-right: 0;
   }
@@ -272,8 +267,6 @@
   }
 
   &__value-container {
-    @include flexVCenter;
-
     height: 2.6rem;
     padding: 0 0.5rem;
     color: var(--color-light-grey-200);
@@ -283,12 +276,8 @@
     color: var(--color-light-grey-200) !important;
   }
 
-  &__single-value,
-  &__placeholder {
-    @include flexVCenter;
-
+  &__single-value {
     color: var(--color-light-grey-200);
-    width: 100%;
     margin-left: 0;
     margin-right: 0;
   }
@@ -315,6 +304,7 @@
     background: var(--color-dark-grey-100);
     border: 0.1rem solid var(--color-dark-grey-100);
     color: var(--color-light-grey-200);
+    margin: 0 !important;
   }
 
   &__option {
@@ -355,15 +345,20 @@
 .selector-input--has-error .selector-input--dark {
   &__control,
   &__control:hover {
-    border-color: var(--color-red-100);
+    border-color: var(--color-red-300);
+  }
+
+  &__control--is-focused,
+  &__control--is-focused:hover {
+    border-color: var(--color-blue-200);
   }
 
   &__value-container {
-    background: var(--color-dark-red-shade-100);
+    background: var(--color-red-500);
   }
 
   &__indicators {
-    background: var(--color-dark-red-shade-100);
+    background: var(--color-red-500);
 
     svg {
       color: var(--color-red-100);
@@ -381,4 +376,9 @@
     align-items: flex-start;
     height: 100%;
   }
+}
+
+.selector-input--dark__option {
+  display: flex;
+  align-items: center;
 }

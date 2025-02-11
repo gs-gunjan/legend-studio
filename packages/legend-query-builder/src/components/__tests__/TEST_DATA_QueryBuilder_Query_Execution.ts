@@ -150,7 +150,12 @@ export const TEST_DATA_QueryExecution_ExecutionInput = {
           {
             multiplicity: { lowerBound: 1 },
             name: 'employees',
-            type: 'model::Person',
+            genericType: {
+              rawType: {
+                _type: 'packageableType',
+                fullPath: 'model::Person',
+              },
+            },
           },
           {
             multiplicity: { lowerBound: 1, upperBound: 1 },
@@ -160,7 +165,12 @@ export const TEST_DATA_QueryExecution_ExecutionInput = {
           {
             multiplicity: { lowerBound: 1, upperBound: 1 },
             name: 'isApple',
-            type: 'Boolean',
+            genericType: {
+              rawType: {
+                _type: 'packageableType',
+                fullPath: 'Boolean',
+              },
+            },
           },
         ],
         qualifiedProperties: [
@@ -582,6 +592,7 @@ export const TEST_DATA_QueryExecution_ExecutionInput = {
           },
           element: 'model::MyDatabase',
           quoteIdentifiers: false,
+          queryTimeOutInSeconds: 3000,
           type: 'H2',
         },
         name: 'MyConnection',

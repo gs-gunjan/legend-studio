@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-import packageJson from '../../package.json';
+import packageJson from '../../package.json' with { type: 'json' };
 import { Persistence } from './metamodel/pure/model/packageableElements/persistence/DSL_Persistence_Persistence.js';
 import { PersistenceContext } from './metamodel/pure/model/packageableElements/persistence/DSL_Persistence_PersistenceContext.js';
 import {
   type PackageableElement,
   PureGraphPlugin,
-  type PureModel,
-  type TestablesCollector,
+  type TestableElementFilter,
   type Testable,
 } from '@finos/legend-graph';
-import { type Clazz, filterByType } from '@finos/legend-shared';
+import { type Clazz } from '@finos/legend-shared';
 
 export class DSL_Persistence_PureGraphPlugin extends PureGraphPlugin {
   constructor() {
@@ -35,10 +34,14 @@ export class DSL_Persistence_PureGraphPlugin extends PureGraphPlugin {
     return [Persistence, PersistenceContext];
   }
 
-  override getExtraTestablesCollectors(): TestablesCollector[] {
+  override getExtraTestablesCollectors(): TestableElementFilter[] {
     return [
-      (graph: PureModel): Testable[] =>
-        graph.allElements.filter(filterByType(Persistence)),
+      (element: PackageableElement): Testable | undefined => {
+        if (element instanceof Persistence) {
+          return element;
+        }
+        return undefined;
+      },
     ];
   }
 }

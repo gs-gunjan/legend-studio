@@ -19,32 +19,33 @@ import { observer } from 'mobx-react-lite';
 import {
   clsx,
   BlankPanelPlaceholder,
+  CalculatorIcon,
   TimesIcon,
-  DropdownMenu,
+  ControlledDropdownMenu,
   MenuContent,
   MenuContentItem,
   CaretDownIcon,
   ContextMenu,
-  InputWithInlineValidation,
   SigmaIcon,
   PanelDropZone,
   DragPreviewLayer,
   useDragPreviewLayer,
-  OptionsIcon,
   PlusIcon,
   PanelContent,
   TrashIcon,
   PanelDnDEntry,
-  PanelDnDEntryDragHandle,
   CalendarIcon,
   CalendarClockIcon,
   CustomSelectorInput,
   PanelEntryDropZonePlaceholder,
   FunctionIcon,
+  CogIcon,
+  InfoCircleIcon,
+  BasePopover,
+  InputWithInlineValidation,
 } from '@finos/legend-art';
 import {
   type QueryBuilderExplorerTreeDragSource,
-  type QueryBuilderExplorerTreePropertyNodeData,
   buildPropertyExpressionFromExplorerTreeNodeData,
   QUERY_BUILDER_EXPLORER_TREE_DND_TYPE,
 } from '../../stores/explorer/QueryBuilderExplorerState.js';
@@ -61,14 +62,16 @@ import {
   QueryBuilderSimpleProjectionColumnState,
   QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE,
 } from '../../stores/fetch-structure/tds/projection/QueryBuilderProjectionColumnState.js';
-import { QueryBuilderPropertyExpressionBadge } from '../QueryBuilderPropertyExpressionEditor.js';
+import {
+  QueryBuilderEditablePropertyName,
+  QueryBuilderPropertyExpressionBadge,
+} from '../QueryBuilderPropertyExpressionEditor.js';
 import { QueryResultModifierModal } from './QueryBuilderResultModifierPanel.js';
 import { QUERY_BUILDER_TEST_ID } from '../../__lib__/QueryBuilderTesting.js';
 import { flowResult } from 'mobx';
 import { useApplicationStore } from '@finos/legend-application';
 import {
-  type ConcreteFunctionDefinition,
-  generateFunctionCallString,
+  type ValueSpecification,
   LAMBDA_PIPE,
   VARIABLE_REFERENCE_TOKEN,
   AbstractPropertyExpression,
@@ -77,12 +80,12 @@ import {
   PropertyExplicitReference,
   VariableExpression,
   Multiplicity,
-  type ValueSpecification,
   PrimitiveType,
   GenericType,
   GenericTypeExplicitReference,
   observe_PrimitiveInstanceValue,
   PrimitiveInstanceValue,
+  generateFunctionCallStringFromFunctionAnalysisInfo,
 } from '@finos/legend-graph';
 import {
   type QueryBuilderFunctionsExplorerDragSource,
@@ -103,9 +106,54 @@ import {
   propertyExpression_setFunc,
 } from '../../stores/shared/ValueSpecificationModifierHelper.js';
 import { guaranteeNonNullable } from '@finos/legend-shared';
-import { getPropertyChainName } from '../../stores/QueryBuilderPropertyEditorState.js';
+import {
+  getPropertyChainName,
+  getPropertyPath,
+} from '../../stores/QueryBuilderPropertyEditorState.js';
 import { generateDefaultValueForPrimitiveType } from '../../stores/QueryBuilderValueSpecificationHelper.js';
 import { QUERY_BUILDER_CALENDAR_TYPE } from '../../graph-manager/QueryBuilderConst.js';
+import {
+  QueryBuilderDerivationInfoTooltip,
+  QueryBuilderPropertyInfoTooltip,
+} from '../shared/QueryBuilderPropertyInfoTooltip.js';
+import { getNameOfValueSpecification } from '../shared/QueryBuilderVariableSelector.js';
+import { QueryBuilderAggregateOperator_Percentile } from '../../stores/fetch-structure/tds/aggregation/operators/QueryBuilderAggregateOperator_Percentile.js';
+import {
+  getFurthestExistsNodeParent,
+  isExistsNodeChild,
+  QUERY_BUILDER_FILTER_DND_TYPE,
+  QueryBuilderFilterTreeConditionNodeData,
+  type QueryBuilderFilterConditionDragSource,
+} from '../../stores/filter/QueryBuilderFilterState.js';
+import { cloneAbstractPropertyExpression } from '../../stores/shared/ValueSpecificationEditorHelper.js';
+import { buildPropertyExpressionFromExistsNode } from '../filter/QueryBuilderFilterPanel.js';
+import { QueryBuilderAggregateOperator_Wavg } from '../../stores/fetch-structure/tds/aggregation/operators/QueryBuilderAggregateOperator_Wavg.js';
+import { WavgParamDNDZone } from './QueryBuilderAggParam.js';
+
+const CAN_DROP_MAIN_GROUP_DND_TYPES = [
+  QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.ENUM_PROPERTY,
+  QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.PRIMITIVE_PROPERTY,
+  QUERY_BUILDER_FILTER_DND_TYPE.CONDITION,
+  QUERY_BUILDER_FUNCTION_DND_TYPE,
+];
+
+const CAN_DROP_DERIVATION_PROJECTION_COLUMN_DND_TYPES = [
+  QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.ROOT,
+  QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.CLASS_PROPERTY,
+  QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.ENUM_PROPERTY,
+  QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.PRIMITIVE_PROPERTY,
+  QUERY_BUILDER_VARIABLE_DND_TYPE,
+  QUERY_BUILDER_FUNCTION_DND_TYPE,
+];
+export type QueryBuilderTDSPanelDropTarget =
+  | QueryBuilderExplorerTreeDragSource
+  | QueryBuilderFunctionsExplorerDragSource
+  | QueryBuilderFilterConditionDragSource;
+
+type QueryBuilderDerivationProjectionColumnDropTarget =
+  | QueryBuilderExplorerTreeDragSource
+  | QueryBuilderVariableDragSource
+  | QueryBuilderFunctionsExplorerDragSource;
 
 const QueryBuilderProjectionColumnContextMenu = observer(
   forwardRef<
@@ -144,26 +192,18 @@ const QueryBuilderProjectionColumnContextMenu = observer(
 const QueryBuilderSimpleProjectionColumnEditor = observer(
   (props: {
     projectionColumnState: QueryBuilderSimpleProjectionColumnState;
+    setColumnName: (columnName: string) => void;
+    error?: string | undefined;
   }) => {
-    const { projectionColumnState } = props;
-    const onPropertyExpressionChange = (
-      node: QueryBuilderExplorerTreePropertyNodeData,
-    ): void =>
-      projectionColumnState.changeProperty(
-        node,
-        projectionColumnState.tdsState.queryBuilderState.explorerState
-          .humanizePropertyName,
-      );
+    const { projectionColumnState, setColumnName, error } = props;
 
     return (
-      <div className="query-builder__projection__column__value__property">
-        <QueryBuilderPropertyExpressionBadge
-          propertyExpressionState={
-            projectionColumnState.propertyExpressionState
-          }
-          onPropertyExpressionChange={onPropertyExpressionChange}
-        />
-      </div>
+      <QueryBuilderPropertyExpressionBadge
+        columnName={projectionColumnState.columnName}
+        propertyExpressionState={projectionColumnState.propertyExpressionState}
+        setColumnName={setColumnName}
+        error={error}
+      />
     );
   },
 );
@@ -174,13 +214,20 @@ const QueryBuilderDerivationProjectionColumnEditor = observer(
   }) => {
     const { projectionColumnState } = props;
     const hasParserError = projectionColumnState.tdsState.hasParserError;
-
+    const onEditorBlur = (): void => {
+      flowResult(
+        projectionColumnState.fetchDerivationLambdaReturnType({
+          forceConversionStringToLambda: true,
+          forceRefresh: true,
+        }),
+      ).catch(
+        projectionColumnState.tdsState.queryBuilderState.applicationStore
+          .alertUnhandledError,
+      );
+    };
     const handleDrop = useCallback(
       (
-        item:
-          | QueryBuilderExplorerTreeDragSource
-          | QueryBuilderVariableDragSource
-          | QueryBuilderFunctionsExplorerDragSource,
+        item: QueryBuilderDerivationProjectionColumnDropTarget,
         type: string,
       ): void => {
         if (type === QUERY_BUILDER_VARIABLE_DND_TYPE) {
@@ -192,13 +239,20 @@ const QueryBuilderDerivationProjectionColumnEditor = observer(
             }`,
           );
         } else if (type === QUERY_BUILDER_FUNCTION_DND_TYPE) {
+          const functionAnalysisInfo = (
+            item as QueryBuilderFunctionsExplorerDragSource
+          ).node.functionAnalysisInfo;
+          const functionPrettyName = functionAnalysisInfo
+            ? generateFunctionCallStringFromFunctionAnalysisInfo(
+                projectionColumnState.tdsState.queryBuilderState
+                  .graphManagerState.graph,
+                functionAnalysisInfo,
+              )
+            : '';
           projectionColumnState.derivationLambdaEditorState.setLambdaString(
             `${
               projectionColumnState.derivationLambdaEditorState.lambdaString
-            }${`${generateFunctionCallString(
-              (item as QueryBuilderFunctionsExplorerDragSource).node
-                .packageableElement as ConcreteFunctionDefinition,
-            )}`}`,
+            }${functionPrettyName}`,
           );
         } else {
           projectionColumnState.derivationLambdaEditorState.setLambdaString(
@@ -209,32 +263,24 @@ const QueryBuilderDerivationProjectionColumnEditor = observer(
       },
       [projectionColumnState],
     );
-    const [, dropConnector] = useDrop<
-      | QueryBuilderExplorerTreeDragSource
-      | QueryBuilderVariableDragSource
-      | QueryBuilderFunctionsExplorerDragSource
-    >(
-      () => ({
-        accept: [
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.ROOT,
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.CLASS_PROPERTY,
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.ENUM_PROPERTY,
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.PRIMITIVE_PROPERTY,
-          QUERY_BUILDER_VARIABLE_DND_TYPE,
-          QUERY_BUILDER_FUNCTION_DND_TYPE,
-        ],
-        drop: (item, monitor): void => {
-          if (!monitor.didDrop()) {
-            handleDrop(item, monitor.getItemType() as string);
-          } // prevent drop event propagation to accomondate for nested DnD
-        },
-      }),
-      [handleDrop],
-    );
+    const [, dropConnector] =
+      useDrop<QueryBuilderDerivationProjectionColumnDropTarget>(
+        () => ({
+          accept: CAN_DROP_DERIVATION_PROJECTION_COLUMN_DND_TYPES,
+          drop: (item, monitor): void => {
+            if (!monitor.didDrop()) {
+              handleDrop(item, monitor.getItemType() as string);
+            } // prevent drop event propagation to accomondate for nested DnD
+          },
+        }),
+        [handleDrop],
+      );
+    const ref = useRef<HTMLDivElement>(null);
+    dropConnector(ref);
 
     return (
       <div
-        ref={dropConnector}
+        ref={ref}
         className={clsx(
           'query-builder__lambda-editor__container query-builder__projection__column__derivation',
           { backdrop__element: hasParserError },
@@ -247,6 +293,7 @@ const QueryBuilderDerivationProjectionColumnEditor = observer(
           }
           lambdaEditorState={projectionColumnState.derivationLambdaEditorState}
           forceBackdrop={hasParserError}
+          onEditorBlur={onEditorBlur}
         />
       </div>
     );
@@ -254,24 +301,28 @@ const QueryBuilderDerivationProjectionColumnEditor = observer(
 );
 
 type CalendarFunctionOption = {
-  label: string | React.ReactNode;
+  label: string;
   value: QueryBuilderAggregateCalendarFunction;
 };
+
+const formatCalendarFunctionOptionLabel = (
+  option: CalendarFunctionOption,
+): React.ReactNode => (
+  <div
+    className="query-builder__projection__calendar__function__label"
+    title={option.value.getLabel()}
+  >
+    <FunctionIcon className="query-builder__projection__calendar__function__label__icon" />
+    <div className="query-builder__projection__calendar__function__label__title">
+      {option.value.getLabel()}
+    </div>
+  </div>
+);
 
 const buildCalendarFunctionOption = (
   calendarFunction: QueryBuilderAggregateCalendarFunction,
 ): CalendarFunctionOption => ({
-  label: (
-    <div
-      className="query-builder__projection__calendar__function__label"
-      title={calendarFunction.getLabel()}
-    >
-      <FunctionIcon className="query-builder__projection__calendar__function__label__icon" />
-      <div className="query-builder__projection__calendar__function__label__title">
-        {calendarFunction.getLabel()}
-      </div>
-    </div>
-  ),
+  label: calendarFunction.getLabel(),
   value: calendarFunction,
 });
 
@@ -324,17 +375,32 @@ const buildCalendarTypeOption = (
 });
 
 const QueryBuilderProjectionColumnEditor = observer(
-  (props: { projectionColumnState: QueryBuilderProjectionColumnState }) => {
-    const handleRef = useRef<HTMLDivElement>(null);
+  (props: {
+    projectionColumnState: QueryBuilderProjectionColumnState;
+    isRearrangeActive: boolean;
+    currentRearrangeDraggedColumnIndex: number | undefined;
+    setCurrentRearrangeDraggedColumnIndex: (val: number | undefined) => void;
+    currentRearrangeDropGapIndex: number | undefined;
+    setCurrentRearrangeDropGapIndex: (val: number | undefined) => void;
+    columnIdx: number;
+  }) => {
+    const {
+      isRearrangeActive,
+      projectionColumnState,
+      columnIdx,
+      currentRearrangeDraggedColumnIndex,
+      setCurrentRearrangeDraggedColumnIndex,
+      currentRearrangeDropGapIndex,
+      setCurrentRearrangeDropGapIndex,
+    } = props;
     const applicationStore = useApplicationStore();
-
     const ref = useRef<HTMLDivElement>(null);
+    const dragHandleRef = useRef<HTMLDivElement>(null);
     const [isSelectedFromContextMenu, setIsSelectedFromContextMenu] =
       useState(false);
     const onContextMenuOpen = (): void => setIsSelectedFromContextMenu(true);
     const onContextMenuClose = (): void => setIsSelectedFromContextMenu(false);
 
-    const { projectionColumnState } = props;
     const tdsState = projectionColumnState.tdsState;
     const isCalendarEnabled = tdsState.queryBuilderState.isCalendarEnabled;
     const isRemovalDisabled = tdsState.isColumnInUse(projectionColumnState);
@@ -343,9 +409,8 @@ const QueryBuilderProjectionColumnEditor = observer(
       tdsState.removeColumn(projectionColumnState);
 
     // name
-    const changeColumnName: React.ChangeEventHandler<HTMLInputElement> = (
-      event,
-    ) => projectionColumnState.setColumnName(event.target.value);
+    const setColumnName = (columnName: string): void =>
+      projectionColumnState.setColumnName(columnName);
     const isDuplicatedColumnName =
       projectionColumnState.tdsState.isDuplicateColumn(projectionColumnState);
 
@@ -403,6 +468,7 @@ const QueryBuilderProjectionColumnEditor = observer(
         aggregateColumnState?.calendarFunction?.setCalendarType(option.value);
       }
     };
+
     const defaultEndDate = observe_PrimitiveInstanceValue(
       new PrimitiveInstanceValue(
         GenericTypeExplicitReference.create(
@@ -478,6 +544,32 @@ const QueryBuilderProjectionColumnEditor = observer(
       }
     };
 
+    const handleDroppingColumn = useCallback(
+      (type: string): void => {
+        if (
+          type === QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE &&
+          currentRearrangeDropGapIndex !== undefined &&
+          currentRearrangeDraggedColumnIndex !== undefined
+        ) {
+          tdsState.moveColumn(
+            currentRearrangeDraggedColumnIndex,
+            currentRearrangeDropGapIndex === tdsState.projectionColumns.length
+              ? tdsState.projectionColumns.length - 1
+              : currentRearrangeDropGapIndex,
+          );
+        }
+        setCurrentRearrangeDraggedColumnIndex(undefined);
+        setCurrentRearrangeDropGapIndex(undefined);
+      },
+      [
+        tdsState,
+        currentRearrangeDropGapIndex,
+        currentRearrangeDraggedColumnIndex,
+        setCurrentRearrangeDraggedColumnIndex,
+        setCurrentRearrangeDropGapIndex,
+      ],
+    );
+
     // Drag and Drop
     const handleHover = useCallback(
       (
@@ -487,37 +579,60 @@ const QueryBuilderProjectionColumnEditor = observer(
         const dragIndex = tdsState.projectionColumns.findIndex(
           (e) => e === item.columnState,
         );
-        const hoverIndex = tdsState.projectionColumns.findIndex(
-          (e) => e === projectionColumnState,
-        );
-        if (dragIndex === -1 || hoverIndex === -1 || dragIndex === hoverIndex) {
-          return;
+        const hoveredRectangle = ref.current?.getBoundingClientRect();
+        const hoveredRectangleMiddle =
+          hoveredRectangle?.top && hoveredRectangle.bottom
+            ? (hoveredRectangle.top + hoveredRectangle.bottom) / 2
+            : undefined;
+        const yCoordinate = monitor.getClientOffset()?.y ?? 0;
+
+        if (yCoordinate && hoveredRectangleMiddle) {
+          setCurrentRearrangeDropGapIndex(
+            yCoordinate < hoveredRectangleMiddle ? columnIdx : columnIdx + 1,
+          );
         }
+
         // move the item being hovered on when the dragged item position is beyond the its middle point
         const hoverBoundingReact = ref.current?.getBoundingClientRect();
-
         const distanceThreshold =
           ((hoverBoundingReact?.bottom ?? 0) - (hoverBoundingReact?.top ?? 0)) /
           2;
-        const dragDistance =
-          (monitor.getClientOffset()?.y ?? 0) - (hoverBoundingReact?.top ?? 0);
-        if (dragIndex < hoverIndex && dragDistance < distanceThreshold) {
+        const dragDistance = yCoordinate - (hoverBoundingReact?.top ?? 0);
+
+        if (dragIndex === -1 || columnIdx === -1 || dragIndex === columnIdx) {
           return;
         }
-        if (dragIndex > hoverIndex && dragDistance > distanceThreshold) {
+
+        if (dragIndex < columnIdx && dragDistance < distanceThreshold) {
           return;
         }
-        tdsState.moveColumn(dragIndex, hoverIndex);
+        if (dragIndex > columnIdx && dragDistance > distanceThreshold) {
+          return;
+        }
+
+        setCurrentRearrangeDraggedColumnIndex(dragIndex);
       },
-      [projectionColumnState, tdsState],
+      [
+        tdsState,
+        columnIdx,
+        setCurrentRearrangeDropGapIndex,
+        setCurrentRearrangeDraggedColumnIndex,
+      ],
     );
+
     const [, dropConnector] = useDrop<QueryBuilderProjectionColumnDragSource>(
       () => ({
         accept: [QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE],
         hover: (item, monitor): void => handleHover(item, monitor),
+        drop: (item, monitor): void => {
+          if (!monitor.didDrop()) {
+            handleDroppingColumn(monitor.getItemType() as string);
+          }
+        },
       }),
-      [handleHover],
+      [handleHover, handleDroppingColumn],
     );
+
     const [
       { projectionColumnBeingDragged },
       dragConnector,
@@ -548,9 +663,7 @@ const QueryBuilderProjectionColumnEditor = observer(
       }),
       [projectionColumnState],
     );
-    const isBeingDragged =
-      projectionColumnState === projectionColumnBeingDragged;
-    dragConnector(handleRef);
+    dragConnector(dragHandleRef);
     dropConnector(ref);
 
     useDragPreviewLayer(dragPreviewConnector);
@@ -591,7 +704,7 @@ const QueryBuilderProjectionColumnEditor = observer(
         tdsState.queryBuilderState.explorerState,
       ],
     );
-    const [{ isDragOver }, dropTargetConnector] = useDrop<
+    const [{ isDragOver }, panelDropConnector] = useDrop<
       QueryBuilderExplorerTreeDragSource,
       void,
       { isDragOver: boolean }
@@ -609,11 +722,77 @@ const QueryBuilderProjectionColumnEditor = observer(
       }),
       [handleDrop],
     );
+    const panelRef = useRef<HTMLDivElement>(null);
+    panelDropConnector(panelRef);
+
+    const percentileButtonRef = useRef<HTMLButtonElement>(null);
+    const percentileInputRef = useRef<HTMLInputElement>(null);
+    const [isPercentileOpen, setIsPercentileOpen] = useState(false);
+    const [percentileValue, setPercentileValue] = useState(
+      aggregateColumnState &&
+        aggregateColumnState.operator instanceof
+          QueryBuilderAggregateOperator_Percentile &&
+        aggregateColumnState.operator.percentile !== undefined
+        ? aggregateColumnState.operator.percentile.toString()
+        : '',
+    );
+    const [acending, setAcending] = useState(
+      aggregateColumnState &&
+        aggregateColumnState.operator instanceof
+          QueryBuilderAggregateOperator_Percentile
+        ? aggregateColumnState.operator.acending
+        : undefined,
+    );
+    const [continuous, setContinuous] = useState(
+      aggregateColumnState &&
+        aggregateColumnState.operator instanceof
+          QueryBuilderAggregateOperator_Percentile
+        ? aggregateColumnState.operator.continuous
+        : undefined,
+    );
+    const percentileOptions = ['true', 'false'].map((op) => ({
+      label: op,
+      value: op,
+    }));
+    const getPercentileDisplayValue = (): string => {
+      if (percentileValue === '') {
+        return '...';
+      }
+      if (acending === undefined || continuous === undefined) {
+        return `${Number(percentileValue)}`;
+      }
+      return `${Number(percentileValue)}, ${acending}, ${continuous}`;
+    };
+    const setPercentileArguments = (): void => {
+      setIsPercentileOpen(!isPercentileOpen);
+    };
+    const onPercentileValueChange: React.ChangeEventHandler<
+      HTMLInputElement
+    > = (event) => {
+      setPercentileValue(event.target.value);
+    };
 
     return (
       <PanelDnDEntry
         ref={ref}
-        showPlaceholder={isBeingDragged}
+        placeholder={
+          <div
+            className={clsx(
+              {
+                'query-builder__projection__column__placeholder--bottom':
+                  currentRearrangeDropGapIndex === columnIdx + 1 &&
+                  columnIdx === tdsState.projectionColumns.length - 1,
+              },
+              {
+                'query-builder__projection__column__placeholder--top':
+                  currentRearrangeDropGapIndex === columnIdx,
+              },
+            )}
+          />
+        }
+        showPlaceholder={
+          projectionColumnBeingDragged !== undefined && isRearrangeActive
+        }
         className="query-builder__projection__column"
       >
         <ContextMenu
@@ -636,43 +815,256 @@ const QueryBuilderProjectionColumnEditor = observer(
           onOpen={onContextMenuOpen}
           onClose={onContextMenuClose}
         >
-          <div className="query-builder__projection__column__container">
-            <PanelDnDEntryDragHandle
-              isBeingDragged={isBeingDragged}
-              dropTargetConnector={handleRef}
-              className="query-builder__projection__column__drag-handle__container"
-            />
-            <div className="query-builder__projection__column__name">
-              <InputWithInlineValidation
-                className="query-builder__projection__column__name__input input-group__input"
-                spellCheck={false}
-                value={projectionColumnState.columnName}
-                onChange={changeColumnName}
-                error={isDuplicatedColumnName ? 'Duplicated column' : undefined}
-              />
-            </div>
-            <div className="query-builder__projection__column__value">
-              {projectionColumnState instanceof
-                QueryBuilderSimpleProjectionColumnState && (
-                <QueryBuilderSimpleProjectionColumnEditor
-                  projectionColumnState={projectionColumnState}
-                />
-              )}
-              {projectionColumnState instanceof
-                QueryBuilderDerivationProjectionColumnState && (
-                <QueryBuilderDerivationProjectionColumnEditor
-                  projectionColumnState={projectionColumnState}
-                />
-              )}
-            </div>
+          <div
+            data-testid={
+              QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_PROJECTION_COLUMN
+            }
+            ref={dragHandleRef}
+            className={clsx('query-builder__projection__column__container', {
+              'query-builder__projection__column__container--dragging':
+                projectionColumnBeingDragged !== undefined,
+            })}
+          >
+            {projectionColumnState instanceof
+              QueryBuilderSimpleProjectionColumnState && (
+              <>
+                <QueryBuilderPropertyInfoTooltip
+                  title={projectionColumnState.propertyExpressionState.title}
+                  property={
+                    projectionColumnState.propertyExpressionState
+                      .propertyExpression.func.value
+                  }
+                  path={getPropertyPath(
+                    projectionColumnState.propertyExpressionState
+                      .propertyExpression,
+                  )}
+                  isMapped={true}
+                  placement="bottom-start"
+                  explorerState={
+                    projectionColumnState.propertyExpressionState
+                      .queryBuilderState.explorerState
+                  }
+                >
+                  <div className="query-builder-property-expression-badge__property__info">
+                    <InfoCircleIcon />
+                  </div>
+                </QueryBuilderPropertyInfoTooltip>
+                <div className="query-builder__projection__column__value">
+                  <QueryBuilderSimpleProjectionColumnEditor
+                    projectionColumnState={projectionColumnState}
+                    setColumnName={setColumnName}
+                    error={
+                      isDuplicatedColumnName
+                        ? 'Duplicated column'
+                        : projectionColumnState.columnName.length === 0
+                          ? 'Empty column name'
+                          : undefined
+                    }
+                  />
+                </div>
+              </>
+            )}
+            {projectionColumnState instanceof
+              QueryBuilderDerivationProjectionColumnState && (
+              <>
+                <QueryBuilderDerivationInfoTooltip
+                  title={projectionColumnState.columnName}
+                  type={projectionColumnState.returnType}
+                  placement="bottom-start"
+                >
+                  <div className="query-builder-property-expression-badge__property__info">
+                    <CalculatorIcon />
+                  </div>
+                </QueryBuilderDerivationInfoTooltip>
+                <div className="query-builder__projection__column__value">
+                  <QueryBuilderEditablePropertyName
+                    columnName={projectionColumnState.columnName}
+                    setColumnName={setColumnName}
+                    error={
+                      isDuplicatedColumnName
+                        ? 'Duplicated column'
+                        : projectionColumnState.columnName.length === 0
+                          ? 'Empty column name'
+                          : undefined
+                    }
+                    title={projectionColumnState.columnName}
+                    defaultColumnName="(derivation)"
+                  />
+                  <QueryBuilderDerivationProjectionColumnEditor
+                    projectionColumnState={projectionColumnState}
+                  />
+                </div>
+              </>
+            )}
             <div className="query-builder__projection__column__aggregate">
               <div className="query-builder__projection__column__aggregate__operator">
                 {aggregateColumnState && (
-                  <div className="query-builder__projection__column__aggregate__operator__label">
-                    {aggregateColumnState.operator.getLabel(
-                      projectionColumnState,
-                    )}
+                  <div className="query-builder__projection__column__aggregate__operator">
+                    <div className="query-builder__projection__column__aggregate__operator__label">
+                      {aggregateColumnState.operator.getLabel(
+                        projectionColumnState,
+                      )}
+                      {aggregateColumnState.operator instanceof
+                        QueryBuilderAggregateOperator_Wavg && (
+                        <WavgParamDNDZone
+                          column={aggregateColumnState.operator}
+                          tdsState={tdsState}
+                        />
+                      )}
+                      {aggregateColumnState.operator instanceof
+                        QueryBuilderAggregateOperator_Percentile && (
+                        <button
+                          className="query-builder__projection__column__aggregate__operator__percentile__badge"
+                          ref={percentileButtonRef}
+                          onClick={setPercentileArguments}
+                          title="Set Percentile Argument(s)..."
+                        >
+                          {getPercentileDisplayValue()}
+                        </button>
+                      )}
+                    </div>
                   </div>
+                )}
+                {aggregateColumnState && isPercentileOpen && (
+                  <BasePopover
+                    open={isPercentileOpen}
+                    PaperProps={{
+                      classes: {
+                        root: 'query-builder__projection__column__aggregate__operator__percentile__container__root',
+                      },
+                    }}
+                    className={clsx(
+                      'query-builder__projection__column__aggregate__operator__percentile__container',
+                    )}
+                    anchorEl={percentileButtonRef.current}
+                    onClose={() => {
+                      const percentileOperator =
+                        aggregateColumnState.operator as QueryBuilderAggregateOperator_Percentile;
+                      if (percentileValue === '') {
+                        percentileOperator.setPercentile(undefined);
+                      } else {
+                        percentileOperator.setPercentile(
+                          Number(percentileValue),
+                        );
+                      }
+                      if (acending !== undefined && continuous !== undefined) {
+                        percentileOperator.setAcending(acending);
+                        percentileOperator.setContinuous(continuous);
+                      }
+                      setIsPercentileOpen(false);
+                    }}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'center',
+                    }}
+                  >
+                    <div
+                      data-testid={
+                        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_PERCENTILE_PANEL
+                      }
+                    >
+                      <div className="query-builder__projection__column__aggregate__operator__percentile__argument-combo">
+                        <div className="query-builder__projection__column__aggregate__operator__percentile__argument-combo__label">
+                          Percentile
+                          <br />
+                          (0-100)
+                        </div>
+                        <div
+                          className={clsx(
+                            'query-builder__projection__column__aggregate__operator__percentile__argument-combo__value',
+                          )}
+                        >
+                          <InputWithInlineValidation
+                            ref={percentileInputRef}
+                            className={clsx(
+                              'query-builder__projection__column__aggregate__operator__percentile__input input--dark',
+                            )}
+                            type="text"
+                            inputMode="numeric"
+                            onChange={onPercentileValueChange}
+                            value={percentileValue}
+                            error={
+                              percentileValue && Number(percentileValue) > 100
+                                ? `Invalid aggregation agruement for ${aggregateColumnState.columnName}`
+                                : undefined
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="query-builder__projection__column__aggregate__operator__percentile__argument-combo">
+                        <div className="query-builder__projection__column__aggregate__operator__percentile__argument-combo__label">
+                          Acending
+                        </div>
+                        <CustomSelectorInput
+                          className="query-loader__results__sort-by__selector query-builder__projection__column__aggregate__operator__percentile__argument-combo__value"
+                          options={percentileOptions}
+                          onChange={(option: {
+                            label: string;
+                            value: string;
+                          }) => {
+                            setAcending(option.value === 'true' ? true : false);
+                          }}
+                          value={{
+                            label:
+                              acending === undefined
+                                ? ''
+                                : acending
+                                  ? 'true'
+                                  : 'false',
+                            value:
+                              acending === undefined
+                                ? ''
+                                : acending
+                                  ? 'true'
+                                  : 'false',
+                          }}
+                          darkMode={
+                            !applicationStore.layoutService
+                              .TEMPORARY__isLightColorThemeEnabled
+                          }
+                        />
+                      </div>
+                      <div className="query-builder__projection__column__aggregate__operator__percentile__argument-combo">
+                        <div className="query-builder__projection__column__aggregate__operator__percentile__argument-combo__label">
+                          Continous
+                        </div>
+                        <CustomSelectorInput
+                          className="query-loader__results__sort-by__selector query-builder__projection__column__aggregate__operator__percentile__argument-combo__value"
+                          options={percentileOptions}
+                          onChange={(option: {
+                            label: string;
+                            value: string;
+                          }) =>
+                            setContinuous(
+                              option.value === 'true' ? true : false,
+                            )
+                          }
+                          value={{
+                            label:
+                              continuous === undefined
+                                ? ''
+                                : continuous
+                                  ? 'true'
+                                  : 'false',
+                            value:
+                              continuous === undefined
+                                ? ''
+                                : continuous
+                                  ? 'true'
+                                  : 'false',
+                          }}
+                          darkMode={
+                            !applicationStore.layoutService
+                              .TEMPORARY__isLightColorThemeEnabled
+                          }
+                        />
+                      </div>
+                    </div>
+                  </BasePopover>
                 )}
                 {isCalendarEnabled &&
                   aggregateColumnState &&
@@ -691,7 +1083,7 @@ const QueryBuilderProjectionColumnEditor = observer(
                       <CalendarClockIcon />
                     </div>
                   )}
-                <DropdownMenu
+                <ControlledDropdownMenu
                   className="query-builder__projection__column__aggregate__operator__dropdown"
                   title="Choose Aggregate Operator..."
                   disabled={!aggreateOperators.length}
@@ -736,7 +1128,7 @@ const QueryBuilderProjectionColumnEditor = observer(
                   <div className="query-builder__projection__column__aggregate__operator__dropdown__trigger">
                     <CaretDownIcon />
                   </div>
-                </DropdownMenu>
+                </ControlledDropdownMenu>
               </div>
             </div>
             <div className="query-builder__projection__column__actions">
@@ -751,6 +1143,7 @@ const QueryBuilderProjectionColumnEditor = observer(
                       "This column is used and can't be removed"
                     : 'Remove'
                 }
+                name="Remove"
               >
                 <TimesIcon />
               </button>
@@ -773,6 +1166,7 @@ const QueryBuilderProjectionColumnEditor = observer(
                   options={calendarFunctionOptions}
                   onChange={onCalendarFunctionOptionChange}
                   value={selectedCalendarFunctionOption}
+                  formatOptionLabel={formatCalendarFunctionOptionLabel}
                   placeholder="Select Calendar Function"
                   isClearable={true}
                   escapeClearsValue={true}
@@ -788,12 +1182,10 @@ const QueryBuilderProjectionColumnEditor = observer(
                       defaultEndDate
                     }
                     setValueSpecification={(val: ValueSpecification): void => {
-                      if (val instanceof PrimitiveInstanceValue) {
-                        aggregateColumnState.calendarFunction?.setEndDate(val);
-                      }
+                      aggregateColumnState.calendarFunction?.setEndDate(val);
                     }}
                     graph={tdsState.queryBuilderState.graphManagerState.graph}
-                    obseverContext={tdsState.queryBuilderState.observerContext}
+                    observerContext={tdsState.queryBuilderState.observerContext}
                     typeCheckOption={{
                       expectedType: PrimitiveType.STRICTDATE,
                     }}
@@ -803,10 +1195,10 @@ const QueryBuilderProjectionColumnEditor = observer(
                 </div>
                 <div
                   className="query-builder__projection__calendar__date__column"
-                  ref={dropTargetConnector}
+                  ref={panelRef}
                 >
                   <PanelEntryDropZonePlaceholder
-                    showPlaceholder={isDragOver}
+                    isDragOver={isDragOver}
                     label="Change Date Column"
                     className="query-builder__projection__calendar__date__column__dnd__placeholder"
                   >
@@ -855,6 +1247,13 @@ export const QueryBuilderTDSPanel = observer(
     const applicationStore = useApplicationStore();
     const { tdsState } = props;
     const projectionColumns = tdsState.projectionColumns;
+    const isEmpty = tdsState.projectionColumns.length === 0;
+    const [
+      currentRearrangeDraggedColumnIndex,
+      setCurrentRearrangeDraggedColumnIndex,
+    ] = useState<number | undefined>();
+    const [currentRearrangeDropGapIndex, setCurrentRearrangeDropGapIndex] =
+      useState<number | undefined>();
 
     // Toolbar
     const openResultSetModifierEditor = (): void =>
@@ -864,17 +1263,13 @@ export const QueryBuilderTDSPanel = observer(
     const clearAllProjectionColumns = (): void => {
       tdsState.checkBeforeClearingColumns(() => {
         tdsState.removeAllColumns();
+        tdsState.resultSetModifierState.reset();
       });
     };
 
     // Drag and Drop
     const handleDrop = useCallback(
-      (
-        item:
-          | QueryBuilderExplorerTreeDragSource
-          | QueryBuilderFunctionsExplorerDragSource,
-        type: string,
-      ): void => {
+      (item: QueryBuilderTDSPanelDropTarget, type: string): void => {
         switch (type) {
           case QUERY_BUILDER_FUNCTION_DND_TYPE: {
             const derivationProjectionColumn =
@@ -884,11 +1279,17 @@ export const QueryBuilderTDSPanel = observer(
                   { addDummyParameter: true },
                 ),
               );
+            const functionAnalysisInfo = (
+              item as QueryBuilderFunctionsExplorerDragSource
+            ).node.functionAnalysisInfo;
+            const functionPrettyName = functionAnalysisInfo
+              ? generateFunctionCallStringFromFunctionAnalysisInfo(
+                  tdsState.queryBuilderState.graphManagerState.graph,
+                  functionAnalysisInfo,
+                )
+              : '';
             derivationProjectionColumn.derivationLambdaEditorState.setLambdaString(
-              `${DEFAULT_LAMBDA_VARIABLE_NAME}${LAMBDA_PIPE}${generateFunctionCallString(
-                (item as QueryBuilderFunctionsExplorerDragSource).node
-                  .packageableElement as ConcreteFunctionDefinition,
-              )}`,
+              `${DEFAULT_LAMBDA_VARIABLE_NAME}${LAMBDA_PIPE}${functionPrettyName} `,
             );
             tdsState.addColumn(derivationProjectionColumn);
             break;
@@ -906,6 +1307,30 @@ export const QueryBuilderTDSPanel = observer(
               ),
             );
             break;
+          case QUERY_BUILDER_FILTER_DND_TYPE.CONDITION:
+            if (item.node instanceof QueryBuilderFilterTreeConditionNodeData) {
+              const propertyExpression = isExistsNodeChild(item.node)
+                ? buildPropertyExpressionFromExistsNode(
+                    tdsState.queryBuilderState.filterState,
+                    guaranteeNonNullable(
+                      getFurthestExistsNodeParent(item.node),
+                    ),
+                    item.node,
+                  )
+                : cloneAbstractPropertyExpression(
+                    item.node.condition.propertyExpressionState
+                      .propertyExpression,
+                    tdsState.queryBuilderState.observerContext,
+                  );
+              tdsState.addColumn(
+                new QueryBuilderSimpleProjectionColumnState(
+                  tdsState,
+                  propertyExpression,
+                  tdsState.queryBuilderState.explorerState.humanizePropertyName,
+                ),
+              );
+            }
+            break;
           default:
             break;
         }
@@ -913,18 +1338,13 @@ export const QueryBuilderTDSPanel = observer(
       [tdsState],
     );
 
-    const [{ isDragOver }, dropTargetConnector] = useDrop<
-      | QueryBuilderExplorerTreeDragSource
-      | QueryBuilderFunctionsExplorerDragSource,
+    const [{ isDragOver }, panelDropConnector] = useDrop<
+      QueryBuilderTDSPanelDropTarget,
       void,
       { isDragOver: boolean }
     >(
       () => ({
-        accept: [
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.ENUM_PROPERTY,
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.PRIMITIVE_PROPERTY,
-          QUERY_BUILDER_FUNCTION_DND_TYPE,
-        ],
+        accept: CAN_DROP_MAIN_GROUP_DND_TYPES,
         drop: (item, monitor): void => {
           if (!monitor.didDrop()) {
             handleDrop(item, monitor.getItemType() as string);
@@ -936,15 +1356,31 @@ export const QueryBuilderTDSPanel = observer(
       }),
       [handleDrop],
     );
+    const panelRef = useRef<HTMLInputElement>(null);
+    panelDropConnector(panelRef);
 
-    const { showDroppableSuggestion } = useDragLayer((monitor) => ({
-      showDroppableSuggestion:
+    const [{ isRearrangeActive }, dropConnector] = useDrop<
+      QueryBuilderProjectionColumnDragSource,
+      void,
+      { isRearrangeActive: boolean }
+    >(
+      () => ({
+        accept: [QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE],
+        collect: (monitor) => ({
+          isRearrangeActive: monitor.isOver({ shallow: false }),
+        }),
+      }),
+      [],
+    );
+    const ref = useRef<HTMLDivElement>(null);
+    dropConnector(ref);
+
+    const { isDroppable } = useDragLayer((monitor) => ({
+      isDroppable:
         monitor.isDragging() &&
-        [
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.ENUM_PROPERTY,
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.PRIMITIVE_PROPERTY,
-          QUERY_BUILDER_FUNCTION_DND_TYPE,
-        ].includes(monitor.getItemType()?.toString() ?? ''),
+        CAN_DROP_MAIN_GROUP_DND_TYPES.includes(
+          monitor.getItemType()?.toString() ?? '',
+        ),
     }));
 
     useEffect(() => {
@@ -956,42 +1392,253 @@ export const QueryBuilderTDSPanel = observer(
     return (
       <PanelContent>
         <div className="query-builder__projection__toolbar">
-          <button
-            className="panel__header__action"
-            onClick={openResultSetModifierEditor}
-            tabIndex={-1}
-            title="Configure result set modifiers..."
-          >
-            <OptionsIcon className="query-builder__icon query-builder__icon__query-option" />
-          </button>
-          <button
-            className="panel__header__action"
-            disabled={tdsState.projectionColumns.length < 1}
-            onClick={clearAllProjectionColumns}
-            tabIndex={-1}
-            title={
-              tdsState.projectionColumns.length < 1
-                ? 'No projection columns to clear'
-                : 'Clear all projection columns'
+          <div
+            className="query-builder__projection__result-modifier-prompt"
+            data-testid={
+              QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_RESULT_MODIFIER_PROMPT
             }
           >
-            <TrashIcon className="query-builder__icon query-builder__icon__query-option--small" />
-          </button>
-          <button
-            className="panel__header__action"
-            onClick={addNewBlankDerivation}
-            tabIndex={-1}
-            title="Add a new derivation"
-          >
-            <PlusIcon />
-          </button>
+            <div className="query-builder__projection__result-modifier-prompt__header">
+              <button
+                className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                onClick={openResultSetModifierEditor}
+                title="Configure Query Options..."
+              >
+                <CogIcon className="query-builder__projection__result-modifier-prompt__header__label__icon" />
+                <div className="query-builder__projection__result-modifier-prompt__header__label__title">
+                  {tdsState.isQueryOptionsSet
+                    ? 'Query Options'
+                    : 'Set Query Options'}
+                </div>
+              </button>
+
+              <div
+                className={clsx(
+                  'query-builder__projection__result-modifier-prompt__divider',
+                  {
+                    'query-builder__projection__result-modifier-prompt__divider--light':
+                      applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled,
+                  },
+                )}
+              >
+                {tdsState.isQueryOptionsSet && ' - '}
+              </div>
+              {tdsState.queryBuilderState.milestoningState
+                .isAllVersionsEnabled &&
+                !tdsState.queryBuilderState.milestoningState
+                  .isAllVersionsInRangeEnabled && (
+                  <div className="query-builder__projection__result-modifier-prompt__group">
+                    <div className="query-builder__projection__result-modifier-prompt__group__label">
+                      All Versions
+                    </div>
+                    <button
+                      className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                      onClick={openResultSetModifierEditor}
+                    >
+                      <div className="query-builder__projection__result-modifier-prompt__header__label__title">
+                        Yes
+                      </div>
+                    </button>
+                  </div>
+                )}
+              {tdsState.queryBuilderState.milestoningState
+                .isAllVersionsInRangeEnabled &&
+                tdsState.queryBuilderState.milestoningState.startDate &&
+                tdsState.queryBuilderState.milestoningState.endDate && (
+                  <div className="query-builder__projection__result-modifier-prompt__group">
+                    <div className="query-builder__projection__result-modifier-prompt__group__label">
+                      All Versions
+                    </div>
+                    <button
+                      className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                      onClick={openResultSetModifierEditor}
+                    >
+                      <div className="query-builder__projection__result-modifier-prompt__header__label__title">
+                        (
+                        {getNameOfValueSpecification(
+                          tdsState.queryBuilderState.milestoningState.getMilestoningParameterValue(
+                            tdsState.queryBuilderState.milestoningState
+                              .startDate,
+                          ) ??
+                            tdsState.queryBuilderState.milestoningState
+                              .startDate,
+                          tdsState.queryBuilderState,
+                        )}{' '}
+                        -{' '}
+                        {getNameOfValueSpecification(
+                          tdsState.queryBuilderState.milestoningState.getMilestoningParameterValue(
+                            tdsState.queryBuilderState.milestoningState.endDate,
+                          ) ??
+                            tdsState.queryBuilderState.milestoningState.endDate,
+                          tdsState.queryBuilderState,
+                        )}
+                        )
+                      </div>
+                    </button>
+                  </div>
+                )}
+              {tdsState.queryBuilderState.milestoningState.businessDate && (
+                <div className="query-builder__projection__result-modifier-prompt__group">
+                  <div className="query-builder__projection__result-modifier-prompt__group__label">
+                    Business Date
+                  </div>
+                  <button
+                    className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                    onClick={openResultSetModifierEditor}
+                  >
+                    <div className="query-builder__projection__result-modifier-prompt__header__label__title">
+                      {getNameOfValueSpecification(
+                        tdsState.queryBuilderState.milestoningState.getMilestoningParameterValue(
+                          tdsState.queryBuilderState.milestoningState
+                            .businessDate,
+                        ) ??
+                          tdsState.queryBuilderState.milestoningState
+                            .businessDate,
+                        tdsState.queryBuilderState,
+                      )}
+                    </div>
+                  </button>
+                </div>
+              )}
+              {tdsState.queryBuilderState.milestoningState.processingDate && (
+                <div className="query-builder__projection__result-modifier-prompt__group">
+                  <div className="query-builder__projection__result-modifier-prompt__group__label">
+                    Processing Date
+                  </div>
+                  <button
+                    className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                    onClick={openResultSetModifierEditor}
+                  >
+                    <div className="query-builder__projection__result-modifier-prompt__header__label__title">
+                      {getNameOfValueSpecification(
+                        tdsState.queryBuilderState.milestoningState.getMilestoningParameterValue(
+                          tdsState.queryBuilderState.milestoningState
+                            .processingDate,
+                        ) ??
+                          tdsState.queryBuilderState.milestoningState
+                            .processingDate,
+                        tdsState.queryBuilderState,
+                      )}
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+            {tdsState.resultSetModifierState.limit && (
+              <div className="query-builder__projection__result-modifier-prompt__group">
+                <div className="query-builder__projection__result-modifier-prompt__group__label">
+                  Max Rows
+                </div>
+                <button
+                  className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                  onClick={openResultSetModifierEditor}
+                >
+                  <div className="query-builder__projection__result-modifier-prompt__header__label__title">
+                    {tdsState.resultSetModifierState.limit}
+                  </div>
+                </button>
+              </div>
+            )}
+            {tdsState.resultSetModifierState.distinct && (
+              <div className="query-builder__projection__result-modifier-prompt__group">
+                <div className="query-builder__projection__result-modifier-prompt__group__label">
+                  Eliminate Duplicate Rows
+                </div>
+                <button
+                  className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                  onClick={openResultSetModifierEditor}
+                >
+                  <div className="query-builder__projection__result-modifier-prompt__header__label__title">
+                    Yes
+                  </div>
+                </button>
+              </div>
+            )}
+            {tdsState.resultSetModifierState.sortColumns.length > 0 && (
+              <div className="query-builder__projection__result-modifier-prompt__group">
+                <div className="query-builder__projection__result-modifier-prompt__group__label">
+                  Sort
+                </div>
+                {tdsState.resultSetModifierState.sortColumns.map(
+                  (columnState) => (
+                    <button
+                      key={columnState.columnState.uuid}
+                      className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                      onClick={openResultSetModifierEditor}
+                    >
+                      <div className="query-builder__projection__result-modifier-prompt__header__label__title">
+                        {`${columnState.columnState.columnName} ${columnState.sortType}`}
+                      </div>
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
+            {tdsState.resultSetModifierState.slice && (
+              <div className="query-builder__projection__result-modifier-prompt__group">
+                <div className="query-builder__projection__result-modifier-prompt__group__label">
+                  Slice
+                </div>
+                <button
+                  className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                  onClick={openResultSetModifierEditor}
+                >
+                  <div className="query-builder__projection__result-modifier-prompt__header__label__title">
+                    {`${tdsState.resultSetModifierState.slice[0]},${tdsState.resultSetModifierState.slice[1]}`}
+                  </div>
+                </button>
+              </div>
+            )}
+            {tdsState.queryBuilderState.watermarkState.value && (
+              <div className="query-builder__projection__result-modifier-prompt__group">
+                <div className="query-builder__projection__result-modifier-prompt__group__label">
+                  Watermark
+                </div>
+                <button
+                  className="query-builder__projection__result-modifier-prompt__header__label editable-value"
+                  onClick={openResultSetModifierEditor}
+                >
+                  {getNameOfValueSpecification(
+                    tdsState.queryBuilderState.watermarkState.value,
+                    tdsState.queryBuilderState,
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="query-builder__projection__toolbar__actions">
+            <button
+              className="panel__header__action"
+              disabled={isEmpty}
+              onClick={clearAllProjectionColumns}
+              tabIndex={-1}
+              title={
+                isEmpty
+                  ? 'No projection columns to clear'
+                  : 'Clear all projection columns'
+              }
+            >
+              <TrashIcon className="query-builder__icon query-builder__icon__query-option--small" />
+            </button>
+            <button
+              className="panel__header__action"
+              onClick={addNewBlankDerivation}
+              tabIndex={-1}
+              title="Add a new derivation"
+            >
+              <PlusIcon />
+            </button>
+          </div>
         </div>
-        <div className="query-builder__projection__content">
+        <div
+          data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_PROJECTION}
+          className="query-builder__projection__content"
+        >
           <PanelDropZone
-            isDragOver={isDragOver}
-            showDroppableSuggestion={showDroppableSuggestion}
-            className="query-builder__panel--droppable"
-            dropTargetConnector={dropTargetConnector}
+            isDragOver={isDragOver && isEmpty}
+            isDroppable={isDroppable && isEmpty}
+            dropTargetConnector={panelDropConnector}
           >
             {!projectionColumns.length && (
               <BlankPanelPlaceholder
@@ -1004,22 +1651,53 @@ export const QueryBuilderTDSPanel = observer(
                 data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS}
                 className="query-builder__projection__columns"
               >
-                <DragPreviewLayer
-                  labelGetter={(
-                    item: QueryBuilderProjectionColumnDragSource,
-                  ): string =>
-                    item.columnState.columnName === ''
-                      ? '(unknown)'
-                      : item.columnState.columnName
-                  }
-                  types={[QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE]}
-                />
-                {projectionColumns.map((projectionColumnState) => (
-                  <QueryBuilderProjectionColumnEditor
-                    key={projectionColumnState.uuid}
-                    projectionColumnState={projectionColumnState}
+                <div ref={ref}>
+                  <DragPreviewLayer
+                    labelGetter={(
+                      item: QueryBuilderProjectionColumnDragSource,
+                    ): string =>
+                      item.columnState.columnName === ''
+                        ? '(unknown)'
+                        : item.columnState.columnName
+                    }
+                    types={[QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE]}
                   />
-                ))}
+                  {projectionColumns.map((projectionColumnState, columnIdx) => (
+                    <QueryBuilderProjectionColumnEditor
+                      key={projectionColumnState.uuid}
+                      projectionColumnState={projectionColumnState}
+                      isRearrangeActive={isRearrangeActive}
+                      currentRearrangeDraggedColumnIndex={
+                        currentRearrangeDraggedColumnIndex
+                      }
+                      currentRearrangeDropGapIndex={
+                        currentRearrangeDropGapIndex
+                      }
+                      setCurrentRearrangeDraggedColumnIndex={
+                        setCurrentRearrangeDraggedColumnIndex
+                      }
+                      setCurrentRearrangeDropGapIndex={
+                        setCurrentRearrangeDropGapIndex
+                      }
+                      columnIdx={columnIdx}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {isDroppable && !isEmpty && (
+              <div
+                ref={panelRef}
+                className="query-builder__projection__free-drop-zone__container"
+              >
+                <PanelEntryDropZonePlaceholder
+                  isDragOver={isDragOver}
+                  isDroppable={isDroppable}
+                  className="query-builder__projection__free-drop-zone"
+                  label="Add a projection column"
+                >
+                  <></>
+                </PanelEntryDropZonePlaceholder>
               </div>
             )}
             <QueryResultModifierModal tdsState={tdsState} />

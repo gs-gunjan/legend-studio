@@ -26,15 +26,12 @@ import {
   VariableExpression,
   type ValueSpecification,
 } from '@finos/legend-graph';
-import {
-  getNullableFirstEntry,
-  guaranteeNonNullable,
-  guaranteeType,
-} from '@finos/legend-shared';
+import { guaranteeNonNullable, guaranteeType } from '@finos/legend-shared';
 import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../graph/QueryBuilderMetaModelConst.js';
 import type { QueryBuilderState } from './QueryBuilderState.js';
 import {
   functionExpression_setParametersValues,
+  functionExpression_setParameterValue,
   propertyExpression_setFunc,
   variableExpression_setName,
 } from './shared/ValueSpecificationModifierHelper.js';
@@ -75,13 +72,18 @@ export const buildPropertyExpressionChain = (
   let nextExpression: ValueSpecification | undefined;
   let currentExpression: ValueSpecification | undefined = newPropertyExpression;
   while (currentExpression instanceof AbstractPropertyExpression) {
-    nextExpression = getNullableFirstEntry(currentExpression.parametersValues);
+    nextExpression = currentExpression.parametersValues[0];
     if (nextExpression instanceof AbstractPropertyExpression) {
       const parameterValue = new AbstractPropertyExpression('');
       parameterValue.func = nextExpression.func;
       parameterValue.parametersValues = [...nextExpression.parametersValues];
       nextExpression = parameterValue;
-      currentExpression.parametersValues[0] = parameterValue;
+      functionExpression_setParameterValue(
+        currentExpression,
+        parameterValue,
+        0,
+        queryBuilderState.observerContext,
+      );
     }
     if (
       currentExpression instanceof AbstractPropertyExpression &&
@@ -167,9 +169,7 @@ export const buildPropertyExpressionChain = (
         QUERY_BUILDER_SUPPORTED_FUNCTIONS.SUBTYPE,
       )
     ) {
-      currentExpression = getNullableFirstEntry(
-        currentExpression.parametersValues,
-      );
+      currentExpression = currentExpression.parametersValues[0];
     }
   }
 
@@ -199,4 +199,14 @@ export type LambdaFunctionBuilderOption = {
    * limit for the query results if it exists so the exported results contain all the data
    */
   isExportingResult?: boolean | undefined;
+  /**
+   * Set this flag to `true` when you want to write to typed TDS function using the `Relation`
+   * typed in engine. This is still an experimental feature, hence we should only enable this flag when user wants to enable this directly.
+   */
+  useTypedRelationFunctions?: boolean | undefined;
+
+  /**
+   * Set this flag to `true` when you want to execute a query that exceeds the limit to check for additional data in the database.
+   */
+  withDataOverflowCheck?: boolean | undefined;
 };

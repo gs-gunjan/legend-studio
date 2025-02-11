@@ -15,7 +15,6 @@
  */
 
 import {
-  type Binding,
   type ServiceTest,
   type Service,
   type ValueSpecification,
@@ -24,13 +23,6 @@ import {
   buildLambdaVariableExpressions,
   VariableExpression,
   PureMultiExecution,
-  PackageableElementImplicitReference,
-  matchFunctionName,
-  isStubbed_RawLambda,
-  InstanceValue,
-  LambdaFunctionInstanceValue,
-  SimpleFunctionExpression,
-  CollectionInstanceValue,
   resolveServiceQueryRawLambda,
 } from '@finos/legend-graph';
 import { action, flow, makeObservable, observable } from 'mobx';
@@ -57,15 +49,9 @@ import {
   isNonNullable,
   returnUndefOnError,
   uuid,
-  getNullableFirstEntry,
-  LogEvent,
 } from '@finos/legend-shared';
 import type { EditorStore } from '../../../../EditorStore.js';
-import {
-  QUERY_BUILDER_SUPPORTED_FUNCTIONS,
-  generateVariableExpressionMockValue,
-} from '@finos/legend-query-builder';
-import { LEGEND_STUDIO_APP_EVENT } from '../../../../../../__lib__/LegendStudioEvent.js';
+import { generateVariableExpressionMockValue } from '@finos/legend-query-builder';
 
 export enum SERIALIZATION_FORMAT {
   PURE = 'PURE',
@@ -183,23 +169,24 @@ export class ServiceTestSetupState {
   showNewParameterModal = false;
 
   constructor(testState: ServiceTestState) {
-    this.testState = testState;
-    this.editorStore = testState.editorStore;
     makeObservable(this, {
-      changeSerializationFormat: action,
       parameterValueStates: observable,
-      buildParameterStates: action,
       newParameterValueName: observable,
       showNewParameterModal: observable,
+      changeSerializationFormat: action,
+      buildParameterStates: action,
       setNewParameterValueName: action,
       setShowNewParameterModal: action,
+      generateTestParameterValues: action,
       openNewParamModal: action,
       addParameterValue: action,
       addServiceTestAssertKeys: action,
       syncWithQuery: action,
       removeParamValueState: action,
-      getBindingWithParamFromQuery: action,
     });
+
+    this.testState = testState;
+    this.editorStore = testState.editorStore;
     this.parameterValueStates = this.buildParameterStates();
   }
 
@@ -222,7 +209,7 @@ export class ServiceTestSetupState {
   get keyOptions(): KeyOption[] {
     const keys =
       this.testState.testable.execution instanceof PureMultiExecution
-        ? this.testState.testable.execution.executionParameters.map(
+        ? (this.testState.testable.execution.executionParameters ?? []).map(
             (p) => p.key,
           )
         : [];
@@ -237,112 +224,6 @@ export class ServiceTestSetupState {
       value: k,
       label: k,
     }));
-  }
-
-  getBindingWithParamFromQuery(): {
-    binding: Binding;
-    param: string;
-  }[] {
-    const query = resolveServiceQueryRawLambda(this.testState.service);
-    if (query && !isStubbed_RawLambda(query)) {
-      // safely pass unsupported funtions when building ValueSpecification from Rawlambda
-      try {
-        const valueSpec =
-          this.editorStore.graphManagerState.graphManager.buildValueSpecification(
-            this.editorStore.graphManagerState.graphManager.serializeRawValueSpecification(
-              query,
-            ),
-            this.editorStore.graphManagerState.graph,
-          );
-        if (valueSpec instanceof LambdaFunctionInstanceValue) {
-          return this.getBindingWithParamRecursively(
-            valueSpec.values[0]?.expressionSequence.find(
-              (exp) =>
-                exp instanceof SimpleFunctionExpression &&
-                (matchFunctionName(
-                  exp.functionName,
-                  QUERY_BUILDER_SUPPORTED_FUNCTIONS.SERIALIZE,
-                ) ||
-                  matchFunctionName(
-                    exp.functionName,
-                    QUERY_BUILDER_SUPPORTED_FUNCTIONS.EXTERNALIZE,
-                  )),
-            ),
-          );
-        }
-      } catch (error) {
-        this.editorStore.applicationStore.logService.error(
-          LogEvent.create(LEGEND_STUDIO_APP_EVENT.SERVICE_TEST_SETUP_FAILURE),
-          error,
-        );
-      }
-    }
-    return [];
-  }
-
-  getBindingWithParamRecursively(expression: ValueSpecification | undefined): {
-    binding: Binding;
-    param: string;
-  }[] {
-    let currentExpression = expression;
-    const res: {
-      binding: Binding;
-      param: string;
-    }[] = [];
-    // use if statement to safely scan service query without breaking the app
-    while (currentExpression instanceof SimpleFunctionExpression) {
-      if (
-        matchFunctionName(
-          currentExpression.functionName,
-          QUERY_BUILDER_SUPPORTED_FUNCTIONS.INTERNALIZE,
-        ) ||
-        matchFunctionName(
-          currentExpression.functionName,
-          QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_RUNTIME_WITH_MODEL_QUERY_CONNECTION,
-        )
-      ) {
-        if (currentExpression.parametersValues[1] instanceof InstanceValue) {
-          if (
-            currentExpression.parametersValues[1].values[0] instanceof
-              PackageableElementImplicitReference &&
-            currentExpression.parametersValues[2] instanceof VariableExpression
-          ) {
-            res.push({
-              binding: currentExpression.parametersValues[1].values[0]
-                .value as Binding,
-              param: currentExpression.parametersValues[2].name,
-            });
-          }
-        }
-        currentExpression = currentExpression.parametersValues[1];
-      } else if (
-        matchFunctionName(
-          currentExpression.functionName,
-          QUERY_BUILDER_SUPPORTED_FUNCTIONS.FROM,
-        )
-      ) {
-        currentExpression = currentExpression.parametersValues[2];
-      } else if (
-        matchFunctionName(
-          currentExpression.functionName,
-          QUERY_BUILDER_SUPPORTED_FUNCTIONS.MERGERUNTIMES,
-        )
-      ) {
-        const collection = currentExpression.parametersValues[0];
-        if (collection instanceof CollectionInstanceValue) {
-          collection.values
-            .map((v) => this.getBindingWithParamRecursively(v))
-            .flat()
-            .map((p) => res.push(p));
-        }
-        currentExpression = collection;
-      } else {
-        currentExpression = getNullableFirstEntry(
-          currentExpression.parametersValues,
-        );
-      }
-    }
-    return res;
   }
 
   addServiceTestAssertKeys(val: string[]): void {

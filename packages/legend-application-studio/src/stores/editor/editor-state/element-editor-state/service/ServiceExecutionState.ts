@@ -35,11 +35,12 @@ import {
   type PureExecution,
   type Mapping,
   type Runtime,
-  type ExecutionResult,
   type PackageableRuntime,
   type RawExecutionPlan,
   type PackageableElementReference,
   type QueryInfo,
+  type LightQuery,
+  type ExecutionResultWithMetadata,
   PureSingleExecution,
   PureMultiExecution,
   KeyedExecutionParameter,
@@ -56,7 +57,6 @@ import {
   stub_PackageableRuntime,
   stub_Mapping,
   reportGraphAnalytics,
-  type LightQuery,
   QuerySearchSpecification,
 } from '@finos/legend-graph';
 import { parseGACoordinates } from '@finos/legend-storage';
@@ -221,7 +221,7 @@ export class ServicePureExecutionQueryState extends LambdaEditorState {
     this.execution = execution;
     this.queryLoaderState = new QueryLoaderState(
       editorStore.applicationStore,
-      editorStore.graphManagerState,
+      editorStore.graphManagerState.graphManager,
       {
         loadQuery: (query: LightQuery): void => {
           flowResult(this.importQuery(query.id)).catch(
@@ -292,10 +292,12 @@ export class ServicePureExecutionQueryState extends LambdaEditorState {
 
   *updateLamba(val: RawLambda): GeneratorFn<void> {
     this.setLambda(val);
-    yield flowResult(this.convertLambdaObjectToGrammarString(true));
+    yield flowResult(this.convertLambdaObjectToGrammarString({ pretty: true }));
   }
 
-  *convertLambdaObjectToGrammarString(pretty?: boolean): GeneratorFn<void> {
+  *convertLambdaObjectToGrammarString(options?: {
+    pretty?: boolean | undefined;
+  }): GeneratorFn<void> {
     if (this.execution.func.body) {
       try {
         const lambdas = new Map<string, RawLambda>();
@@ -309,7 +311,7 @@ export class ServicePureExecutionQueryState extends LambdaEditorState {
         const isolatedLambdas =
           (yield this.editorStore.graphManagerState.graphManager.lambdasToPureCode(
             lambdas,
-            pretty,
+            options?.pretty,
           )) as Map<string, string>;
         const grammarText = isolatedLambdas.get(this.lambdaId);
         this.setLambdaString(
@@ -437,7 +439,7 @@ export abstract class ServicePureExecutionState extends ServiceExecutionState {
   executionResultText?: string | undefined; // NOTE: stored as lossless JSON string
   executionPlanState: ExecutionPlanState;
   readonly parametersState: ServiceExecutionParametersState;
-  queryRunPromise: Promise<ExecutionResult> | undefined = undefined;
+  queryRunPromise: Promise<ExecutionResultWithMetadata> | undefined = undefined;
 
   constructor(
     editorStore: EditorStore,
@@ -488,7 +490,7 @@ export abstract class ServicePureExecutionState extends ServiceExecutionState {
   };
 
   setQueryRunPromise = (
-    promise: Promise<ExecutionResult> | undefined,
+    promise: Promise<ExecutionResultWithMetadata> | undefined,
   ): void => {
     this.queryRunPromise = promise;
   };
@@ -543,7 +545,7 @@ export abstract class ServicePureExecutionState extends ServiceExecutionState {
             rawPlan,
             this.editorStore.graphManagerState.graph,
           );
-        this.executionPlanState.setPlan(plan);
+        this.executionPlanState.initialize(plan);
       } catch {
         // do nothing
       }
@@ -626,10 +628,14 @@ export abstract class ServicePureExecutionState extends ServiceExecutionState {
         report,
       );
       this.setQueryRunPromise(promise);
-      const result = (yield promise) as ExecutionResult;
+      const result = (yield promise) as ExecutionResultWithMetadata;
       if (this.queryRunPromise === promise) {
         this.setExecutionResultText(
-          stringifyLosslessJSON(result, undefined, DEFAULT_TAB_SIZE),
+          stringifyLosslessJSON(
+            result.executionResult,
+            undefined,
+            DEFAULT_TAB_SIZE,
+          ),
         );
         this.parametersState.setParameters([]);
         // report
@@ -925,7 +931,6 @@ export class MultiServicePureExecutionState extends ServicePureExecutionState {
       handleRunQuery: flow,
       runQuery: flow,
     });
-
     this.execution = execution;
     this.selectedExecutionContextState =
       this.getInitiallySelectedExecutionContextState();
@@ -937,6 +942,10 @@ export class MultiServicePureExecutionState extends ServicePureExecutionState {
       this.editorStore.applicationStore,
       this.editorStore.graphManagerState,
     );
+  }
+
+  get keyedExecutionParameters(): KeyedExecutionParameter[] {
+    return this.execution.executionParameters ?? [];
   }
 
   setSingleExecutionKey(val: KeyedExecutionParameter | undefined): void {
@@ -978,7 +987,7 @@ export class MultiServicePureExecutionState extends ServicePureExecutionState {
   getInitiallySelectedExecutionContextState():
     | ServiceExecutionContextState
     | undefined {
-    const parameter = this.execution.executionParameters[0];
+    const parameter = this.keyedExecutionParameters[0];
     return parameter
       ? new KeyedExecutionContextState(parameter, this)
       : undefined;
@@ -992,7 +1001,10 @@ export class MultiServicePureExecutionState extends ServicePureExecutionState {
   }
 
   deleteKeyExecutionParameter(value: KeyedExecutionParameter): void {
-    pureMultiExecution_deleteExecutionParameter(this.execution, value);
+    pureMultiExecution_deleteExecutionParameter(
+      this.keyedExecutionParameters,
+      value,
+    );
     if (value === this.selectedExecutionContextState?.executionContext) {
       this.selectedExecutionContextState =
         this.getInitiallySelectedExecutionContextState();
@@ -1008,7 +1020,7 @@ export class MultiServicePureExecutionState extends ServicePureExecutionState {
       stub_PackageableRuntime(),
     );
     pureMultiExecution_addExecutionParameter(
-      this.execution,
+      this.keyedExecutionParameters,
       _key,
       this.editorStore.changeDetectionState.observerContext,
     );

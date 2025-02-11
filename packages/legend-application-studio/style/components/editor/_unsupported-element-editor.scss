@@ -59,7 +59,7 @@
       height: 100%;
       width: 100%;
       padding: 1rem;
-      overflow: overlay;
+      overflow: auto;
     }
   }
 
@@ -77,5 +77,15 @@
   &__to-text-mode__btn {
     height: 2.8rem;
     width: 15rem;
+  }
+
+  &__btn--dark {
+    background: var(--color-dark-grey-200);
+  }
+
+  &__actions {
+    @include flexCenter;
+
+    flex-direction: row;
   }
 }

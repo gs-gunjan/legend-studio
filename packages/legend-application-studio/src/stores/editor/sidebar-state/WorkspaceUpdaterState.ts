@@ -23,7 +23,6 @@ import {
   LogEvent,
   assertErrorThrown,
   guaranteeNonNullable,
-  getNullableFirstEntry,
   NetworkClientError,
   HttpStatus,
 } from '@finos/legend-shared';
@@ -328,29 +327,30 @@ export class WorkspaceUpdaterState {
           RevisionAlias.BASE,
         )) as PlainObject<Revision>,
       );
-      const baseReviewObj = getNullableFirstEntry(
+      const baseReviewObj = (
         (yield this.editorStore.sdlcServerClient.getReviews(
           this.sdlcState.activeProject.projectId,
-          ReviewState.COMMITTED,
-          [workspaceBaseRevision.id],
-          undefined,
-          undefined,
-          1,
-        )) as PlainObject<Review>[],
-      );
+          this.sdlcState.activePatch?.patchReleaseVersionId.id,
+          {
+            state: ReviewState.COMMITTED,
+            revisionIds: [workspaceBaseRevision.id],
+            limit: 1,
+          },
+        )) as PlainObject<Review>[]
+      )[0];
       const baseReview = baseReviewObj
         ? Review.serialization.fromJson(baseReviewObj)
         : undefined;
       this.committedReviewsBetweenWorkspaceBaseAndProjectLatest = (
         (yield this.editorStore.sdlcServerClient.getReviews(
           this.sdlcState.activeProject.projectId,
-          ReviewState.COMMITTED,
-          undefined,
-          baseReview
-            ? baseReview.committedAt
-            : workspaceBaseRevision.committedAt,
-          undefined,
-          undefined,
+          this.sdlcState.activePatch?.patchReleaseVersionId.id,
+          {
+            state: ReviewState.COMMITTED,
+            since: baseReview
+              ? baseReview.committedAt
+              : workspaceBaseRevision.committedAt,
+          },
         )) as PlainObject<Review>[]
       )
         .map((v) => Review.serialization.fromJson(v))

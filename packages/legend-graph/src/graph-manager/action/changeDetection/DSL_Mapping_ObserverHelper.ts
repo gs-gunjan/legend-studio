@@ -132,6 +132,8 @@ import type { INTERNAL__UnknownConnection } from '../../../graph/metamodel/pure/
 import type { INTERNAL__UnknownPropertyMapping } from '../../../graph/metamodel/pure/packageableElements/mapping/INTERNAL__UnknownPropertyMapping.js';
 import type { INTERNAL__UnknownSetImplementation } from '../../../graph/metamodel/pure/packageableElements/mapping/INTERNAL__UnknownSetImplementation.js';
 import type { INTERNAL__UnknownStore } from '../../../graph/metamodel/pure/packageableElements/store/INTERNAL__UnknownStore.js';
+import type { RelationFunctionInstanceSetImplementation } from '../../../graph/metamodel/pure/packageableElements/mapping/relationFunction/RelationFunctionInstanceSetImplementation.js';
+import type { RelationFunctionPropertyMapping } from '../../../graph/metamodel/pure/packageableElements/mapping/relationFunction/RelationFunctionPropertyMapping.js';
 
 // ------------------------------------- Store -------------------------------------
 
@@ -396,6 +398,12 @@ class PropertyMappingObserver implements PropertyMappingVisitor<void> {
   visit_XStorePropertyMapping(propertyMapping: XStorePropertyMapping): void {
     // TODO
   }
+
+  visit_RelationFunctionPropertyMapping(
+    propertyMapping: RelationFunctionPropertyMapping,
+  ): void {
+    // TODO
+  }
 }
 
 export const observe_PropertyMapping = (
@@ -636,6 +644,12 @@ class SetImplementationObserver implements SetImplementationVisitor<void> {
     );
   }
 
+  visit_RelationFunctionInstanceSetImplementation(
+    setImplementation: RelationFunctionInstanceSetImplementation,
+  ): void {
+    // TODO
+  }
+
   visit_AggregationAwareSetImplementation(
     setImplementation: AggregationAwareSetImplementation,
   ): void {
@@ -675,7 +689,7 @@ export const observe_SubstituteStore = skipObserved(
 
 export const observe_MappingInclude = skipObserved(
   (metamodel: MappingInclude): MappingInclude => {
-    // TODO: handle for mapping include dataspace
+    // TODO: handle for mapping include data product
     if (metamodel instanceof MappingIncludeMapping) {
       makeObservable(metamodel, {
         included: observable,
@@ -871,8 +885,9 @@ export const observe_Abstract_Connection = (metamodel: Connection): void => {
   makeObservable(metamodel, {
     store: observable,
   });
-
-  observe_PackageableElementReference(metamodel.store);
+  if (metamodel.store) {
+    observe_PackageableElementReference(metamodel.store);
+  }
 };
 
 export const observe_ConnectionPointer = skipObserved(

@@ -41,6 +41,7 @@ import type {
 import {
   type TestResult,
   deserializeTestRunnerCheckResult,
+  PCTAdapter,
   TestFailureResult,
   TestResultStatus,
   TestRunnerCheckResult,
@@ -81,10 +82,10 @@ export const getTestResultById = (
   testResultInfo.passedTests.has(id)
     ? TestResultType.PASSED
     : testResultInfo.failedTests.has(id)
-    ? TestResultType.FAILED
-    : testResultInfo.testsWithError.has(id)
-    ? TestResultType.ERROR
-    : TestResultType.RUNNING;
+      ? TestResultType.FAILED
+      : testResultInfo.testsWithError.has(id)
+        ? TestResultType.ERROR
+        : TestResultType.RUNNING;
 
 export const getTestTreeNodeStatus = (
   node: TestTreeNode,
@@ -102,8 +103,8 @@ export const getTestTreeNodeStatus = (
     testResultInfo.testWithErrorIds.some((i) => i.startsWith(`${id}_`))
     ? TestResultType.FAILED
     : testResultInfo.notRunTestIds.some((i) => i.startsWith(`${id}_`))
-    ? TestResultType.RUNNING
-    : TestResultType.PASSED;
+      ? TestResultType.RUNNING
+      : TestResultType.PASSED;
 };
 
 export class TestResultInfo {
@@ -184,8 +185,8 @@ export class TestResultInfo {
     return this.failed + this.error
       ? TestSuiteStatus.FAILED
       : this.passed
-      ? TestSuiteStatus.PASSED
-      : TestSuiteStatus.NONE;
+        ? TestSuiteStatus.PASSED
+        : TestSuiteStatus.NONE;
   }
 
   setTime(val: number): void {
@@ -235,6 +236,9 @@ export class TestRunnerState {
   treeData?: TreeData<TestTreeNode> | undefined;
   viewAsList = false;
 
+  readonly initState = ActionState.create();
+  adapters: PCTAdapter[] = [];
+
   constructor(
     ideStore: PureIDEStore,
     testExecutionResult: TestExecutionResult,
@@ -254,6 +258,7 @@ export class TestRunnerState {
       expandTree: action,
       buildTreeDataByLayer: action,
       pullTestRunnerResult: action,
+      initialize: flow,
       buildTestTreeData: flow,
       pollTestRunnerResult: flow,
       rerunTestSuite: flow,
@@ -289,6 +294,29 @@ export class TestRunnerState {
 
   refreshTree(): void {
     this.setTreeData({ ...guaranteeNonNullable(this.treeData) });
+  }
+
+  *initialize(): GeneratorFn<void> {
+    if (this.initState.isInProgress) {
+      this.ideStore.applicationStore.notificationService.notifyWarning(
+        'Test runner initialization is in progress',
+      );
+      return;
+    }
+    this.initState.inProgress();
+    try {
+      this.adapters = (
+        (yield this.ideStore.client.getPCTAdapters()) as {
+          first: string;
+          second: string;
+        }[]
+      ).map((adapter) => new PCTAdapter(adapter.first, adapter.second));
+      this.initState.pass();
+    } catch (error) {
+      assertErrorThrown(error);
+      this.ideStore.applicationStore.notificationService.notifyError(error);
+      this.initState.fail();
+    }
   }
 
   *buildTestTreeData(): GeneratorFn<void> {
@@ -443,6 +471,7 @@ export class TestRunnerState {
       this.ideStore.executeTests(
         this.testExecutionResult.path,
         this.testExecutionResult.relevantTestsOnly,
+        this.testExecutionResult.pctAdapter,
       ),
     );
   }

@@ -71,8 +71,6 @@ import {
   uuid,
   LogEvent,
   guaranteeNonNullable,
-  assertTrue,
-  AssertionError,
 } from '@finos/legend-shared';
 import { type Entity, generateGAVCoordinates } from '@finos/legend-storage';
 import {
@@ -90,17 +88,12 @@ import {
 
 const projectDependencyToProjectCoordinates = (
   projectDependency: ProjectDependency,
-): ProjectDependencyCoordinates => {
-  assertTrue(
-    !projectDependency.isLegacyDependency,
-    `Legacy dependency is not supported`,
-  );
-  return new ProjectDependencyCoordinates(
+): ProjectDependencyCoordinates =>
+  new ProjectDependencyCoordinates(
     guaranteeNonNullable(projectDependency.groupId),
     guaranteeNonNullable(projectDependency.artifactId),
     projectDependency.versionId,
   );
-};
 
 export const createServiceElement = async (
   servicePath: string,
@@ -146,30 +139,6 @@ export const createServiceElement = async (
     new RuntimePointer(PackageableElementExplicitReference.create(runtime)),
   );
   return service;
-};
-
-const createServiceEntity = async (
-  servicePath: string,
-  servicePattern: string,
-  serviceOwners: string[],
-  queryContent: string,
-  mappingPath: string,
-  runtimePath: string,
-  graphManagerState: GraphManagerState,
-): Promise<Entity> => {
-  const service = await createServiceElement(
-    servicePath,
-    servicePattern,
-    serviceOwners,
-    queryContent,
-    mappingPath,
-    runtimePath,
-    graphManagerState,
-  );
-  const entity = graphManagerState.graphManager.elementToEntity(service, {
-    pruneSourceInformation: true,
-  });
-  return entity;
 };
 
 const DEFAULT_WORKSPACE_NAME_PREFIX = 'productionize-query';
@@ -423,10 +392,9 @@ export class QueryProductionizerStore {
       searchText.length >= DEFAULT_TYPEAHEAD_SEARCH_MINIMUM_SEARCH_LENGTH;
     this.loadQueriesState.inProgress();
     try {
-      const searchSpecification = new QuerySearchSpecification();
-      searchSpecification.searchTerm = isValidSearchString
-        ? searchText
-        : undefined;
+      const searchSpecification = QuerySearchSpecification.createDefault(
+        isValidSearchString ? searchText : undefined,
+      );
       searchSpecification.limit = DEFAULT_TYPEAHEAD_SEARCH_LIMIT;
       this.queries = (yield this.graphManagerState.graphManager.searchQueries(
         searchSpecification,
@@ -473,6 +441,7 @@ export class QueryProductionizerStore {
       this.currentProjectConfigurationStatus =
         (yield fetchProjectConfigurationStatus(
           project.projectId,
+          undefined,
           this.applicationStore,
           this.sdlcServerClient,
         )) as ProjectConfigurationStatus;
@@ -480,6 +449,7 @@ export class QueryProductionizerStore {
       const workspacesInConflictResolutionIds = (
         (yield this.sdlcServerClient.getWorkspacesInConflictResolutionMode(
           project.projectId,
+          undefined,
         )) as Workspace[]
       ).map((workspace) => workspace.workspaceId);
       this.groupWorkspaces = (
@@ -536,15 +506,7 @@ export class QueryProductionizerStore {
         prompt: 'Please do not close the application',
         showLoading: true,
       });
-      const serviceEntity = await createServiceEntity(
-        this.servicePath,
-        this.servicePattern,
-        this.serviceOwners,
-        this.currentQueryInfo.content,
-        this.currentQueryInfo.mapping,
-        this.currentQueryInfo.runtime,
-        this.graphManagerState,
-      );
+
       const projectData = await Promise.all([
         this.sdlcServerClient.getEntities(project.projectId, undefined),
         this.sdlcServerClient.getConfiguration(project.projectId, undefined),
@@ -553,7 +515,6 @@ export class QueryProductionizerStore {
         projectData[0] as unknown as Entity[],
         ProjectConfiguration.serialization.fromJson(projectData[1]),
       ];
-
       // 2. auto-configure the project
       // here, the goal is to identify and add the query's project as a dependency
       const dependenciesToAdd: ProjectDependency[] = [];
@@ -589,15 +550,6 @@ export class QueryProductionizerStore {
         showLoading: true,
       });
 
-      if (
-        currentProjectConfiguration.projectDependencies.some(
-          (p) => p.isLegacyDependency,
-        )
-      ) {
-        throw new AssertionError(
-          `Can't productionize query: selected project '${project.name}' (${project.projectId}) contains legacy dependencies. Please update the project and try again.`,
-        );
-      }
       const dependencyEntities = (
         await this.depotServerClient.collectDependencyEntities(
           [
@@ -612,13 +564,27 @@ export class QueryProductionizerStore {
       )
         .map((p) => ProjectVersionEntities.serialization.fromJson(p))
         .flatMap((info) => info.entities);
+      // build service entity
+      const [servicePackagePath, serviceName] =
+        resolvePackagePathAndElementName(this.servicePath);
+      const entity =
+        (await this.graphManagerState.graphManager.productionizeQueryToServiceEntity(
+          this.currentQueryInfo,
+          {
+            name: serviceName,
+            packageName: servicePackagePath,
+            pattern: this.servicePattern,
+            serviceOwners: this.serviceOwners,
+          },
+          [...currentProjectEntities, ...dependencyEntities],
+        )) as unknown as Entity;
 
       let compilationFailed = false;
       try {
         await this.graphManagerState.graphManager.compileEntities([
           ...dependencyEntities,
           ...currentProjectEntities,
-          serviceEntity,
+          entity,
         ]);
       } catch {
         compilationFailed = true;
@@ -638,6 +604,7 @@ export class QueryProductionizerStore {
           workspace = Workspace.serialization.fromJson(
             await this.sdlcServerClient.createWorkspace(
               project.projectId,
+              undefined,
               this.workspaceName,
               WorkspaceType.GROUP,
             ),
@@ -681,9 +648,9 @@ export class QueryProductionizerStore {
               message: 'productionize-query: add service element',
               entityChanges: [
                 {
-                  classifierPath: serviceEntity.classifierPath,
-                  entityPath: serviceEntity.path,
-                  content: serviceEntity.content,
+                  classifierPath: entity.classifierPath,
+                  entityPath: entity.path,
+                  content: entity.content,
                   type: EntityChangeType.CREATE,
                 },
               ],
@@ -708,6 +675,7 @@ export class QueryProductionizerStore {
                       this.applicationStore.navigationService.navigator.goToLocation(
                         generateEditorRoute(
                           project.projectId,
+                          undefined,
                           this.workspaceName,
                           WorkspaceType.GROUP,
                         ),
@@ -738,6 +706,7 @@ export class QueryProductionizerStore {
                       this.applicationStore.navigationService.navigator.goToLocation(
                         generateEditorRoute(
                           project.projectId,
+                          undefined,
                           this.workspaceName,
                           WorkspaceType.GROUP,
                         ),

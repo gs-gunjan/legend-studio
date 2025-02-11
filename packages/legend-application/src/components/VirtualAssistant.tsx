@@ -32,7 +32,6 @@ import {
   WizardHatIcon,
   FaceLaughWinkIcon,
   ThinVerticalDragHandleIcon,
-  CircleIcon,
   PanelLoadingIndicator,
   BasePopover,
   FaceSadTearIcon,
@@ -40,6 +39,9 @@ import {
   Draggable,
   BaseRadioGroup,
   QuestionCircleIcon,
+  EmptyWindowRestoreIcon,
+  WindowMaximizeIcon,
+  MinusCircleIcon,
 } from '@finos/legend-art';
 import {
   ADVANCED_FUZZY_SEARCH_MODE,
@@ -233,7 +235,6 @@ const VirtualAssistantContextualSupportPanel = observer(() => {
               )}
             </>
           )}
-
           {contextualEntry.related.length && (
             <div className="virtual-assistant__contextual-support__relevant-entries">
               <div className="virtual-assistant__contextual-support__relevant-entries__title">
@@ -547,6 +548,17 @@ const VirtualAssistantPanel = observer(
       assistantService.currentContextualDocumentationEntry;
     const selectedTab = assistantService.selectedTab;
 
+    const extraViewConfigurations = applicationStore.pluginManager
+      .getApplicationPlugins()
+      .flatMap(
+        (plugin) => plugin.getExtraVirtualAssistantViewConfigurations?.() ?? [],
+      );
+    const currentExtensionView = extraViewConfigurations.find(
+      (config) => config.key === selectedTab,
+    );
+
+    const toggleMaximize = (): void =>
+      assistantService.setIsPanelMaximized(!assistantService.isPanelMaximized);
     const selectSearch = (): void =>
       assistantService.setSelectedTab(VIRTUAL_ASSISTANT_TAB.SEARCH);
     const selectContextualDoc = (): void =>
@@ -594,7 +606,10 @@ const VirtualAssistantPanel = observer(
         key={assistantService.panelRenderingKey}
       >
         <div
-          className="virtual-assistant__panel"
+          className={clsx('virtual-assistant__panel', {
+            'virtual-assistant__panel--maximized':
+              assistantService.isPanelMaximized,
+          })}
           // NOTE: here we block `tabbing` (to move focus). This is to counter the effect of
           // `disableEnforceFocus={true}` set in the assistant panel popover
           // this is the poor-man focus trap for the assistant to ensure
@@ -647,13 +662,47 @@ const VirtualAssistantPanel = observer(
                   )}
                 </div>
               </div>
+              {extraViewConfigurations.map((config) => (
+                <div
+                  key={config.key}
+                  className={clsx('virtual-assistant__panel__header__tab', {
+                    'virtual-assistant__panel__header__tab--active':
+                      selectedTab === config.key,
+                  })}
+                  onClick={() => {
+                    assistantService.setSelectedTab(config.key);
+                    if (config.autoExpandOnOpen) {
+                      assistantService.setIsPanelMaximized(true);
+                    }
+                  }}
+                  title={config.title}
+                >
+                  <div className="virtual-assistant__panel__header__tab__content">
+                    {config.icon ?? <QuestionCircleIcon />}
+                  </div>
+                </div>
+              ))}
             </div>
             <div className="virtual-assistant__panel__header__actions">
               <button
                 className="virtual-assistant__panel__header__action"
                 tabIndex={-1}
+                onClick={toggleMaximize}
+                title={
+                  assistantService.isPanelMaximized ? 'Minimize' : 'Maximize'
+                }
+              >
+                {assistantService.isPanelMaximized ? (
+                  <EmptyWindowRestoreIcon />
+                ) : (
+                  <WindowMaximizeIcon />
+                )}
+              </button>
+              <button
+                className="virtual-assistant__panel__header__action"
+                tabIndex={-1}
                 onClick={closeAssistantPanel}
-                title="Close panel"
+                title="Close"
               >
                 <CloseIcon className="virtual-assistant__panel__icon__close" />
               </button>
@@ -666,6 +715,7 @@ const VirtualAssistantPanel = observer(
             {selectedTab === VIRTUAL_ASSISTANT_TAB.CONTEXTUAL_SUPPORT && (
               <VirtualAssistantContextualSupportPanel />
             )}
+            {currentExtensionView?.renderer()}
           </div>
         </div>
       </BasePopover>
@@ -677,7 +727,7 @@ export const VirtualAssistant = observer(() => {
   const [isDragging, setIsDragging] = useState(false);
   const [_key, _setKey] = useState(uuid());
   const applicationStore = useApplicationStore();
-  const assistantRef = useRef<HTMLDivElement>(null);
+  const assistantRef = useRef<HTMLElement>(null);
   const assistantService = applicationStore.assistantService;
   const currentContextualDocumentationEntry =
     assistantService.currentContextualDocumentationEntry;
@@ -718,6 +768,9 @@ export const VirtualAssistant = observer(() => {
       bounds="parent"
       onStart={onDragStart}
       onStop={onDragEnd}
+      // Avoid using deprecated findDOMNode method to rid of React warning
+      // See https://github.com/react-grid-layout/react-draggable/issues/749
+      nodeRef={assistantRef as React.RefObject<HTMLDivElement>}
       // limit the dnd trigger to only the drag handle
       handle=".virtual-assistant__station__drag-handle"
     >
@@ -726,7 +779,7 @@ export const VirtualAssistant = observer(() => {
         // NOTE: we have to set the `ref` at this level so even when the assistant is hidden
         // the element is still in the DOM so when we programmatically show the assistant panel
         // the anchor is available in time
-        ref={assistantRef}
+        ref={assistantRef as React.RefObject<HTMLDivElement>}
       >
         <div
           //  NOTE: make sure when we change the documentation entry,
@@ -740,6 +793,15 @@ export const VirtualAssistant = observer(() => {
           })}
         >
           <button
+            className="virtual-assistant__station__hide-button"
+            title="Hide assistant"
+            onClick={() => {
+              applicationStore.assistantService.toggleAssistant();
+            }}
+          >
+            <MinusCircleIcon />
+          </button>
+          <button
             className="virtual-assistant__station__trigger"
             tabIndex={-1}
             onClick={toggleAssistantPanel}
@@ -750,16 +812,21 @@ export const VirtualAssistant = observer(() => {
                     currentContextualDocumentationEntry
                       ? 'Contextual support available.\n'
                       : ''
-                  }Click to open assistant panel...`
+                  }Click to open Assistant...`
             }
           >
-            {assistantService.isOpen ? (
-              <CloseIcon className="virtual-assistant__station__trigger__close" />
-            ) : currentContextualDocumentationEntry ? (
-              <CircleIcon className="virtual-assistant__station__trigger__circle" />
-            ) : null}
+            <div className="virtual-assistant__station__character">
+              <WizardHatIcon className="virtual-assistant__station__character__hat" />
+              <SunglassesIcon className="virtual-assistant__station__character__glasses" />
+              <BeardIcon className="virtual-assistant__station__character__beard" />
+            </div>
           </button>
-
+          <div
+            className="virtual-assistant__station__label"
+            onClick={toggleAssistantPanel}
+          >
+            Assistant
+          </div>
           <ContextMenu
             className={clsx('virtual-assistant__station__drag-handle', {
               'virtual-assistant__station__drag-handle--dragging': isDragging,

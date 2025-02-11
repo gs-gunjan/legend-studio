@@ -27,31 +27,47 @@ import {
   type Runtime,
   type TestAssertion,
   type AtomicTest,
-  type Class,
   type EmbeddedDataVisitor,
+  type INTERNAL__UnknownConnection,
+  type DataElementReference,
+  type INTERNAL__UnknownEmbeddedData,
+  type TestResult,
+  type ValueSpecification,
+  type Binding,
+  type RawLambda,
+  type Type,
   ExternalFormatData,
   RelationalCSVData,
   ConnectionTestData,
   EqualToJson,
   DEFAULT_TEST_ASSERTION_PREFIX,
   RelationalCSVDataTable,
-  type INTERNAL__UnknownConnection,
   getAllIdentifiedConnectionsFromRuntime,
   ModelStoreData,
   ModelEmbeddedData,
   PackageableElementExplicitReference,
-  type DataElementReference,
-  type INTERNAL__UnknownEmbeddedData,
-  type TestResult,
   TestExecuted,
   TestExecutionStatus,
+  isStubbed_RawLambda,
+  SimpleFunctionExpression,
+  InstanceValue,
+  CollectionInstanceValue,
+  matchFunctionName,
+  PackageableElementImplicitReference,
+  VariableExpression,
+  PrimitiveInstanceValue,
+  PrimitiveType,
+  LambdaFunctionInstanceValue,
+  DataElement,
 } from '@finos/legend-graph';
 import {
   assertTrue,
   ContentType,
   generateEnumerableNameFromToken,
   guaranteeNonEmptyString,
+  guaranteeType,
   isNonNullable,
+  LogEvent,
   returnUndefOnError,
   UnsupportedOperationError,
   uuid,
@@ -59,6 +75,9 @@ import {
 import { EmbeddedDataType } from '../editor-state/ExternalFormatState.js';
 import type { EditorStore } from '../EditorStore.js';
 import { createMockDataForMappingElementSource } from './MockDataUtils.js';
+import type { DSL_Data_LegendStudioApplicationPlugin_Extension } from '../../extensions/DSL_Data_LegendStudioApplicationPlugin_Extension.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '@finos/legend-query-builder';
+import { LEGEND_STUDIO_APP_EVENT } from '../../../__lib__/LegendStudioEvent.js';
 
 export const DEFAULT_TEST_ASSERTION_ID = 'assertion_1';
 export const DEFAULT_TEST_ID = 'test_1';
@@ -74,7 +93,7 @@ export const validateTestableId = (
   if (!id) {
     return 'ID is required';
   } else if (id.includes(' ')) {
-    return `ID can't contain space`;
+    return `ID can't contain spaces`;
   } else if (possibleIds?.includes(id)) {
     return `ID '${id}' already exists`;
   }
@@ -102,7 +121,7 @@ export const createDefaultEqualToJSONTestAssertion = (
 };
 
 export const createEmbeddedDataFromClass = (
-  _class: Class,
+  _class: Type,
   editorStore: EditorStore,
 ): ExternalFormatData => {
   const _json = createMockDataForMappingElementSource(_class, editorStore);
@@ -112,7 +131,7 @@ export const createEmbeddedDataFromClass = (
 };
 
 export const createBareModelStoreData = (
-  _class: Class,
+  _class: Type,
   editorStore: EditorStore,
 ): ModelStoreData => {
   const embeddedData = createEmbeddedDataFromClass(_class, editorStore);
@@ -127,8 +146,28 @@ export const createBareModelStoreData = (
 export class EmbeddedDataCreatorFromEmbeddedData
   implements EmbeddedDataVisitor<EmbeddedData>
 {
+  editorStore: EditorStore;
+  constructor(editorStore: EditorStore) {
+    this.editorStore = editorStore;
+  }
   visit_EmbeddedData(data: EmbeddedData): EmbeddedData {
-    throw new Error('Method not implemented.');
+    const extraEmbeddedDataCloners = this.editorStore.pluginManager
+      .getApplicationPlugins()
+      .flatMap(
+        (plugin) =>
+          (
+            plugin as DSL_Data_LegendStudioApplicationPlugin_Extension
+          ).getExtraEmbeddedDataCloners?.() ?? [],
+      );
+    for (const creator of extraEmbeddedDataCloners) {
+      const embeddedData = creator(data);
+      if (embeddedData) {
+        return embeddedData;
+      }
+    }
+    throw new UnsupportedOperationError(
+      `Unsupported embedded data${data.toString()}`,
+    );
   }
   visit_INTERNAL__UnknownEmbeddedData(
     data: INTERNAL__UnknownEmbeddedData,
@@ -138,7 +177,7 @@ export class EmbeddedDataCreatorFromEmbeddedData
   visit_ExternalFormatData(data: ExternalFormatData): EmbeddedData {
     const val = new ExternalFormatData();
     val.contentType = data.contentType;
-    val.data = '';
+    val.data = data.data;
     return val;
   }
   visit_ModelStoreData(data: ModelStoreData): EmbeddedData {
@@ -149,7 +188,7 @@ export class EmbeddedDataCreatorFromEmbeddedData
           const v = new ModelEmbeddedData();
           v.model = PackageableElementExplicitReference.create(e.model.value);
           v.data = e.data.accept_EmbeddedDataVisitor(
-            new EmbeddedDataCreatorFromEmbeddedData(),
+            new EmbeddedDataCreatorFromEmbeddedData(this.editorStore),
           );
           return v;
         }
@@ -159,8 +198,9 @@ export class EmbeddedDataCreatorFromEmbeddedData
     return val;
   }
   visit_DataElementReference(data: DataElementReference): EmbeddedData {
-    return data.dataElement.value.data.accept_EmbeddedDataVisitor(
-      new EmbeddedDataCreatorFromEmbeddedData(),
+    const datElement = guaranteeType(data.dataElement.value, DataElement);
+    return datElement.data.accept_EmbeddedDataVisitor(
+      new EmbeddedDataCreatorFromEmbeddedData(this.editorStore),
     );
   }
   visit_RelationalCSVData(data: RelationalCSVData): EmbeddedData {
@@ -224,6 +264,20 @@ export class EmbeddedDataConnectionTypeVisitor
   }
 
   visit_Connection(connection: Connection): string {
+    const extraEmbeddedDataCreator = this.editorStore.pluginManager
+      .getApplicationPlugins()
+      .flatMap(
+        (plugin) =>
+          (
+            plugin as DSL_Data_LegendStudioApplicationPlugin_Extension
+          ).getExtraEmbeddedDataTypeFromConnectionMatchers?.() ?? [],
+      );
+    for (const creator of extraEmbeddedDataCreator) {
+      const embeddedData = creator(connection);
+      if (embeddedData) {
+        return embeddedData;
+      }
+    }
     return EmbeddedDataType.EXTERNAL_FORMAT_DATA;
   }
   visit_INTERNAL__UnknownConnection(
@@ -324,3 +378,124 @@ export const TEMPORARY__createRelationalDataFromCSV = (
 export const isTestPassing = (testResult: TestResult): boolean =>
   testResult instanceof TestExecuted &&
   testResult.testExecutionStatus === TestExecutionStatus.PASS;
+
+// external format param type
+export interface TestParamContentType {
+  contentType: string;
+  param: string;
+}
+export const getContentTypeWithParamRecursively = (
+  expression: ValueSpecification | undefined,
+): TestParamContentType[] => {
+  let currentExpression = expression;
+  const res: TestParamContentType[] = [];
+  // use if statement to safely scan service query without breaking the app
+  while (currentExpression instanceof SimpleFunctionExpression) {
+    if (
+      matchFunctionName(
+        currentExpression.functionName,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.INTERNALIZE,
+      ) ||
+      matchFunctionName(
+        currentExpression.functionName,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_RUNTIME_WITH_MODEL_QUERY_CONNECTION,
+      )
+    ) {
+      if (currentExpression.parametersValues[1] instanceof InstanceValue) {
+        if (
+          currentExpression.parametersValues[1].values[0] instanceof
+            PackageableElementImplicitReference &&
+          currentExpression.parametersValues[2] instanceof VariableExpression
+        ) {
+          res.push({
+            contentType: (
+              currentExpression.parametersValues[1].values[0].value as Binding
+            ).contentType,
+            param: currentExpression.parametersValues[2].name,
+          });
+        } else if (
+          matchFunctionName(
+            currentExpression.functionName,
+            QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_RUNTIME_WITH_MODEL_QUERY_CONNECTION,
+          ) &&
+          currentExpression.parametersValues[1] instanceof
+            PrimitiveInstanceValue &&
+          currentExpression.parametersValues[1].genericType.value.rawType ===
+            PrimitiveType.STRING &&
+          currentExpression.parametersValues[2] instanceof VariableExpression
+        ) {
+          res.push({
+            contentType: currentExpression.parametersValues[1]
+              .values[0] as string,
+            param: currentExpression.parametersValues[2].name,
+          });
+        }
+      }
+      currentExpression = currentExpression.parametersValues[1];
+    } else if (
+      matchFunctionName(
+        currentExpression.functionName,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.FROM,
+      )
+    ) {
+      currentExpression = currentExpression.parametersValues[2];
+    } else if (
+      matchFunctionName(
+        currentExpression.functionName,
+        QUERY_BUILDER_SUPPORTED_FUNCTIONS.MERGERUNTIMES,
+      )
+    ) {
+      const collection = currentExpression.parametersValues[0];
+      if (collection instanceof CollectionInstanceValue) {
+        collection.values
+          .map((v) => getContentTypeWithParamRecursively(v))
+          .flat()
+          .map((p) => res.push(p));
+      }
+      currentExpression = collection;
+    } else {
+      currentExpression = currentExpression.parametersValues[0];
+    }
+  }
+  return res;
+};
+
+export const getContentTypeWithParamFromQuery = (
+  query: RawLambda | undefined,
+  editorStore: EditorStore,
+): TestParamContentType[] => {
+  if (query && !isStubbed_RawLambda(query)) {
+    // safely pass unsupported funtions when building ValueSpecification from Rawlambda
+    try {
+      const valueSpec =
+        editorStore.graphManagerState.graphManager.buildValueSpecification(
+          editorStore.graphManagerState.graphManager.serializeRawValueSpecification(
+            query,
+          ),
+          editorStore.graphManagerState.graph,
+        );
+      if (valueSpec instanceof LambdaFunctionInstanceValue) {
+        return getContentTypeWithParamRecursively(
+          valueSpec.values[0]?.expressionSequence.find(
+            (exp) =>
+              exp instanceof SimpleFunctionExpression &&
+              (matchFunctionName(
+                exp.functionName,
+                QUERY_BUILDER_SUPPORTED_FUNCTIONS.SERIALIZE,
+              ) ||
+                matchFunctionName(
+                  exp.functionName,
+                  QUERY_BUILDER_SUPPORTED_FUNCTIONS.EXTERNALIZE,
+                )),
+          ),
+        );
+      }
+    } catch (error) {
+      editorStore.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.SERVICE_TEST_SETUP_FAILURE),
+        error,
+      );
+    }
+  }
+  return [];
+};

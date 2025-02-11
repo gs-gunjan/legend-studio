@@ -14,33 +14,33 @@
  * limitations under the License.
  */
 
-import { useCallback } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from 'react';
 import {
   clsx,
   Dialog,
   PanelDropZone,
   InfoCircleIcon,
-  PanelEntryDropZonePlaceholder,
   Modal,
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalFooterButton,
+  InputWithInlineValidation,
 } from '@finos/legend-art';
 import { observer } from 'mobx-react-lite';
 import {
   generateValueSpecificationForParameter,
-  getPropertyPath,
+  getPropertyChainName,
   type QueryBuilderDerivedPropertyExpressionState,
   type QueryBuilderPropertyExpressionState,
 } from '../stores/QueryBuilderPropertyEditorState.js';
 import { useDrop } from 'react-dnd';
-import {
-  QUERY_BUILDER_EXPLORER_TREE_DND_TYPE,
-  type QueryBuilderExplorerTreeDragSource,
-  type QueryBuilderExplorerTreePropertyNodeData,
-} from '../stores/explorer/QueryBuilderExplorerState.js';
-import { QueryBuilderPropertyInfoTooltip } from './shared/QueryBuilderPropertyInfoTooltip.js';
 import {
   type ValueSpecification,
   type VariableExpression,
@@ -93,7 +93,7 @@ const DerivedPropertyParameterValueEditor = observer(
       },
       [derivedPropertyExpressionState, idx],
     );
-    const [{ isParameterValueDragOver }, dropTargetConnector] = useDrop<
+    const [{ isParameterValueDragOver }, dropConnector] = useDrop<
       QueryBuilderVariableDragSource,
       void,
       { isParameterValueDragOver: boolean }
@@ -201,6 +201,8 @@ const DerivedPropertyParameterValueEditor = observer(
             variable,
             derivedPropertyExpressionState.queryBuilderState.graphManagerState
               .graph,
+            derivedPropertyExpressionState.queryBuilderState
+              .INTERNAL__enableInitializingDefaultSimpleExpressionValue,
             derivedPropertyExpressionState.queryBuilderState.observerContext,
           ),
         idx + 1,
@@ -235,7 +237,7 @@ const DerivedPropertyParameterValueEditor = observer(
         <div className="query-builder__variable-editor">
           <PanelDropZone
             isDragOver={isParameterValueDragOver}
-            dropTargetConnector={dropTargetConnector}
+            dropTargetConnector={dropConnector}
           >
             <BasicValueSpecificationEditor
               valueSpecification={valueSpec}
@@ -249,7 +251,7 @@ const DerivedPropertyParameterValueEditor = observer(
                 );
               }}
               graph={graph}
-              obseverContext={
+              observerContext={
                 derivedPropertyExpressionState.queryBuilderState.observerContext
               }
               typeCheckOption={{
@@ -303,6 +305,8 @@ const DerivedPropertyExpressionEditor = observer(
 export const QueryBuilderPropertyExpressionEditor = observer(
   (props: { propertyExpressionState: QueryBuilderPropertyExpressionState }) => {
     const { propertyExpressionState } = props;
+    const applicationStore =
+      propertyExpressionState.queryBuilderState.applicationStore;
     const handleClose = (): void =>
       propertyExpressionState.setIsEditingDerivedProperty(false);
     const isParameterCompatibleWithDerivedProperty = (
@@ -336,7 +340,9 @@ export const QueryBuilderPropertyExpressionEditor = observer(
         }}
       >
         <Modal
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
           className="editor-modal query-builder-property-editor"
         >
           <ModalHeader title="Derived Property" />
@@ -370,14 +376,111 @@ export const QueryBuilderPropertyExpressionEditor = observer(
   },
 );
 
+export const QueryBuilderPropertyNameDisplay = observer(
+  (props: {
+    columnName: string;
+    title: string;
+    error?: boolean | undefined;
+    setIsEditingColumnName?: ((isEditing: boolean) => void) | undefined;
+  }) => {
+    const { columnName, title, error, setIsEditingColumnName } = props;
+    return (
+      <div className="query-builder__property__name__display" title={title}>
+        <span
+          className={clsx('query-builder__property__name__display__content', {
+            'query-builder__property__name__display__content--error': error,
+            'editable-value': setIsEditingColumnName,
+          })}
+          onClick={() => {
+            setIsEditingColumnName?.(true);
+          }}
+        >
+          {columnName}
+        </span>
+      </div>
+    );
+  },
+);
+
+export const QueryBuilderEditablePropertyName = observer(
+  (props: {
+    columnName: string;
+    setColumnName: ((columnName: string) => void) | undefined;
+    error: string | undefined;
+    title: string;
+    defaultColumnName: string;
+  }) => {
+    const { columnName, setColumnName, error, title, defaultColumnName } =
+      props;
+
+    const [isEditingColumnName, setIsEditingColumnName] = useState(false);
+    const [selectedColumnName, setSelectedColumnName] = useState(columnName);
+    const columnNameInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+      if (isEditingColumnName) {
+        columnNameInputRef.current?.focus();
+      }
+    }, [isEditingColumnName, columnNameInputRef]);
+
+    const handleFinishEditing = (): void => {
+      const trimmedSelectedColumnName = selectedColumnName.trim();
+      if (trimmedSelectedColumnName.length > 0) {
+        setColumnName?.(trimmedSelectedColumnName);
+        setSelectedColumnName(trimmedSelectedColumnName);
+      } else {
+        setColumnName?.(defaultColumnName);
+        setSelectedColumnName(defaultColumnName);
+      }
+      setIsEditingColumnName(false);
+    };
+
+    return isEditingColumnName ? (
+      <div className="query-builder__property__name__editor">
+        <InputWithInlineValidation
+          className="query-builder__property__name__editor__input input-group__input"
+          spellCheck={false}
+          value={selectedColumnName}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            setSelectedColumnName(event.target.value)
+          }
+          onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+            if (event.key === 'Enter') {
+              handleFinishEditing();
+            }
+          }}
+          onBlur={handleFinishEditing}
+          ref={columnNameInputRef}
+          draggable={true}
+          onDragStart={(e: React.DragEvent<HTMLInputElement>) => {
+            // The below 2 lines are to allow dragging to select text in the input instead of
+            // dragging the draggable element containing the input.
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        />
+      </div>
+    ) : (
+      <QueryBuilderPropertyNameDisplay
+        columnName={columnName}
+        title={title}
+        error={Boolean(error)}
+        setIsEditingColumnName={
+          setColumnName ? setIsEditingColumnName : undefined
+        }
+      />
+    );
+  },
+);
+
 export const QueryBuilderPropertyExpressionBadge = observer(
   (props: {
+    columnName?: string;
     propertyExpressionState: QueryBuilderPropertyExpressionState;
-    onPropertyExpressionChange: (
-      node: QueryBuilderExplorerTreePropertyNodeData,
-    ) => void;
+    setColumnName?: (columnName: string) => void;
+    error?: string | undefined;
   }) => {
-    const { propertyExpressionState, onPropertyExpressionChange } = props;
+    const { columnName, propertyExpressionState, setColumnName, error } = props;
     const type =
       propertyExpressionState.propertyExpression.func.value.genericType.value
         .rawType;
@@ -390,93 +493,50 @@ export const QueryBuilderPropertyExpressionBadge = observer(
         propertyExpressionState.setIsEditingDerivedProperty(true);
       }
     };
-    const handleDrop = useCallback(
-      (item: QueryBuilderExplorerTreeDragSource): void =>
-        onPropertyExpressionChange(item.node),
-      [onPropertyExpressionChange],
-    );
-    const [{ isDragOver }, dropConnector] = useDrop<
-      QueryBuilderExplorerTreeDragSource,
-      void,
-      { isDragOver: boolean }
-    >(
-      () => ({
-        accept: [
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.ENUM_PROPERTY,
-          QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.PRIMITIVE_PROPERTY,
-        ],
-        drop: (item, monitor): void => {
-          if (!monitor.didDrop()) {
-            handleDrop(item);
-          } // prevent drop event propagation to accomondate for nested DnD
-        },
-        collect: (monitor) => ({
-          isDragOver: monitor.isOver({ shallow: true }),
-        }),
-      }),
-      [handleDrop],
-    );
 
     return (
-      <div
-        className="query-builder-property-expression-badge"
-        ref={dropConnector}
-      >
-        <PanelEntryDropZonePlaceholder
-          showPlaceholder={isDragOver}
-          label="Change Property"
-          className="query-builder__dnd__placeholder"
+      <div className="query-builder-property-expression-badge">
+        <div
+          className={clsx('query-builder-property-expression-badge__content', {
+            'query-builder-property-expression-badge__content--class':
+              type instanceof Class,
+            'query-builder-property-expression-badge__content--enumeration':
+              type instanceof Enumeration,
+            'query-builder-property-expression-badge__content--primitive':
+              type instanceof PrimitiveType,
+          })}
         >
-          <div
-            className={clsx(
-              'query-builder-property-expression-badge__content',
-              {
-                'query-builder-property-expression-badge__content--class':
-                  type instanceof Class,
-                'query-builder-property-expression-badge__content--enumeration':
-                  type instanceof Enumeration,
-                'query-builder-property-expression-badge__content--primitive':
-                  type instanceof PrimitiveType,
-              },
+          <QueryBuilderEditablePropertyName
+            columnName={columnName ?? propertyExpressionState.title}
+            setColumnName={setColumnName}
+            error={error}
+            title={`${propertyExpressionState.title} - ${propertyExpressionState.path}`}
+            defaultColumnName={getPropertyChainName(
+              propertyExpressionState.propertyExpression,
+              propertyExpressionState.queryBuilderState.explorerState
+                .humanizePropertyName,
             )}
-          >
-            <div
-              className="query-builder-property-expression-badge__property"
-              title={`${propertyExpressionState.title} - ${propertyExpressionState.path}`}
+          />
+          {hasDerivedPropertyInExpression && (
+            <button
+              className={clsx(
+                'query-builder-property-expression-badge__action',
+                {
+                  'query-builder-property-expression-badge__action--error':
+                    !isValid,
+                },
+              )}
+              tabIndex={-1}
+              onClick={setDerivedPropertyArguments}
+              title="Set Derived Property Argument(s)..."
             >
-              {propertyExpressionState.title}
-            </div>
-            {hasDerivedPropertyInExpression && (
-              <button
-                className={clsx(
-                  'query-builder-property-expression-badge__action',
-                  {
-                    'query-builder-property-expression-badge__action--error':
-                      !isValid,
-                  },
-                )}
-                tabIndex={-1}
-                onClick={setDerivedPropertyArguments}
-                title="Set Derived Property Argument(s)..."
-              >
-                {!isValid && <InfoCircleIcon />} (...)
-              </button>
-            )}
-            <QueryBuilderPropertyExpressionEditor
-              propertyExpressionState={propertyExpressionState}
-            />
-            <QueryBuilderPropertyInfoTooltip
-              property={propertyExpressionState.propertyExpression.func.value}
-              path={getPropertyPath(propertyExpressionState.propertyExpression)}
-              isMapped={true}
-              placement="bottom-end"
-            >
-              <div className="query-builder-property-expression-badge__property__info">
-                <InfoCircleIcon />
-              </div>
-            </QueryBuilderPropertyInfoTooltip>
-          </div>
-        </PanelEntryDropZonePlaceholder>
+              {!isValid && <InfoCircleIcon />} (...)
+            </button>
+          )}
+          <QueryBuilderPropertyExpressionEditor
+            propertyExpressionState={propertyExpressionState}
+          />
+        </div>
       </div>
     );
   },

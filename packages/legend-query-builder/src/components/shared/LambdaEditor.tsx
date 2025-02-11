@@ -28,9 +28,9 @@ import {
   ModalFooter,
   ModalHeader,
   ModalTitle,
+  ModalFooterButton,
 } from '@finos/legend-art';
 import {
-  disposeCodeEditor,
   getBaseCodeEditorOptions,
   getCodeEditorValue,
   normalizeLineEnding,
@@ -38,7 +38,8 @@ import {
   setErrorMarkers,
   CODE_EDITOR_LANGUAGE,
   CODE_EDITOR_THEME,
-} from '@finos/legend-lego/code-editor';
+} from '@finos/legend-code-editor';
+import { disposeCodeEditor } from '@finos/legend-lego/code-editor';
 import type { LambdaEditorState } from '../../stores/shared/LambdaEditorState.js';
 import {
   debounce,
@@ -89,7 +90,7 @@ const LambdaEditor_Inner = observer(
     disabled: boolean;
     inline?: boolean | undefined;
     lambdaEditorState: LambdaEditorState;
-    transformStringToLambda: DebouncedFunc<() => GeneratorFn<void>> | undefined;
+    transformStringToLambda: DebouncedFunc<() => GeneratorFn<void>> | null;
     expectedType?: Type | undefined;
     matchedExpectedType?: (() => boolean) | undefined;
     onExpectedTypeLabelSelect?: (() => void) | undefined;
@@ -99,6 +100,7 @@ const LambdaEditor_Inner = observer(
     autoFocus?: boolean | undefined;
     openInPopUp?: (() => void) | undefined;
     onEditorFocus?: (() => void) | undefined;
+    onEditorBlur?: (() => void) | undefined;
     disableExpansion?: boolean | undefined;
     forceExpansion?: boolean | undefined;
   }) => {
@@ -119,12 +121,16 @@ const LambdaEditor_Inner = observer(
       autoFocus,
       openInPopUp,
       onEditorFocus,
+      onEditorBlur,
     } = props;
     const applicationStore = useApplicationStore();
     const onDidChangeModelContentEventDisposer = useRef<
       IDisposable | undefined
     >(undefined);
     const onDidFocusEditorWidgetDisposer = useRef<IDisposable | undefined>(
+      undefined,
+    );
+    const onDidBlurEditorTextDisposer = useRef<IDisposable | undefined>(
       undefined,
     );
     const value = normalizeLineEnding(lambdaEditorState.lambdaString);
@@ -140,7 +146,9 @@ const LambdaEditor_Inner = observer(
     const transformLambdaToString = async (pretty: boolean): Promise<void> => {
       transformStringToLambda?.cancel();
       return flowResult(
-        lambdaEditorState.convertLambdaObjectToGrammarString(pretty),
+        lambdaEditorState.convertLambdaObjectToGrammarString({
+          pretty: pretty,
+        }),
       ).catch(applicationStore.alertUnhandledError);
     };
     const discardChanges = applicationStore.guardUnhandledError(() =>
@@ -151,6 +159,8 @@ const LambdaEditor_Inner = observer(
         transformLambdaToString(!isExpanded).catch(
           applicationStore.alertUnhandledError,
         );
+        setExpanded(!isExpanded);
+      } else if (!forceExpansion && parserError) {
         setExpanded(!isExpanded);
       }
     };
@@ -214,6 +224,21 @@ const LambdaEditor_Inner = observer(
         }
       }
     }, [editor, isExpanded]);
+
+    // set styling when theme changes
+    useEffect(() => {
+      if (editor) {
+        editor.updateOptions({
+          theme: applicationStore.layoutService
+            .TEMPORARY__isLightColorThemeEnabled
+            ? CODE_EDITOR_THEME.BUILT_IN__VSCODE_LIGHT
+            : CODE_EDITOR_THEME.DEFAULT_DARK,
+        });
+      }
+    }, [
+      editor,
+      applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled,
+    ]);
 
     // set backdrop to force user to fix parser error when it happens
     useEffect(() => {
@@ -283,7 +308,12 @@ const LambdaEditor_Inner = observer(
           onEditorFocus?.();
         },
       );
-
+      if (onEditorBlur) {
+        onDidBlurEditorTextDisposer.current = editor.onDidBlurEditorText(() => {
+          transformStringToLambda?.cancel();
+          onEditorBlur();
+        });
+      }
       // Set the text value
       const currentValue = getCodeEditorValue(editor);
       const editorModel = editor.getModel();
@@ -387,7 +417,6 @@ const LambdaEditor_Inner = observer(
             <button
               className="lambda-editor__editor__expand-btn"
               onClick={toggleExpandedMode}
-              disabled={Boolean(parserError)}
               tabIndex={-1}
               title="Toggle Expand"
             >
@@ -398,7 +427,6 @@ const LambdaEditor_Inner = observer(
             <button
               className="lambda-editor__action"
               onClick={openInPopUp}
-              disabled={Boolean(parserError)}
               tabIndex={-1}
               title="Open in a popup..."
             >
@@ -419,10 +447,11 @@ const LambdaEditor_Inner = observer(
 
 const LambdaEditor_PopUp = observer(
   (props: {
+    title?: string | undefined;
     className?: string | undefined;
     disabled: boolean;
     lambdaEditorState: LambdaEditorState;
-    transformStringToLambda: DebouncedFunc<() => GeneratorFn<void>> | undefined;
+    transformStringToLambda: DebouncedFunc<() => GeneratorFn<void>> | null;
     onClose: () => void;
   }) => {
     const {
@@ -430,6 +459,7 @@ const LambdaEditor_PopUp = observer(
       disabled,
       lambdaEditorState,
       transformStringToLambda,
+      title,
       onClose,
     } = props;
     const applicationStore = useApplicationStore();
@@ -447,7 +477,9 @@ const LambdaEditor_PopUp = observer(
     const transformLambdaToString = async (pretty: boolean): Promise<void> => {
       transformStringToLambda?.cancel();
       return flowResult(
-        lambdaEditorState.convertLambdaObjectToGrammarString(pretty),
+        lambdaEditorState.convertLambdaObjectToGrammarString({
+          pretty: pretty,
+        }),
       ).catch(applicationStore.alertUnhandledError);
     };
     const discardChanges = applicationStore.guardUnhandledError(() =>
@@ -553,9 +585,14 @@ const LambdaEditor_PopUp = observer(
     }
 
     useEffect(() => {
-      flowResult(
-        lambdaEditorState.convertLambdaObjectToGrammarString(true),
-      ).catch(applicationStore.alertUnhandledError);
+      if (!lambdaEditorState.parserError) {
+        flowResult(
+          lambdaEditorState.convertLambdaObjectToGrammarString({
+            pretty: true,
+            preserveCompilationError: true,
+          }),
+        ).catch(applicationStore.alertUnhandledError);
+      }
     }, [applicationStore, lambdaEditorState]);
 
     // dispose editor
@@ -584,7 +621,9 @@ const LambdaEditor_PopUp = observer(
         }}
       >
         <Modal
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
           className={clsx(
             'editor-modal lambda-editor__popup__modal',
             {
@@ -600,7 +639,7 @@ const LambdaEditor_PopUp = observer(
           )}
         >
           <ModalHeader>
-            <ModalTitle title="Edit Lambda" />
+            <ModalTitle title={title ?? 'Edit Lambda'} />
             {lambdaEditorState.parserError && (
               <div className="modal__title__error-badge">
                 Failed to parse lambda
@@ -618,19 +657,17 @@ const LambdaEditor_PopUp = observer(
             </div>
           </ModalBody>
           <ModalFooter>
-            <button
-              className="btn btn--dark btn--caution"
-              onClick={discardChanges}
-            >
-              Discard changes
-            </button>
-            <button
-              className="btn btn--dark"
+            <ModalFooterButton
+              text="Proceed"
               onClick={onClose}
               disabled={Boolean(lambdaEditorState.parserError)}
-            >
-              Close
-            </button>
+            />
+            <ModalFooterButton
+              className="btn--caution"
+              text="Cancel"
+              onClick={discardChanges}
+              type="secondary"
+            />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -659,6 +696,7 @@ type LambdaEditorBaseProps = {
   forceBackdrop: boolean;
   autoFocus?: boolean | undefined;
   onEditorFocus?: (() => void) | undefined;
+  onEditorBlur?: (() => void) | undefined;
 };
 
 export const InlineLambdaEditor = observer(
@@ -707,6 +745,7 @@ export const InlineLambdaEditor = observer(
       hideErrorBar,
       autoFocus,
       onEditorFocus,
+      onEditorBlur,
     } = props;
     const [showPopUp, setShowPopUp] = useState(false);
     const openInPopUp = (): void => setShowPopUp(true);
@@ -714,7 +753,7 @@ export const InlineLambdaEditor = observer(
     const debouncedTransformStringToLambda = useMemo(
       () =>
         disabled
-          ? undefined
+          ? null
           : debounce(
               () => lambdaEditorState.convertLambdaGrammarStringToObject(),
               1000,
@@ -777,6 +816,7 @@ export const InlineLambdaEditor = observer(
         autoFocus={autoFocus}
         openInPopUp={openInPopUp}
         onEditorFocus={onEditorFocus}
+        onEditorBlur={onEditorBlur}
         hideErrorBar={hideErrorBar}
         forceExpansion={
           disableExpansion !== undefined
@@ -800,7 +840,7 @@ export const LambdaEditor = observer((props: LambdaEditorBaseProps) => {
   const debouncedTransformStringToLambda = useMemo(
     () =>
       disabled
-        ? undefined
+        ? null
         : debounce(
             () => lambdaEditorState.convertLambdaGrammarStringToObject(),
             1000,

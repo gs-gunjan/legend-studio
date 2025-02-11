@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../package.json';
+import packageJson from '../../../package.json' with { type: 'json' };
 import { PureGraphManagerPlugin } from '../PureGraphManagerPlugin.js';
 import { CORE_PURE_PATH } from '../../graph/MetaModelConst.js';
 
@@ -26,6 +26,11 @@ export class Core_PureGraphManagerPlugin extends PureGraphManagerPlugin {
   }
 
   override getExtraExposedSystemElementPath(): string[] {
-    return [CORE_PURE_PATH.PROFILE_DOC, CORE_PURE_PATH.PROFILE_TEMPORAL];
+    return [
+      CORE_PURE_PATH.PROFILE_DOC,
+      CORE_PURE_PATH.PROFILE_TEMPORAL,
+      CORE_PURE_PATH.MAPPING,
+      CORE_PURE_PATH.RUNTIME,
+    ];
   }
 }

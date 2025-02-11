@@ -28,6 +28,25 @@ import {
   FETCH_STRUCTURE_IMPLEMENTATION,
   type QueryBuilderFetchStructureImplementationState,
 } from './QueryBuilderFetchStructureImplementationState.js';
+import { QueryBuilderTelemetryHelper } from '../../__lib__/QueryBuilderTelemetryHelper.js';
+
+export const onChangeFetchStructureImplementation =
+  (
+    implementationType: FETCH_STRUCTURE_IMPLEMENTATION,
+    fetchStructureState: QueryBuilderFetchStructureState,
+  ): (() => void) =>
+  (): void => {
+    if (fetchStructureState.implementation.type !== implementationType) {
+      QueryBuilderTelemetryHelper.logEvent_ToggleFetchStructure(
+        fetchStructureState.queryBuilderState.applicationStore.telemetryService,
+      );
+      fetchStructureState.implementation.checkBeforeChangingImplementation(
+        () => {
+          fetchStructureState.changeImplementation(implementationType);
+        },
+      );
+    }
+  };
 
 export class QueryBuilderFetchStructureState {
   readonly queryBuilderState: QueryBuilderState;
@@ -37,6 +56,7 @@ export class QueryBuilderFetchStructureState {
     makeObservable(this, {
       implementation: observable,
       changeImplementation: action,
+      initializeWithQuery: action,
     });
 
     this.queryBuilderState = queryBuilderState;
@@ -75,6 +95,10 @@ export class QueryBuilderFetchStructureState {
         );
     }
     this.implementation.initialize();
+  }
+
+  initializeWithQuery(): void {
+    this.implementation.initializeWithQuery();
   }
 
   fetchProperty(node: QueryBuilderExplorerTreeNodeData): void {

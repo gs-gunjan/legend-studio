@@ -25,27 +25,52 @@ export const TEST_DATA__roundtrip_case1 = [
         {
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'zookeeper',
-          type: 'org::dxl::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'org::dxl::Person',
+            },
+          },
         },
         {
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'owner',
-          type: 'org::dxl::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'org::dxl::Person',
+            },
+          },
         },
         {
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'admin',
-          type: 'org::dxl::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'org::dxl::Person',
+            },
+          },
         },
         {
           multiplicity: { lowerBound: 0 },
           name: 'animals',
-          type: 'org::dxl::Animal',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'org::dxl::Animal',
+            },
+          },
         },
       ],
     },
@@ -61,17 +86,32 @@ export const TEST_DATA__roundtrip_case1 = [
         {
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'effectiveDateFrom',
-          type: 'DateTime',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'DateTime',
+            },
+          },
         },
         {
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'effectiveDateThru',
-          type: 'DateTime',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'DateTime',
+            },
+          },
         },
       ],
     },
@@ -87,18 +127,22 @@ export const TEST_DATA__roundtrip_case1 = [
         {
           multiplicity: { lowerBound: 1, upperBound: 1 },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
     path: 'org::dxl::Animal',
   },
   {
-    classifierPath: 'meta::external::shared::format::binding::Binding',
+    classifierPath: 'meta::external::format::shared::binding::Binding',
     content: {
       _type: 'binding',
       contentType: 'application/json',
-      includedStores: [],
       modelUnit: {
         packageableElementExcludes: [],
         packageableElementIncludes: ['org::dxl::Person'],
@@ -114,7 +158,6 @@ export const TEST_DATA__roundtrip_case1 = [
     content: {
       _type: 'relational',
       filters: [],
-      includedStores: [],
       joins: [],
       name: 'ZooDb',
       package: 'org::dxl',
@@ -155,7 +198,12 @@ export const TEST_DATA__roundtrip_case1 = [
           parameters: [
             {
               _type: 'var',
-              class: 'org::dxl::Zoo',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'org::dxl::Zoo',
+                },
+              },
               multiplicity: { lowerBound: 1, upperBound: 1 },
               name: 'src',
             },
@@ -164,6 +212,7 @@ export const TEST_DATA__roundtrip_case1 = [
         mapping: 'org::dxl::Mapping',
         runtime: {
           _type: 'engineRuntime',
+          connectionStores: [],
           connections: [],
           mappings: [{ path: 'org::dxl::Mapping', type: 'MAPPING' }],
         },
@@ -233,7 +282,13 @@ export const TEST_DATA__roundtrip_case1 = [
             },
           },
         },
-        sink: { _type: 'objectStorageSink', binding: 'org::dxl::ZooBinding' },
+        sink: {
+          _type: 'objectStorageSink',
+          binding: {
+            path: 'org::dxl::ZooBinding',
+            type: 'BINDING',
+          },
+        },
         targetShape: {
           _type: 'multiFlatTarget',
           modelClass: 'org::dxl::Zoo',
@@ -266,7 +321,10 @@ export const TEST_DATA__roundtrip_case1 = [
           transactionScope: 'ALL_TARGETS',
         },
       },
-      service: 'org::dxl::ZooService',
+      service: {
+        path: 'org::dxl::ZooService',
+        type: 'SERVICE',
+      },
       trigger: { _type: 'manualTrigger' },
     },
     path: 'org::dxl::ZooPersistence',
@@ -277,7 +335,10 @@ export const TEST_DATA__roundtrip_case1 = [
       _type: 'persistenceContext',
       name: 'ZooPersistenceContext',
       package: 'org::dxl',
-      persistence: 'org::dxl::ZooPersistence',
+      persistence: {
+        path: 'org::dxl::ZooPersistence',
+        type: 'PERSISTENCE',
+      },
       platform: { _type: 'default' },
       serviceParameters: [
         {
@@ -340,7 +401,12 @@ export const TEST_DATA__roundtrip_case2 = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -359,7 +425,12 @@ export const TEST_DATA__roundtrip_case2 = [
             upperBound: 1,
           },
           name: 'deleted',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -367,7 +438,12 @@ export const TEST_DATA__roundtrip_case2 = [
             upperBound: 1,
           },
           name: 'dateTimeIn',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -378,7 +454,6 @@ export const TEST_DATA__roundtrip_case2 = [
     content: {
       _type: 'relational',
       filters: [],
-      includedStores: [],
       joins: [],
       name: 'TestDatabase',
       package: 'org::legend',
@@ -473,7 +548,12 @@ export const TEST_DATA__roundtrip_case2 = [
           parameters: [
             {
               _type: 'var',
-              class: 'org::dxl::Zoo',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'org::dxl::Zoo',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -485,6 +565,7 @@ export const TEST_DATA__roundtrip_case2 = [
         mapping: 'org::dxl::Mapping',
         runtime: {
           _type: 'engineRuntime',
+          connectionStores: [],
           connections: [],
           mappings: [
             {
@@ -525,7 +606,10 @@ export const TEST_DATA__roundtrip_case2 = [
         },
         sink: {
           _type: 'relationalSink',
-          database: 'org::legend::TestDatabase',
+          database: {
+            path: 'org::legend::TestDatabase',
+            type: 'STORE',
+          },
         },
         targetShape: {
           _type: 'flatTarget',
@@ -537,7 +621,10 @@ export const TEST_DATA__roundtrip_case2 = [
           targetName: 'personTable',
         },
       },
-      service: 'org::dxl::ZooService',
+      service: {
+        path: 'org::dxl::ZooService',
+        type: 'SERVICE',
+      },
       trigger: {
         _type: 'manualTrigger',
       },
@@ -615,7 +702,12 @@ export const TEST_DATA__cloud__roundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -623,7 +715,12 @@ export const TEST_DATA__cloud__roundtrip = [
             upperBound: 1,
           },
           name: 'zookeeper',
-          type: 'org::dxl::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'org::dxl::Person',
+            },
+          },
         },
         {
           multiplicity: {
@@ -631,7 +728,12 @@ export const TEST_DATA__cloud__roundtrip = [
             upperBound: 1,
           },
           name: 'owner',
-          type: 'org::dxl::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'org::dxl::Person',
+            },
+          },
         },
         {
           multiplicity: {
@@ -639,14 +741,24 @@ export const TEST_DATA__cloud__roundtrip = [
             upperBound: 1,
           },
           name: 'admin',
-          type: 'org::dxl::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'org::dxl::Person',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'animals',
-          type: 'org::dxl::Animal',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'org::dxl::Animal',
+            },
+          },
         },
       ],
     },
@@ -665,7 +777,12 @@ export const TEST_DATA__cloud__roundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -673,7 +790,12 @@ export const TEST_DATA__cloud__roundtrip = [
             upperBound: 1,
           },
           name: 'effectiveDateFrom',
-          type: 'DateTime',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'DateTime',
+            },
+          },
         },
         {
           multiplicity: {
@@ -681,7 +803,12 @@ export const TEST_DATA__cloud__roundtrip = [
             upperBound: 1,
           },
           name: 'effectiveDateThru',
-          type: 'DateTime',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'DateTime',
+            },
+          },
         },
       ],
     },
@@ -700,18 +827,22 @@ export const TEST_DATA__cloud__roundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
   },
   {
     path: 'org::dxl::ZooBinding',
-    classifierPath: 'meta::external::shared::format::binding::Binding',
+    classifierPath: 'meta::external::format::shared::binding::Binding',
     content: {
       _type: 'binding',
       contentType: 'application/json',
-      includedStores: [],
       modelUnit: {
         packageableElementExcludes: [],
         packageableElementIncludes: ['org::dxl::Person'],
@@ -727,7 +858,6 @@ export const TEST_DATA__cloud__roundtrip = [
     content: {
       _type: 'relational',
       filters: [],
-      includedStores: [],
       joins: [],
       name: 'ZooDb',
       package: 'org::dxl',
@@ -773,7 +903,12 @@ export const TEST_DATA__cloud__roundtrip = [
           parameters: [
             {
               _type: 'var',
-              class: 'org::dxl::Zoo',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'org::dxl::Zoo',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -785,6 +920,7 @@ export const TEST_DATA__cloud__roundtrip = [
         mapping: 'org::dxl::Mapping',
         runtime: {
           _type: 'engineRuntime',
+          connectionStores: [],
           connections: [],
           mappings: [
             {
@@ -875,7 +1011,10 @@ export const TEST_DATA__cloud__roundtrip = [
         },
         sink: {
           _type: 'objectStorageSink',
-          binding: 'org::dxl::ZooBinding',
+          binding: {
+            path: 'org::dxl::ZooBinding',
+            type: 'BINDING',
+          },
         },
         targetShape: {
           _type: 'multiFlatTarget',
@@ -911,7 +1050,10 @@ export const TEST_DATA__cloud__roundtrip = [
           transactionScope: 'ALL_TARGETS',
         },
       },
-      service: 'org::dxl::ZooService',
+      service: {
+        path: 'org::dxl::ZooService',
+        type: 'SERVICE',
+      },
       trigger: {
         _type: 'manualTrigger',
       },
@@ -924,7 +1066,10 @@ export const TEST_DATA__cloud__roundtrip = [
       _type: 'persistenceContext',
       name: 'ZooPersistenceContext',
       package: 'org::dxl',
-      persistence: 'org::dxl::ZooPersistence',
+      persistence: {
+        path: 'org::dxl::ZooPersistence',
+        type: 'PERSISTENCE',
+      },
       platform: {
         _type: 'awsGlue',
         dataProcessingUnits: 10,

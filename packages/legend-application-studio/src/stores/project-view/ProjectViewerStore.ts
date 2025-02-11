@@ -132,8 +132,8 @@ export class ProjectViewerStore {
           versionId
             ? generateViewVersionRoute(projectId, versionId)
             : revisionId
-            ? generateViewRevisionRoute(projectId, revisionId)
-            : generateViewProjectRoute(projectId),
+              ? generateViewRevisionRoute(projectId, revisionId)
+              : generateViewProjectRoute(projectId),
         );
       } else if (gav) {
         const {
@@ -274,6 +274,7 @@ export class ProjectViewerStore {
     yield Promise.all([
       this.editorStore.sdlcState.fetchProjectVersions(),
       this.editorStore.sdlcState.fetchPublishedProjectVersions(),
+      this.editorStore.sdlcState.fetchAuthorizedActions(),
     ]);
 
     // fetch entities
@@ -477,6 +478,10 @@ export class ProjectViewerStore {
         // TODO: we should split this into 2 notifications when we support multiple notifications
         this.editorStore.applicationStore.notificationService.notifyError(
           `Can't build graph. Redirected to text mode for debugging. Error: ${error.message}`,
+        );
+        this.editorStore.applicationStore.logService.error(
+          LogEvent.create(GRAPH_MANAGER_EVENT.GRAPH_BUILDER_FAILURE),
+          error,
         );
         yield flowResult(
           this.editorStore.switchModes(GRAPH_EDITOR_MODE.GRAMMAR_TEXT, {

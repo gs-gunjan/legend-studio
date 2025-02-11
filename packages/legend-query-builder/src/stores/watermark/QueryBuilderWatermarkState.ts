@@ -32,43 +32,25 @@ import { isValueExpressionReferencedInValue } from '../QueryBuilderValueSpecific
 export class QueryBuilderWatermarkState implements Hashable {
   readonly queryBuilderState: QueryBuilderState;
   value?: ValueSpecification | undefined;
-  isEditingWatermark = false;
 
   constructor(queryBuilderState: QueryBuilderState) {
     makeObservable(this, {
       value: observable,
-      isEditingWatermark: observable,
       setValue: action,
-      resetValue: action,
-      enableWatermark: action,
-      setIsEditingWatermark: action,
       hashCode: computed,
     });
 
     this.queryBuilderState = queryBuilderState;
   }
 
-  resetValue(): void {
+  getDefaultValue(): ValueSpecification {
     const watermarkConstant = new PrimitiveInstanceValue(
       GenericTypeExplicitReference.create(
         new GenericType(PrimitiveType.STRING),
       ),
     );
 
-    watermarkConstant.values = ['watermarkValue'];
-    this.setValue(watermarkConstant);
-  }
-
-  setIsEditingWatermark(val: boolean): void {
-    this.isEditingWatermark = val;
-  }
-
-  enableWatermark(): void {
-    if (this.value) {
-      this.setValue(undefined);
-    } else {
-      this.resetValue();
-    }
+    return watermarkConstant;
   }
 
   setValue(val: ValueSpecification | undefined): void {

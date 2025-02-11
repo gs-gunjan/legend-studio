@@ -81,7 +81,7 @@ export const FileSearchCommand = observer(() => {
         <div className="modal__title">Open file</div>
         <div className="command-modal__content">
           <CustomSelectorInput
-            ref={selectorRef}
+            inputRef={selectorRef}
             className="command-modal__content__input"
             options={ideStore.fileSearchCommandResults
               .map((option) => ({ label: option, value: option }))
@@ -90,7 +90,10 @@ export const FileSearchCommand = observer(() => {
             onInputChange={onSearchTextChange}
             placeholder="Enter file name or path"
             escapeClearsValue={true}
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
             isLoading={loadingOptionsState.isInProgress}
           />
           <button

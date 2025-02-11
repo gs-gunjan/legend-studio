@@ -15,10 +15,10 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import type { MenuProps as MuiMenuProps } from '@mui/material';
-import { BaseMenu } from './BaseMenu.js';
+import type { MenuItemProps, MenuProps as MuiMenuProps } from '@mui/material';
+import { BaseMenu, BaseMenuItem, Menu } from './BaseMenu.js';
 
-export const DropdownMenu: React.FC<{
+export const ControlledDropdownMenu: React.FC<{
   children: React.ReactNode;
   open?: boolean | undefined;
   menuProps?: Partial<MuiMenuProps> | undefined;
@@ -28,6 +28,7 @@ export const DropdownMenu: React.FC<{
   title?: string | undefined;
   onOpen?: (() => void) | undefined;
   onClose?: (() => void) | undefined;
+  useCapture?: boolean | undefined;
 }> = (props) => {
   const {
     open,
@@ -39,6 +40,7 @@ export const DropdownMenu: React.FC<{
     disabled,
     onClose,
     onOpen,
+    useCapture,
   } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [anchorEl, setAnchorEl] = useState<Element | null>(null);
@@ -48,12 +50,7 @@ export const DropdownMenu: React.FC<{
     if (disabled) {
       return;
     }
-    if (anchorEl) {
-      // if the trigger is clicked and the menu is already opened, close it
-      onClose?.();
-      setAnchorEl(null);
-    } else if (triggerRef.current) {
-      // if the trigger is clicked, open the dropdown menu
+    if (triggerRef.current) {
       onOpen?.();
       setAnchorEl(triggerRef.current);
     }
@@ -73,30 +70,134 @@ export const DropdownMenu: React.FC<{
   }, [anchorEl, open]);
 
   return (
-    <button
-      ref={triggerRef}
-      className={className}
-      disabled={disabled}
-      onClick={onTriggerClick}
-      tabIndex={-1}
-      title={title}
-    >
-      {children}
-      <BaseMenu
+    <>
+      <button
+        ref={triggerRef}
+        className={className}
+        disabled={disabled}
+        {...(useCapture
+          ? {
+              onClickCapture: onTriggerClick,
+              onClick: (event) => {
+                event.stopPropagation();
+              },
+            }
+          : { onClick: onTriggerClick })}
+        title={title}
+      >
+        {children}
+      </button>
+      <Menu
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         anchorEl={anchorEl}
         open={(open === undefined || Boolean(open)) && Boolean(anchorEl)}
-        BackdropProps={{
-          invisible: true,
+        slotProps={{
+          root: {
+            slotProps: {
+              backdrop: {
+                invisible: true,
+              },
+            },
+          },
         }}
         elevation={0}
         marginThreshold={0}
         disableRestoreFocus={true}
+        hideBackdrop={true}
+        transitionDuration={0}
+        onClick={() => {
+          onClose?.();
+          setAnchorEl(null);
+        }}
         {...menuProps}
       >
         {content}
-      </BaseMenu>
-    </button>
+      </Menu>
+    </>
   );
 };
+
+export function useDropdownMenu() {
+  const [anchorEl, setAnchorEl] = useState<Element | null>(null);
+  return [
+    (event: React.MouseEvent) => setAnchorEl(event.currentTarget),
+    () => setAnchorEl(null),
+    {
+      anchorEl,
+      onClose: () => setAnchorEl(null),
+    },
+    Boolean(anchorEl),
+  ] as const;
+}
+
+export type DropdownMenuProps = {
+  children: React.ReactNode;
+  anchorEl: Element | null;
+  onClose: () => void;
+  /**
+   * This method will be called after the menu has been closed
+   * NOTE: Usually used to imperatively set the focus to some other input box
+   * It is important to use `useCallback` to this call to avoid unnecessary calls
+   * on the useEffect, which might cause undesired focus behavior
+   */
+  onClosed?: (() => void) | undefined;
+  className?: string | undefined;
+  menuProps?: Partial<MuiMenuProps> | undefined;
+};
+
+export function DropdownMenu(props: DropdownMenuProps) {
+  const { menuProps, children, onClosed, onClose, anchorEl } = props;
+
+  // Make sure the first time the menu is opened, we don't trigger onLeave
+  const [hasBeenOpened, setHasBeenOpened] = useState(false);
+  useEffect(() => {
+    if (hasBeenOpened && !anchorEl) {
+      onClosed?.();
+    }
+  }, [anchorEl, hasBeenOpened, onClosed]);
+
+  if (!anchorEl) {
+    return null;
+  }
+  return (
+    <BaseMenu
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      anchorEl={anchorEl}
+      open={Boolean(anchorEl)}
+      slotProps={{
+        root: {
+          slotProps: {
+            backdrop: {
+              invisible: true,
+            },
+          },
+        },
+      }}
+      elevation={1}
+      marginThreshold={0}
+      transitionDuration={0}
+      TransitionProps={{
+        onEnter: () => setHasBeenOpened(true),
+      }}
+      onClose={onClose}
+      {...menuProps}
+    >
+      {children}
+    </BaseMenu>
+  );
+}
+
+export type DropdownMenuItemProps = MenuItemProps;
+
+export function DropdownMenuItem(props: DropdownMenuItemProps) {
+  return (
+    <BaseMenuItem
+      {...props}
+      style={{
+        cursor: 'default',
+      }}
+    />
+  );
+}

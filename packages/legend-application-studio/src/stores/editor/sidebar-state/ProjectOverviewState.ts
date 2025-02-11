@@ -22,9 +22,12 @@ import {
   type PlainObject,
   assertErrorThrown,
   LogEvent,
-  getNullableFirstEntry,
+  ActionState,
 } from '@finos/legend-shared';
-import { generateSetupRoute } from '../../../__lib__/LegendStudioNavigation.js';
+import {
+  generateEditorRoute,
+  generateSetupRoute,
+} from '../../../__lib__/LegendStudioNavigation.js';
 import {
   type NewVersionType,
   CreateVersionCommand,
@@ -35,6 +38,8 @@ import {
   Workspace,
   Review,
   areWorkspacesEquivalent,
+  Patch,
+  type WorkspaceType,
 } from '@finos/legend-server-sdlc';
 import { LEGEND_STUDIO_APP_EVENT } from '../../../__lib__/LegendStudioEvent.js';
 
@@ -43,6 +48,7 @@ export enum PROJECT_OVERVIEW_ACTIVITY_MODE {
   OVERVIEW = 'OVERVIEW',
   VERSIONS = 'VERSIONS',
   WORKSPACES = 'WORKSPACES',
+  PATCH = 'PATCH',
 }
 
 export class ProjectOverviewState {
@@ -55,15 +61,20 @@ export class ProjectOverviewState {
   currentProjectRevision?: Revision | undefined;
   projectWorkspaces: Workspace[] = [];
 
+  patches: Patch[] = [];
+
   isCreatingVersion = false;
   isFetchingProjectWorkspaces = false;
   isDeletingWorkspace = false;
-  isUpdatingProject = false;
+  updatingProjectState = ActionState.create();
   isFetchingLatestVersion = false;
   isFetchingCurrentProjectRevision = false;
 
+  createPatchState = ActionState.create();
+
   constructor(editorStore: EditorStore, sdlcState: EditorSDLCState) {
     makeObservable(this, {
+      patches: observable,
       activityMode: observable,
       releaseVersion: observable,
       committedReviewsBetweenMostRecentVersionAndProjectLatest: observable,
@@ -73,7 +84,7 @@ export class ProjectOverviewState {
       isCreatingVersion: observable,
       isFetchingProjectWorkspaces: observable,
       isDeletingWorkspace: observable,
-      isUpdatingProject: observable,
+      updatingProjectState: observable,
       isFetchingLatestVersion: observable,
       isFetchingCurrentProjectRevision: observable,
       setActivityMode: action,
@@ -82,6 +93,9 @@ export class ProjectOverviewState {
       updateProject: flow,
       fetchLatestProjectVersion: flow,
       createVersion: flow,
+      createPatchVersion: flow,
+      createPatch: flow,
+      fetchPatches: flow,
     });
 
     this.editorStore = editorStore;
@@ -96,11 +110,30 @@ export class ProjectOverviewState {
   *fetchProjectWorkspaces(): GeneratorFn<void> {
     try {
       this.isFetchingProjectWorkspaces = true;
+      this.patches = (
+        (yield this.editorStore.sdlcServerClient.getPatches(
+          this.sdlcState.activeProject.projectId,
+        )) as PlainObject<Patch>[]
+      ).map((v) => Patch.serialization.fromJson(v));
       this.projectWorkspaces = (
         (yield this.editorStore.sdlcServerClient.getWorkspaces(
           this.sdlcState.activeProject.projectId,
         )) as PlainObject<Workspace>[]
       ).map((v) => Workspace.serialization.fromJson(v));
+      for (const patch of this.patches) {
+        this.projectWorkspaces = this.projectWorkspaces.concat(
+          (
+            (yield this.editorStore.sdlcServerClient.getWorkspaces(
+              this.sdlcState.activeProject.projectId,
+              patch.patchReleaseVersionId.id,
+            )) as PlainObject<Workspace>[]
+          ).map((v) => {
+            const w = Workspace.serialization.fromJson(v);
+            w.source = patch.patchReleaseVersionId.id;
+            return w;
+          }),
+        );
+      }
     } catch (error) {
       assertErrorThrown(error);
       this.editorStore.applicationStore.logService.error(
@@ -135,6 +168,7 @@ export class ProjectOverviewState {
         this.editorStore.applicationStore.navigationService.navigator.goToLocation(
           generateSetupRoute(
             this.editorStore.sdlcState.activeProject.projectId,
+            undefined,
           ),
           {
             ignoreBlocking: true,
@@ -158,7 +192,7 @@ export class ProjectOverviewState {
     tags: string[],
   ): GeneratorFn<void> {
     try {
-      this.isUpdatingProject = true;
+      this.updatingProjectState.inProgress();
       yield this.editorStore.sdlcServerClient.updateProject(
         this.sdlcState.activeProject.projectId,
         {
@@ -179,7 +213,24 @@ export class ProjectOverviewState {
       assertErrorThrown(error);
       this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
-      this.isUpdatingProject = false;
+      this.updatingProjectState.complete();
+    }
+  }
+
+  *fetchPatches(): GeneratorFn<void> {
+    try {
+      this.patches = (
+        (yield this.editorStore.sdlcServerClient.getPatches(
+          this.sdlcState.activeProject.projectId,
+        )) as PlainObject<Patch>[]
+      ).map((v: PlainObject<Patch>) => Patch.serialization.fromJson(v));
+    } catch (error) {
+      assertErrorThrown(error);
+      this.editorStore.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
+        error,
+      );
+      this.editorStore.applicationStore.notificationService.notifyError(error);
     }
   }
 
@@ -216,16 +267,17 @@ export class ProjectOverviewState {
         // 1. the revision is somehow directly added to the branch by the user (in the case of `git`, user directly pushed to unprotected default branch)
         // 2. the revision is the merged/comitted review revision (this usually happens for projects where fast forwarding merging is not default)
         // in those case, we will get the time from the revision
-        const latestProjectVersionRevisionReviewObj = getNullableFirstEntry(
+        const latestProjectVersionRevisionReviewObj = (
           (yield this.editorStore.sdlcServerClient.getReviews(
             this.sdlcState.activeProject.projectId,
-            ReviewState.COMMITTED,
-            [latestProjectVersionRevision.id],
             undefined,
-            undefined,
-            1,
-          )) as PlainObject<Review>[],
-        );
+            {
+              state: ReviewState.COMMITTED,
+              revisionIds: [latestProjectVersionRevision.id],
+              limit: 1,
+            },
+          )) as PlainObject<Review>[]
+        )[0];
         const latestProjectVersionRevisionReview =
           latestProjectVersionRevisionReviewObj
             ? Review.serialization.fromJson(
@@ -235,12 +287,13 @@ export class ProjectOverviewState {
         this.committedReviewsBetweenMostRecentVersionAndProjectLatest = (
           (yield this.editorStore.sdlcServerClient.getReviews(
             this.sdlcState.activeProject.projectId,
-            ReviewState.COMMITTED,
             undefined,
-            latestProjectVersionRevisionReview?.committedAt ??
-              latestProjectVersionRevision.committedAt,
-            undefined,
-            undefined,
+            {
+              state: ReviewState.COMMITTED,
+              since:
+                latestProjectVersionRevisionReview?.committedAt ??
+                latestProjectVersionRevision.committedAt,
+            },
           )) as PlainObject<Review>[]
         )
           .map((v) => Review.serialization.fromJson(v))
@@ -253,11 +306,10 @@ export class ProjectOverviewState {
         this.committedReviewsBetweenMostRecentVersionAndProjectLatest = (
           (yield this.editorStore.sdlcServerClient.getReviews(
             this.sdlcState.activeProject.projectId,
-            ReviewState.COMMITTED,
             undefined,
-            undefined,
-            undefined,
-            undefined,
+            {
+              state: ReviewState.COMMITTED,
+            },
           )) as PlainObject<Review>[]
         ).map((v) => Review.serialization.fromJson(v));
       }
@@ -299,6 +351,85 @@ export class ProjectOverviewState {
       this.editorStore.applicationStore.notificationService.notifyError(error);
     } finally {
       this.isCreatingVersion = false;
+    }
+  }
+
+  *createPatchVersion(id: string): GeneratorFn<void> {
+    this.isCreatingVersion = true;
+    try {
+      const version = Version.serialization.fromJson(
+        (yield this.editorStore.sdlcServerClient.releasePatch(
+          this.sdlcState.activeProject.projectId,
+          id,
+        )) as PlainObject<Version>,
+      );
+      this.editorStore.applicationStore.notificationService.notifySuccess(
+        `${version.id.id} is released successfully`,
+      );
+    } catch (error) {
+      assertErrorThrown(error);
+      this.editorStore.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
+        error,
+      );
+      this.editorStore.applicationStore.notificationService.notifyError(error);
+    } finally {
+      this.isCreatingVersion = false;
+    }
+  }
+
+  *createPatch(
+    sourceVersion: string,
+    workspaceName: string,
+    workspaceType: WorkspaceType,
+  ): GeneratorFn<void> {
+    if (!workspaceName) {
+      this.editorStore.applicationStore.notificationService.notify(
+        `Please provide workspace name`,
+      );
+    }
+    this.createPatchState.inProgress();
+    this.createPatchState.setMessage(`Creating patch...`);
+    try {
+      const newPatch = Patch.serialization.fromJson(
+        (yield this.editorStore.sdlcServerClient.createPatch(
+          this.sdlcState.activeProject.projectId,
+          sourceVersion,
+        )) as PlainObject<Patch>,
+      );
+      this.editorStore.applicationStore.notificationService.notifySuccess(
+        `Patch '${newPatch.patchReleaseVersionId.id}' is succesfully created`,
+      );
+      this.createPatchState.setMessage(`Creating workspace...`);
+      const newWorkspace = Workspace.serialization.fromJson(
+        (yield this.editorStore.sdlcServerClient.createWorkspace(
+          this.sdlcState.activeProject.projectId,
+          newPatch.patchReleaseVersionId.id,
+          workspaceName,
+          workspaceType,
+        )) as PlainObject<Workspace>,
+      );
+      newWorkspace.source = newPatch.patchReleaseVersionId.id;
+      this.editorStore.applicationStore.notificationService.notifySuccess(
+        `Workspace '${newWorkspace.workspaceId}' is succesfully created`,
+      );
+      this.editorStore.applicationStore.navigationService.navigator.goToLocation(
+        generateEditorRoute(
+          this.sdlcState.activeProject.projectId,
+          newPatch.patchReleaseVersionId.id,
+          workspaceName,
+          workspaceType,
+        ),
+      );
+    } catch (error) {
+      assertErrorThrown(error);
+      this.editorStore.applicationStore.logService.error(
+        LogEvent.create(LEGEND_STUDIO_APP_EVENT.SDLC_MANAGER_FAILURE),
+        error,
+      );
+      this.editorStore.applicationStore.notificationService.notifyError(error);
+    } finally {
+      this.createPatchState.reset();
     }
   }
 }

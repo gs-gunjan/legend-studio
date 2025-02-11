@@ -1,5 +1,121 @@
 # @finos/legend-dev-utils
 
+## 2.2.0
+
+## 2.1.37
+
+## 2.1.36
+
+## 2.1.35
+
+## 2.1.34
+
+## 2.1.33
+
+## 2.1.32
+
+## 2.1.31
+
+## 2.1.30
+
+## 2.1.29
+
+## 2.1.28
+
+## 2.1.27
+
+## 2.1.26
+
+## 2.1.25
+
+## 2.1.24
+
+## 2.1.23
+
+## 2.1.22
+
+## 2.1.21
+
+## 2.1.20
+
+## 2.1.19
+
+## 2.1.18
+
+## 2.1.17
+
+## 2.1.16
+
+## 2.1.15
+
+## 2.1.14
+
+## 2.1.13
+
+## 2.1.12
+
+## 2.1.11
+
+## 2.1.10
+
+## 2.1.9
+
+## 2.1.8
+
+## 2.1.7
+
+## 2.1.6
+
+## 2.1.5
+
+## 2.1.4
+
+### Patch Changes
+
+- [#3130](https://github.com/finos/legend-studio/pull/3130) [`97838e392`](https://github.com/finos/legend-studio/commit/97838e392d1f37ca958528b7c3269c28f6d5dcfb) ([@gayathrir11](https://github.com/gayathrir11)) - Support relative path resolution for `baseUrl` during production bundling
+
+## 2.1.3
+
+## 2.1.2
+
+## 2.1.1
+
+## 2.1.0
+
+### Minor Changes
+
+- [#2923](https://github.com/finos/legend-studio/pull/2923) [`f557af7b1`](https://github.com/finos/legend-studio/commit/f557af7b1ce0bfe879703c0ada0bd038bbec86c5) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add ability to register [Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API) in `LegendApplication` and configure it during start up of application.
+
+### Patch Changes
+
+- [#2918](https://github.com/finos/legend-studio/pull/2918) [`2c3a9b624`](https://github.com/finos/legend-studio/commit/2c3a9b624ff700190792f92996374a44c9489cbe) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Update webpack config to reduce bundle size
+
+## 2.0.82
+
+## 2.0.81
+
+## 2.0.80
+
+## 2.0.79
+
+## 2.0.78
+
+## 2.0.77
+
+## 2.0.76
+
+## 2.0.75
+
+## 2.0.74
+
+## 2.0.73
+
+## 2.0.72
+
+## 2.0.71
+
+## 2.0.70
+
 ## 2.0.69
 
 ## 2.0.68

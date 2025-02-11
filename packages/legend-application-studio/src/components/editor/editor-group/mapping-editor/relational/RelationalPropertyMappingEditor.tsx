@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   EmbeddedRelationalInstanceSetImplementationState,
@@ -56,17 +56,19 @@ import { InlineLambdaEditor } from '@finos/legend-query-builder';
 const SimplePropertyMappingEditor = observer(
   (props: {
     propertyMappingState: RelationalPropertyMappingState;
-    drop?: ConnectDropTarget;
+    dropConnector?: ConnectDropTarget;
     transformProps: {
       disableTransform: boolean;
       forceBackdrop: boolean;
     };
     isReadOnly: boolean;
   }) => {
-    const { propertyMappingState, drop, transformProps } = props;
+    const { propertyMappingState, dropConnector, transformProps } = props;
+    const ref = useRef<HTMLDivElement>(null);
+    dropConnector?.(ref);
     return (
       <div className="property-mapping-editor__entry__container">
-        <div ref={drop} className="property-mapping-editor__entry">
+        <div ref={ref} className="property-mapping-editor__entry">
           <InlineLambdaEditor
             disabled={transformProps.disableTransform}
             lambdaEditorState={propertyMappingState}
@@ -81,14 +83,17 @@ const SimplePropertyMappingEditor = observer(
 const EnumerationPropertyMappingEditor = observer(
   (props: {
     propertyMappingState: RelationalPropertyMappingState;
-    drop?: ConnectDropTarget;
+    dropConnector?: ConnectDropTarget;
     transformProps: {
       disableTransform: boolean;
       forceBackdrop: boolean;
     };
     isReadOnly: boolean;
   }) => {
-    const { propertyMappingState, drop, transformProps, isReadOnly } = props;
+    const { propertyMappingState, dropConnector, transformProps, isReadOnly } =
+      props;
+    const ref = useRef<HTMLDivElement>(null);
+    dropConnector?.(ref);
     const editorStore = useEditorStore();
     const mappingEditorState =
       editorStore.tabManagerState.getCurrentEditorState(MappingEditorState);
@@ -106,7 +111,6 @@ const EnumerationPropertyMappingEditor = observer(
       mappingEditorState.mapping,
       enumeration,
     ).map((em) => ({ value: em, label: em.id.value }));
-    const transformerLabel = propertyMapping.transformer?.valueForSerialization;
     const handleSelectionChange = (
       val: { label: string; value: EnumerationMapping } | null,
     ): void =>
@@ -150,13 +154,21 @@ const EnumerationPropertyMappingEditor = observer(
 
     return (
       <div className="property-mapping-editor__entry__container">
-        <div ref={drop} className="property-mapping-editor__entry">
+        <div ref={ref} className="property-mapping-editor__entry">
           <div className="property-mapping-editor__entry__enumeration-mapping-selector">
             <CustomSelectorInput
               disabled={options.length <= 1 || isReadOnly}
               options={options}
               onChange={handleSelectionChange}
-              value={{ value: transformerLabel, label: transformerLabel }}
+              value={
+                propertyMapping.transformer
+                  ? {
+                      value: propertyMapping.transformer.value,
+                      label:
+                        propertyMapping.transformer.valueForSerialization ?? '',
+                    }
+                  : null
+              }
               placeholder="Choose an existing enumeration mapping"
             />
             <button
@@ -185,14 +197,16 @@ const EnumerationPropertyMappingEditor = observer(
 const ClassPropertyMappingEditor = observer(
   (props: {
     propertyMappingState: RelationalPropertyMappingState;
-    drop?: ConnectDropTarget;
+    dropConnector?: ConnectDropTarget;
     transformProps: {
       disableTransform: boolean;
       forceBackdrop: boolean;
     };
     isReadOnly: boolean;
   }) => {
-    const { propertyMappingState, drop, transformProps } = props;
+    const { propertyMappingState, dropConnector, transformProps } = props;
+    const ref = useRef<HTMLDivElement>(null);
+    dropConnector?.(ref);
     const editorStore = useEditorStore();
     const mappingEditorState =
       editorStore.tabManagerState.getCurrentEditorState(MappingEditorState);
@@ -230,7 +244,7 @@ const ClassPropertyMappingEditor = observer(
 
     return (
       <div className="property-mapping-editor__entry__container">
-        <div ref={drop} className="property-mapping-editor__entry">
+        <div ref={ref} className="property-mapping-editor__entry">
           <div className="property-mapping-editor__entry__id">
             <div
               className={clsx('property-mapping-editor__entry__id__label', {
@@ -295,7 +309,7 @@ export const RelationalPropertyMappingEditor = observer(
       },
       [disableEditingTransform, relationalPropertyMappingState],
     );
-    const [, drop] = useDrop<TableOrViewTreeNodeDragSource>(
+    const [, dropConnector] = useDrop<TableOrViewTreeNodeDragSource>(
       () => ({
         accept: [TABLE_ELEMENT_DND_TYPE],
         drop: (item) => handleDrop(item),
@@ -319,7 +333,7 @@ export const RelationalPropertyMappingEditor = observer(
         return (
           <SimplePropertyMappingEditor
             propertyMappingState={relationalPropertyMappingState}
-            drop={drop}
+            dropConnector={dropConnector}
             transformProps={transformProps}
             isReadOnly={isReadOnly}
           />
@@ -328,7 +342,7 @@ export const RelationalPropertyMappingEditor = observer(
         return (
           <EnumerationPropertyMappingEditor
             propertyMappingState={relationalPropertyMappingState}
-            drop={drop}
+            dropConnector={dropConnector}
             transformProps={transformProps}
             isReadOnly={isReadOnly}
           />
@@ -348,7 +362,7 @@ export const RelationalPropertyMappingEditor = observer(
         return (
           <ClassPropertyMappingEditor
             propertyMappingState={relationalPropertyMappingState}
-            drop={drop}
+            dropConnector={dropConnector}
             transformProps={transformProps}
             isReadOnly={isReadOnly}
           />

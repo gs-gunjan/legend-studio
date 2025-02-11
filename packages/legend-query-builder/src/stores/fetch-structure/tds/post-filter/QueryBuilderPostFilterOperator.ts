@@ -16,6 +16,7 @@
 
 import type {
   FunctionExpression,
+  LambdaFunction,
   Type,
   ValueSpecification,
 } from '@finos/legend-graph';
@@ -23,8 +24,8 @@ import { type Hashable, uuid } from '@finos/legend-shared';
 import type {
   PostFilterConditionState,
   QueryBuilderPostFilterState,
-  TDS_COLUMN_GETTER,
 } from './QueryBuilderPostFilterState.js';
+import type { TDS_COLUMN_GETTER } from '../../../../graph/QueryBuilderMetaModelConst.js';
 
 export abstract class QueryBuilderPostFilterOperator implements Hashable {
   readonly uuid = uuid();
@@ -48,7 +49,7 @@ export abstract class QueryBuilderPostFilterOperator implements Hashable {
   isCompatibleWithPostFilterColumn(
     postFilterState: PostFilterConditionState,
   ): boolean {
-    const columnType = postFilterState.columnState.getColumnType();
+    const columnType = postFilterState.leftConditionValue.getColumnType();
     if (columnType) {
       return this.isCompatibleWithType(columnType);
     }
@@ -57,6 +58,7 @@ export abstract class QueryBuilderPostFilterOperator implements Hashable {
 
   abstract buildPostFilterConditionExpression(
     postFilterConditionState: PostFilterConditionState,
+    parentExpression: LambdaFunction | undefined,
   ): ValueSpecification | undefined;
 
   abstract buildPostFilterConditionState(

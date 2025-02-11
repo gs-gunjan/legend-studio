@@ -33,6 +33,7 @@ import {
   usingModelSchema,
   customList,
   customEquivalentList,
+  customListWithSchema,
 } from '@finos/legend-shared';
 import { V1_Column } from '../../../model/packageableElements/store/relational/model/V1_Column.js';
 import { V1_Database } from '../../../model/packageableElements/store/relational/model/V1_Database.js';
@@ -95,6 +96,14 @@ import {
   V1_serializeAuthenticationStrategy,
   V1_serializeDatasourceSpecification,
 } from './V1_ConnectionSerializationHelper.js';
+import type { V1_PackageableElementPointer } from '../../../model/packageableElements/V1_PackageableElement.js';
+import {
+  V1_stereotypePtrModelSchema,
+  V1_packageableElementPointerModelSchema,
+  V1_serializePackageableElementPointer,
+} from './V1_CoreSerializationHelper.js';
+import { PackageableElementPointerType } from '../../../../../../../graph/MetaModelConst.js';
+import { V1_TabularFunction } from '../../../model/packageableElements/store/relational/model/V1_TabularFunction.js';
 
 export const V1_DATABASE_ELEMENT_PROTOCOL_TYPE = 'relational';
 
@@ -455,6 +464,11 @@ export function V1_deserializeRelationalOperationElement(
   }
 }
 
+const V1_tabularFunctionModelSchema = createModelSchema(V1_TabularFunction, {
+  name: primitive(),
+  columns: list(usingModelSchema(columnModelSchema)),
+});
+
 export const V1_filterMappingModelSchema = createModelSchema(V1_FilterMapping, {
   filter: usingModelSchema(V1_filterPointerModelSchema),
   joins: list(usingModelSchema(V1_joinPointerModelSchema)),
@@ -486,6 +500,11 @@ const V1_viewModelSchema = createModelSchema(V1_View, {
 const V1_schemaModelSchema = createModelSchema(V1_Schema, {
   name: primitive(),
   tables: list(object(V1_Table)),
+  tabularFunctions: customList(
+    (value) => serialize(V1_tabularFunctionModelSchema, value),
+    (value) => deserialize(V1_tabularFunctionModelSchema, value),
+    { INTERNAL__forceReturnEmptyInTest: true },
+  ),
   views: list(usingModelSchema(V1_viewModelSchema)),
 });
 
@@ -522,6 +541,15 @@ const V1_setupTableSerialization = (
   });
 };
 
+const V1_setupTabularFunctionSerialization = (
+  plugins: PureProtocolProcessorPlugin[],
+): void => {
+  createModelSchema(V1_TabularFunction, {
+    columns: list(usingModelSchema(columnModelSchema)),
+    name: primitive(),
+  });
+};
+
 const V1_setupRelationalDatabaseConnectionModelSchema = (
   plugins: PureProtocolProcessorPlugin[],
 ): void => {
@@ -540,11 +568,15 @@ const V1_setupRelationalDatabaseConnectionModelSchema = (
     ),
     localMode: optional(primitive()),
     store: alias('element', primitive()),
+    queryTimeOutInSeconds: optional(primitive()),
     quoteIdentifiers: optional(primitive()),
     timeZone: optional(primitive()),
     postProcessors: customList(
       (value: V1_PostProcessor) => V1_serializePostProcessor(value, plugins),
       (value) => V1_deserializePostProcessor(value, plugins),
+      {
+        INTERNAL__forceReturnEmptyInTest: true,
+      },
     ),
     postProcessorWithParameter: customEquivalentList({
       INTERNAL__forceReturnEmptyInTest: true,
@@ -557,15 +589,29 @@ export const V1_setupDatabaseSerialization = (
   plugins: PureProtocolProcessorPlugin[],
 ): void => {
   V1_setupTableSerialization(plugins);
+  V1_setupTabularFunctionSerialization(plugins);
   V1_setupRelationalDatabaseConnectionModelSchema(plugins);
 };
 
 export const V1_databaseModelSchema = createModelSchema(V1_Database, {
   _type: usingConstantValueSchema(V1_DATABASE_ELEMENT_PROTOCOL_TYPE),
   filters: list(usingModelSchema(V1_filterModelSchema)),
-  includedStores: list(primitive()),
+  includedStores: customList(
+    (val: V1_PackageableElementPointer) =>
+      serialize(V1_packageableElementPointerModelSchema, val),
+    (val) =>
+      V1_serializePackageableElementPointer(
+        val,
+        PackageableElementPointerType.STORE,
+      ),
+
+    { INTERNAL__forceReturnEmptyInTest: true },
+  ),
   joins: list(usingModelSchema(V1_joinModelSchema)),
   name: primitive(),
   package: primitive(),
   schemas: list(usingModelSchema(V1_schemaModelSchema)),
+  stereotypes: customListWithSchema(V1_stereotypePtrModelSchema, {
+    INTERNAL__forceReturnEmptyInTest: true,
+  }),
 });

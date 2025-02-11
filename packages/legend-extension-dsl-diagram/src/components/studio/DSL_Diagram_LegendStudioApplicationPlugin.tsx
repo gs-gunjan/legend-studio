@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../package.json';
+import packageJson from '../../../package.json' with { type: 'json' };
 import {
   LegendStudioApplicationPlugin,
   type NewElementFromStateCreator,
@@ -34,6 +34,7 @@ import {
   type PureGrammarParserElementDocumentationGetter,
   type PureGrammarParserKeywordSuggestionGetter,
   type PureGrammarParserElementSnippetSuggestionsGetter,
+  PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY,
 } from '@finos/legend-application-studio';
 import { ShapesIcon } from '@finos/legend-art';
 import type { Class, PackageableElement } from '@finos/legend-graph';
@@ -50,12 +51,12 @@ import {
 } from '../../__lib__/studio/DSL_Diagram_LegendStudioCodeSnippet.js';
 import {
   collectKeyedCommandConfigEntriesFromConfig,
-  type DocumentationEntry,
   type KeyedCommandConfigEntry,
 } from '@finos/legend-application';
 import { DSL_DIAGRAM_LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../__lib__/studio/DSL_Diagram_LegendStudioApplicationNavigationContext.js';
 import { DSL_DIAGRAM_LEGEND_STUDIO_COMMAND_CONFIG } from '../../__lib__/studio/DSL_Diagram_LegendStudioCommand.js';
-import type { PureGrammarTextSuggestion } from '@finos/legend-lego/code-editor';
+import type { PureGrammarTextSuggestion } from '@finos/legend-code-editor';
+import type { DocumentationEntry } from '@finos/legend-shared';
 
 const DIAGRAM_ELEMENT_TYPE = 'DIAGRAM';
 const DIAGRAM_ELEMENT_PROJECT_EXPLORER_DND_TYPE = 'PROJECT_EXPLORER_DIAGRAM';
@@ -104,6 +105,15 @@ export class DSL_Diagram_LegendStudioApplicationPlugin
 
   getExtraSupportedElementTypes(): string[] {
     return [DIAGRAM_ELEMENT_TYPE];
+  }
+
+  getExtraSupportedElementTypesWithCategory?(): Map<string, string[]> {
+    const elementTypesWithCategoryMap = new Map<string, string[]>();
+    elementTypesWithCategoryMap.set(
+      PACKAGEABLE_ELEMENT_GROUP_BY_CATEGORY.MODEL,
+      [DIAGRAM_ELEMENT_TYPE],
+    );
+    return elementTypesWithCategoryMap;
   }
 
   getExtraElementClassifiers(): ElementClassifier[] {
@@ -295,5 +305,9 @@ export class DSL_Diagram_LegendStudioApplicationPlugin
             ]
           : undefined,
     ];
+  }
+
+  getExtraGrammarTextEditorAutoFoldingElementCreatorKeywords(): string[] {
+    return [PURE_GRAMMAR_DIAGRAM_PARSER_NAME];
   }
 }

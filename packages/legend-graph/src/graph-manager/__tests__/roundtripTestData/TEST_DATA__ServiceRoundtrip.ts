@@ -31,7 +31,12 @@ export const TEST_DATA__ServiceRoundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -49,7 +54,12 @@ export const TEST_DATA__ServiceRoundtrip = [
             lowerBound: 0,
           },
           name: 'givenNames',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -184,6 +194,7 @@ export const TEST_DATA__ServiceRoundtrip = [
         mapping: 'my::map',
         runtime: {
           _type: 'engineRuntime',
+          connectionStores: [],
           connections: [],
           mappings: [
             {
@@ -328,6 +339,7 @@ export const TEST_DATA__ServiceRoundtrip = [
         mapping: 'my::map',
         runtime: {
           _type: 'engineRuntime',
+          connectionStores: [],
           connections: [],
           mappings: [
             {
@@ -456,6 +468,7 @@ export const TEST_DATA__ServiceRoundtrip = [
         mapping: 'my::map',
         runtime: {
           _type: 'engineRuntime',
+          connectionStores: [],
           connections: [],
           mappings: [
             {
@@ -497,7 +510,12 @@ export const TEST_DATA__ServiceRoundtrip = [
           parameters: [
             {
               _type: 'var',
-              class: 'test::tClass',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'test::tClass',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -562,7 +580,12 @@ export const TEST_DATA__ServiceRoundtrip = [
               parameters: [
                 {
                   _type: 'var',
-                  class: 'test::tClass',
+                  genericType: {
+                    rawType: {
+                      _type: 'packageableType',
+                      fullPath: 'test::tClass',
+                    },
+                  },
                   multiplicity: {
                     lowerBound: 1,
                     upperBound: 1,
@@ -603,7 +626,12 @@ export const TEST_DATA__ServiceRoundtrip = [
           parameters: [
             {
               _type: 'var',
-              class: 'Byte',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'Byte',
+                },
+              },
               multiplicity: {
                 lowerBound: 0,
               },
@@ -669,7 +697,12 @@ export const TEST_DATA__ServiceRoundtrip = [
           parameters: [
             {
               _type: 'var',
-              class: 'test::tClass',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'est::tClass',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -716,7 +749,12 @@ export const TEST_DATA__ServiceRoundtrip = [
                   parameters: [
                     {
                       _type: 'var',
-                      class: 'test::tClass',
+                      genericType: {
+                        rawType: {
+                          _type: 'packageableType',
+                          fullPath: 'est::tClass',
+                        },
+                      },
                       multiplicity: {
                         lowerBound: 1,
                         upperBound: 1,
@@ -811,6 +849,7 @@ export const TEST_DATA__ServiceRoundtrip = [
         mapping: 'my::map',
         runtime: {
           _type: 'engineRuntime',
+          connectionStores: [],
           connections: [],
           mappings: [
             {
@@ -955,6 +994,7 @@ export const TEST_DATA__ServiceRoundtrip = [
         mapping: 'my::map',
         runtime: {
           _type: 'engineRuntime',
+          connectionStores: [],
           connections: [],
           mappings: [
             {
@@ -1103,7 +1143,12 @@ export const TEST_DATA__ServiceRoundtrip = [
           parameters: [
             {
               _type: 'var',
-              class: 'test::tClass',
+              genericType: {
+                rawType: {
+                  _type: 'packageableType',
+                  fullPath: 'est::tClass',
+                },
+              },
               multiplicity: {
                 lowerBound: 1,
                 upperBound: 1,
@@ -1115,6 +1160,7 @@ export const TEST_DATA__ServiceRoundtrip = [
         mapping: 'test::tMapping',
         runtime: {
           _type: 'engineRuntime',
+          connectionStores: [],
           connections: [
             {
               store: {
@@ -1168,6 +1214,7 @@ export const TEST_DATA__ServiceRoundtrip = [
       package: 'test',
       runtimeValue: {
         _type: 'engineRuntime',
+        connectionStores: [],
         connections: [],
         mappings: [
           {
@@ -1227,7 +1274,12 @@ export const TEST_DATA__SERVICE_WITH_ONLY_QUERY_Roundtrip = [
             upperBound: 1,
           },
           name: 'firstName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -1235,7 +1287,12 @@ export const TEST_DATA__SERVICE_WITH_ONLY_QUERY_Roundtrip = [
             upperBound: 1,
           },
           name: 'lastName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -1243,7 +1300,12 @@ export const TEST_DATA__SERVICE_WITH_ONLY_QUERY_Roundtrip = [
             upperBound: 1,
           },
           name: 'employeeType',
-          type: 'model::EmployeeType',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'model::EmployeeType',
+            },
+          },
         },
       ],
     },
@@ -1262,14 +1324,24 @@ export const TEST_DATA__SERVICE_WITH_ONLY_QUERY_Roundtrip = [
             upperBound: 1,
           },
           name: 'legalName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
             lowerBound: 0,
           },
           name: 'employees',
-          type: 'model::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'model::Person',
+            },
+          },
         },
       ],
     },
@@ -1280,7 +1352,6 @@ export const TEST_DATA__SERVICE_WITH_ONLY_QUERY_Roundtrip = [
     content: {
       _type: 'relational',
       filters: [],
-      includedStores: [],
       joins: [
         {
           name: 'FirmPerson',
@@ -1578,7 +1649,10 @@ export const TEST_DATA__SERVICE_WITH_ONLY_QUERY_Roundtrip = [
               ],
             },
           ],
-          enumeration: 'model::EmployeeType',
+          enumeration: {
+            path: 'model::EmployeeType',
+            type: 'ENUMERATION',
+          },
           id: 'EmployeeTypeMapping',
         },
       ],
@@ -1636,7 +1710,10 @@ export const TEST_DATA__SERVICE_WITH_ONLY_QUERY_Roundtrip = [
               {
                 data: {
                   _type: 'reference',
-                  dataElement: 'data::RelationalData',
+                  dataElement: {
+                    type: 'DATA',
+                    path: 'data::RelationalData',
+                  },
                 },
                 id: 'connection_1',
               },
@@ -1683,6 +1760,7 @@ export const TEST_DATA__SERVICE_WITH_ONLY_QUERY_Roundtrip = [
       package: 'execution',
       runtimeValue: {
         _type: 'engineRuntime',
+        connectionStores: [],
         connections: [
           {
             store: {

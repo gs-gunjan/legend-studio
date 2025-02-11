@@ -21,6 +21,7 @@ import {
   matchFunctionName,
   SimpleFunctionExpression,
   VariableExpression,
+  AbstractPropertyExpression,
 } from '@finos/legend-graph';
 import {
   assertTrue,
@@ -31,12 +32,17 @@ import {
   returnUndefOnError,
   UnsupportedOperationError,
 } from '@finos/legend-shared';
-import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../../graph/QueryBuilderMetaModelConst.js';
+import {
+  QUERY_BUILDER_SUPPORTED_FUNCTIONS,
+  QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS,
+} from '../../../../graph/QueryBuilderMetaModelConst.js';
 import type { QueryBuilderState } from '../../../QueryBuilderState.js';
 import { QueryBuilderValueSpecificationProcessor } from '../../../QueryBuilderStateBuilder.js';
 import { extractNullableStringFromInstanceValue } from '../../../QueryBuilderValueSpecificationHelper.js';
 import { FETCH_STRUCTURE_IMPLEMENTATION } from '../../QueryBuilderFetchStructureImplementationState.js';
 import { QueryBuilderTDSState } from '../QueryBuilderTDSState.js';
+
+import { QueryBuilderAggregateOperator_Wavg } from './operators/QueryBuilderAggregateOperator_Wavg.js';
 
 export const processTDSAggregateExpression = (
   expression: SimpleFunctionExpression,
@@ -148,6 +154,16 @@ export const processTDSAggregateExpression = (
           projectionColumnState,
         ),
       );
+      if (
+        projectionColumnState.wavgWeight &&
+        aggregateColumnState &&
+        aggregateColumnState.operator instanceof
+          QueryBuilderAggregateOperator_Wavg
+      ) {
+        aggregateColumnState.operator.setWeight(
+          projectionColumnState.wavgWeight,
+        );
+      }
       if (aggregateColumnState) {
         aggregationState.addColumn(aggregateColumnState);
         if (
@@ -178,6 +194,62 @@ export const processTDSAggregateExpression = (
   }
 };
 
+export const processWAVGRowMapperExpression = (
+  expression: SimpleFunctionExpression,
+  parentExpression: SimpleFunctionExpression | undefined,
+  queryBuilderState: QueryBuilderState,
+  parentLambda: LambdaFunction,
+): void => {
+  // check parent expression is agg
+  assertTrue(
+    Boolean(
+      parentExpression &&
+        matchFunctionName(
+          parentExpression.functionName,
+          QUERY_BUILDER_SUPPORTED_FUNCTIONS.TDS_AGG,
+        ),
+    ),
+    `Can't process wavgRowMapper() expression: only support wavgRowMapper() used within an agg() expression`,
+  );
+
+  // check number of parameters
+  assertTrue(
+    expression.parametersValues.length === 2,
+    `Can't process wavgRowMapper() expression: wavgRowMapper() expects 2 arguments`,
+  );
+
+  //checking type of parameters
+  const wavgInput = expression.parametersValues;
+  wavgInput.map((p) =>
+    assertType(
+      p,
+      AbstractPropertyExpression,
+      `Can't process wavgRowMapper() expression: wavgRowMapper() expects arguments to be Property Expressions`,
+    ),
+  );
+
+  QueryBuilderValueSpecificationProcessor.processChild(
+    guaranteeNonNullable(expression.parametersValues[0]),
+    expression,
+    parentLambda,
+    queryBuilderState,
+  );
+
+  //setting weight here then build when agg is built
+  if (
+    queryBuilderState.fetchStructureState.implementation instanceof
+    QueryBuilderTDSState
+  ) {
+    const tdsState = queryBuilderState.fetchStructureState.implementation;
+    const projectionColumnState = guaranteeNonNullable(
+      tdsState.projectionColumns[tdsState.projectionColumns.length - 1],
+    );
+    projectionColumnState.setWavgWeight(
+      expression.parametersValues[1] as AbstractPropertyExpression,
+    );
+  }
+};
+
 export const processTDSGroupByExpression = (
   expression: SimpleFunctionExpression,
   queryBuilderState: QueryBuilderState,
@@ -202,7 +274,9 @@ export const processTDSGroupByExpression = (
   );
   assertTrue(
     matchFunctionName(precedingExpression.functionName, [
-      QUERY_BUILDER_SUPPORTED_FUNCTIONS.GET_ALL,
+      QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL,
+      QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS,
+      QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS.GET_ALL_VERSIONS_IN_RANGE,
       QUERY_BUILDER_SUPPORTED_FUNCTIONS.FILTER,
     ]),
     `Can't process groupBy() expression: only support groupBy() immediately following either getAll() or filter()`,

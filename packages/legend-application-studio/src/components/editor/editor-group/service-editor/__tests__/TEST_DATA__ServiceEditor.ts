@@ -464,7 +464,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -472,7 +477,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'id',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -480,7 +490,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'addressId',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -488,7 +503,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'firmId',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
     },
@@ -523,7 +543,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -537,7 +562,12 @@ export const TEST_DATA__multiEXecutionService = [
               value: 'Key',
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -545,7 +575,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'addressId',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -553,7 +588,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'firmId',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
     },
@@ -607,7 +647,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'firmId',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -615,7 +660,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'ceoId',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -623,7 +673,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'addressId',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -691,7 +746,12 @@ export const TEST_DATA__multiEXecutionService = [
               value: 'Key',
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -699,7 +759,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'ceoId',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -707,7 +772,12 @@ export const TEST_DATA__multiEXecutionService = [
             upperBound: 1,
           },
           name: 'addressId',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
     },

@@ -31,7 +31,7 @@ import {
   PackageableElementReference,
   getClassProperty,
 } from '@finos/legend-graph';
-import TEST_DATA__M2MGraphEntities from './TEST_DATA__M2MGraphEntities.json';
+import TEST_DATA__M2MGraphEntities from './TEST_DATA__M2MGraphEntities.json' with { type: 'json' };
 import { TEST_DATA__ProjectDependencyReportWithConflict } from '../../../components/editor/editor-group/__tests__/TEST_DATA__ProjectDependencyReport.js';
 import type { EditorStore } from '../EditorStore.js';
 import {
@@ -40,6 +40,7 @@ import {
   TEST_DATA__dependencyMainGraphEntities2,
   TEST_DATA__projectsData,
 } from './TEST_DATA__ProjectDependencyManager.js';
+import { flowResult } from 'mobx';
 
 const testDependingOnDifferentProjectVersions = [
   {
@@ -127,7 +128,7 @@ const PROJECT_CONFIG = {
   artifactId: 'string',
   projectDependencies: [
     {
-      projectId: 'PROD_1',
+      projectId: 'groupId:my-artifact',
       versionId: '1.0.0',
     },
     {
@@ -146,25 +147,6 @@ const PROJECT_DATA = [
     artifactId: 'my-artifact',
     versions: ['1.0.0'],
     latestVersion: '1.0.0',
-  },
-];
-
-const MULTI_PROJECT_DATA = [
-  {
-    id: '1',
-    projectId: 'PROD_1',
-    groupId: 'org.finos.legend',
-    artifactId: 'my-artifact',
-    versions: ['1.0.0'],
-    latestVersion: '1.0.0',
-  },
-  {
-    id: '2',
-    projectId: 'PROD_1',
-    groupId: 'org.finos.legend',
-    artifactId: 'my-artifact-diff',
-    versions: ['1.0.0', '2.0.0'],
-    latestVersion: '2.0.0',
   },
 ];
 
@@ -216,12 +198,6 @@ const testDependencyElements = async (
     guaranteeNonNullable(editorStore.depotServerClient),
     'collectDependencyEntities',
   ).mockResolvedValue(dependencyEntities);
-  if (projectsData) {
-    createSpy(
-      guaranteeNonNullable(editorStore.depotServerClient),
-      'getProjectById',
-    ).mockResolvedValue(projectsData);
-  }
   if (dependencyInfo) {
     createSpy(
       guaranteeNonNullable(editorStore.depotServerClient),
@@ -351,60 +327,10 @@ test(
 );
 
 test(
-  unitTest('Legacy project not returning singular project from depot'),
-  async () => {
-    await expect(
-      testDependencyElements(
-        [] as Entity[],
-        testDependingOnDifferentProjectVersions,
-        MULTI_PROJECT_DATA,
-        true,
-      ),
-    ).rejects.toThrowError(
-      "Expected 1 project for project ID 'PROD_1'. Got 2 projects with coordinates 'org.finos.legend:my-artifact', 'org.finos.legend:my-artifact-diff'.",
-    );
-  },
-);
-
-test(
   unitTest('Same project different versions dependency error check'),
   async () => {
     const expectedError =
       'Depending on multiple versions of a project is not supported. Found conflicts:\n';
-    'project: com.company0:artifact0\n' +
-      'versions:[2.0.0,3.0.0]\n' +
-      'project: com.company0:artifact11\n' +
-      'versions:[65.0.0,66.0.0]\n' +
-      'project: com.company0:artifact33\n' +
-      'versions:[20.0.0,21.0.0]\n' +
-      'project: com.company6:artifact44\n' +
-      'versions:[62.0.0,63.0.0]\n' +
-      'project: com.company3:artifact8\n' +
-      'versions:[5.0.0,6.0.0]\n' +
-      'project: com.company6:artifact43\n' +
-      'versions:[58.0.0,59.0.0]\n' +
-      'project: com.company9:artifact41\n' +
-      'versions:[65.0.0,66.0.0]\n' +
-      'project: com.company6:artifact47\n' +
-      'versions:[72.0.0,73.0.0]\n' +
-      'project: com.company0:artifact57\n' +
-      'versions:[19.0.0,20.0.0]\n' +
-      'project: com.company1:artifact18\n' +
-      'versions:[5.0.0,6.0.0]\n' +
-      'project: com.company0:artifact4\n' +
-      'versions:[2.0.0,3.0.0]\n' +
-      'project: com.company5:artifact14\n' +
-      'versions:[40.0.0,41.0.0]\n' +
-      'project: com.company0:artifact27\n' +
-      'versions:[84.0.0,85.0.0]\n' +
-      'project: com.company3:artifact36\n' +
-      'versions:[2.0.0,3.0.0]\n' +
-      'project: com.company7:artifact25\n' +
-      'versions:[64.0.0,65.0.0]\n' +
-      'project: com.company0:artifact16\n' +
-      'versions:[3.0.0,4.0.0]\n' +
-      'project: com.company0:artifact13\n' +
-      'versions:[14.0.0,15.0.0]';
     await expect(
       testDependencyElements(
         [] as Entity[],
@@ -443,9 +369,11 @@ test(
     getClassProperty(firm, 'mainPerson');
     getClassProperty(person, 'mainFirm');
     // load association 1/2
-    await editorStore.graphState.loadEntityChangesToGraph(
-      [],
-      TEST_DATA__dependencyMainGraphEntities2 as Entity[],
+    await flowResult(
+      editorStore.graphState.loadEntityChangesToGraph(
+        [],
+        TEST_DATA__dependencyMainGraphEntities2 as Entity[],
+      ),
     );
     expect(firm.propertiesFromAssociations.length).toBe(2);
     expect(person.propertiesFromAssociations.length).toBe(2);
@@ -466,7 +394,7 @@ test(
     getClassProperty(firm, 'mainPerson2');
     getClassProperty(person, 'mainFirm2');
     // clear current graph
-    await editorStore.graphState.loadEntityChangesToGraph([], []);
+    await flowResult(editorStore.graphState.loadEntityChangesToGraph([], []));
     expect(editorStore.graphManagerState.graph.allOwnElements.length).toBe(0);
     expect(firm.propertiesFromAssociations.length).toBe(0);
     expect(person.propertiesFromAssociations.length).toBe(0);

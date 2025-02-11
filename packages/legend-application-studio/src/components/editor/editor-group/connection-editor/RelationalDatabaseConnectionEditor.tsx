@@ -18,8 +18,6 @@ import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import {
   type RelationalDatabaseConnectionValueState,
-  CORE_AUTHENTICATION_STRATEGY_TYPE,
-  CORE_DATASOURCE_SPEC_TYPE,
   RELATIONAL_DATABASE_TAB_TYPE,
   POST_PROCESSOR_TYPE,
 } from '../../../../stores/editor/editor-state/element-editor-state/connection/ConnectionEditorState.js';
@@ -37,7 +35,7 @@ import {
   MenuContent,
   MenuContentItem,
   PanelListSelectorItem,
-  DropdownMenu,
+  ControlledDropdownMenu,
   PanelTabs,
   BlankPanelContent,
   ResizablePanelSplitterLine,
@@ -61,6 +59,9 @@ import {
   type RelationalDatabaseConnection,
   type Store,
   type PostProcessor,
+  type DatasourceSpecification,
+  type AuthenticationStrategy,
+  type PackageableConnection,
   DatabaseType,
   DelegatedKerberosAuthenticationStrategy,
   OAuthAuthenticationStrategy,
@@ -81,14 +82,13 @@ import {
   MapperPostProcessor,
   SpannerDatasourceSpecification,
   TrinoDatasourceSpecification,
+  guaranteeRelationalDatabaseConnection,
 } from '@finos/legend-graph';
 import type { LegendStudioApplicationPlugin } from '../../../../stores/LegendStudioApplicationPlugin.js';
 import type { STO_Relational_LegendStudioApplicationPlugin_Extension } from '../../../../stores/extensions/STO_Relational_LegendStudioApplicationPlugin_Extension.js';
 import { useEditorStore } from '../../EditorStoreProvider.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 import {
   buildElementOption,
   type PackageableElementOption,
@@ -161,16 +161,49 @@ import {
   middleTierUsernamePasswordAuthenticationStrategy_setVaultReference,
   relationalDatabaseConnection_addPostProcessor,
   relationalDatabaseConnection_deletePostProcessor,
+  snowflakeDatasourceSpec_setTempTableDb,
+  snowflakeDatasourceSpec_setTempTableSchema,
+  dBConnection_setQueryTimeOut,
 } from '../../../../stores/graph-modifier/STO_Relational_GraphModifierHelper.js';
 import { MapperPostProcessorEditor } from './post-processor-editor/MapperPostProcessorEditor.js';
 import { UnsupportedEditorPanel } from '../UnsupportedElementEditor.js';
 import type { MapperPostProcessorEditorState } from '../../../../stores/editor/editor-state/element-editor-state/connection/PostProcessorEditorState.js';
+import { prettyCONSTName, uniq } from '@finos/legend-shared';
+import { useApplicationStore } from '@finos/legend-application';
+
+export type RelationalDatabaseConnectionOption = {
+  label: React.ReactNode;
+  value: PackageableConnection;
+};
+
+export const buildRelationalDatabaseConnectionOption = (
+  connection: PackageableConnection,
+): RelationalDatabaseConnectionOption => {
+  const connectionValue = guaranteeRelationalDatabaseConnection(connection);
+  return {
+    value: connection,
+    label: (
+      <div className="sql-playground__config__connection-selector__option">
+        <div className="sql-playground__config__connection-selector__option__label">
+          {connection.name}
+        </div>
+        <div className="sql-playground__config__connection-selector__option__type">
+          {connectionValue.type}
+        </div>
+        <div className="sql-playground__config__connection-selector__option__path">
+          {connection.path}
+        </div>
+      </div>
+    ),
+  };
+};
 
 const LocalH2DatasourceSpecificationEditor = observer(
   (props: {
     sourceSpec: LocalH2DatasourceSpecification;
     isReadOnly: boolean;
   }) => {
+    const applicationStore = useApplicationStore();
     const { sourceSpec, isReadOnly } = props;
     const [showPopUp, setShowPopUp] = useState(false);
     const openInPopUp = (): void => setShowPopUp(true);
@@ -183,7 +216,13 @@ const LocalH2DatasourceSpecificationEditor = observer(
         {showPopUp && (
           <div>
             <Dialog open={showPopUp} onClose={closePopUp}>
-              <Modal darkMode={true} className="editor-modal">
+              <Modal
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
+                className="editor-modal"
+              >
                 <ModalHeader title="test data setup SQL" />
                 <ModalBody className="modal__body__large">
                   <CodeEditor
@@ -199,7 +238,11 @@ const LocalH2DatasourceSpecificationEditor = observer(
                   />
                 </ModalBody>
                 <ModalFooter>
-                  <ModalFooterButton onClick={closePopUp} text="Close" />
+                  <ModalFooterButton
+                    onClick={closePopUp}
+                    text="Close"
+                    type="secondary"
+                  />
                 </ModalFooter>
               </Modal>
             </Dialog>
@@ -251,7 +294,7 @@ const StaticDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.host}
-          name="host"
+          name="host (required)"
           update={(value: string | undefined): void =>
             staticDatasourceSpecification_setHost(sourceSpec, value ?? '')
           }
@@ -263,7 +306,7 @@ const StaticDatasourceSpecificationEditor = observer(
           <input
             className="panel__content__form__section__input panel__content__form__section__number-input"
             spellCheck={false}
-            type="number"
+            type="number (required)"
             disabled={isReadOnly}
             value={sourceSpec.port}
             onChange={changePort}
@@ -272,7 +315,7 @@ const StaticDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.databaseName}
-          name="database"
+          name="database (required)"
           update={(value: string | undefined): void =>
             staticDatasourceSpecification_setDatabaseName(
               sourceSpec,
@@ -296,7 +339,7 @@ const EmbeddedH2DatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.databaseName}
-          name="database"
+          name="database (required)"
           update={(value: string | undefined): void =>
             embeddedH2DatasourceSpecification_setDatabaseName(
               sourceSpec,
@@ -307,7 +350,7 @@ const EmbeddedH2DatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.directory}
-          name="directory"
+          name="directory (required)"
           update={(value: string | undefined): void =>
             embeddedH2DatasourceSpecification_setDirectory(
               sourceSpec,
@@ -318,7 +361,7 @@ const EmbeddedH2DatasourceSpecificationEditor = observer(
         <PanelFormBooleanField
           isReadOnly={isReadOnly}
           value={sourceSpec.autoServerMode}
-          name="auto server mode"
+          name="auto server mode (required)"
           update={(value?: boolean): void =>
             embeddedH2DatasourceSpecification_setAutoServerMode(
               sourceSpec,
@@ -342,7 +385,7 @@ const DatabricksDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.hostname}
-          name="hostname"
+          name="hostname (required)"
           update={(value: string | undefined): void =>
             databricksDatasourceSpecification_setHostName(
               sourceSpec,
@@ -353,7 +396,7 @@ const DatabricksDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.port}
-          name="port"
+          name="port (required)"
           update={(value: string | undefined): void =>
             databricksDatasourceSpecification_setPort(sourceSpec, value ?? '')
           }
@@ -361,7 +404,7 @@ const DatabricksDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.protocol}
-          name="protocol"
+          name="protocol (required)"
           update={(value: string | undefined): void =>
             databricksDatasourceSpecification_setProtocol(
               sourceSpec,
@@ -372,7 +415,7 @@ const DatabricksDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.httpPath}
-          name="httpPath"
+          name="httpPath (required)"
           update={(value: string | undefined): void =>
             databricksDatasourceSpecification_setHttpPath(
               sourceSpec,
@@ -400,14 +443,14 @@ const TrinoDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.host}
-          name="host"
+          name="host (required)"
           update={(value: string | undefined): void =>
             trinoDatasourceSpecification_setHost(sourceSpec, value ?? '')
           }
         />
         <div className="panel__content__form__section">
           <div className="panel__content__form__section__header__label">
-            port
+            port (required)
           </div>
           <input
             className="panel__content__form__section__input panel__content__form__section__number-input"
@@ -488,7 +531,7 @@ const SnowflakeDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.accountName}
-          name="account"
+          name="account (required)"
           update={(value: string | undefined): void =>
             snowflakeDatasourceSpec_setAccountName(sourceSpec, value ?? '')
           }
@@ -496,7 +539,7 @@ const SnowflakeDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.region}
-          name="region"
+          name="region (required)"
           update={(value: string | undefined): void =>
             snowflakeDatasourceSpec_setRegion(sourceSpec, value ?? '')
           }
@@ -504,7 +547,7 @@ const SnowflakeDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.warehouseName}
-          name="warehouse"
+          name="warehouse (required)"
           update={(value: string | undefined): void =>
             snowflakeDatasourceSpec_setWarehouseName(sourceSpec, value ?? '')
           }
@@ -512,7 +555,7 @@ const SnowflakeDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.databaseName}
-          name="database"
+          name="database (required)"
           update={(value: string | undefined): void =>
             snowflakeDatasourceSpec_setDatabaseName(sourceSpec, value ?? '')
           }
@@ -573,6 +616,28 @@ const SnowflakeDatasourceSpecificationEditor = observer(
             snowflakeDatasourceSpec_setRole(sourceSpec, value)
           }
         />
+        <PanelFormTextField
+          isReadOnly={isReadOnly}
+          value={sourceSpec.tempTableDb}
+          name="Temp Table DB"
+          update={(value: string | undefined): void =>
+            snowflakeDatasourceSpec_setTempTableDb(
+              sourceSpec,
+              value ?? undefined,
+            )
+          }
+        />
+        <PanelFormTextField
+          isReadOnly={isReadOnly}
+          value={sourceSpec.tempTableSchema}
+          name="Temp Table Schema"
+          update={(value: string | undefined): void =>
+            snowflakeDatasourceSpec_setTempTableSchema(
+              sourceSpec,
+              value ?? undefined,
+            )
+          }
+        />
         {/* TODO: we should reconsider adding this field, it's an optional boolean, should we default it to `undefined` when it's `false`?*/}
         <PanelFormBooleanField
           isReadOnly={isReadOnly}
@@ -618,14 +683,14 @@ const RedshiftDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.host}
-          name="host"
+          name="host (required)"
           update={(value: string | undefined): void =>
             redshiftDatasourceSpecification_setHost(sourceSpec, value ?? '')
           }
         />
         <div className="panel__content__form__section">
           <div className="panel__content__form__section__header__label">
-            port
+            port (required)
           </div>
           <input
             className="panel__content__form__section__input panel__content__form__section__number-input"
@@ -639,7 +704,7 @@ const RedshiftDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.databaseName}
-          name="database"
+          name="database (required)"
           update={(value: string | undefined): void =>
             redshiftDatasourceSpecification_setDatabaseName(
               sourceSpec,
@@ -651,7 +716,7 @@ const RedshiftDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.region}
-          name="region"
+          name="region (required)"
           update={(value: string | undefined): void =>
             redshiftDatasourceSpecification_setRegion(sourceSpec, value ?? '')
           }
@@ -659,7 +724,7 @@ const RedshiftDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.clusterID}
-          name="cluster"
+          name="cluster (required)"
           update={(value: string | undefined): void =>
             redshiftDatasourceSpecification_setClusterID(
               sourceSpec,
@@ -694,7 +759,7 @@ const BigQueryDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.projectId}
-          name="project id"
+          name="project id (required)"
           update={(value: string | undefined): void =>
             bigQueryDatasourceSpecification_setProjectId(
               sourceSpec,
@@ -753,7 +818,7 @@ const SpannerDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.projectId}
-          name="project id"
+          name="project id (required)"
           prompt="Your Google Cloud Platform (GCP) project identifier"
           update={(value: string | undefined): void =>
             spannerDatasourceSpecification_setProjectId(sourceSpec, value ?? '')
@@ -762,7 +827,7 @@ const SpannerDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.instanceId}
-          name="instance id"
+          name="instance id (required)"
           prompt="Spanner instance identifier in Google Cloud Platform (GCP)"
           update={(value: string | undefined): void =>
             spannerDatasourceSpecification_setInstanceId(
@@ -774,7 +839,7 @@ const SpannerDatasourceSpecificationEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={sourceSpec.databaseId}
-          name="database id"
+          name="database id (required)"
           prompt="Spanner database identifier"
           update={(value: string | undefined): void =>
             spannerDatasourceSpecification_setDatabaseId(
@@ -843,7 +908,7 @@ const ApiTokenAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.apiToken}
-          name="apiTokenRef"
+          name="apiTokenRef (required)"
           update={(value: string | undefined): void =>
             apiTokenAuthenticationStrategy_setApiToken(authSpec, value ?? '')
           }
@@ -864,7 +929,7 @@ const SnowflakePublicAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.privateKeyVaultReference}
-          name="private key vault reference"
+          name="private key vault reference (required)"
           update={(value: string | undefined): void =>
             snowflakePublicAuthenticationStrategy_setPrivateKeyVaultReference(
               authSpec,
@@ -875,7 +940,7 @@ const SnowflakePublicAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.passPhraseVaultReference}
-          name="pass phrase vault reference"
+          name="pass phrase vault reference (required)"
           update={(value: string | undefined): void =>
             snowflakePublicAuthenticationStrategy_setPassPhraseVaultReference(
               authSpec,
@@ -886,7 +951,7 @@ const SnowflakePublicAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.publicUserName}
-          name="public user name"
+          name="public user name (required)"
           update={(value: string | undefined): void =>
             snowflakePublicAuthenticationStrategy_setPublicUserName(
               authSpec,
@@ -907,7 +972,7 @@ const OAuthAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.oauthKey}
-          name="oauth key"
+          name="oauth key (required)"
           update={(value: string | undefined): void =>
             oAuthAuthenticationStrategy_setOauthKey(authSpec, value ?? '')
           }
@@ -915,7 +980,7 @@ const OAuthAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.scopeName}
-          name="scope name"
+          name="scope name (required)"
           update={(value: string | undefined): void =>
             oAuthAuthenticationStrategy_setScopeName(authSpec, value ?? '')
           }
@@ -947,7 +1012,7 @@ const UsernamePasswordAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.userNameVaultReference}
-          name="user name vault reference"
+          name="user name vault reference (required)"
           update={(value: string | undefined): void =>
             usernamePasswordAuthenticationStrategy_setUserNameVaultReference(
               authSpec,
@@ -958,7 +1023,7 @@ const UsernamePasswordAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.passwordVaultReference}
-          name="password vault reference"
+          name="password vault reference (required)"
           update={(value: string | undefined): void =>
             usernamePasswordAuthenticationStrategy_setPasswordVaultReference(
               authSpec,
@@ -982,7 +1047,7 @@ const MiddleTierUsernamePasswordAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.vaultReference}
-          name="vault reference"
+          name="vault reference (required)"
           prompt="Specifies the credential vault reference containing connection credentials"
           update={(value: string | undefined): void =>
             middleTierUsernamePasswordAuthenticationStrategy_setVaultReference(
@@ -1007,7 +1072,7 @@ const TrinoDelegatedKerberosAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.kerberosRemoteServiceName}
-          name="Kerberos Remote Service Name"
+          name="Kerberos Remote Service Name (required)"
           prompt="Specifies the Kerberos Remote Service Name"
           update={(value: string | undefined): void =>
             trinoDelegatedKerberosAuthenticationStrategy_setKerberosRemoteServiceName(
@@ -1045,7 +1110,7 @@ const GCPWorkloadIdentityFederationAuthenticationStrategyEditor = observer(
         <PanelFormTextField
           isReadOnly={isReadOnly}
           value={authSpec.serviceAccountEmail}
-          name="Service Account Email"
+          name="Service Account Email (required)"
           update={(value: string | undefined): void =>
             gcpWorkloadIdentityFederationAuthenticationStrategy_setServiceAccountEmail(
               authSpec,
@@ -1075,6 +1140,7 @@ const RelationalConnectionStoreEditor = observer(
     isReadOnly: boolean;
   }) => {
     const { connectionValueState, isReadOnly } = props;
+    const applicationStore = connectionValueState.editorStore.applicationStore;
     const connection = connectionValueState.connection;
     // store
     const isStoreEmpty = connectionValueState.storeValidationResult;
@@ -1097,7 +1163,7 @@ const RelationalConnectionStoreEditor = observer(
     const selectedStore = {
       value: store,
       label: isStoreEmpty ? noStoreLabel : store.path,
-    };
+    } as PackageableElementOption<Store>;
     const onStoreChange = (
       val: PackageableElementOption<Store> | null,
     ): void => {
@@ -1125,9 +1191,12 @@ const RelationalConnectionStoreEditor = observer(
               options={options}
               onChange={onStoreChange}
               value={selectedStore}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
               disabled={isReadOnly}
-              hasError={isStoreEmpty}
+              hasError={Boolean(isStoreEmpty)}
             />
             <PanelDivider />
             <button
@@ -1299,7 +1368,7 @@ const PostProcessorRelationalConnectionEditor = observer(
                   <Panel>
                     <PanelHeader title="post-processor">
                       <PanelHeaderActions>
-                        <DropdownMenu
+                        <ControlledDropdownMenu
                           title="Create post-processor"
                           className="panel__header__action"
                           disabled={isReadOnly}
@@ -1328,7 +1397,7 @@ const PostProcessorRelationalConnectionEditor = observer(
                           }}
                         >
                           <PlusIcon />
-                        </DropdownMenu>
+                        </ControlledDropdownMenu>
                       </PanelHeaderActions>
                     </PanelHeader>
                     <PanelContent>
@@ -1566,52 +1635,79 @@ const renderAuthenticationStrategyEditor = (
   }
 };
 
-const RelationalConnectionGeneralEditor = observer(
+export const RelationalConnectionGeneralEditor = observer(
   (props: {
     connectionValueState: RelationalDatabaseConnectionValueState;
     isReadOnly: boolean;
+    hideHeader?: boolean;
   }) => {
-    const { connectionValueState, isReadOnly } = props;
+    const { connectionValueState, isReadOnly, hideHeader } = props;
     const connection = connectionValueState.connection;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const plugins = editorStore.pluginManager.getApplicationPlugins();
+    const databseTypeConfigs =
+      connectionValueState.editorStore.graphState
+        .relationalDatabseTypeConfigurations;
+    const availableDbTypes = databseTypeConfigs?.length
+      ? // Currently H2 Flow is not returned in relational configs. We will remove this once it is properly returned as a supported flow in engine
+        uniq([DatabaseType.H2, ...databseTypeConfigs.map((e) => e.type)])
+      : Object.values(DatabaseType);
 
-    // database type
-    const typeOptions = Object.values(DatabaseType).map((type) => ({
-      value: type,
-      label: type,
+    const dbTypes = availableDbTypes.map((dbType) => ({
+      value: dbType,
+      label: dbType,
     }));
-    const selectedType = {
+
+    const selectedDbType = {
       value: connection.type,
       label: connection.type,
     };
+
+    const changeTimeOut: React.ChangeEventHandler<HTMLInputElement> = (
+      event,
+    ) => {
+      const val = event.target.value;
+      dBConnection_setQueryTimeOut(
+        connection,
+        val === '' ? undefined : parseInt(val, 10),
+      );
+    };
+
     const onTypeChange = (
       val: { label: string; value: string } | null,
     ): void => {
       dBConnection_setType(connection, val?.value ?? DatabaseType.H2);
+      if (connectionValueState.selectedValidDatasources[0]) {
+        connectionValueState.changeDatasourceSpec(
+          connectionValueState.selectedValidDatasources[0],
+        );
+      }
+      if (connectionValueState.selectedValidAuthenticationStrategies[0]) {
+        connectionValueState.changeAuthenticationStrategy(
+          connectionValueState.selectedValidAuthenticationStrategies[0],
+        );
+      }
     };
 
     // source spec type
-    const sourceSpecOptions = (
-      Object.values(CORE_DATASOURCE_SPEC_TYPE) as string[]
-    )
-      .concat(
-        plugins.flatMap(
-          (plugin) =>
-            (
-              plugin as STO_Relational_LegendStudioApplicationPlugin_Extension
-            ).getExtraDatasourceSpecificationTypes?.() ?? [],
-        ),
-      )
-      .map((type) => ({
+    const sourceSpecOptions = connectionValueState.selectedValidDatasources.map(
+      (type) => ({
         value: type,
-        label: type,
-      }));
-    const selectedSourceSpec = {
-      label:
-        connectionValueState.selectedDatasourceSpecificationType ?? 'Unknown',
-      value: connectionValueState.selectedDatasourceSpecificationType,
-    };
+        label: prettyCONSTName(type),
+      }),
+    );
+
+    const selectedSourceSpec = (
+      spec: DatasourceSpecification,
+    ): { label: string; value: string | undefined } => ({
+      label: prettyCONSTName(
+        connectionValueState.selectedDatasourceSpecificationType(spec) ??
+          'Unknown',
+      ),
+      value: connectionValueState.selectedDatasourceSpecificationType(spec),
+    });
+
     const onSourceSpecChange = (
       val: { label: string; value: string | undefined } | null,
     ): void => {
@@ -1621,26 +1717,24 @@ const RelationalConnectionGeneralEditor = observer(
     };
 
     // auth type
-    const authOptions = (
-      Object.values(CORE_AUTHENTICATION_STRATEGY_TYPE) as string[]
-    )
-      .concat(
-        plugins.flatMap(
-          (plugin) =>
-            (
-              plugin as STO_Relational_LegendStudioApplicationPlugin_Extension
-            ).getExtraAuthenticationStrategyTypes?.() ?? [],
-        ),
-      )
-      .map((type) => ({
-        value: type,
-        label: type,
-      }));
-    const selectedAuth = {
-      label:
-        connectionValueState.selectedAuthenticationStrategyType ?? 'Unknown',
-      value: connectionValueState.selectedAuthenticationStrategyType,
-    };
+    const authOptions =
+      connectionValueState.selectedValidAuthenticationStrategies.map(
+        (type) => ({
+          value: type,
+          label: prettyCONSTName(type),
+        }),
+      );
+
+    const selectedAuth = (
+      auth: AuthenticationStrategy,
+    ): { label: string; value: string | undefined } => ({
+      label: prettyCONSTName(
+        connectionValueState.selectedAuthenticationStrategyType(auth) ??
+          'Unknown',
+      ),
+      value: connectionValueState.selectedAuthenticationStrategyType(auth),
+    });
+
     const onAuthStrategyChange = (
       val: { label: string; value: string | undefined } | null,
     ): void => {
@@ -1661,10 +1755,13 @@ const RelationalConnectionGeneralEditor = observer(
                   Database Type
                 </div>
                 <CustomSelectorInput
-                  options={typeOptions}
+                  options={dbTypes}
                   onChange={onTypeChange}
-                  value={selectedType}
-                  darkMode={true}
+                  value={selectedDbType}
+                  darkMode={
+                    !applicationStore.layoutService
+                      .TEMPORARY__isLightColorThemeEnabled
+                  }
                 />
               </PanelFormSection>
             </PanelContent>
@@ -1678,17 +1775,20 @@ const RelationalConnectionGeneralEditor = observer(
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel size={200} minSize={15}>
             <Panel>
-              <PanelHeader title="general"></PanelHeader>
+              {!hideHeader && <PanelHeader title="general"></PanelHeader>}
               <PanelContent className="relational-connection-editor__general">
                 <PanelFormSection>
                   <div className="panel__content__form__section__header__label">
                     Database Type
                   </div>
                   <CustomSelectorInput
-                    options={typeOptions}
+                    options={dbTypes}
                     onChange={onTypeChange}
-                    value={selectedType}
-                    darkMode={true}
+                    value={selectedDbType}
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
                   />
                 </PanelFormSection>
                 <PanelFormBooleanField
@@ -1700,6 +1800,19 @@ const RelationalConnectionGeneralEditor = observer(
                     dBConnection_setQuoteIdentifiers(connection, Boolean(value))
                   }
                 />
+                <div className="panel__content__form__section">
+                  <div className="panel__content__form__section__header__label">
+                    Query timeout (in seconds)
+                  </div>
+                  <input
+                    className="panel__content__form__section__input panel__content__form__section__number-input"
+                    spellCheck={false}
+                    type="number"
+                    disabled={isReadOnly}
+                    value={connection.queryTimeOutInSeconds}
+                    onChange={changeTimeOut}
+                  />
+                </div>
               </PanelContent>
             </Panel>
           </ResizablePanel>
@@ -1712,14 +1825,24 @@ const RelationalConnectionGeneralEditor = observer(
                     <PanelHeader title="datasource specification"></PanelHeader>
                     <PanelContent className="relational-connection-editor__auth__content">
                       <PanelFormSection>
-                        <div className="panel__content__form__section__header__label">
-                          Datasource
+                        <div style={{ width: '100%' }}>
+                          <div
+                            style={{ display: 'inline-block', width: '10px' }}
+                            className="panel__content__form__section__header__label"
+                          >
+                            Datasource
+                          </div>
                         </div>
                         <CustomSelectorInput
                           options={sourceSpecOptions}
                           onChange={onSourceSpecChange}
-                          value={selectedSourceSpec}
-                          darkMode={true}
+                          value={selectedSourceSpec(
+                            connection.datasourceSpecification,
+                          )}
+                          darkMode={
+                            !applicationStore.layoutService
+                              .TEMPORARY__isLightColorThemeEnabled
+                          }
                         />
                       </PanelFormSection>
                       <PanelDivider />
@@ -1739,14 +1862,24 @@ const RelationalConnectionGeneralEditor = observer(
                     <PanelHeader title="authentication strategy"></PanelHeader>
                     <PanelContent className="relational-connection-editor__source__content">
                       <PanelFormSection>
-                        <div className="panel__content__form__section__header__label">
-                          Authentication
+                        <div style={{ width: '100%' }}>
+                          <div
+                            style={{ display: 'inline-block', width: '10px' }}
+                            className="panel__content__form__section__header__label"
+                          >
+                            Authentication
+                          </div>
                         </div>
                         <CustomSelectorInput
                           options={authOptions}
                           onChange={onAuthStrategyChange}
-                          value={selectedAuth}
-                          darkMode={true}
+                          value={selectedAuth(
+                            connection.authenticationStrategy,
+                          )}
+                          darkMode={
+                            !applicationStore.layoutService
+                              .TEMPORARY__isLightColorThemeEnabled
+                          }
                         />
                       </PanelFormSection>
                       <PanelDivider />
@@ -1776,21 +1909,15 @@ export const RelationalDatabaseConnectionEditor = observer(
   }) => {
     const { connectionValueState, isReadOnly } = props;
     const selectedTab = connectionValueState.selectedTab;
-    const changeTab =
-      <T,>( // eslint-disable-line
-        tab: T,
-      ) =>
-      (): void => {
-        connectionValueState.setSelectedTab(
-          tab as unknown as RELATIONAL_DATABASE_TAB_TYPE,
-        );
-      };
+    const changeTab = (tab: string) => (): void => {
+      connectionValueState.setSelectedTab(tab as RELATIONAL_DATABASE_TAB_TYPE);
+    };
 
     return (
       <Panel>
         <PanelTabs
-          tabTitles={Object.values(RELATIONAL_DATABASE_TAB_TYPE)}
-          changeTheTab={changeTab}
+          tabs={Object.values(RELATIONAL_DATABASE_TAB_TYPE)}
+          changeTab={changeTab}
           selectedTab={selectedTab}
           tabClassName="relational-connection-editor__tab"
         />

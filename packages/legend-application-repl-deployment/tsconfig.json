@@ -1,0 +1,14 @@
+{
+  "extends": "@finos/legend-dev-utils/tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "build/dev.tsbuildinfo",
+    "noEmit": true,
+    "jsx": "react-jsxdev",
+    "allowJs": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.json", "repl.config.js"],
+  "references": [
+    { "path": "../legend-art" },
+    { "path": "../legend-application-repl" }
+  ]
+}

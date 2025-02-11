@@ -19,17 +19,20 @@ import type { V1_Persister } from './V1_DSL_Persistence_Persister.js';
 import type { V1_Trigger } from './V1_DSL_Persistence_Trigger.js';
 import {
   V1_PackageableElement,
+  type V1_PackageableElementPointer,
   type V1_PackageableElementVisitor,
 } from '@finos/legend-graph';
 import { type Hashable, hashArray } from '@finos/legend-shared';
 import { PERSISTENCE_HASH_STRUCTURE } from '../../../../../../../graph/DSL_Persistence_HashUtils.js';
 import type { V1_PersistenceTest } from './V1_DSL_Persistence_PersistenceTest.js';
+import type { V1_ServiceOutputTarget as V1_ServiceOutputTarget } from './V1_DSL_Persistence_ServiceOutputTarget.js';
 
 export class V1_Persistence extends V1_PackageableElement implements Hashable {
   documentation!: string;
   trigger!: V1_Trigger;
-  service!: string;
-  persister!: V1_Persister;
+  service!: V1_PackageableElementPointer;
+  persister?: V1_Persister | undefined;
+  serviceOutputTargets?: V1_ServiceOutputTarget[] | undefined;
   notifier!: V1_Notifier;
   tests: V1_PersistenceTest[] = [];
 
@@ -38,8 +41,9 @@ export class V1_Persistence extends V1_PackageableElement implements Hashable {
       PERSISTENCE_HASH_STRUCTURE.PERSISTENCE,
       this.documentation,
       this.trigger,
-      this.service,
-      this.persister,
+      this.service.path,
+      hashArray(this.serviceOutputTargets ?? []),
+      this.persister ?? '',
       this.notifier,
       hashArray(this.tests),
     ]);

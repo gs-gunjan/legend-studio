@@ -46,6 +46,7 @@ import {
   INTERNAL__PropagatedValue,
   isSubType,
   type ObserverContext,
+  InstanceValue,
 } from '@finos/legend-graph';
 import {
   addUniqueEntry,
@@ -62,6 +63,7 @@ import {
   validateMilestoningPropertyExpressionChain,
 } from './milestoning/QueryBuilderMilestoningHelper.js';
 import { instanceValue_setValues } from './shared/ValueSpecificationModifierHelper.js';
+import type { QueryBuilderState } from './QueryBuilderState.js';
 
 export const getNonCollectionValueSpecificationType = (
   valueSpecification: ValueSpecification,
@@ -84,7 +86,7 @@ export const getCollectionValueSpecificationType = (
 ): Type | undefined => {
   if (values.every((val) => val instanceof PrimitiveInstanceValue)) {
     const valuePrimitiveTypes: (PrimitiveType | undefined)[] = [];
-    (values as PrimitiveInstanceValue[]).forEach((val) => {
+    values.forEach((val) => {
       const primitiveType = val.genericType.value.rawType;
       switch (primitiveType.path) {
         case PRIMITIVE_TYPE.STRING:
@@ -95,6 +97,15 @@ export const getCollectionValueSpecificationType = (
         case PRIMITIVE_TYPE.FLOAT:
         case PRIMITIVE_TYPE.NUMBER:
           addUniqueEntry(valuePrimitiveTypes, PrimitiveType.NUMBER);
+          break;
+        case PRIMITIVE_TYPE.DATE:
+          addUniqueEntry(valuePrimitiveTypes, PrimitiveType.DATE);
+          break;
+        case PRIMITIVE_TYPE.STRICTDATE:
+          addUniqueEntry(valuePrimitiveTypes, PrimitiveType.STRICTDATE);
+          break;
+        case PRIMITIVE_TYPE.DATETIME:
+          addUniqueEntry(valuePrimitiveTypes, PrimitiveType.DATETIME);
           break;
         default:
           valuePrimitiveTypes.push(undefined);
@@ -107,7 +118,7 @@ export const getCollectionValueSpecificationType = (
     return valuePrimitiveTypes[0] as PrimitiveType;
   } else if (values.every((val) => val instanceof EnumValueInstanceValue)) {
     const valueEnumerationTypes: Enumeration[] = [];
-    (values as EnumValueInstanceValue[]).forEach((val) => {
+    values.forEach((val) => {
       addUniqueEntry(
         valueEnumerationTypes,
         guaranteeNonNullable(val.values[0]).value._OWNER,
@@ -119,6 +130,37 @@ export const getCollectionValueSpecificationType = (
     return valueEnumerationTypes[0];
   }
   return undefined;
+};
+
+export const isValidInstanceValue = (value: InstanceValue): boolean => {
+  const isRequired = value.multiplicity.lowerBound >= 1;
+  // required and no values provided. LatestDate doesn't have any values so we skip that check for it.
+  if (
+    isRequired &&
+    value.genericType?.value.rawType !== PrimitiveType.LATESTDATE &&
+    (!value.values.length ||
+      value.values.some((val) => val === null || val === undefined))
+  ) {
+    return false;
+  }
+  // more values than allowed
+  if (
+    !(value instanceof CollectionInstanceValue) &&
+    value.multiplicity.upperBound &&
+    value.values.length > value.multiplicity.upperBound
+  ) {
+    return false;
+  }
+  // collection instance with invalid values
+  if (
+    value instanceof CollectionInstanceValue &&
+    value.values.some(
+      (val) => val instanceof InstanceValue && !isValidInstanceValue(val),
+    )
+  ) {
+    return false;
+  }
+  return true;
 };
 
 export const unwrapNotExpression = (
@@ -198,7 +240,7 @@ export const isTypeCompatibleForAssignment = (
       // Pure function used for the operation
       // e.g. LHS(DateTime) = RHS(Date) -> we use isOnDay() instead of is()
       DATE_PRIMITIVE_TYPES.includes(type.path) ||
-      type === assignmentType ||
+      type.path === assignmentType.path ||
       isSuperType(assignmentType, type))
   );
 };
@@ -211,11 +253,12 @@ export const generateDefaultValueForPrimitiveType = (
       return '';
     case PRIMITIVE_TYPE.BOOLEAN:
       return false;
+    case PRIMITIVE_TYPE.BYTE:
+      return btoa('');
     case PRIMITIVE_TYPE.NUMBER:
     case PRIMITIVE_TYPE.DECIMAL:
     case PRIMITIVE_TYPE.FLOAT:
     case PRIMITIVE_TYPE.INTEGER:
-    case PRIMITIVE_TYPE.BYTE:
     case PRIMITIVE_TYPE.BINARY:
       return 0;
     case PRIMITIVE_TYPE.DATE:
@@ -287,6 +330,7 @@ export const buildGenericLambdaFunctionInstanceValue = (
 export const validatePropertyExpressionChain = (
   propertyExpression: AbstractPropertyExpression,
   graph: PureModel,
+  queryBuilderState: QueryBuilderState,
 ): void => {
   if (
     propertyExpression.func.value.genericType.value.rawType instanceof Class &&
@@ -313,6 +357,7 @@ export const validatePropertyExpressionChain = (
           sourceStereotype,
           targetStereotype,
           propertyExpression,
+          queryBuilderState,
         );
       }
     }

@@ -59,6 +59,7 @@ interface ClassMappingSubTypeOption {
 
 export const NewMappingElementModal = observer(() => {
   const editorStore = useEditorStore();
+  const applicationStore = editorStore.applicationStore;
   const mappingEditorState =
     editorStore.tabManagerState.getCurrentEditorState(MappingEditorState);
   const spec = mappingEditorState.newMappingElementSpec;
@@ -87,11 +88,15 @@ export const NewMappingElementModal = observer(() => {
   const filterOption = createFilter({
     ignoreCase: true,
     ignoreAccents: false,
-    stringify: (option: PackageableElementOption<PackageableElement>): string =>
-      option.value.path,
+    stringify: (option: {
+      data: PackageableElementOption<PackageableElement>;
+    }): string => option.data.value.path,
   });
   const selectedOption = spec?.target
-    ? { label: spec.target.name, value: spec.target.path }
+    ? {
+        label: spec.target.name,
+        value: spec.target,
+      }
     : null;
   const handleTargetChange = (
     val: PackageableElementOption<PackageableElement> | null,
@@ -106,10 +111,6 @@ export const NewMappingElementModal = observer(() => {
       : '';
     setId(suggestedId && !mappingIds.includes(suggestedId) ? suggestedId : '');
   };
-
-  const darkMappingMode =
-    editorStore.applicationStore.config.options
-      .TEMPORARY__enableMappingTestableEditor;
   // Class Mapping Type
   const classMappingTypeSelectorRef = useRef<SelectComponent>(null);
   const classMappingTypeOptions = [
@@ -200,8 +201,8 @@ export const NewMappingElementModal = observer(() => {
           spec.target instanceof Class
             ? 'Class'
             : spec.target instanceof Enumeration
-            ? 'Enumeration'
-            : 'Association'
+              ? 'Enumeration'
+              : 'Association'
         } Mapping ${spec.target ? `for ${spec.target.name}` : ''}`
     : undefined;
 
@@ -228,13 +229,13 @@ export const NewMappingElementModal = observer(() => {
             handleSubmit();
           }}
           className={clsx('modal search-modal new-mapping-element-modal', {
-            'modal--dark': darkMappingMode,
+            'modal--dark': true,
           })}
         >
           {titleText && <div className="modal__title">{titleText}</div>}
           {spec.showTarget && (
             <CustomSelectorInput
-              ref={targetSelectorRef}
+              inputRef={targetSelectorRef}
               options={options}
               filterOption={filterOption}
               onChange={handleTargetChange}
@@ -242,7 +243,10 @@ export const NewMappingElementModal = observer(() => {
               formatOptionLabel={getPackageableElementOptionFormatter({})}
               placeholder="Choose a target"
               isClearable={true}
-              darkMode={darkMappingMode}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           )}
           {showId && (
@@ -252,7 +256,7 @@ export const NewMappingElementModal = observer(() => {
               <PanelDivider />
               <input
                 className={clsx('input new-mapping-element-modal__id-input', {
-                  'input--dark': darkMappingMode,
+                  'input--dark': true,
                 })}
                 ref={mappingIdInputRef}
                 spellCheck={false}
@@ -266,11 +270,14 @@ export const NewMappingElementModal = observer(() => {
             <>
               <PanelDivider />
               <CustomSelectorInput
-                ref={classMappingTypeSelectorRef}
+                inputRef={classMappingTypeSelectorRef}
                 options={classMappingTypeOptions}
                 onChange={changeClassMappingType}
                 value={classMappingType}
-                darkMode={darkMappingMode}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
                 placeholder="Choose a class mapping type"
               />
             </>
@@ -279,7 +286,7 @@ export const NewMappingElementModal = observer(() => {
           <div className="search-modal__actions">
             <button
               className={clsx('btn btn--primary', {
-                'btn--dark': darkMappingMode,
+                'btn--dark': true,
               })}
               disabled={disableCreateButton}
             >

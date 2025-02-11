@@ -21,12 +21,14 @@ import {
   extractElementNameFromPath,
   stub_RawLambda,
   V1_buildExecutionResult,
-  V1_serializeExecutionResult,
+  V1_deserializeExecutionResult,
 } from '@finos/legend-graph';
 import {
   act,
   fireEvent,
+  getAllByText,
   getByDisplayValue,
+  getByRole,
   getByText,
   getByTitle,
   waitFor,
@@ -36,14 +38,16 @@ import {
   TEST__provideMockedQueryEditorStore,
   TEST__setUpQueryEditor,
 } from '../__test-utils__/QueryEditorComponentTestUtils.js';
-import { QUERY_BUILDER_TEST_ID } from '@finos/legend-query-builder';
+import {
+  QUERY_BUILDER_TEST_ID,
+  dragAndDrop,
+} from '@finos/legend-query-builder';
 import {
   TEST_DATA__ResultState_entities,
   TEST_DATA__result,
   TEST_DATA__modelCoverageAnalysisResult,
   TEST_DATA__simpleProjectionQuery,
 } from './TEST_DATA__QueryBuilder_ResultStateTest.js';
-import { QUERY_EDITOR_TEST_ID } from '../../__lib__/LegendQueryTesting.js';
 
 test(
   integrationTest(
@@ -78,46 +82,49 @@ test(
     await waitFor(() =>
       getByText(queryBuilderSetup, extractElementNameFromPath(mapping)),
     );
-    await waitFor(() =>
-      getByText(queryBuilderSetup, extractElementNameFromPath(runtime)),
-    );
+    expect(
+      getAllByText(queryBuilderSetup, extractElementNameFromPath(runtime))
+        .length,
+    ).toBe(2);
     await act(async () => {
       queryBuilderState.initializeWithQuery(lambda);
     });
 
     const executionResult = V1_buildExecutionResult(
-      V1_serializeExecutionResult(TEST_DATA__result),
+      V1_deserializeExecutionResult(TEST_DATA__result),
     );
     await act(async () => {
       queryBuilderState.resultState.setExecutionResult(executionResult);
     });
 
     await waitFor(() =>
-      renderResult.getByTestId(QUERY_EDITOR_TEST_ID.QUERY_EDITOR_ACTIONS),
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_ACTIONS),
     );
     const queryActionsPanel = renderResult.getByTestId(
-      QUERY_EDITOR_TEST_ID.QUERY_EDITOR_ACTIONS,
+      QUERY_BUILDER_TEST_ID.QUERY_BUILDER_ACTIONS,
     );
 
     expect(
       getByTitle(queryActionsPanel, 'Save query').hasAttribute('disabled'),
     ).toBe(false);
 
-    expect(
-      getByTitle(queryActionsPanel, 'Save as new query').hasAttribute(
-        'disabled',
-      ),
-    ).toBe(false);
-
-    fireEvent.click(getByTitle(queryActionsPanel, 'Save as new query'));
+    const saveDropdown = await waitFor(() =>
+      renderResult.getByTitle('query__editor__save-dropdown'),
+    );
+    fireEvent.click(saveDropdown);
+    const saveAsNewQueryButton = renderResult.getByTitle(
+      'query__editor__save-dropdown__save-as',
+    );
+    expect(saveAsNewQueryButton.hasAttribute('disabled')).toBe(false);
+    fireEvent.click(saveAsNewQueryButton);
 
     const createNewQueryModal = await waitFor(() =>
       renderResult.getByRole('dialog'),
     );
-    const renamedQueryInput = getByDisplayValue(
-      createNewQueryModal,
-      'New Query',
-    );
+    const renamedQueryInput = getByTitle(createNewQueryModal, 'New Query Name');
+    fireEvent.change(renamedQueryInput, {
+      target: { value: 'New Query' },
+    });
     expect(
       await waitFor(() =>
         getByTitle(
@@ -187,34 +194,34 @@ test(
     await waitFor(() =>
       getByText(queryBuilderSetup, extractElementNameFromPath(mapping)),
     );
-    await waitFor(() =>
-      getByText(queryBuilderSetup, extractElementNameFromPath(runtime)),
-    );
+    expect(
+      getAllByText(queryBuilderSetup, extractElementNameFromPath(runtime))
+        .length,
+    ).toBe(2);
     await act(async () => {
       queryBuilderState.initializeWithQuery(lambda);
     });
 
     const executionResult = V1_buildExecutionResult(
-      V1_serializeExecutionResult(TEST_DATA__result),
+      V1_deserializeExecutionResult(TEST_DATA__result),
     );
     await act(async () => {
       queryBuilderState.resultState.setExecutionResult(executionResult);
     });
 
     await waitFor(() =>
-      renderResult.getByTestId(QUERY_EDITOR_TEST_ID.QUERY_EDITOR_ACTIONS),
-    );
-    const queryActionsPanel = renderResult.getByTestId(
-      QUERY_EDITOR_TEST_ID.QUERY_EDITOR_ACTIONS,
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_ACTIONS),
     );
 
-    expect(
-      getByTitle(queryActionsPanel, 'Save as new query').hasAttribute(
-        'disabled',
-      ),
-    ).toBe(false);
-
-    fireEvent.click(getByTitle(queryActionsPanel, 'Save as new query'));
+    const saveDropdown = await waitFor(() =>
+      renderResult.getByTitle('query__editor__save-dropdown'),
+    );
+    fireEvent.click(saveDropdown);
+    const saveAsNewQueryButton = renderResult.getByTitle(
+      'query__editor__save-dropdown__save-as',
+    );
+    expect(saveAsNewQueryButton.hasAttribute('disabled')).toBe(false);
+    fireEvent.click(saveAsNewQueryButton);
 
     const createNewQueryModal = await waitFor(() =>
       renderResult.getByRole('dialog'),
@@ -222,6 +229,194 @@ test(
 
     expect(
       getByText(createNewQueryModal, 'Create Query').hasAttribute('disabled'),
+    ).toBe(true);
+  },
+);
+
+test(
+  integrationTest("Query header actions are disabled if query can't be built"),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryEditor(
+      TEST__provideMockedQueryEditorStore(),
+      TEST_DATA__ResultState_entities,
+      stub_RawLambda(),
+      'execution::RelationalMapping',
+      'execution::Runtime',
+      TEST_DATA__modelCoverageAnalysisResult,
+    );
+    const _class = 'model::Firm';
+
+    const _modelClass =
+      queryBuilderState.graphManagerState.graph.getClass(_class);
+
+    await act(async () => {
+      queryBuilderState.changeClass(_modelClass);
+    });
+
+    const filterPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_FILTER_PANEL,
+      ),
+    );
+    const tdsProjectionPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_PROJECTION,
+      ),
+    );
+    const explorerPanel = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_EXPLORER),
+    );
+
+    // Drag and drop
+    const tdsProjectionDropZone = await waitFor(() =>
+      getByText(tdsProjectionPanel, 'Add a projection column'),
+    );
+    const filterDropZone = await waitFor(() =>
+      getByText(filterPanel, 'Add a filter condition'),
+    );
+    const dragSource = await waitFor(() =>
+      getByText(explorerPanel, 'Legal Name'),
+    );
+    await dragAndDrop(
+      dragSource,
+      tdsProjectionDropZone,
+      tdsProjectionPanel,
+      'Add a projection column',
+    );
+    await dragAndDrop(
+      dragSource,
+      filterDropZone,
+      filterPanel,
+      'Add a filter condition',
+    );
+    await waitFor(() => getByText(filterPanel, 'Legal Name'));
+    await waitFor(() => getByText(filterPanel, 'is'));
+    await waitFor(() => getByDisplayValue(filterPanel, ''));
+
+    // Verify action buttons are disabled properly and error is shown
+    const queryActionsPanel = await renderResult.findByTestId(
+      QUERY_BUILDER_TEST_ID.QUERY_BUILDER_ACTIONS,
+    );
+    expect(
+      getByRole(queryActionsPanel, 'button', {
+        name: 'Load Query',
+      }).hasAttribute('disabled'),
     ).toBe(false);
+    expect(
+      getByRole(queryActionsPanel, 'button', {
+        name: 'New Query',
+      }).hasAttribute('disabled'),
+    ).toBe(false);
+    expect(
+      getByRole(queryActionsPanel, 'button', { name: 'Save' }).hasAttribute(
+        'disabled',
+      ),
+    ).toBe(true);
+    const saveDropdown = await waitFor(() =>
+      renderResult.getByTitle('query__editor__save-dropdown'),
+    );
+    fireEvent.click(saveDropdown);
+    const saveAsNewQueryButton = renderResult.getByTitle(
+      'query__editor__save-dropdown__save-as',
+    );
+    expect(saveAsNewQueryButton.hasAttribute('disabled')).toBe(true);
+    expect(renderResult.getByText('1 issue')).not.toBeNull();
+  },
+);
+
+test(
+  integrationTest(
+    'Query header actions are not disabled if query can be built',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryEditor(
+      TEST__provideMockedQueryEditorStore(),
+      TEST_DATA__ResultState_entities,
+      stub_RawLambda(),
+      'execution::RelationalMapping',
+      'execution::Runtime',
+      TEST_DATA__modelCoverageAnalysisResult,
+    );
+    const _class = 'model::Firm';
+
+    const _modelClass =
+      queryBuilderState.graphManagerState.graph.getClass(_class);
+
+    await act(async () => {
+      queryBuilderState.changeClass(_modelClass);
+    });
+
+    const filterPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_FILTER_PANEL,
+      ),
+    );
+    const tdsProjectionPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_PROJECTION,
+      ),
+    );
+    const explorerPanel = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_EXPLORER),
+    );
+
+    // Drag and drop
+    const tdsProjectionDropZone = await waitFor(() =>
+      getByText(tdsProjectionPanel, 'Add a projection column'),
+    );
+    const filterDropZone = await waitFor(() =>
+      getByText(filterPanel, 'Add a filter condition'),
+    );
+    const dragSource = await waitFor(() =>
+      getByText(explorerPanel, 'Legal Name'),
+    );
+    await dragAndDrop(
+      dragSource,
+      tdsProjectionDropZone,
+      tdsProjectionPanel,
+      'Add a projection column',
+    );
+    await dragAndDrop(
+      dragSource,
+      filterDropZone,
+      filterPanel,
+      'Add a filter condition',
+    );
+    await waitFor(() => getByText(filterPanel, 'Legal Name'));
+    await waitFor(() => getByText(filterPanel, 'is'));
+    await waitFor(() => getByDisplayValue(filterPanel, ''));
+
+    // Enter filter value
+    const filterValueInput = getByDisplayValue(filterPanel, '');
+    fireEvent.change(filterValueInput, { target: { value: 'test' } });
+
+    // Verify action buttons are disabled properly and no error is shown
+    const queryActionsPanel = await renderResult.findByTestId(
+      QUERY_BUILDER_TEST_ID.QUERY_BUILDER_ACTIONS,
+    );
+    expect(
+      getByRole(queryActionsPanel, 'button', {
+        name: 'Load Query',
+      }).hasAttribute('disabled'),
+    ).toBe(false);
+    expect(
+      getByRole(queryActionsPanel, 'button', {
+        name: 'New Query',
+      }).hasAttribute('disabled'),
+    ).toBe(false);
+    expect(
+      getByRole(queryActionsPanel, 'button', { name: 'Save' }).hasAttribute(
+        'disabled',
+      ),
+    ).toBe(false);
+    const saveDropdown = await waitFor(() =>
+      renderResult.getByTitle('query__editor__save-dropdown'),
+    );
+    fireEvent.click(saveDropdown);
+    const saveAsNewQueryButton = renderResult.getByTitle(
+      'query__editor__save-dropdown__save-as',
+    );
+    expect(saveAsNewQueryButton.hasAttribute('disabled')).toBe(false);
+    expect(renderResult.queryByText('1 issue')).toBeNull();
   },
 );

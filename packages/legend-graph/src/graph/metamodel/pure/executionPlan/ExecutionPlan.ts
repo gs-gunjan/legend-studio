@@ -15,6 +15,7 @@
  */
 
 import type { ExecutionNode } from './nodes/ExecutionNode.js';
+import type { PlatformImplementation } from './nodes/PlatformImplementation.js';
 
 export type RawExecutionPlan = object;
 
@@ -23,10 +24,5 @@ export class ExecutionPlan {
   processingTemplateFunctions: string[] = [];
   authDependent!: boolean;
   kerberos?: string | undefined;
-  /**
-   * Studio does not process the platform implementation info
-   *
-   * @discrepancy model
-   */
-  globalImplementationSupport!: object;
+  globalImplementationSupport?: PlatformImplementation | undefined;
 }

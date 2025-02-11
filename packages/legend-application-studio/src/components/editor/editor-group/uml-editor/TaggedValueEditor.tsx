@@ -24,7 +24,7 @@ import {
   TimesIcon,
   ArrowCircleRightIcon,
   LongArrowAltUpIcon,
-  PanelDnDEntryDragHandle,
+  PanelEntryDragHandle,
   PanelDnDEntry,
   DragPreviewLayer,
   useDragPreviewLayer,
@@ -99,8 +99,9 @@ export const TaggedValueEditor = observer(
     const profileFilterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: PackageableElementOption<Profile>): string =>
-        option.value.path,
+      stringify: (option: {
+        data: PackageableElementOption<Profile>;
+      }): string => option.data.value.path,
     });
     const [selectedProfile, setSelectedProfile] = useState<
       PackageableElementOption<Profile>
@@ -125,7 +126,7 @@ export const TaggedValueEditor = observer(
     const tagFilterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: TagOption): string => option.label,
+      stringify: (option: { data: TagOption }): string => option.data.label,
     });
     const selectedTag = {
       value: inferableTag.value,
@@ -189,9 +190,9 @@ export const TaggedValueEditor = observer(
         showPlaceholder={isBeingDragged}
         placeholder={<div className="dnd__placeholder--light"></div>}
       >
-        <PanelDnDEntryDragHandle
-          dropTargetConnector={handleRef}
-          isBeingDragged={isBeingDragged}
+        <PanelEntryDragHandle
+          dragSourceConnector={handleRef}
+          isDragging={isBeingDragged}
         />
         <div
           className={clsx('tagged-value-editor', {

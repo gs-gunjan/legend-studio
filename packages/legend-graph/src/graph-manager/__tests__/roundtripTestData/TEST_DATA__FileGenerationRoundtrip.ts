@@ -96,7 +96,12 @@ export const TEST_DATA__FileGenerationWithPackageSameAsSystemElement = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -115,7 +120,12 @@ export const TEST_DATA__FileGenerationWithPackageSameAsSystemElement = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },

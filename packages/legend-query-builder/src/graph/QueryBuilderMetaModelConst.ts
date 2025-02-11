@@ -24,6 +24,8 @@ export enum QUERY_BUILDER_PURE_PATH {
   DURATION_UNIT = 'meta::pure::functions::date::DurationUnit',
   DAY_OF_WEEK = 'meta::pure::functions::date::DayOfWeek',
 
+  // RELATION
+  RELATION = 'meta::pure::metamodel::relation::Relation',
   // serialization
   SERIALIZE_CONFIG = 'meta::pure::graphFetch::execution::AlloySerializationConfig',
 }
@@ -31,6 +33,7 @@ export enum QUERY_BUILDER_PURE_PATH {
 export enum QUERY_BUILDER_SUPPORTED_CALENDAR_AGGREGATION_FUNCTIONS {
   CALENDAR_ANNUALIZED = 'meta::pure::functions::date::calendar::annualized',
   CALENDAR_CME = ' meta::pure::functions::date::calendar::cme',
+
   CALENDAR_CW = 'meta::pure::functions::date::calendar::cw',
   CALENDAR_CW_FM = 'meta::pure::functions::date::calendar::cw_fm',
   CALENDAR_CY_MINUS2 = 'meta::pure::functions::date::calendar::CYMinus2',
@@ -62,12 +65,16 @@ export enum QUERY_BUILDER_SUPPORTED_CALENDAR_AGGREGATION_FUNCTIONS {
   CALENDAR_YTD = 'meta::pure::functions::date::calendar::ytd',
 }
 
+export enum QUERY_BUILDER_SUPPORTED_GET_ALL_FUNCTIONS {
+  GET_ALL = 'meta::pure::functions::collection::getAll',
+  GET_ALL_VERSIONS = 'meta::pure::functions::collection::getAllVersions',
+  GET_ALL_VERSIONS_IN_RANGE = 'meta::pure::functions::collection::getAllVersionsInRange',
+}
+
 export enum QUERY_BUILDER_SUPPORTED_FUNCTIONS {
   AND = 'meta::pure::functions::boolean::and',
   EXISTS = 'meta::pure::functions::collection::exists',
   FILTER = 'meta::pure::functions::collection::filter',
-  GET_ALL = 'meta::pure::functions::collection::getAll',
-  GET_ALL_VERSIONS = 'meta::pure::functions::collection::getAllVersions',
   NOT = 'meta::pure::functions::boolean::not',
   OR = 'meta::pure::functions::boolean::or',
   TAKE = 'meta::pure::functions::collection::take',
@@ -79,9 +86,11 @@ export enum QUERY_BUILDER_SUPPORTED_FUNCTIONS {
   TODAY = 'meta::pure::functions::date::today',
   NOW = 'meta::pure::functions::date::now',
   FIRST_DAY_OF_WEEK = 'meta::pure::functions::date::firstDayOfThisWeek',
-  FIRST_DAY_OF_MONTH = 'meta::pure::functions::date::firstDayOfThisMonth',
+  FIRST_DAY_OF_THIS_MONTH = 'meta::pure::functions::date::firstDayOfThisMonth',
+  FIRST_DAY_OF_MONTH = 'meta::pure::functions::date::firstDayOfMonth',
   FIRST_DAY_OF_QUARTER = 'meta::pure::functions::date::firstDayOfThisQuarter',
-  FIRST_DAY_OF_YEAR = 'meta::pure::functions::date::firstDayOfThisYear',
+  FIRST_DAY_OF_THIS_YEAR = 'meta::pure::functions::date::firstDayOfThisYear',
+  FIRST_DAY_OF_YEAR = 'meta::pure::functions::date::firstDayOfYear',
   PREVIOUS_DAY_OF_WEEK = 'meta::pure::functions::date::previousDayOfWeek',
   IS_ON_DAY = 'meta::pure::functions::date::isOnDay',
   IS_ON_OR_AFTER_DAY = 'meta::pure::functions::date::isOnOrAfterDay',
@@ -105,8 +114,18 @@ export enum QUERY_BUILDER_SUPPORTED_FUNCTIONS {
   TDS_GROUP_BY = 'meta::pure::tds::groupBy',
   TDS_SORT = 'meta::pure::tds::sort',
   TDS_TAKE = 'meta::pure::tds::take',
+  TDS_RESTRICT = 'meta::pure::tds::restrict',
   TDS_FUNC = 'meta::pure::tds::func',
+  TDS_COL = 'meta::pure::tds::col',
 
+  // Relation
+  RELATION_PROJECT = 'meta::pure::functions::relation::project',
+  RELATION_LIMIT = 'meta::pure::functions::relation::limit',
+  RELATION_ASC = 'meta::pure::functions::relation::ascending',
+  RELATION_DESC = 'meta::pure::functions::relation::descending',
+  RELATION_DISTINCT = 'meta::pure::functions::relation::distinct',
+  RELATION_SORT = 'meta::pure::functions::relation::sort',
+  RELATION_SLICE = 'meta::pure::functions::relation::slice',
   // filter
   CONTAINS = 'meta::pure::functions::string::contains',
   ENDS_WITH = 'meta::pure::functions::string::endsWith',
@@ -132,6 +151,8 @@ export enum QUERY_BUILDER_SUPPORTED_FUNCTIONS {
   STD_DEV_SAMPLE = 'meta::pure::functions::math::stdDevSample',
   SUM = 'meta::pure::functions::math::sum',
   UNIQUE_VALUE_ONLY = 'meta::pure::functions::collection::uniqueValueOnly',
+  WAVG = 'meta::pure::functions::math::wavg',
+  WAVG_ROW_MAPPER = 'meta::pure::functions::math::wavgUtility::wavgRowMapper',
 
   // watermark
   WATERMARK = 'meta::datalake::functions::forWatermark',
@@ -149,4 +170,32 @@ export enum QUERY_BUILDER_SUPPORTED_FUNCTIONS {
   FROM = 'meta::pure::mapping::from',
   CHECKED = 'meta::pure::dataQuality::checked',
   MERGERUNTIMES = 'meta::pure::runtime::mergeRuntimes',
+  PERCENTILE = 'meta::pure::functions::math::percentile',
+
+  // TOTDS
+  TABLE_TO_TDS = 'meta::pure::tds::tableToTDS',
+  TABLE_REFERENCE = 'meta::relational::functions::database::tableReference',
+
+  // SLICE
+  SLICE = 'meta::pure::functions::collection::slice',
+}
+
+export enum TDS_COLUMN_GETTER {
+  GET_STRING = 'getString',
+  GET_NUMBER = 'getNumber',
+  GET_INTEGER = 'getInteger',
+  GET_FLOAT = 'getFloat',
+  GET_DECIMAL = 'getDecimal',
+  GET_DATE = 'getDate',
+  GET_DATETIME = 'getDateTime',
+  GET_STRICTDATE = 'getStrictDate',
+  GET_BOOLEAN = 'getBoolean',
+  GET_ENUM = 'getEnum',
+  IS_NULL = 'isNull',
+  IS_NOT_NULL = 'isNotNull',
+}
+
+export enum COLUMN_SORT_TYPE {
+  ASC = 'ASC',
+  DESC = 'DESC',
 }

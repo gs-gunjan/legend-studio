@@ -14,10 +14,18 @@
  * limitations under the License.
  */
 
+// Graph
+export * from '../graph/metamodel/pure/model/packageableElements/dataSpace/DSL_DataSpace_DataSpace.js';
+export * from '../graph/metamodel/pure/model/packageableElements/mapping/DSL_DataSpace_MappingIncludeDataSpace.js';
+export * from '../graph/DSL_DataSpace_MetaModelConst.js';
+
 export * from './DSL_DataSpace_GraphManagerPreset.js';
+
+export { V1_DataSpaceAnalysisResult } from './protocol/pure/v1/engine/analytics/V1_DataSpaceAnalysis.js';
 
 export {
   DATA_SPACE_ELEMENT_CLASSIFIER_PATH,
+  DATA_SPACE_ELEMENT_POINTER,
   extractDataSpaceTaxonomyNodes,
 } from './protocol/pure/DSL_DataSpace_PureProtocolProcessorPlugin.js';
 
@@ -26,3 +34,12 @@ export { DSL_DataSpace_getGraphManagerExtension } from './protocol/pure/DSL_Data
 
 export * from './action/analytics/DataSpaceAnalysis.js';
 export * from './action/analytics/DataSpaceAnalysisHelper.js';
+export * from './protocol/pure/DSL_DataSpace_PureGraphManagerExtension.js';
+export * from '../stores/shared/DataSpaceInfo.js';
+export * from '../stores/query-builder/DataSpaceQueryBuilderState.js';
+
+export { observe_DataSpace } from '../graph-manager/action/changeDetection/DSL_DataSpace_ObserverHelper.js';
+export {
+  V1_DataSpaceExecutionContext,
+  V1_DataSpace,
+} from '../graph-manager/protocol/pure/v1/model/packageableElements/dataSpace/V1_DSL_DataSpace_DataSpace.js';

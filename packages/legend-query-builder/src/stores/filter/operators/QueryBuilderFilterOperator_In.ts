@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import type {
-  QueryBuilderFilterState,
-  FilterConditionState,
+import {
+  type QueryBuilderFilterState,
+  type FilterConditionState,
+  FilterValueSpecConditionValueState,
 } from '../QueryBuilderFilterState.js';
 import { QueryBuilderFilterOperator } from '../QueryBuilderFilterOperator.js';
 import {
@@ -47,8 +48,8 @@ export class QueryBuilderFilterOperator_In
   extends QueryBuilderFilterOperator
   implements Hashable
 {
-  getLabel(filterConditionState: FilterConditionState): string {
-    return 'is in';
+  getLabel(): string {
+    return 'is in list of';
   }
 
   isCompatibleWithFilterConditionProperty(
@@ -65,6 +66,9 @@ export class QueryBuilderFilterOperator_In
           PRIMITIVE_TYPE.INTEGER,
           PRIMITIVE_TYPE.DECIMAL,
           PRIMITIVE_TYPE.FLOAT,
+          PRIMITIVE_TYPE.DATE,
+          PRIMITIVE_TYPE.STRICTDATE,
+          PRIMITIVE_TYPE.DATETIME,
         ] as string[]
       ).includes(propertyType.path) ||
       // TODO: do we care if the enumeration type has no value (like in the case of `==` operator)?
@@ -78,45 +82,55 @@ export class QueryBuilderFilterOperator_In
     const propertyType =
       filterConditionState.propertyExpressionState.propertyExpression.func.value
         .genericType.value.rawType;
-    const valueSpec = filterConditionState.value;
-    if (valueSpec instanceof CollectionInstanceValue) {
-      if (valueSpec.values.length === 0) {
-        return true;
+    const rightSide = filterConditionState.rightConditionValue;
+    // `in`/`not in` does not support right hand value being column state as the multipliticy for columns are [0..1]
+    if (rightSide instanceof FilterValueSpecConditionValueState) {
+      const valueSpec = rightSide.value;
+      if (valueSpec instanceof CollectionInstanceValue) {
+        if (valueSpec.values.length === 0) {
+          return true;
+        }
+        const collectionType = getCollectionValueSpecificationType(
+          filterConditionState.filterState.queryBuilderState.graphManagerState
+            .graph,
+          valueSpec.values,
+        );
+        if (!collectionType) {
+          return false;
+        }
+        if (
+          (
+            [
+              PRIMITIVE_TYPE.NUMBER,
+              PRIMITIVE_TYPE.INTEGER,
+              PRIMITIVE_TYPE.DECIMAL,
+              PRIMITIVE_TYPE.FLOAT,
+              PRIMITIVE_TYPE.DATE,
+              PRIMITIVE_TYPE.STRICTDATE,
+              PRIMITIVE_TYPE.DATETIME,
+            ] as string[]
+          ).includes(propertyType.path)
+        ) {
+          return (
+            [
+              PRIMITIVE_TYPE.NUMBER,
+              PRIMITIVE_TYPE.INTEGER,
+              PRIMITIVE_TYPE.DECIMAL,
+              PRIMITIVE_TYPE.FLOAT,
+              PRIMITIVE_TYPE.DATE,
+              PRIMITIVE_TYPE.STRICTDATE,
+              PRIMITIVE_TYPE.DATETIME,
+            ] as string[]
+          ).includes(collectionType.path);
+        }
+        return collectionType === propertyType;
+      } else if (valueSpec instanceof VariableExpression) {
+        // check if not a single value
+        if (valueSpec.multiplicity.upperBound === 1) {
+          return false;
+        }
+        return propertyType === valueSpec.genericType?.value.rawType;
       }
-      const collectionType = getCollectionValueSpecificationType(
-        filterConditionState.filterState.queryBuilderState.graphManagerState
-          .graph,
-        valueSpec.values,
-      );
-      if (!collectionType) {
-        return false;
-      }
-      if (
-        (
-          [
-            PRIMITIVE_TYPE.NUMBER,
-            PRIMITIVE_TYPE.INTEGER,
-            PRIMITIVE_TYPE.DECIMAL,
-            PRIMITIVE_TYPE.FLOAT,
-          ] as string[]
-        ).includes(propertyType.path)
-      ) {
-        return (
-          [
-            PRIMITIVE_TYPE.NUMBER,
-            PRIMITIVE_TYPE.INTEGER,
-            PRIMITIVE_TYPE.DECIMAL,
-            PRIMITIVE_TYPE.FLOAT,
-          ] as string[]
-        ).includes(collectionType.path);
-      }
-      return collectionType === propertyType;
-    } else if (valueSpec instanceof VariableExpression) {
-      // check if not a single value
-      if (valueSpec.multiplicity.upperBound === 1) {
-        return false;
-      }
-      return propertyType === valueSpec.genericType?.value.rawType;
     }
     return false;
   }
@@ -135,10 +149,12 @@ export class QueryBuilderFilterOperator_In
 
   buildFilterConditionExpression(
     filterConditionState: FilterConditionState,
+    lambdaParameterName?: string | undefined,
   ): ValueSpecification {
     return buildFilterConditionExpression(
       filterConditionState,
       QUERY_BUILDER_SUPPORTED_FUNCTIONS.IN,
+      lambdaParameterName,
     );
   }
 
@@ -160,15 +176,19 @@ export class QueryBuilderFilterOperator_In
 }
 
 export class QueryBuilderFilterOperator_NotIn extends QueryBuilderFilterOperator_In {
-  override getLabel(filterConditionState: FilterConditionState): string {
-    return `is not in`;
+  override getLabel(): string {
+    return `is not in list of`;
   }
 
   override buildFilterConditionExpression(
     filterConditionState: FilterConditionState,
+    lambdaParameterName?: string | undefined,
   ): ValueSpecification {
     return buildNotExpression(
-      super.buildFilterConditionExpression(filterConditionState),
+      super.buildFilterConditionExpression(
+        filterConditionState,
+        lambdaParameterName,
+      ),
     );
   }
 

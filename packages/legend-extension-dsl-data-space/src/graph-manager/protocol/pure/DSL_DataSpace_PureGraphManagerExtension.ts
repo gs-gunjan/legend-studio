@@ -16,15 +16,24 @@
 
 import {
   type AbstractPureGraphManager,
+  type PureProtocolProcessorPlugin,
+  type QueryInfo,
+  type PureModel,
+  type GraphManagerOperationReport,
   AbstractPureGraphManagerExtension,
 } from '@finos/legend-graph';
-import type { Entity } from '@finos/legend-storage';
+import type {
+  Entity,
+  ProjectGAVCoordinates,
+  StoredFileGeneration,
+} from '@finos/legend-storage';
 import {
-  guaranteeNonNullable,
   type ActionState,
   type PlainObject,
+  guaranteeNonNullable,
 } from '@finos/legend-shared';
 import type { DataSpaceAnalysisResult } from '../../action/analytics/DataSpaceAnalysis.js';
+import type { V1_DataSpaceAnalysisResult } from './v1/engine/analytics/V1_DataSpaceAnalysis.js';
 
 export abstract class DSL_DataSpace_PureGraphManagerExtension extends AbstractPureGraphManagerExtension {
   abstract analyzeDataSpace(
@@ -32,6 +41,43 @@ export abstract class DSL_DataSpace_PureGraphManagerExtension extends AbstractPu
     entitiesRetriever: () => Promise<Entity[]>,
     cacheRetriever?: () => Promise<PlainObject<DataSpaceAnalysisResult>>,
     actionState?: ActionState,
+  ): Promise<DataSpaceAnalysisResult>;
+
+  abstract retrieveDataSpaceAnalysisFromCache(
+    cacheRetriever: () => Promise<PlainObject<DataSpaceAnalysisResult>>,
+    actionState?: ActionState,
+  ): Promise<DataSpaceAnalysisResult | undefined>;
+
+  abstract analyzeDataSpaceCoverage(
+    dataSpacePath: string,
+    entitiesWithClassifierRetriever: () => Promise<
+      [PlainObject<Entity>[], PlainObject<Entity>[]]
+    >,
+    cacheRetriever?: () => Promise<PlainObject<StoredFileGeneration>[]>,
+    actionState?: ActionState,
+    graphReport?: GraphManagerOperationReport | undefined,
+    pureGraph?: PureModel | undefined,
+    executionContext?: string | undefined,
+    mappingPath?: string | undefined,
+    projectInfo?: ProjectGAVCoordinates,
+    templateQueryId?: string,
+  ): Promise<DataSpaceAnalysisResult>;
+
+  abstract addNewExecutableToDataSpaceEntity(
+    dataSpaceEntity: Entity,
+    currentQuery: QueryInfo,
+    executable: {
+      id: string;
+      title: string;
+      description?: string;
+    },
+  ): Promise<Entity>;
+
+  abstract IsTemplateQueryIdValid(dataSpaceEntity: Entity, id: string): boolean;
+
+  abstract buildDataSpaceAnalytics(
+    json: PlainObject<V1_DataSpaceAnalysisResult>,
+    plugins: PureProtocolProcessorPlugin[],
   ): Promise<DataSpaceAnalysisResult>;
 }
 
@@ -43,5 +89,5 @@ export const DSL_DataSpace_getGraphManagerExtension = (
       (extension) =>
         extension instanceof DSL_DataSpace_PureGraphManagerExtension,
     ),
-    `Can't find DSL Data Space Pure graph manager extension`,
-  ) as DSL_DataSpace_PureGraphManagerExtension;
+    `Can't find DSL Data Product Pure graph manager extension`,
+  );

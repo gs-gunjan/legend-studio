@@ -53,11 +53,26 @@ import type { V1_TaggedValue } from '../../../../model/packageableElements/domai
 import { V1_buildRawLambdaWithResolvedPaths } from './V1_ValueSpecificationPathResolver.js';
 import {
   addElementToPackage,
+  getAllClassDerivedProperties,
   getAllClassProperties,
   getOrCreateGraphPackage,
 } from '../../../../../../../../graph/helpers/DomainHelper.js';
 import { AggregationKind } from '../../../../../../../../graph/metamodel/pure/packageableElements/domain/AggregationKind.js';
 import { GraphBuilderError } from '../../../../../../../GraphManagerUtils.js';
+import type { V1_FunctionTestSuite } from '../../../../model/packageableElements/function/test/V1_FunctionTestSuite.js';
+import { FunctionTestSuite } from '../../../../../../../../graph/metamodel/pure/packageableElements/function/test/FunctionTestSuite.js';
+import type { V1_FunctionStoreTestData } from '../../../../model/packageableElements/function/test/V1_FunctionStoreTestData.js';
+import { FunctionStoreTestData } from '../../../../../../../../graph/metamodel/pure/packageableElements/function/test/FunctionStoreTestData.js';
+import { V1_buildEmbeddedData } from './V1_DataElementBuilderHelper.js';
+import { V1_FunctionTest } from '../../../../model/packageableElements/function/test/V1_FunctionTest.js';
+import {
+  FunctionParameterValue,
+  FunctionTest,
+} from '../../../../../../../../graph/metamodel/pure/packageableElements/function/test/FunctionTest.js';
+import { V1_buildTestAssertion } from './V1_TestBuilderHelper.js';
+import type { TestSuite } from '../../../../../../../../graph/metamodel/pure/test/Test.js';
+import { DefaultValue } from '../../../../../../../../graph/metamodel/pure/packageableElements/domain/DefaultValue.js';
+import { V1_getGenericTypeFullPath } from '../../../../helpers/V1_DomainHelper.js';
 
 export const V1_buildTaggedValue = (
   taggedValue: V1_TaggedValue,
@@ -112,9 +127,9 @@ export const V1_buildVariable = (
     variable.name,
     `Variable 'name' field is missing or empty`,
   );
-  assertNonEmptyString(
-    variable.class,
-    `Variable 'class' field is missing or empty`,
+  assertNonNullable(
+    variable.genericType,
+    `Variable 'genericType' field is missing or empty`,
   );
   assertNonNullable(
     variable.multiplicity,
@@ -124,7 +139,7 @@ export const V1_buildVariable = (
     variable.multiplicity.lowerBound,
     variable.multiplicity.upperBound,
   );
-  const type = context.resolveType(variable.class);
+  const type = context.resolveType(variable.genericType.rawType.fullPath);
   return new RawVariableExpression(variable.name, multiplicity, type);
 };
 
@@ -182,9 +197,9 @@ export const V1_buildProperty = (
     property.name,
     `Property 'name' field is missing or empty`,
   );
-  assertNonEmptyString(
-    property.type,
-    `Property 'type' field is missing or empty`,
+  assertNonNullable(
+    property.genericType,
+    `Property 'genericType' field is missing or empty`,
   );
   assertNonNullable(
     property.multiplicity,
@@ -197,7 +212,7 @@ export const V1_buildProperty = (
       property.multiplicity.lowerBound,
       property.multiplicity.upperBound,
     ),
-    context.resolveGenericType(property.type),
+    context.resolveGenericType(V1_getGenericTypeFullPath(property.genericType)),
     owner,
   );
   pureProperty.aggregation = property.aggregation
@@ -206,6 +221,11 @@ export const V1_buildProperty = (
   pureProperty.stereotypes = property.stereotypes
     .map((stereotype) => context.resolveStereotype(stereotype))
     .filter(isNonNullable);
+  if (property.defaultValue) {
+    const defautVal = new DefaultValue();
+    defautVal.value = property.defaultValue.value;
+    pureProperty.defaultValue = defautVal;
+  }
   pureProperty.taggedValues = property.taggedValues
     .map((taggedValue) => V1_buildTaggedValue(taggedValue, context))
     .filter(isNonNullable);
@@ -221,9 +241,9 @@ export const V1_buildDerivedProperty = (
     property.name,
     `Derived property 'name' field is missing or empty`,
   );
-  assertNonEmptyString(
-    property.returnType,
-    `Derived property 'returnType' field is missing or empty`,
+  assertNonNullable(
+    property.returnGenericType,
+    `Derived property 'returnGenericType' field is missing or empty`,
   );
   assertNonNullable(
     property.returnMultiplicity,
@@ -235,7 +255,9 @@ export const V1_buildDerivedProperty = (
       property.returnMultiplicity.lowerBound,
       property.returnMultiplicity.upperBound,
     ),
-    context.resolveGenericType(property.returnType),
+    context.resolveGenericType(
+      V1_getGenericTypeFullPath(property.returnGenericType),
+    ),
     owner,
   );
   derivedProperty.stereotypes = property.stereotypes
@@ -288,9 +310,11 @@ export const V1_buildAssociationProperty = (
   context: V1_GraphBuilderContext,
   pureAssociation: Association,
 ): Property => {
-  const associatedPropertyClassType = guaranteeNonNullable(
-    associatedProperty.type,
-    `Association associated property 'type' field is missing`,
+  const associatedPropertyClassType = V1_getGenericTypeFullPath(
+    guaranteeNonNullable(
+      associatedProperty.genericType,
+      `Association associated property 'type' field is missing`,
+    ),
   );
   validateAssociationProperty(
     pureAssociation,
@@ -325,7 +349,7 @@ export const V1_getAppliedProperty = (
   if (property) {
     return property;
   }
-  property = parentClass.derivedProperties.find((p) =>
+  property = getAllClassDerivedProperties(parentClass).find((p) =>
     parameters
       ? isCompatibleDerivedProperty(p, name, parameters)
       : name === p.name,
@@ -334,4 +358,60 @@ export const V1_getAppliedProperty = (
     property,
     `Property '${name}' not found in class '${parentClass.path}'`,
   );
+};
+
+// Function Suite
+const V1_buildFunctionTest = (
+  element: V1_FunctionTest,
+  parentSuite: TestSuite,
+  context: V1_GraphBuilderContext,
+): FunctionTest => {
+  const functionTest = new FunctionTest();
+  functionTest.id = element.id;
+  functionTest.__parent = parentSuite;
+  functionTest.doc = element.doc;
+  functionTest.assertions = element.assertions.map((assertion) =>
+    V1_buildTestAssertion(assertion, functionTest, context),
+  );
+  functionTest.parameters = element.parameters?.map((param) => {
+    const parameterValue = new FunctionParameterValue();
+    parameterValue.name = param.name;
+    parameterValue.value = param.value;
+    return parameterValue;
+  });
+  return functionTest;
+};
+
+const V1_buildFunctionStoreTestData = (
+  element: V1_FunctionStoreTestData,
+  context: V1_GraphBuilderContext,
+): FunctionStoreTestData => {
+  const storeTestData = new FunctionStoreTestData();
+  storeTestData.doc = element.doc;
+  storeTestData.store = context.resolveStore(element.store.path);
+  storeTestData.data = V1_buildEmbeddedData(element.data, context);
+  return storeTestData;
+};
+
+export const V1_buildFunctionSuite = (
+  element: V1_FunctionTestSuite,
+  context: V1_GraphBuilderContext,
+): FunctionTestSuite => {
+  const functionSuite = new FunctionTestSuite();
+  functionSuite.id = element.id;
+  functionSuite.doc = element.doc;
+  if (element.testData?.length) {
+    functionSuite.testData = element.testData.map((e) =>
+      V1_buildFunctionStoreTestData(e, context),
+    );
+  }
+  functionSuite.tests = element.tests.map((test) => {
+    if (test instanceof V1_FunctionTest) {
+      return V1_buildFunctionTest(test, functionSuite, context);
+    }
+    throw new UnsupportedOperationError(
+      'Unable to build function test: Unsupported function test type',
+    );
+  });
+  return functionSuite;
 };

@@ -74,7 +74,7 @@ import {
   ElementDragSource,
 } from '../../../stores/editor/utils/DnDUtils.js';
 import { useDrop } from 'react-dnd';
-import { assertErrorThrown, guaranteeType } from '@finos/legend-shared';
+import { assertErrorThrown } from '@finos/legend-shared';
 import type { ConnectionEditorState } from '../../../stores/editor/editor-state/element-editor-state/connection/ConnectionEditorState.js';
 import { useEditorStore } from '../EditorStoreProvider.js';
 import {
@@ -111,6 +111,7 @@ import {
   runtime_deleteIdentifiedConnection,
 } from '../../../stores/graph-modifier/DSL_Mapping_GraphModifierHelper.js';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../__lib__/LegendStudioApplicationNavigationContext.js';
+import { CUSTOM_LABEL } from '../../../stores/editor/NewElementState.js';
 
 const getConnectionTooltipText = (
   connection: Connection,
@@ -379,7 +380,7 @@ const RuntimeExplorer = observer(
     const runtimeName =
       runtime instanceof RuntimePointer
         ? runtime.packageableRuntime.value.name
-        : '(custom)';
+        : CUSTOM_LABEL;
     // explorer tree data
     const treeData = runtimeEditorState.explorerTreeData;
     const onNodeSelect = (node: RuntimeExplorerTreeNodeData): void =>
@@ -411,7 +412,7 @@ const RuntimeExplorer = observer(
       },
       [isReadOnly, runtimeEditorState, runtimeValue],
     );
-    const [{ isRuntimeSubElementDragOver }, dropRuntimeSubElementRef] = useDrop<
+    const [{ isRuntimeSubElementDragOver }, dropConnector] = useDrop<
       ElementDragSource,
       void,
       { isRuntimeSubElementDragOver: boolean }
@@ -443,7 +444,7 @@ const RuntimeExplorer = observer(
         </PanelHeader>
         <PanelContent>
           <PanelDropZone
-            dropTargetConnector={dropRuntimeSubElementRef}
+            dropTargetConnector={dropConnector}
             isDragOver={isRuntimeSubElementDragOver}
           >
             <div className="panel__content__list">
@@ -494,7 +495,7 @@ const IdentifiedConnectionEditor = observer(
       <div className="runtime-connection-editor__connection-option--custom">
         <CogIcon />
         <div className="runtime-connection-editor__connection-option--custom__label">
-          (custom)
+          {CUSTOM_LABEL}
         </div>
       </div>
     );
@@ -503,7 +504,7 @@ const IdentifiedConnectionEditor = observer(
       ? []
       : ([{ label: embeddedConnectionLabel }] as {
           label: string | React.ReactNode;
-          value?: PackageableConnection;
+          value: PackageableConnection;
         }[]);
     connectionOptions = connectionOptions.concat(
       currentRuntimeEditorTabState.packageableConnections.map(
@@ -513,13 +514,16 @@ const IdentifiedConnectionEditor = observer(
         }),
       ),
     );
-    const selectedConnectionOption = {
-      value: identifiedConnection.connection,
-      label: isEmbeddedConnection
-        ? embeddedConnectionLabel
-        : guaranteeType(identifiedConnection.connection, ConnectionPointer)
-            .packageableConnection.value.path,
-    };
+    const selectedConnectionOption =
+      identifiedConnection.connection instanceof ConnectionPointer
+        ? {
+            value: identifiedConnection.connection.packageableConnection.value,
+            label: isEmbeddedConnection
+              ? embeddedConnectionLabel
+              : identifiedConnection.connection.packageableConnection.value
+                  .path,
+          }
+        : null;
     const editorStore = useEditorStore();
     const onConnectionSelectionChange = (val: {
       label: string | React.ReactNode;
@@ -595,7 +599,10 @@ const IdentifiedConnectionEditor = observer(
                 options={connectionOptions}
                 onChange={onConnectionSelectionChange}
                 value={selectedConnectionOption}
-                darkMode={true}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
               />
               {!isEmbeddedConnection && (
                 <button
@@ -653,7 +660,7 @@ const IdentifiedConnectionsPerStoreEditor = observer(
       },
       [currentRuntimeEditorTabState, isReadOnly],
     );
-    const [{ isConnectionDragOver, dragItem }, dropConnectionRef] = useDrop<
+    const [{ isConnectionDragOver, dragItem }, dropConnector] = useDrop<
       ElementDragSource,
       void,
       { isConnectionDragOver: boolean; dragItem: ElementDragSource | null }
@@ -735,7 +742,7 @@ const IdentifiedConnectionsPerStoreEditor = observer(
                 menuProps={{ elevation: 7 }}
               >
                 <PanelDropZone
-                  dropTargetConnector={dropConnectionRef}
+                  dropTargetConnector={dropConnector}
                   isDragOver={isConnectionDragOver}
                 >
                   {Boolean(
@@ -811,6 +818,7 @@ const RuntimeMappingEditor = observer(
   }) => {
     const { runtimeEditorState, mappingRef, isReadOnly } = props;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const runtimeValue = runtimeEditorState.runtimeValue;
     const mappingOptions = editorStore.graphManagerState.graph.ownMappings
       .filter((m) => !runtimeValue.mappings.map((_m) => _m.value).includes(m))
@@ -818,11 +826,12 @@ const RuntimeMappingEditor = observer(
     const filterOption = createFilter({
       ignoreCase: true,
       ignoreAccents: false,
-      stringify: (option: PackageableElementOption<Mapping>): string =>
-        option.value.path,
+      stringify: (option: {
+        data: PackageableElementOption<Mapping>;
+      }): string => option.data.value.path,
     });
     const selectedMappingOption = {
-      value: mappingRef,
+      value: mappingRef.value,
       label: mappingRef.value.name,
     };
     const changeMapping = (val: PackageableElementOption<Mapping>): void =>
@@ -842,7 +851,9 @@ const RuntimeMappingEditor = observer(
           value={selectedMappingOption}
           placeholder="Choose a class"
           filterOption={filterOption}
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
         />
         <button
           className="btn--dark btn__icon--dark"
@@ -904,7 +915,7 @@ const RuntimeGeneralEditor = observer(
       },
       [isReadOnly, runtimeEditorState, runtimeValue.mappings],
     );
-    const [{ isMappingDragOver }, dropMappingRef] = useDrop<
+    const [{ isMappingDragOver }, dropConnector] = useDrop<
       ElementDragSource,
       void,
       { isMappingDragOver: boolean }
@@ -924,7 +935,7 @@ const RuntimeGeneralEditor = observer(
         <PanelHeader />
         <PanelContent>
           <PanelDropZone
-            dropTargetConnector={dropMappingRef}
+            dropTargetConnector={dropConnector}
             isDragOver={isMappingDragOver && !isReadOnly}
           >
             <div className="panel__content__form">
@@ -1053,6 +1064,7 @@ export const EmbeddedRuntimeEditor = observer(
     onClose: () => void;
   }) => {
     const { runtimeEditorState, onClose, isReadOnly } = props;
+    const applicationStore = useApplicationStore();
     const closeEditor = (): void => onClose();
     if (!runtimeEditorState) {
       return null;
@@ -1067,7 +1079,12 @@ export const EmbeddedRuntimeEditor = observer(
           paper: 'editor-modal__content',
         }}
       >
-        <Modal darkMode={true} className="editor-modal embedded-runtime-editor">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="editor-modal embedded-runtime-editor"
+        >
           <ModalHeader>
             <ModalTitle icon={<CogIcon />} title="custom runtime" />
             <ModalHeaderActions>

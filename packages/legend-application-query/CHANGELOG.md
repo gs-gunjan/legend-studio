@@ -1,5 +1,643 @@
 # @finos/legend-application-query
 
+## 13.7.49
+
+## 13.7.48
+
+## 13.7.47
+
+## 13.7.46
+
+## 13.7.45
+
+## 13.7.44
+
+## 13.7.43
+
+### Patch Changes
+
+- [#3856](https://github.com/finos/legend-studio/pull/3856) [`80971ca`](https://github.com/finos/legend-studio/commit/80971cabf2b52b695e5e46b538692883f46d8b6e) ([@kelly-thai](https://github.com/kelly-thai)) - Update error message if Legend DataCube URL could not be generated
+
+## 13.7.42
+
+### Patch Changes
+
+- [#3849](https://github.com/finos/legend-studio/pull/3849) [`3fc168e`](https://github.com/finos/legend-studio/commit/3fc168ebe789d83dc3b7d9fee0c0b618092745dd) ([@kelly-thai](https://github.com/kelly-thai)) - Add integration between Query and DataCube, allow users to now open their saved query results in DataCube via a link provided by Query.
+
+## 13.7.41
+
+## 13.7.40
+
+## 13.7.39
+
+## 13.7.38
+
+## 13.7.37
+
+## 13.7.36
+
+## 13.7.35
+
+## 13.7.34
+
+### Patch Changes
+
+- [#3808](https://github.com/finos/legend-studio/pull/3808) [`eec360c`](https://github.com/finos/legend-studio/commit/eec360cd6b019d272945bfae9782ec613c17f72c) ([@kelly-thai](https://github.com/kelly-thai)) - Updating dataspaces to dataproducts where necessary
+
+## 13.7.33
+
+## 13.7.32
+
+## 13.7.31
+
+## 13.7.30
+
+## 13.7.29
+
+## 13.7.28
+
+## 13.7.27
+
+## 13.7.26
+
+## 13.7.25
+
+## 13.7.24
+
+## 13.7.23
+
+## 13.7.22
+
+## 13.7.21
+
+## 13.7.20
+
+## 13.7.19
+
+## 13.7.18
+
+## 13.7.17
+
+## 13.7.16
+
+## 13.7.15
+
+## 13.7.14
+
+## 13.7.13
+
+## 13.7.12
+
+### Patch Changes
+
+- [#3693](https://github.com/finos/legend-studio/pull/3693) [`85053ba`](https://github.com/finos/legend-studio/commit/85053ba06ef38f4017499b09e0b78fda1e12e6b8) ([@pragyasri-gs](https://github.com/pragyasri-gs)) - Add queryChatState in QueryBuilderState for aborting previous API requests
+
+## 13.7.11
+
+### Patch Changes
+
+- [#3688](https://github.com/finos/legend-studio/pull/3688) [`2e059b8`](https://github.com/finos/legend-studio/commit/2e059b89c7777d64c74024ae055054549be137e5) ([@kelly-thai](https://github.com/kelly-thai)) - Data Product now on one line
+
+## 13.7.10
+
+### Patch Changes
+
+- [#3683](https://github.com/finos/legend-studio/pull/3683) [`42b374c`](https://github.com/finos/legend-studio/commit/42b374c56646f89003d49201efcafb69f5555d1d) ([@kelly-thai](https://github.com/kelly-thai)) - Changing instances of Data Space to Data Product in UI
+
+## 13.7.9
+
+## 13.7.8
+
+## 13.7.7
+
+## 13.7.6
+
+## 13.7.5
+
+### Patch Changes
+
+- [#3660](https://github.com/finos/legend-studio/pull/3660) [`9dd4bf6`](https://github.com/finos/legend-studio/commit/9dd4bf64fdbcfb16e010c9aa6bf89e79aa3c3109) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - leverage minimal graph to build query builder with datsapaces
+
+## 13.7.4
+
+## 13.7.3
+
+## 13.7.2
+
+## 13.7.1
+
+## 13.7.0
+
+### Minor Changes
+
+- [#3488](https://github.com/finos/legend-studio/pull/3488) [`2fa496b`](https://github.com/finos/legend-studio/commit/2fa496bfce04a1bc42d75f2c31febc48a938bcbc) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Use PMCD returned by mapping analysis to build minimal graph for query
+
+## 13.6.9
+
+## 13.6.8
+
+## 13.6.7
+
+## 13.6.6
+
+### Patch Changes
+
+- [#3611](https://github.com/finos/legend-studio/pull/3611) [`850de72`](https://github.com/finos/legend-studio/commit/850de72098173a36371d1c22835191c6c23e92dd) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add test coverage for dataspace analytics result
+
+## 13.6.5
+
+## 13.6.4
+
+## 13.6.3
+
+## 13.6.2
+
+## 13.6.1
+
+## 13.6.0
+
+### Minor Changes
+
+- [#3563](https://github.com/finos/legend-studio/pull/3563) [`7800906`](https://github.com/finos/legend-studio/commit/78009064cf30dc2b9a49e66877b58bde51f3e150) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Incorporate data cube viewer with route `/edit/{id}/cube`.
+
+## 13.5.56
+
+## 13.5.55
+
+## 13.5.54
+
+## 13.5.53
+
+## 13.5.52
+
+## 13.5.51
+
+## 13.5.50
+
+## 13.5.49
+
+## 13.5.48
+
+## 13.5.47
+
+## 13.5.46
+
+## 13.5.45
+
+## 13.5.44
+
+## 13.5.43
+
+## 13.5.42
+
+### Patch Changes
+
+- [#3485](https://github.com/finos/legend-studio/pull/3485) [`03ec0a3`](https://github.com/finos/legend-studio/commit/03ec0a350d388759f2249ab75fb4e0c25e114056) ([@pragyasri-gs](https://github.com/pragyasri-gs)) - Adding conditions for Legend AI button and exporting DataSpaceQuerySetupState.
+
+## 13.5.41
+
+## 13.5.40
+
+## 13.5.39
+
+## 13.5.38
+
+## 13.5.37
+
+## 13.5.36
+
+## 13.5.35
+
+## 13.5.34
+
+## 13.5.33
+
+## 13.5.32
+
+## 13.5.31
+
+## 13.5.30
+
+## 13.5.29
+
+## 13.5.28
+
+## 13.5.27
+
+### Patch Changes
+
+- [#3407](https://github.com/finos/legend-studio/pull/3407) [`ee89917`](https://github.com/finos/legend-studio/commit/ee89917bcc334ac868f3d2711cd71253072ff965) ([@pragyasri-gs](https://github.com/pragyasri-gs)) - Adding Legend AI button at the top bar.
+
+## 13.5.26
+
+### Patch Changes
+
+- [#3394](https://github.com/finos/legend-studio/pull/3394) [`3e857e6`](https://github.com/finos/legend-studio/commit/3e857e6f483822bbf4047f25a4f7357b452fc1c6) ([@travisstebbins](https://github.com/travisstebbins)) - Add link button to share data space
+
+## 13.5.25
+
+## 13.5.24
+
+## 13.5.23
+
+## 13.5.22
+
+## 13.5.21
+
+## 13.5.20
+
+## 13.5.19
+
+## 13.5.18
+
+## 13.5.17
+
+### Patch Changes
+
+- [#3347](https://github.com/finos/legend-studio/pull/3347) [`cf588c5`](https://github.com/finos/legend-studio/commit/cf588c552a78ca67e9d24affe8a8bc33f679df8f) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Support opening query with default url param values using the url query key `p:{param}`.
+
+## 13.5.16
+
+## 13.5.15
+
+## 13.5.14
+
+### Patch Changes
+
+- [#3204](https://github.com/finos/legend-studio/pull/3204) [`aef6560`](https://github.com/finos/legend-studio/commit/aef656034324424171c33cabf9ba470bceb31b8c) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add sortby dropdown in Query Loader
+
+## 13.5.13
+
+## 13.5.12
+
+## 13.5.11
+
+## 13.5.10
+
+## 13.5.9
+
+## 13.5.8
+
+### Patch Changes
+
+- [#3295](https://github.com/finos/legend-studio/pull/3295) [`6ff62bf`](https://github.com/finos/legend-studio/commit/6ff62bfcac2490292ff56fa47a407df169249e02) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Disable `Curated Template Query` when condition is not applied.
+
+  Add `Open in Taxonomy` button in `About Dataspace`.
+
+  Fix visit project link in `About Dataspace`.
+
+## 13.5.7
+
+## 13.5.6
+
+### Patch Changes
+
+- [#3273](https://github.com/finos/legend-studio/pull/3273) [`c1430ff`](https://github.com/finos/legend-studio/commit/c1430ff3deb14d3aa63f3897c1d48ff860c27334) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Display connection and runtime info in `About Dataspace`
+
+## 13.5.5
+
+## 13.5.4
+
+## 13.5.3
+
+### Patch Changes
+
+- [#3212](https://github.com/finos/legend-studio/pull/3212) [`2373444`](https://github.com/finos/legend-studio/commit/237344409fa6c17f26fac529e73a1355ca3bf85d) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Display 10 default queries when there is no recently reivewed query
+
+- [#3257](https://github.com/finos/legend-studio/pull/3257) [`04afcbe`](https://github.com/finos/legend-studio/commit/04afcbe555d63351dd3158931bba76b80b770b6e) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Improve Help button in Query Builder
+
+## 13.5.2
+
+## 13.5.1
+
+## 13.5.0
+
+### Minor Changes
+
+- [#3239](https://github.com/finos/legend-studio/pull/3239) [`4b8c6d0`](https://github.com/finos/legend-studio/commit/4b8c6d0b306ed95983b82df4273ed1afd8b6b17c) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Clean up creator application query routes. Will not change routes on change of dataspace and will hold all dataspace navigations to `/query`. Continue to read legacy routes and open corresponding datasapaces but remove route.
+
+## 13.4.21
+
+## 13.4.20
+
+## 13.4.19
+
+## 13.4.18
+
+## 13.4.17
+
+### Patch Changes
+
+- [#3208](https://github.com/finos/legend-studio/pull/3208) [`603ee53`](https://github.com/finos/legend-studio/commit/603ee53a5c0e28e30dbefc7863675b92183d8068) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add recently visited dataspaces. Redirect dataspace to most recent dataspace. Show recently visited datasapces on top of selector.
+
+- [#3202](https://github.com/finos/legend-studio/pull/3202) [`45f97a9`](https://github.com/finos/legend-studio/commit/45f97a94ce0187445bc388c7446f8c59581052e1) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add saved dataspaces to LegendQueryUserDataHelper
+
+- [#3200](https://github.com/finos/legend-studio/pull/3200) [`5459b23`](https://github.com/finos/legend-studio/commit/5459b2327a87b098812daae8e7fa094bd73fde5e) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Show release notes up until the last opened version
+
+## 13.4.16
+
+### Patch Changes
+
+- [#3179](https://github.com/finos/legend-studio/pull/3179) [`43b16a3`](https://github.com/finos/legend-studio/commit/43b16a3ba3ef66d4dd1583f2b79741460d3946c1) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - enable new query button in query create flow
+
+## 13.4.15
+
+## 13.4.14
+
+### Patch Changes
+
+- [#3161](https://github.com/finos/legend-studio/pull/3161) [`843496b`](https://github.com/finos/legend-studio/commit/843496b63ec7d1e621bc7677991cc2177e1f3e20) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Group Legend Query Application header buttons with Query Builder buttons
+
+## 13.4.13
+
+### Patch Changes
+
+- [#3094](https://github.com/finos/legend-studio/pull/3094) [`1289579`](https://github.com/finos/legend-studio/commit/12895798774e0123463a96d94799bc676020ec1f) ([@travisstebbins](https://github.com/travisstebbins)) - Disable save/save as buttons if query can't be built
+
+- [#3146](https://github.com/finos/legend-studio/pull/3146) [`45fd4af`](https://github.com/finos/legend-studio/commit/45fd4afe2484a1ac8eecd9f06668fc7094137b52) ([@travisstebbins](https://github.com/travisstebbins)) - Update query builder setup to use text instead of icons
+
+- [#3132](https://github.com/finos/legend-studio/pull/3132) [`68c383c`](https://github.com/finos/legend-studio/commit/68c383ce8c7e1cb04c98d641608a2bd7f91dd4be) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Aggregate Legend Query Application header actions with Query Builder Header actions
+
+- [#3155](https://github.com/finos/legend-studio/pull/3155) [`98dc893`](https://github.com/finos/legend-studio/commit/98dc893935497060ab6a5c26cd20f18c4dbc7d42) ([@travisstebbins](https://github.com/travisstebbins)) - Sort selectors for DataSpaceQuerySetup component
+
+## 13.4.12
+
+## 13.4.11
+
+## 13.4.10
+
+### Patch Changes
+
+- [#3133](https://github.com/finos/legend-studio/pull/3133) [`1ffeda30a`](https://github.com/finos/legend-studio/commit/1ffeda30afeffd83e37c3d2fdc513e3f651082e2) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Make light theme default in application-query.
+
+## 13.4.9
+
+## 13.4.8
+
+## 13.4.7
+
+## 13.4.6
+
+## 13.4.5
+
+## 13.4.4
+
+## 13.4.3
+
+## 13.4.2
+
+## 13.4.1
+
+## 13.4.0
+
+### Minor Changes
+
+- [#3073](https://github.com/finos/legend-studio/pull/3073) [`1ce2ea7a4`](https://github.com/finos/legend-studio/commit/1ce2ea7a442c887eceb4d3780e48ca5cd1e04eb0) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add 'New Query` to existing query action.
+
+### Patch Changes
+
+- [#3076](https://github.com/finos/legend-studio/pull/3076) [`6c3f18e4d`](https://github.com/finos/legend-studio/commit/6c3f18e4d3f784eb5c3108cab89d998bfa089e8f) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Redirect root legend query app to dataSpace creator view.
+
+## 13.3.3
+
+## 13.3.2
+
+## 13.3.1
+
+## 13.3.0
+
+### Minor Changes
+
+- [#3042](https://github.com/finos/legend-studio/pull/3042) [`5ea34a9af`](https://github.com/finos/legend-studio/commit/5ea34a9af28454cff201a061f4880364e80582ca) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Persist grid config in local mode when running TDS queries.
+
+## 13.2.20
+
+## 13.2.19
+
+### Patch Changes
+
+- [#3019](https://github.com/finos/legend-studio/pull/3019) [`13bd7ad50`](https://github.com/finos/legend-studio/commit/13bd7ad500a6133b136c5b6ae0ef98e95f16d7da) ([@travisstebbins](https://github.com/travisstebbins)) - Fix query light mode inconsistencies
+
+## 13.2.18
+
+## 13.2.17
+
+## 13.2.16
+
+### Patch Changes
+
+- [#2947](https://github.com/finos/legend-studio/pull/2947) [`897d3de3b`](https://github.com/finos/legend-studio/commit/897d3de3b76af2c0516df990550e46078634cbb3) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Provide a way to update version if query is incompatible with current version
+
+## 13.2.15
+
+### Patch Changes
+
+- [#3005](https://github.com/finos/legend-studio/pull/3005) [`3b6e37db4`](https://github.com/finos/legend-studio/commit/3b6e37db47beb28f86cfa5c4ac2cf4e8620f1e20) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Uplift query search and include owner in search.
+
+## 13.2.14
+
+## 13.2.13
+
+## 13.2.12
+
+## 13.2.11
+
+## 13.2.10
+
+## 13.2.9
+
+## 13.2.8
+
+## 13.2.7
+
+## 13.2.6
+
+## 13.2.5
+
+## 13.2.4
+
+### Patch Changes
+
+- [#2919](https://github.com/finos/legend-studio/pull/2919) [`31d516c1e`](https://github.com/finos/legend-studio/commit/31d516c1e8e095c8655fe2effea74d900c0932c8) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Provide query information to users and make query version changeable
+
+## 13.2.3
+
+## 13.2.2
+
+## 13.2.1
+
+## 13.2.0
+
+### Minor Changes
+
+- [#2923](https://github.com/finos/legend-studio/pull/2923) [`f557af7b1`](https://github.com/finos/legend-studio/commit/f557af7b1ce0bfe879703c0ada0bd038bbec86c5) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Enable ServiceWork in Studio and Query Application Launching.
+
+## 13.1.51
+
+## 13.1.50
+
+## 13.1.49
+
+## 13.1.48
+
+## 13.1.47
+
+## 13.1.46
+
+## 13.1.45
+
+## 13.1.44
+
+## 13.1.43
+
+## 13.1.42
+
+## 13.1.41
+
+## 13.1.40
+
+## 13.1.39
+
+## 13.1.38
+
+## 13.1.37
+
+## 13.1.36
+
+## 13.1.35
+
+## 13.1.34
+
+## 13.1.33
+
+## 13.1.32
+
+## 13.1.31
+
+## 13.1.30
+
+## 13.1.29
+
+## 13.1.28
+
+## 13.1.27
+
+## 13.1.26
+
+## 13.1.25
+
+## 13.1.24
+
+## 13.1.23
+
+## 13.1.22
+
+## 13.1.21
+
+## 13.1.20
+
+## 13.1.19
+
+## 13.1.18
+
+## 13.1.17
+
+## 13.1.16
+
+## 13.1.15
+
+## 13.1.14
+
+## 13.1.13
+
+## 13.1.12
+
+## 13.1.11
+
+## 13.1.10
+
+## 13.1.9
+
+## 13.1.8
+
+## 13.1.7
+
+## 13.1.6
+
+## 13.1.5
+
+## 13.1.4
+
+## 13.1.3
+
+## 13.1.2
+
+## 13.1.1
+
+## 13.1.0
+
+### Minor Changes
+
+- [#2570](https://github.com/finos/legend-studio/pull/2570) [`aada85b52`](https://github.com/finos/legend-studio/commit/aada85b524ce21856f73bc8d160afce362d0ca1a) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add `queryBuidlerConfig` and add config to `LegendQueryApplicationConfig` and `LegendStudioApplicationConfig`. Disable QueryChat with `TEMPORARY__disableQueryBuilderChat` flag.
+
+## 13.0.57
+
+## 13.0.56
+
+## 13.0.55
+
+## 13.0.54
+
+## 13.0.53
+
+## 13.0.52
+
+## 13.0.51
+
+## 13.0.50
+
+## 13.0.49
+
+## 13.0.48
+
+## 13.0.47
+
+## 13.0.46
+
+## 13.0.45
+
+## 13.0.44
+
+## 13.0.43
+
+## 13.0.42
+
+## 13.0.41
+
+## 13.0.40
+
+## 13.0.39
+
+## 13.0.38
+
+## 13.0.37
+
+## 13.0.36
+
+## 13.0.35
+
+## 13.0.34
+
+## 13.0.33
+
+## 13.0.32
+
+## 13.0.31
+
+## 13.0.30
+
+## 13.0.29
+
 ## 13.0.28
 
 ### Patch Changes

@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-import { primitive, createModelSchema, optional } from 'serializr';
+import { primitive, createModelSchema, optional, deserialize } from 'serializr';
 import {
   SerializationFactory,
+  isString,
   optionalCustomUsingModelSchema,
+  usingModelSchema,
+  type PlainObject,
 } from '@finos/legend-shared';
 import { V1_Multiplicity } from '../../../model/packageableElements/domain/V1_Multiplicity.js';
 import { V1_PackageableElementPointer } from '../../../model/packageableElements/V1_PackageableElement.js';
 import { V1_SourceInformation } from '../../../model/V1_SourceInformation.js';
+import { V1_StereotypePtr } from '../../../model/packageableElements/domain/V1_StereotypePtr.js';
+import { V1_TaggedValue } from '../../../model/packageableElements/domain/V1_TaggedValue.js';
+import { V1_TagPtr } from '../../../model/packageableElements/domain/V1_TagPtr.js';
 
 export const V1_sourceInformationSerialization = new SerializationFactory(
   createModelSchema(V1_SourceInformation, {
@@ -60,4 +66,31 @@ export const V1_packageableElementPointerModelSchema = createModelSchema(
 export const V1_multiplicityModelSchema = createModelSchema(V1_Multiplicity, {
   lowerBound: primitive(),
   upperBound: optional(primitive()),
+});
+
+export const V1_serializePackageableElementPointer = (
+  json: PlainObject<V1_PackageableElementPointer> | string,
+  type?: string | undefined,
+): V1_PackageableElementPointer => {
+  // For backward compatible: see https://github.com/finos/legend-engine/pull/2621
+  if (isString(json)) {
+    return new V1_PackageableElementPointer(type, json);
+  }
+  return deserialize(V1_packageableElementPointerModelSchema, json);
+};
+// ------------------------------------- Profile -------------------------------------
+
+export const V1_stereotypePtrModelSchema = createModelSchema(V1_StereotypePtr, {
+  profile: primitive(),
+  value: primitive(),
+});
+
+export const V1_tagPtrModelSchema = createModelSchema(V1_TagPtr, {
+  profile: primitive(),
+  value: primitive(),
+});
+
+export const V1_taggedValueModelSchema = createModelSchema(V1_TaggedValue, {
+  tag: usingModelSchema(V1_tagPtrModelSchema),
+  value: primitive(),
 });

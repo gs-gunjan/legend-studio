@@ -94,6 +94,8 @@ export class V1_SnowflakeDatasourceSpecification
   organization?: string | undefined;
   accountType?: string | undefined;
   role?: string | undefined;
+  tempTableDb?: string | undefined;
+  tempTableSchema?: string | undefined;
 
   get hashCode(): string {
     return hashArray([
@@ -111,6 +113,8 @@ export class V1_SnowflakeDatasourceSpecification
       this.role ?? '',
       this.quotedIdentifiersIgnoreCase?.toString() ?? '',
       this.enableQueryTags?.toString() ?? '',
+      this.tempTableDb ?? '',
+      this.tempTableSchema ?? '',
     ]);
   }
 }
@@ -232,6 +236,20 @@ export class V1_TrinoDatasourceSpecification
       this.catalog ?? '',
       this.schema ?? '',
       this.clientTags ?? '',
+    ]);
+  }
+}
+
+export class V1_DuckDBDatasourceSpecification
+  extends V1_DatasourceSpecification
+  implements Hashable
+{
+  path!: string;
+
+  get hashCode(): string {
+    return hashArray([
+      CORE_HASH_STRUCTURE.DUCKDB_DATASOURCE_SPECIFICATION,
+      this.path,
     ]);
   }
 }

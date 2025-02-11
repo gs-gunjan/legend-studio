@@ -22,6 +22,7 @@ import type {
 } from '@finos/legend-graph';
 import type { QueryBuilderDerivedPropertyExpressionState } from '../QueryBuilderPropertyEditorState.js';
 import type { QueryBuilderMilestoningState } from './QueryBuilderMilestoningState.js';
+import type { LambdaParameterState } from '../shared/LambdaParameterState.js';
 
 export abstract class QueryBuilderMilestoningImplementation {
   milestoningState: QueryBuilderMilestoningState;
@@ -64,6 +65,20 @@ export abstract class QueryBuilderMilestoningImplementation {
   ): void;
 
   /**
+   * Builds parameters for getAllVersionsInRange() function with milestoned class
+   */
+  abstract buildGetAllVersionsInRangeParameters(
+    getAllVersionsInRangeFunction: SimpleFunctionExpression,
+  ): void;
+
+  /**
+   * Builds parameters for getAll() function with milestoned class
+   */
+  abstract buildGetAllWithDefaultParameters(
+    getAllFunction: SimpleFunctionExpression,
+  ): void;
+
+  /**
    * Generates milestoning date for a propertyexpression based on its source and target stereotype
    */
   abstract generateMilestoningDate(
@@ -74,4 +89,6 @@ export abstract class QueryBuilderMilestoningImplementation {
     idx?: number,
     derivedPropertyExpressionState?: QueryBuilderDerivedPropertyExpressionState,
   ): ValueSpecification;
+
+  abstract buildParameterStatesFromMilestoningParameters(): LambdaParameterState[];
 }

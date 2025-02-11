@@ -35,25 +35,20 @@ import {
   RefreshIcon,
   TimesIcon,
   FilledWindowMaximizeIcon,
-  Modal,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalTitle,
+  PlayIcon,
 } from '@finos/legend-art';
 import {
-  type Binding,
   type ValueSpecification,
   PrimitiveInstanceValue,
   PrimitiveType,
   PureMultiExecution,
+  resolveServiceQueryRawLambda,
 } from '@finos/legend-graph';
 import {
   BasicValueSpecificationEditor,
   instanceValue_setValue,
 } from '@finos/legend-query-builder';
 import {
-  ContentType,
   filterByType,
   guaranteeNonNullable,
   prettyCONSTName,
@@ -79,19 +74,21 @@ import {
 } from '../../../../../stores/editor/sidebar-state/testable/GlobalTestRunnerState.js';
 import { getTestableResultIcon } from '../../../side-bar/testable/GlobalTestRunner.js';
 import {
+  ExternalFormatParameterEditorModal,
   RenameModal,
   TestAssertionEditor,
   TestAssertionItem,
 } from '../../testable/TestableSharedComponents.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
 import { LEGEND_STUDIO_TEST_ID } from '../../../../../__lib__/LegendStudioTesting.js';
+import {
+  getContentTypeWithParamFromQuery,
+  type TestParamContentType,
+} from '../../../../../stores/editor/utils/TestableUtils.js';
 
 export const NewParameterModal = observer(
   (props: { setupState: ServiceTestSetupState; isReadOnly: boolean }) => {
     const { setupState, isReadOnly } = props;
+    const applicationStore = setupState.editorStore.applicationStore;
     const currentOption = {
       value: setupState.newParameterValueName,
       label: setupState.newParameterValueName,
@@ -126,8 +123,11 @@ export const NewParameterModal = observer(
             onChange={onChange}
             value={currentOption}
             escapeClearsValue={true}
-            darkMode={true}
-            disable={isReadOnly}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
+            disabled={isReadOnly}
           />
           <div className="search-modal__actions">
             <button className="btn btn--dark" disabled={isReadOnly}>
@@ -140,96 +140,22 @@ export const NewParameterModal = observer(
   },
 );
 
-export const ExternalFormatParameterEditorModal = observer(
-  (props: {
-    paramState: ServiceValueSpecificationTestParameterState;
-    isReadOnly: boolean;
-    onClose: () => void;
-    updateParamValue: (val: string) => void;
-    bindingParamPair: {
-      binding: Binding;
-      param: string;
-    };
-  }) => {
-    const {
-      paramState,
-      isReadOnly,
-      onClose,
-      updateParamValue,
-      bindingParamPair,
-    } = props;
-    const paramValue =
-      paramState.varExpression.genericType?.value.rawType === PrimitiveType.BYTE
-        ? atob(
-            (paramState.valueSpec as PrimitiveInstanceValue)
-              .values[0] as string,
-          )
-        : ((paramState.valueSpec as PrimitiveInstanceValue)
-            .values[0] as string);
-    return (
-      <Dialog
-        open={true}
-        onClose={onClose}
-        classes={{ container: 'search-modal__container' }}
-        PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
-      >
-        <Modal
-          darkMode={true}
-          className={clsx('editor-modal lambda-editor__popup__modal')}
-        >
-          <ModalHeader>
-            <ModalTitle title="Edit Parameter Value" />
-          </ModalHeader>
-          <ModalBody>
-            <div className="service-test-editor__setup__parameter__code-editor__container">
-              <div className="service-test-editor__setup__parameter__code-editor__container__content">
-                <CodeEditor
-                  key={paramState.uuid}
-                  inputValue={paramValue}
-                  updateInput={updateParamValue}
-                  isReadOnly={isReadOnly}
-                  language={
-                    bindingParamPair.binding.contentType ===
-                    ContentType.APPLICATION_JSON.toString()
-                      ? CODE_EDITOR_LANGUAGE.JSON
-                      : CODE_EDITOR_LANGUAGE.TEXT
-                  }
-                />
-              </div>
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <button className="btn btn--dark" onClick={onClose}>
-              Close
-            </button>
-          </ModalFooter>
-        </Modal>
-      </Dialog>
-    );
-  },
-);
-
 const ServiceTestParameterEditor = observer(
   (props: {
     isReadOnly: boolean;
     paramState: ServiceValueSpecificationTestParameterState;
     serviceTestState: ServiceTestState;
-    bindingParamPair:
-      | {
-          binding: Binding;
-          param: string;
-        }
-      | undefined;
+    contentTypeParamPair: TestParamContentType | undefined;
   }) => {
-    const { serviceTestState, paramState, isReadOnly, bindingParamPair } =
+    const { serviceTestState, paramState, isReadOnly, contentTypeParamPair } =
       props;
     const [showPopUp, setShowPopUp] = useState(false);
     const setupState = serviceTestState.setupState;
     const paramIsRequired =
       paramState.varExpression.multiplicity.lowerBound > 0;
-    const type = bindingParamPair
-      ? bindingParamPair.binding.contentType
-      : paramState.varExpression.genericType?.value.rawType.name ?? 'unknown';
+    const type = contentTypeParamPair
+      ? contentTypeParamPair.contentType
+      : (paramState.varExpression.genericType?.value.rawType.name ?? 'unknown');
     const paramValue =
       paramState.varExpression.genericType?.value.rawType === PrimitiveType.BYTE
         ? atob(
@@ -272,7 +198,7 @@ const ServiceTestParameterEditor = observer(
           </button>
         </div>
         <>
-          {bindingParamPair ? (
+          {contentTypeParamPair ? (
             <div className="service-test-editor__setup__parameter__code-editor">
               <textarea
                 className="panel__content__form__section__textarea value-spec-editor__input"
@@ -290,11 +216,12 @@ const ServiceTestParameterEditor = observer(
               />
               {showPopUp && (
                 <ExternalFormatParameterEditorModal
-                  paramState={paramState}
+                  valueSpec={paramState.valueSpec}
+                  varExpression={paramState.varExpression}
                   isReadOnly={isReadOnly}
                   onClose={closePopUp}
                   updateParamValue={updateParamValue}
-                  bindingParamPair={bindingParamPair}
+                  contentTypeParamPair={contentTypeParamPair}
                 />
               )}
               <div className="service-test-editor__setup__parameter__value__actions">
@@ -333,7 +260,7 @@ const ServiceTestParameterEditor = observer(
                   paramState.updateValueSpecification(val);
                 }}
                 graph={setupState.editorStore.graphManagerState.graph}
-                obseverContext={
+                observerContext={
                   setupState.editorStore.changeDetectionState.observerContext
                 }
                 typeCheckOption={{
@@ -373,6 +300,7 @@ const ServiceTestSetupEditor = observer(
   (props: { serviceTestState: ServiceTestState }) => {
     const { serviceTestState } = props;
     const setupState = serviceTestState.setupState;
+    const applicationStore = setupState.editorStore.applicationStore;
     const test = serviceTestState.test;
     const format = test.serializationFormat;
     const selectedSerializationFormat = setupState.getSelectedFormatOption();
@@ -442,8 +370,11 @@ const ServiceTestSetupEditor = observer(
                       value={selectedSerializationFormat}
                       isClearable={true}
                       escapeClearsValue={true}
-                      darkMode={true}
-                      disable={isReadOnly}
+                      darkMode={
+                        !applicationStore.layoutService
+                          .TEMPORARY__isLightColorThemeEnabled
+                      }
+                      disabled={isReadOnly}
                     />
                   </div>
                   {setupState.testState.testable.execution instanceof
@@ -463,9 +394,12 @@ const ServiceTestSetupEditor = observer(
                         value={selectedKeys}
                         isClearable={true}
                         escapeClearsValue={true}
-                        darkMode={true}
+                        darkMode={
+                          !applicationStore.layoutService
+                            .TEMPORARY__isLightColorThemeEnabled
+                        }
                         isMulti={true}
-                        disable={isReadOnly}
+                        disabled={isReadOnly}
                         placeholder="Choose keys..."
                       />
                     </div>
@@ -525,12 +459,15 @@ const ServiceTestSetupEditor = observer(
                         isReadOnly={isReadOnly}
                         paramState={paramState}
                         serviceTestState={serviceTestState}
-                        bindingParamPair={setupState
-                          .getBindingWithParamFromQuery()
-                          .find(
-                            (pair) =>
-                              pair.param === paramState.parameterValue.name,
-                          )}
+                        contentTypeParamPair={getContentTypeWithParamFromQuery(
+                          resolveServiceQueryRawLambda(
+                            serviceTestState.service,
+                          ),
+                          serviceTestState.editorStore,
+                        ).find(
+                          (pair) =>
+                            pair.param === paramState.parameterValue.name,
+                        )}
                       />
                     ))}
                 </div>
@@ -717,8 +654,21 @@ const ServiceTestDataContextMenu = observer(
     const remove = (): void => suiteState.deleteTest(serviceTestState);
     const rename = (): void =>
       suiteState.setTestToRename(serviceTestState.test);
+    const runTest =
+      serviceTestState.editorStore.applicationStore.guardUnhandledError(() =>
+        flowResult(serviceTestState.runTest()),
+      );
     return (
       <MenuContent ref={ref}>
+        <MenuContentItem
+          disabled={
+            suiteState.runningTestState.isInProgress ||
+            serviceTestState.runningTestAction.isInProgress
+          }
+          onClick={runTest}
+        >
+          Run test
+        </MenuContentItem>
         <MenuContentItem onClick={rename}>Rename</MenuContentItem>
         <MenuContentItem onClick={remove}>Delete</MenuContentItem>
         <MenuContentItem onClick={addTest}>Add test</MenuContentItem>
@@ -750,16 +700,12 @@ const ServiceTestItem = observer(
     const resultIcon = getTestableResultIcon(testableResult);
     const onContextMenuOpen = (): void => setIsSelectedFromContextMenu(true);
     const onContextMenuClose = (): void => setIsSelectedFromContextMenu(false);
+    const runTest =
+      serviceTestState.editorStore.applicationStore.guardUnhandledError(() =>
+        flowResult(serviceTestState.runTest()),
+      );
     return (
       <ContextMenu
-        className={clsx(
-          'testable-test-explorer__item',
-          {
-            'testable-test-explorer__item--selected-from-context-menu':
-              !isActive && isSelectedFromContextMenu,
-          },
-          { 'testable-test-explorer__item--active': isActive },
-        )}
         disabled={isReadOnly}
         content={
           <ServiceTestDataContextMenu
@@ -771,18 +717,43 @@ const ServiceTestItem = observer(
         onOpen={onContextMenuOpen}
         onClose={onContextMenuClose}
       >
-        <button
-          className={clsx('testable-test-explorer__item__label')}
-          onClick={openTest}
-          tabIndex={-1}
+        <div
+          className={clsx(
+            'testable-test-explorer__item',
+            {
+              'testable-test-explorer__item--selected-from-context-menu':
+                !isActive && isSelectedFromContextMenu,
+            },
+            { 'testable-test-explorer__item--active': isActive },
+          )}
         >
-          <div className="testable-test-explorer__item__label__icon">
-            {resultIcon}
+          <button
+            className={clsx('testable-test-explorer__item__label')}
+            onClick={openTest}
+            tabIndex={-1}
+          >
+            <div className="testable-test-explorer__item__label__icon">
+              {resultIcon}
+            </div>
+            <div className="testable-test-explorer__item__label__text">
+              {serviceTest.id}
+            </div>
+          </button>
+          <div className="mapping-test-explorer__item__actions">
+            <button
+              className="mapping-test-explorer__item__action mapping-test-explorer__run-test-btn"
+              onClick={runTest}
+              disabled={
+                suiteState.runningTestState.isInProgress ||
+                serviceTestState.runningTestAction.isInProgress
+              }
+              tabIndex={-1}
+              title={`Run ${serviceTest.id}`}
+            >
+              {<PlayIcon />}
+            </button>
           </div>
-          <div className="testable-test-explorer__item__label__text">
-            {serviceTest.id}
-          </div>
-        </button>
+        </div>
       </ContextMenu>
     );
   },

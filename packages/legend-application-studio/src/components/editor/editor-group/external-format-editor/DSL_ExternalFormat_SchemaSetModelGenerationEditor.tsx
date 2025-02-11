@@ -35,10 +35,8 @@ import {
   ResizablePanelSplitterLine,
 } from '@finos/legend-art';
 import { GenerationPropertyEditor } from '../element-generation-editor/FileGenerationEditor.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 import { useApplicationNavigationContext } from '@finos/legend-application';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../../__lib__/LegendStudioApplicationNavigationContext.js';
 
@@ -77,7 +75,7 @@ export const SchemaSetModelGenerationEditor = observer(
     const resetProperties = (): void => {
       modelGenerationState.setConfigurationProperty([]);
     };
-    const getConfigValue = (name: string): unknown | undefined =>
+    const getConfigValue = (name: string): unknown =>
       modelGenerationState.getConfigValue(name);
     const targetBindingPathValidationMessage =
       Boolean(modelGenerationState.targetBinding) &&
@@ -174,7 +172,7 @@ export const SchemaSetModelGenerationEditor = observer(
               <PanelHeader title="result">
                 <PanelHeaderActions>
                   <PanelHeaderActionItem
-                    className=" generation-result-viewer__generate-btn"
+                    className="generation-result-viewer__generate-btn"
                     onClick={regenerate}
                     disabled={
                       modelGenerationState.generatingModelsState.isInProgress ||

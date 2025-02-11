@@ -43,10 +43,8 @@ import {
 import { observer } from 'mobx-react-lite';
 import { forwardRef, useState } from 'react';
 import type { RelationalCSVDataState } from '../../../../stores/editor/editor-state/element-editor-state/data/EmbeddedDataState.js';
-import {
-  CODE_EDITOR_LANGUAGE,
-  CodeEditor,
-} from '@finos/legend-lego/code-editor';
+import { CODE_EDITOR_LANGUAGE } from '@finos/legend-code-editor';
+import { CodeEditor } from '@finos/legend-lego/code-editor';
 import { LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY } from '../../../../__lib__/LegendStudioApplicationNavigationContext.js';
 import { useApplicationNavigationContext } from '@finos/legend-application';
 import {
@@ -56,7 +54,7 @@ import {
 } from '../../../../stores/graph-modifier/DSL_Data_GraphModifierHelper.js';
 import { createMockDataForMappingElementSource } from '../../../../stores/editor/utils/MockDataUtils.js';
 
-interface TableOption {
+export interface TableOption {
   value: Table;
   label: string;
 }
@@ -64,6 +62,7 @@ interface TableOption {
 const RelationalTableIdentifierEditor = observer(
   (props: { dataState: RelationalCSVDataState; isReadOnly: boolean }) => {
     const { isReadOnly, dataState } = props;
+    const applicationStore = dataState.editorStore.applicationStore;
     const resolvedDb = dataState.database;
     const existingDataTable = dataState.tableToEdit;
 
@@ -168,7 +167,10 @@ const RelationalTableIdentifierEditor = observer(
                       onChange={onTableChange}
                       value={selectedTable}
                       isClearable={false}
-                      darkMode={true}
+                      darkMode={
+                        !applicationStore.layoutService
+                          .TEMPORARY__isLightColorThemeEnabled
+                      }
                     />
                   </div>
                 </div>
@@ -240,6 +242,7 @@ const RelationalCSVTableContextMenu = observer(
 const ImportModal = observer(
   (props: { dataState: RelationalCSVDataState; isReadOnly: boolean }) => {
     const { isReadOnly, dataState } = props;
+    const applicationStore = dataState.editorStore.applicationStore;
     const [csv, setCSV] = useState('');
     const closeModal = (): void => dataState.closeCSVModal();
     const importVal = (): void => {
@@ -259,7 +262,12 @@ const ImportModal = observer(
         classes={{ container: 'search-modal__container' }}
         PaperProps={{ classes: { root: 'search-modal__inner-container' } }}
       >
-        <Modal darkMode={true} className="relational-data-editor__import">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="relational-data-editor__import"
+        >
           <ModalHeader title="Import CSV" />
           <ModalBody>
             <textarea

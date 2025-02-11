@@ -15,7 +15,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "boolean",
-          "type": "Boolean"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Boolean"
+            }
+          }
         },
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
@@ -35,7 +40,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "integer",
-          "type": "Integer"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         },
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
@@ -81,7 +91,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "zipCode",
-          "type": "Integer"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         }
       ]
     }
@@ -145,7 +160,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "salary",
-          "type": "Integer"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         }
       ],
       "superTypes": ["myPackage::test::shared::src::User"]
@@ -183,7 +203,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "memberShipFee",
-          "type": "Integer"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         }
       ],
       "superTypes": ["myPackage::test::shared::src::User"]
@@ -273,7 +298,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "time",
-          "type": "Integer"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         }
       ]
     }
@@ -335,7 +365,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "roadster",
-          "type": "Boolean"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Boolean"
+            }
+          }
         }
       ],
       "superTypes": ["myPackage::test::shared::src::_RoadVehicle"]
@@ -352,7 +387,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "engine",
-          "type": "Boolean"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Boolean"
+            }
+          }
         }
       ],
       "superTypes": ["myPackage::test::shared::src::_RoadVehicle"]
@@ -543,7 +583,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "wheelCount",
-          "type": "Integer"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         }
       ]
     }
@@ -575,7 +620,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "side",
-          "type": "Integer"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         },
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
@@ -690,7 +740,12 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "count",
-          "type": "Integer"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         }
       ]
     }
@@ -856,19 +911,113 @@
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "wheelCount",
-          "type": "Integer"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
         },
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "engine",
-          "type": "Boolean"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Boolean"
+            }
+          }
         },
         {
           "multiplicity": { "lowerBound": 1, "upperBound": 1 },
           "name": "roadster",
-          "type": "Boolean"
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Boolean"
+            }
+          }
         }
       ]
     }
+  },
+  {
+    "path": "myPackage::test::shared::dest::MilestonedVehicle",
+    "content": {
+      "_type": "class",
+      "name": "MilestonedVehicle",
+      "package": "myPackage::test::shared::dest",
+      "properties": [
+        {
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "name": "id",
+          "genericType": {
+            "rawType": {
+              "_type": "packageableType",
+              "fullPath": "Integer"
+            }
+          }
+        },
+        {
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "name": "description",
+          "type": "String"
+        },
+        {
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "name": "name",
+          "type": "String"
+        }
+      ],
+      "stereotypes": [
+        {
+          "profile": "temporal",
+          "value": "businesstemporal"
+        }
+      ]
+    },
+    "classifierPath": "meta::pure::metamodel::type::Class"
+  },
+  {
+    "path": "myPackage::test::shared::dest::VehicleOwner",
+    "content": {
+      "_type": "class",
+      "name": "VehicleOwner",
+      "package": "myPackage::test::shared::dest",
+      "properties": [
+        {
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "name": "vehicle",
+          "type": "myPackage::test::shared::dest::MilestonedVehicle"
+        },
+        {
+          "multiplicity": {
+            "lowerBound": 1,
+            "upperBound": 1
+          },
+          "name": "name",
+          "type": "String"
+        }
+      ],
+      "stereotypes": [
+        {
+          "profile": "temporal",
+          "value": "businesstemporal"
+        }
+      ]
+    },
+    "classifierPath": "meta::pure::metamodel::type::Class"
   }
 ]

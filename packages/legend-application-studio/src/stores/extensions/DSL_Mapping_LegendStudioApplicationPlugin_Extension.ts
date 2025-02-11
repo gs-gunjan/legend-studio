@@ -33,7 +33,7 @@ import type {
   MappingElementState,
   PropertyMappingState,
 } from '../editor/editor-state/element-editor-state/mapping/MappingElementState.js';
-import type { PureGrammarTextSuggestion } from '@finos/legend-lego/code-editor';
+import type { PureGrammarTextSuggestion } from '@finos/legend-code-editor';
 
 type MappingSourceTypeInfo = {
   sourceType: string;
@@ -64,7 +64,7 @@ export type SetImplementationMappingElementLabelInfoBuilder = (
 
 export type MappingElementSourceExtractor = (
   mappingElement: MappingElement,
-) => MappingElementSource | undefined;
+) => MappingElementSource;
 
 export type MappingElementStateCreator = (
   mappingElement: MappingElement | undefined,
@@ -106,7 +106,7 @@ export type NewConnectionSnippetSuggestion = PureGrammarTextSuggestion;
  */
 export type InstanceSetImplementationSourceUpdater = (
   setImplementation: InstanceSetImplementation,
-  newSource: unknown | undefined,
+  newSource: unknown,
 ) => boolean;
 
 export type MappingSourceTypeInfoGetter = (

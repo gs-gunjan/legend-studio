@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-import packageJson from '../../../../package.json';
-import V1_SYSTEM_MODELS from './v1/V1_DSL_DataSpace_SystemModels.json';
+import packageJson from '../../../../package.json' with { type: 'json' };
+import V1_SYSTEM_MODELS from './v1/V1_DSL_DataSpace_SystemModels.json' with { type: 'json' };
 import {
   V1_DataSpace,
   V1_DataSpaceDiagram,
   V1_DataSpaceElementPointer,
-  V1_DataSpaceExecutable,
   V1_DataSpaceExecutionContext,
+  V1_DataSpacePackageableElementExecutable,
   V1_DataSpaceSupportCombinedInfo,
   V1_DataSpaceSupportEmail,
+  V1_DataSpaceTemplateExecutable,
 } from './v1/model/packageableElements/dataSpace/V1_DSL_DataSpace_DataSpace.js';
 import {
   type PlainObject,
@@ -32,6 +33,8 @@ import {
   UnsupportedOperationError,
   isNonNullable,
   assertType,
+  guaranteeType,
+  returnUndefOnError,
 } from '@finos/legend-shared';
 import { deserialize } from 'serializr';
 import {
@@ -45,14 +48,15 @@ import {
 import { V1_resolveDataSpace } from './v1/transformation/pureGraph/V1_DSL_DataSpace_GraphBuilderHelper.js';
 import { getOwnDataSpace } from '../../DSL_DataSpace_GraphManagerHelper.js';
 import {
+  type DataSpaceElement,
   DataSpace,
-  DataSpaceExecutable,
   DataSpaceExecutionContext,
   DataSpaceSupportCombinedInfo,
   DataSpaceSupportEmail,
-  type DataSpaceElement,
   DataSpaceDiagram,
   DataSpaceElementPointer,
+  DataSpaceExecutableTemplate,
+  DataSpacePackageableElementExecutable,
 } from '../../../graph/metamodel/pure/model/packageableElements/dataSpace/DSL_DataSpace_DataSpace.js';
 import {
   type PackageableElement,
@@ -65,6 +69,20 @@ import {
   type V1_PackageableElement,
   type V1_PureModelContextData,
   type V1_TaggedValue,
+  type Mapping,
+  type MappingInclude,
+  type PackageableElementReference,
+  type V1_MappingInclude,
+  type DSL_Mapping_PureProtocolProcessorPlugin_Extension,
+  type V1_MappingIncludeBuilder,
+  type V1_MappingIncludeTransformer,
+  type V1_MappingIncludeProtocolSerializer,
+  type V1_MappingIncludeProtocolDeserializer,
+  type V1_MappingIncludeIdentifierBuilder,
+  type QueryExecutionContextInfo,
+  type V1_SavedQueryExecutionBuilder,
+  type V1_ElementPointerType,
+  type V1_RawLambda,
   V1_taggedValueModelSchema,
   PackageableElementExplicitReference,
   V1_PackageableElementPointer,
@@ -79,24 +97,26 @@ import {
   Class,
   Enumeration,
   Association,
-  type Mapping,
-  type MappingInclude,
-  type PackageableElementReference,
   Package,
-  type V1_MappingInclude,
-  type DSL_Mapping_PureProtocolProcessorPlugin_Extension,
-  type V1_MappingIncludeBuilder,
-  type V1_MappingIncludeTransformer,
-  type V1_MappingIncludeProtocolSerializer,
-  type V1_MappingIncludeProtocolDeserializer,
-  type V1_MappingIncludeIdentifierBuilder,
+  V1_RawValueSpecificationTransformer,
+  V1_buildRawLambdaWithResolvedPaths,
+  V1_buildEmbeddedData,
+  V1_transformEmbeddedData,
+  DataElementReference,
+  V1_DataElementReference,
+  QueryDataSpaceExecutionContextInfo,
+  generateFunctionPrettyName,
+  ConcreteFunctionDefinition,
 } from '@finos/legend-graph';
 import { V1_resolveDiagram } from '@finos/legend-extension-dsl-diagram/graph';
 import { V1_MappingIncludeDataSpace } from './v1/model/packageableElements/mapping/V1_DSL_DataSpace_MappingIncludeDataSpace.js';
 import { MappingIncludeDataSpace } from '../../../graph/metamodel/pure/model/packageableElements/mapping/DSL_DataSpace_MappingIncludeDataSpace.js';
+import type { Entity } from '@finos/legend-storage';
 
 export const DATA_SPACE_ELEMENT_CLASSIFIER_PATH =
   'meta::pure::metamodel::dataSpace::DataSpace';
+
+export const DATA_SPACE_ELEMENT_POINTER = 'DATASPACE';
 
 export class DSL_DataSpace_PureProtocolProcessorPlugin
   extends PureProtocolProcessorPlugin
@@ -126,12 +146,12 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
           );
           element.executionContexts = guaranteeNonNullable(
             elementProtocol.executionContexts,
-            `Data space 'executionContexts' field is missing`,
+            `Data product 'executionContexts' field is missing`,
           ).map((contextProtocol) => {
             const execContext = new DataSpaceExecutionContext();
             execContext.name = guaranteeNonEmptyString(
               contextProtocol.name,
-              `Data space execution context 'name' field is missing or empty`,
+              `Data product execution context 'name' field is missing or empty`,
             );
             execContext.title = contextProtocol.title;
             execContext.description = contextProtocol.description;
@@ -142,6 +162,12 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
               PackageableElementExplicitReference.create(
                 context.graph.getRuntime(contextProtocol.defaultRuntime.path),
               );
+            execContext.testData = contextProtocol.testData
+              ? guaranteeType(
+                  V1_buildEmbeddedData(contextProtocol.testData, context),
+                  DataElementReference,
+                )
+              : undefined;
             return execContext;
           });
           element.defaultExecutionContext = guaranteeNonNullable(
@@ -150,7 +176,7 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
                 execContext.name ===
                 guaranteeNonEmptyString(
                   elementProtocol.defaultExecutionContext,
-                  `Data space 'defaultExecutionContext' field is missing or empty`,
+                  `Data product 'defaultExecutionContext' field is missing or empty`,
                 ),
             ),
             `Can't find default execution context '${elementProtocol.defaultExecutionContext}'`,
@@ -199,21 +225,85 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
                 return elementPointer;
               }
               throw new UnsupportedOperationError(
-                `Can't find data space element (only allow packages, classes, enumerations, and associations) '${pointer.path}'`,
+                `Can't find data product element (only allow packages, classes, enumerations, and associations) '${pointer.path}'`,
               );
             });
           }
           if (elementProtocol.executables) {
             element.executables = elementProtocol.executables.map(
               (executableProtocol) => {
-                const executable = new DataSpaceExecutable();
-                executable.title = executableProtocol.title;
-                executable.description = executableProtocol.description;
-                executable.executable = context.resolveElement(
-                  executableProtocol.executable.path,
-                  false,
-                );
-                return executable;
+                if (
+                  executableProtocol instanceof V1_DataSpaceTemplateExecutable
+                ) {
+                  const executable = new DataSpaceExecutableTemplate();
+                  if (executableProtocol.id) {
+                    executable.id = executableProtocol.id;
+                  }
+                  executable.title = executableProtocol.title;
+                  executable.description = executableProtocol.description;
+                  executable.query = V1_buildRawLambdaWithResolvedPaths(
+                    executableProtocol.query.parameters,
+                    executableProtocol.query.body,
+                    context,
+                  );
+                  if (executableProtocol.executionContextKey) {
+                    executable.executionContextKey =
+                      executableProtocol.executionContextKey;
+                  }
+                  return executable;
+                } else if (
+                  executableProtocol instanceof
+                  V1_DataSpacePackageableElementExecutable
+                ) {
+                  const executable =
+                    new DataSpacePackageableElementExecutable();
+                  if (executableProtocol.id) {
+                    executable.id = executableProtocol.id;
+                  }
+                  executable.title = executableProtocol.title;
+                  executable.description = executableProtocol.description;
+                  if (executableProtocol.executionContextKey) {
+                    executable.executionContextKey =
+                      executableProtocol.executionContextKey;
+                  }
+                  try {
+                    executable.executable = context.resolveElement(
+                      executableProtocol.executable.path,
+                      false,
+                    );
+                  } catch {
+                    try {
+                      executable.executable =
+                        PackageableElementExplicitReference.create(
+                          guaranteeNonNullable(
+                            context.graph.functions.find(
+                              (fn) =>
+                                generateFunctionPrettyName(fn, {
+                                  fullPath: true,
+                                  spacing: false,
+                                  notIncludeParamName: true,
+                                }) ===
+                                executableProtocol.executable.path.replaceAll(
+                                  /\s*/gu,
+                                  '',
+                                ),
+                            ),
+                          ),
+                        );
+                    } catch {
+                      throw new UnsupportedOperationError(
+                        `Can't analyze data product executable with element in path: ${executableProtocol.executable.path}`,
+                        executableProtocol,
+                      );
+                    }
+                  }
+                  return executable;
+                } else {
+                  throw new UnsupportedOperationError(
+                    `Can't build data product executable`,
+                    executableProtocol,
+                  );
+                }
               },
             );
           }
@@ -240,7 +330,7 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
                 elementProtocol.supportInfo.documentationUrl;
               supportEmail.address = guaranteeNonEmptyString(
                 elementProtocol.supportInfo.address,
-                `Data space support email 'address' field is missing or empty`,
+                `Data product support email 'address' field is missing or empty`,
               );
               element.supportInfo = supportEmail;
             } else if (
@@ -257,7 +347,7 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
               element.supportInfo = combinedInfo;
             } else {
               throw new UnsupportedOperationError(
-                `Can't build data space support info`,
+                `Can't build data product support info`,
                 elementProtocol.supportInfo,
               );
             }
@@ -276,6 +366,17 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
       (elementProtocol: V1_PackageableElement): string | undefined => {
         if (elementProtocol instanceof V1_DataSpace) {
           return DATA_SPACE_ELEMENT_CLASSIFIER_PATH;
+        }
+        return undefined;
+      },
+    ];
+  }
+
+  override V1_getExtraElementPointerTypes(): V1_ElementPointerType[] {
+    return [
+      (elementProtocol: PackageableElement): string | undefined => {
+        if (elementProtocol instanceof DataSpace) {
+          return DATA_SPACE_ELEMENT_POINTER;
         }
         return undefined;
       },
@@ -339,6 +440,12 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
                 PackageableElementPointerType.RUNTIME,
                 execContext.defaultRuntime.valueForSerialization ?? '',
               );
+              contextProtocol.testData = execContext.testData
+                ? guaranteeType(
+                    V1_transformEmbeddedData(execContext.testData, context),
+                    V1_DataElementReference,
+                  )
+                : undefined;
               return contextProtocol;
             },
           );
@@ -353,14 +460,63 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
             return elementPointer;
           });
           protocol.executables = metamodel.executables?.map((executable) => {
-            const executableProtocol = new V1_DataSpaceExecutable();
-            executableProtocol.title = executable.title;
-            executableProtocol.description = executable.description;
-            executableProtocol.executable = new V1_PackageableElementPointer(
-              undefined,
-              executable.executable.valueForSerialization ?? '',
-            );
-            return executableProtocol;
+            if (executable instanceof DataSpaceExecutableTemplate) {
+              const executableProtocol = new V1_DataSpaceTemplateExecutable();
+              if (executable.id) {
+                executableProtocol.id = executable.id;
+              }
+              executableProtocol.title = executable.title;
+              executableProtocol.description = executable.description;
+              if (executable.executionContextKey) {
+                executableProtocol.executionContextKey =
+                  executable.executionContextKey;
+              }
+              executableProtocol.query =
+                executable.query.accept_RawValueSpecificationVisitor(
+                  new V1_RawValueSpecificationTransformer(context),
+                ) as V1_RawLambda;
+              return executableProtocol;
+            } else if (
+              executable instanceof DataSpacePackageableElementExecutable
+            ) {
+              const executableProtocol =
+                new V1_DataSpacePackageableElementExecutable();
+              if (executable.id) {
+                executableProtocol.id = executable.id;
+              }
+              executableProtocol.title = executable.title;
+              executableProtocol.description = executable.description;
+              if (executable.executionContextKey) {
+                executableProtocol.executionContextKey =
+                  executable.executionContextKey;
+              }
+              if (
+                executable.executable.value instanceof
+                ConcreteFunctionDefinition
+              ) {
+                executableProtocol.executable =
+                  new V1_PackageableElementPointer(
+                    PackageableElementPointerType.FUNCTION,
+                    generateFunctionPrettyName(executable.executable.value, {
+                      fullPath: true,
+                      spacing: false,
+                      notIncludeParamName: true,
+                    }),
+                  );
+              } else {
+                executableProtocol.executable =
+                  new V1_PackageableElementPointer(
+                    undefined,
+                    executable.executable.valueForSerialization ?? '',
+                  );
+              }
+              return executableProtocol;
+            } else {
+              throw new UnsupportedOperationError(
+                `Can't transform data product executable`,
+                executable,
+              );
+            }
           });
           protocol.diagrams = metamodel.diagrams?.map((diagram) => {
             const diagramProtocol = new V1_DataSpaceDiagram();
@@ -392,7 +548,7 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
               protocol.supportInfo = combinedInfo;
             } else {
               throw new UnsupportedOperationError(
-                `Can't transform data space support info`,
+                `Can't transform data product support info`,
                 metamodel.supportInfo,
               );
             }
@@ -474,6 +630,51 @@ export class DSL_DataSpace_PureProtocolProcessorPlugin
       (protocol: V1_MappingInclude): string | undefined => {
         if (protocol instanceof V1_MappingIncludeDataSpace) {
           return protocol.includedDataSpace;
+        }
+        return undefined;
+      },
+    ];
+  }
+
+  override V1_getExtraSavedQueryExecutionBuilder(): V1_SavedQueryExecutionBuilder[] {
+    return [
+      (
+        queryExec: QueryExecutionContextInfo,
+        entites: Entity[],
+      ): { mapping: string; runtime: string } | undefined => {
+        if (queryExec instanceof QueryDataSpaceExecutionContextInfo) {
+          const dataSpace = queryExec.dataSpacePath;
+          const dataSpaceEntity = entites.find((e) => e.path === dataSpace);
+          if (dataSpaceEntity) {
+            const content = dataSpaceEntity.content;
+            if (content._type === V1_DATA_SPACE_ELEMENT_PROTOCOL_TYPE) {
+              const v1DataSpace = returnUndefOnError(() =>
+                V1_deserializeDataSpace(content),
+              );
+              if (v1DataSpace) {
+                if (v1DataSpace.executionContexts.length === 1) {
+                  const exec = guaranteeNonNullable(
+                    v1DataSpace.executionContexts[0],
+                  );
+                  return {
+                    mapping: exec.mapping.path,
+                    runtime: exec.defaultRuntime.path,
+                  };
+                }
+                const resvoled =
+                  queryExec.executionKey ?? v1DataSpace.defaultExecutionContext;
+                const resolvedExec = guaranteeNonNullable(
+                  v1DataSpace.executionContexts.find(
+                    (e) => e.name === resvoled,
+                  ),
+                );
+                return {
+                  mapping: resolvedExec.mapping.path,
+                  runtime: resolvedExec.defaultRuntime.path,
+                };
+              }
+            }
+          }
         }
         return undefined;
       },

@@ -21,17 +21,12 @@ import type { FileEditorState } from '../../stores/FileEditorState.js';
 import { useApplicationStore, useCommands } from '@finos/legend-application';
 import { clsx, Dialog, WordWrapIcon } from '@finos/legend-art';
 import { usePureIDEStore } from '../PureIDEStoreProvider.js';
-import {
-  getNullableFirstEntry,
-  getNullableLastEntry,
-  guaranteeNonNullable,
-  returnUndefOnError,
-} from '@finos/legend-shared';
+import { at, returnUndefOnError } from '@finos/legend-shared';
 import {
   CODE_EDITOR_THEME,
   getBaseCodeEditorOptions,
   moveCursorToPosition,
-} from '@finos/legend-lego/code-editor';
+} from '@finos/legend-code-editor';
 
 const POSITION_PATTERN = /[0-9]+(?::[0-9]+)?/;
 
@@ -43,12 +38,8 @@ const getPositionFromGoToLinePromptInputValue = (
     return [1, undefined];
   }
   return [
-    returnUndefOnError(() =>
-      parseInt(guaranteeNonNullable(getNullableFirstEntry(parts))),
-    ) ?? 1,
-    returnUndefOnError(() =>
-      parseInt(guaranteeNonNullable(getNullableLastEntry(parts))),
-    ),
+    returnUndefOnError(() => parseInt(at(parts, 0))) ?? 1,
+    returnUndefOnError(() => parseInt(at(parts, -1))),
   ];
 };
 
@@ -70,8 +61,8 @@ export const GoToLinePrompt = observer(
     const error = !isValidValue
       ? 'Invalid value (format [line:column] - e.g. 123:45)'
       : !isValidLineNumber
-      ? `Invalid line number`
-      : undefined;
+        ? `Invalid line number`
+        : undefined;
 
     // actions
     const closeModal = (): void => fileEditorState.setShowGoToLinePrompt(false);

@@ -307,10 +307,10 @@ const buildPackageFilterTreeData = (
             entry instanceof DataSpaceClassDocumentationEntry
               ? CORE_PURE_PATH.CLASS
               : entry instanceof DataSpaceEnumerationDocumentationEntry
-              ? CORE_PURE_PATH.ENUMERATION
-              : entry instanceof DataSpaceAssociationDocumentationEntry
-              ? CORE_PURE_PATH.ASSOCIATION
-              : undefined,
+                ? CORE_PURE_PATH.ENUMERATION
+                : entry instanceof DataSpaceAssociationDocumentationEntry
+                  ? CORE_PURE_PATH.ASSOCIATION
+                  : undefined,
           );
         } else {
           node = new ModelsDocumentationFilterTreePackageNodeData(
@@ -554,7 +554,7 @@ export class DataSpaceViewerModelsDocumentationState
       }
     });
     // NOTE: sort to avoid unnecessary re-computation of filtered search results
-    this.filterTypes = types.slice().sort((a, b) => a.localeCompare(b));
+    this.filterTypes = types.toSorted((a, b) => a.localeCompare(b));
   }
 
   updatePackageFilter(): void {
@@ -568,7 +568,7 @@ export class DataSpaceViewerModelsDocumentationState
       }
     });
     // NOTE: sort to avoid unnecessary re-computation of filtered search results
-    this.filterPaths = elementPaths.slice().sort((a, b) => a.localeCompare(b));
+    this.filterPaths = elementPaths.toSorted((a, b) => a.localeCompare(b));
   }
 
   resetTypeFilter(): void {

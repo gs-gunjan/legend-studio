@@ -22,7 +22,9 @@ export class AssertionError extends EnrichedError {
     super('Assertion Error', error, message);
   }
 }
-
+export const isNullable = <T>(
+  value: T | null | undefined,
+): value is null | undefined => value === null || value === undefined;
 export const isNonNullable = <T>(value: T | null | undefined): value is T =>
   value !== null && value !== undefined;
 export function assertNonNullable<T>(
@@ -71,6 +73,12 @@ export const guaranteeType = <T>(
   assertType(value, clazz, message);
   return value;
 };
+
+export function isNonEmptyString(
+  str: string | null | undefined,
+): str is string {
+  return isNonNullable(str) && str !== '';
+}
 
 export function assertNonEmptyString(
   str: string | null | undefined,

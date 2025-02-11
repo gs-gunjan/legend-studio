@@ -19,7 +19,7 @@ import {
   type KeyedCommandConfigEntry,
   type LegendApplicationSetup,
 } from '@finos/legend-application';
-import packageJson from '../../package.json';
+import packageJson from '../../package.json' with { type: 'json' };
 import { LegendPureIDEApplicationPlugin } from '../stores/LegendPureIDEApplicationPlugin.js';
 import {
   LEGEND_PURE_IDE_COMMAND_CONFIG,
@@ -27,10 +27,8 @@ import {
   LEGEND_PURE_IDE_PURE_FILE_EDITOR_COMMAND_CONFIG,
 } from '../__lib__/LegendPureIDECommand.js';
 import { PURE_GRAMMAR_DIAGRAM_ELEMENT_TYPE_LABEL } from '../stores/PureFileEditorUtils.js';
-import {
-  configureCodeEditorComponent,
-  setupPureLanguageService,
-} from '@finos/legend-lego/code-editor';
+import { setupPureLanguageService } from '@finos/legend-code-editor';
+import { configureCodeEditorComponent } from '@finos/legend-lego/code-editor';
 
 export class Core_LegendPureIDEApplicationPlugin extends LegendPureIDEApplicationPlugin {
   static NAME = packageJson.extensions.applicationPureIDEPlugin;

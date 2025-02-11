@@ -30,6 +30,10 @@ import {
 } from '@finos/legend-shared';
 import { ExecutionActivityType } from '../../../../../../graph-manager/action/execution/ExecutionResult.js';
 
+export const V1_EXECUTION_RESULT = 'executionResult';
+export const V1_ZIPKIN_TRACE_HEADER = 'x-b3-traceid';
+export const V1_DELEGATED_EXPORT_HEADER = 'x-legend-delegated-export';
+
 export class V1_ResultBuilder {
   static readonly builderSerialization = new SerializationFactory(
     createModelSchema(V1_ResultBuilder, {

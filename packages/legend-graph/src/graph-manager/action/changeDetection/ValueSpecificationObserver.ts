@@ -60,6 +60,12 @@ import type {
   KeyExpression,
   KeyExpressionInstanceValue,
 } from '../../../graph/metamodel/pure/valueSpecification/KeyExpressionInstanceValue.js';
+import type {
+  ColSpec,
+  ColSpecArray,
+  ColSpecArrayInstance,
+  ColSpecInstanceValue,
+} from '../../../graph/metamodel/pure/valueSpecification/RelationValueSpecification.js';
 
 const observe_Abstract_ValueSpecification = (
   metamodel: ValueSpecification,
@@ -174,6 +180,25 @@ export const observe_GraphFetchTreeInstanceValue = skipObservedWithContext(
   },
 );
 
+export const observe_ColSpec = skipObservedWithContext(_observe_ColSpec);
+export const observe_ColSpecArray = skipObservedWithContext(
+  (metamodel: ColSpecArray, context): ColSpecArray => {
+    makeObservable(metamodel, {
+      colSpecs: observable,
+    });
+    metamodel.colSpecs.forEach((value) => observe_ColSpec(value, context));
+    return metamodel;
+  },
+);
+
+export const observe_ColSpecArrayInstance = skipObservedWithContext(
+  _observe_ColSpecArrayInstance,
+);
+
+export const observe_ColSpecInstance = skipObservedWithContext(
+  _observe_ColSpecInstance,
+);
+
 const observe_LambdaFunction = skipObservedWithContext(_observe_LambdaFunction);
 
 const observe_LambdaFunctionInstanceValue = skipObservedWithContext(
@@ -240,6 +265,7 @@ class ValueSpecificationObserver implements ValueSpecificationVisitor<void> {
   constructor(observerContext: ObserverContext) {
     this.observerContext = observerContext;
   }
+
   visit_KeyExpressionInstanceValue(
     valueSpeciciation: KeyExpressionInstanceValue,
   ): void {
@@ -320,6 +346,13 @@ class ValueSpecificationObserver implements ValueSpecificationVisitor<void> {
       this.observerContext,
     );
   }
+  visit_ColSpecArrayInstance(valueSpeciciation: ColSpecArrayInstance): void {
+    observe_ColSpecArrayInstance(valueSpeciciation, this.observerContext);
+  }
+
+  visit_ColSpecInstance(valueSpeciciation: ColSpecInstanceValue): void {
+    observe_ColSpecInstance(valueSpeciciation, this.observerContext);
+  }
 }
 
 export const observe_ValueSpecification = skipObservedWithContext(
@@ -327,7 +360,6 @@ export const observe_ValueSpecification = skipObservedWithContext(
     valueSpecification.accept_ValueSpecificationVisitor(
       new ValueSpecificationObserver(context),
     );
-
     return valueSpecification;
   },
 );
@@ -475,5 +507,45 @@ function _observe_LambdaFunction(
     observe_ValueSpecification(e, context),
   );
 
+  return metamodel;
+}
+
+function _observe_ColSpecArrayInstance(
+  metamodel: ColSpecArrayInstance,
+  context: ObserverContext,
+): ColSpecArrayInstance {
+  observe_Abstract_InstanceValue(metamodel, context);
+  makeObservable(metamodel, {
+    hashCode: override,
+  });
+  metamodel.values.forEach((value) => observe_ColSpecArray(value, context));
+  return metamodel;
+}
+
+function _observe_ColSpecInstance(
+  metamodel: ColSpecInstanceValue,
+  context: ObserverContext,
+): ColSpecInstanceValue {
+  observe_Abstract_InstanceValue(metamodel, context);
+  makeObservable(metamodel, {
+    hashCode: override,
+  });
+  metamodel.values.forEach((value) => observe_ColSpec(value, context));
+  return metamodel;
+}
+
+function _observe_ColSpec(
+  metamodel: ColSpec,
+  context: ObserverContext,
+): ColSpec {
+  makeObservable(metamodel, {
+    name: observable,
+    type: observable,
+    function1: observable,
+    function2: observable,
+  });
+  if (metamodel.function1) {
+    observe_ValueSpecification(metamodel.function1, context);
+  }
   return metamodel;
 }

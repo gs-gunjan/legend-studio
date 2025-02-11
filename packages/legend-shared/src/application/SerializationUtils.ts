@@ -18,6 +18,7 @@ import { type PlainObject, pruneNullValues } from '../CommonUtils.js';
 import {
   type ModelSchema,
   type PropSchema,
+  type AdditionalPropArgs,
   custom,
   SKIP,
   deserialize,
@@ -54,7 +55,7 @@ export class SerializationFactory<T> {
     );
   }
 
-  toJson(val: T): PlainObject<T> {
+  toJson(val: Partial<T> | T): PlainObject<T> {
     return serialize(this.schema, val);
   }
 
@@ -100,9 +101,7 @@ export const serializeMap = <T>(
   return result;
 };
 
-export const usingConstantValueSchema = (
-  value: unknown | typeof SKIP,
-): PropSchema =>
+export const usingConstantValueSchema = (value: unknown): PropSchema =>
   custom(
     () => value,
     () => value,
@@ -124,10 +123,12 @@ export const optionalCustom = (
   serializer: (val: any) => any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   deserializer: (val: any) => any,
+  additionalArgs?: AdditionalPropArgs,
 ): PropSchema =>
   custom(
     (val) => (val ? serializer(val) : SKIP),
     (val) => (val ? deserializer(val) : SKIP),
+    additionalArgs,
   );
 
 export const optionalCustomUsingModelSchema = <T>(
@@ -181,17 +182,19 @@ export const serializeArray = <T>(
   if (process.env.NODE_ENV === 'test') {
     forceReturnEmptyInTest =
       Boolean(options?.INTERNAL__forceReturnEmptyInTest) &&
+      // TODO: when we distribute engine-roundtrip tests to different test groups, we should
+      // remove this condition and clean up test data accordingly.
       // eslint-disable-next-line no-process-env
-      process.env.TEST_MODE === 'grammar';
+      process.env.TEST_GROUP === 'engine-roundtrip';
   }
   if (Array.isArray(values)) {
     return values.length
       ? values.map((value) => itemSerializer(value))
       : forceReturnEmptyInTest
-      ? []
-      : options?.skipIfEmpty
-      ? SKIP
-      : [];
+        ? []
+        : options?.skipIfEmpty
+          ? SKIP
+          : [];
   }
   return forceReturnEmptyInTest ? [] : SKIP;
 };

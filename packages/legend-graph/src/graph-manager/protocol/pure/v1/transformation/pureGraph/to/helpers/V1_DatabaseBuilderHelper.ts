@@ -129,6 +129,10 @@ import { FilterMapping } from '../../../../../../../../graph/metamodel/pure/pack
 import type { V1_FilterMapping } from '../../../../model/packageableElements/store/relational/mapping/V1_FilterMapping.js';
 import { FilterImplicitReference } from '../../../../../../../../graph/metamodel/pure/packageableElements/store/relational/model/FilterReference.js';
 import { PackageableElementImplicitReference } from '../../../../../../../../graph/metamodel/pure/packageableElements/PackageableElementReference.js';
+import type { V1_TablePtr } from '../../../../model/packageableElements/store/relational/model/V1_TablePtr.js';
+import { TablePtr } from '../../../../../../../../graph/metamodel/pure/packageableElements/service/TablePtr.js';
+import type { TabularFunction } from '../../../../../../../../graph/metamodel/pure/packageableElements/store/relational/model/TabularFunction.js';
+import type { V1_TabularFunction } from '../../../../model/packageableElements/store/relational/model/V1_TabularFunction.js';
 
 const _schemaExists = (
   db: Database,
@@ -183,6 +187,11 @@ export const V1_findRelation = (
       );
       if (!relation) {
         relation = schema.views.find((view) => view.name === tableName);
+      }
+      if (!relation) {
+        relation = schema.tabularFunctions.find(
+          (tabularFunction) => tabularFunction.name === tableName,
+        );
       }
       if (relation) {
         relations.push(relation);
@@ -445,6 +454,22 @@ const buildDatabaseTable = (
   return table;
 };
 
+const buildDatabaseTabularFunction = (
+  srcTabularFunction: V1_TabularFunction,
+  schema: Schema,
+): TabularFunction => {
+  assertNonEmptyString(
+    srcTabularFunction.name,
+    `TabularFunction 'name' field is missing or empty`,
+  );
+  const tabularFunction = new Table(srcTabularFunction.name, schema);
+  const columns = srcTabularFunction.columns.map((column) =>
+    buildColumn(column, tabularFunction),
+  );
+  tabularFunction.columns = columns;
+  return tabularFunction;
+};
+
 export const V1_buildSchema = (
   srcSchema: V1_Schema,
   database: Database,
@@ -457,6 +482,9 @@ export const V1_buildSchema = (
   const schema = new Schema(srcSchema.name, database);
   schema.tables = srcSchema.tables.map((table) =>
     buildDatabaseTable(table, schema, context),
+  );
+  schema.tabularFunctions = srcSchema.tabularFunctions.map((tabularFunction) =>
+    buildDatabaseTabularFunction(tabularFunction, schema),
   );
   return schema;
 };
@@ -664,4 +692,13 @@ export const V1_buildDatabaseFilter = (
   const filter = new Filter(srcFilter.name, op);
   filter.owner = database;
   return filter;
+};
+
+export const V1_buildTablePtr = (protocol: V1_TablePtr): TablePtr => {
+  const tablePtr = new TablePtr();
+  tablePtr.database = protocol.database;
+  tablePtr.schema = protocol.schema;
+  tablePtr.table = protocol.table;
+  tablePtr.mainTableDb = protocol.mainTableDb;
+  return tablePtr;
 };

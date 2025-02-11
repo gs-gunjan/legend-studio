@@ -15,11 +15,11 @@
  */
 
 import type { EditorStore } from '../EditorStore.js';
-import { action, makeObservable, observable } from 'mobx';
+import { action, computed, makeObservable, observable } from 'mobx';
 import { hashValue } from '@finos/legend-shared';
-import { type SourceInformation } from '@finos/legend-graph';
+import type { SourceInformation } from '@finos/legend-graph';
 import { LEGEND_STUDIO_SETTING_KEY } from '../../../__lib__/LegendStudioSetting.js';
-import type { CodeEditorPosition } from '@finos/legend-lego/code-editor';
+import type { CodeEditorPosition } from '@finos/legend-code-editor';
 
 export class GrammarTextEditorState {
   readonly editorStore: EditorStore;
@@ -38,6 +38,7 @@ export class GrammarTextEditorState {
       setGraphGrammarText: action,
       setWrapText: action,
       setForcedCursorPosition: action,
+      wordWrapOtion: computed,
     });
 
     this.editorStore = editorStore;
@@ -49,6 +50,10 @@ export class GrammarTextEditorState {
 
   get currentTextGraphHash(): string {
     return hashValue(this.graphGrammarText);
+  }
+
+  get wordWrapOtion(): 'on' | 'off' {
+    return this.wrapText ? 'on' : 'off';
   }
 
   setGraphGrammarText(code: string): void {

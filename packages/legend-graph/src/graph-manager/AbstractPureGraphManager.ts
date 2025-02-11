@@ -17,6 +17,7 @@
 import type {
   ExecutionResult,
   EXECUTION_SERIALIZATION_FORMAT,
+  ExecutionResultWithMetadata,
 } from './action/execution/ExecutionResult.js';
 import type {
   ServiceRegistrationResult,
@@ -53,11 +54,12 @@ import type {
 } from '../graph/metamodel/pure/executionPlan/ExecutionPlan.js';
 import type { ExecutionNode } from '../graph/metamodel/pure/executionPlan/nodes/ExecutionNode.js';
 import {
-  ActionState,
-  type PlainObject,
+  type ContentType,
   type LogService,
+  type PlainObject,
   type ServerClientConfig,
   type TracerService,
+  ActionState,
 } from '@finos/legend-shared';
 import type { LightQuery, Query, QueryInfo } from './action/query/Query.js';
 import type { EntitiesWithOrigin, Entity } from '@finos/legend-storage';
@@ -77,7 +79,10 @@ import type {
   CompilationResult,
   TextCompilationResult,
 } from './action/compilation/CompilationResult.js';
-import type { ParameterValue } from '../DSL_Service_Exports.js';
+import type {
+  ParameterValue,
+  PostValidationAssertionResult,
+} from '../DSL_Service_Exports.js';
 import type { ModelUnit } from '../graph/metamodel/pure/packageableElements/externalFormat/store/DSL_ExternalFormat_ModelUnit.js';
 import type {
   DatasetEntitlementReport,
@@ -98,9 +103,21 @@ import type {
   SubtypeInfo,
 } from './action/protocol/ProtocolInfo.js';
 import type { FunctionActivatorConfiguration } from './action/functionActivator/FunctionActivatorConfiguration.js';
+import type { RelationalDatabaseTypeConfiguration } from './action/relational/RelationalDatabaseTypeConfiguration.js';
 import type { FunctionActivator } from '../graph/metamodel/pure/packageableElements/function/FunctionActivator.js';
 import type { RelationalDatabaseConnection } from '../STO_Relational_Exports.js';
 import type { ArtifactGenerationExtensionResult } from './action/generation/ArtifactGenerationExtensionResult.js';
+import type { TestDataGenerationResult } from '../graph/metamodel/pure/packageableElements/service/TestGenerationResult.js';
+import type { TableRowIdentifiers } from '../graph/metamodel/pure/packageableElements/service/TableRowIdentifiers.js';
+import type { EngineError } from './action/EngineError.js';
+import type { TestDebug } from '../graph/metamodel/pure/test/result/DebugTestsResult.js';
+import type { RelationTypeMetadata } from './action/relation/RelationTypeMetadata.js';
+import type { CodeCompletionResult } from './action/compilation/Completion.js';
+import type { DeploymentResult } from './action/DeploymentResult.js';
+import type {
+  LightPersistentDataCube,
+  PersistentDataCube,
+} from './action/query/PersistentDataCube.js';
 
 export interface TEMPORARY__EngineSetupConfig {
   env: string;
@@ -144,14 +161,18 @@ export interface ExecutionOptions {
    * NOTE: This will result in numeric values being stored as object instead of primitive type number values.
    */
   useLosslessParse?: boolean | undefined;
+  convertUnsafeNumbersToString?: boolean | undefined;
   serializationFormat?: EXECUTION_SERIALIZATION_FORMAT | undefined;
   parameterValues?: ParameterValue[];
+  abortController?: AbortController | undefined;
+  preservedResponseHeadersList?: string[];
 }
 
 export interface ServiceRegistrationOptions {
   TEMPORARY__useStoreModel?: boolean | undefined;
   TEMPORARY__semiInteractiveOverridePattern?: string | undefined;
   TEMPORARY__useGenerateLineage?: boolean | undefined;
+  TEMPORARY__useGenerateOpenApi?: boolean | undefined;
 }
 
 export abstract class AbstractPureGraphManagerExtension {
@@ -204,9 +225,7 @@ export abstract class AbstractPureGraphManager {
     config: TEMPORARY__EngineSetupConfig,
     options?: {
       tracerService?: TracerService | undefined;
-      TEMPORARY__enableNewServiceRegistrationInputCollectorMechanism?:
-        | boolean
-        | undefined;
+      disableGraphConfiguration?: boolean | undefined;
     },
   ): Promise<void>;
 
@@ -287,7 +306,10 @@ export abstract class AbstractPureGraphManager {
 
   abstract graphToPureCode(
     graph: PureModel,
-    options?: { pretty?: boolean | undefined },
+    options?: {
+      pretty?: boolean | undefined;
+      excludeUnknown?: boolean | undefined;
+    },
   ): Promise<string>;
   abstract pureCodeToEntities(
     code: string,
@@ -321,6 +343,16 @@ export abstract class AbstractPureGraphManager {
     lambdas: Map<string, ValueSpecification>,
     pretty?: boolean,
   ): Promise<Map<string, string>>;
+
+  abstract valueSpecificationToPureCode(
+    valSpec: PlainObject<ValueSpecification>,
+    pretty?: boolean,
+  ): Promise<string>;
+
+  abstract pureCodeToValueSpecification(
+    valSpec: string,
+    returnSourceInformation?: boolean,
+  ): Promise<PlainObject<ValueSpecification>>;
 
   abstract pureCodeToValueSpecifications(
     lambdas: Map<string, string>,
@@ -359,12 +391,47 @@ export abstract class AbstractPureGraphManager {
     options?: { keepSourceInformation?: boolean },
   ): Promise<string>;
 
+  abstract getLambdaRelationType(
+    lambda: RawLambda,
+    graph: PureModel,
+    options?: { keepSourceInformation?: boolean },
+  ): Promise<RelationTypeMetadata>;
+
+  abstract getCodeComplete(
+    codeBlock: string,
+    graph: PureModel,
+    offset: number | undefined,
+  ): Promise<CodeCompletionResult>;
+
+  abstract getLambdasReturnType(
+    lambdas: Map<string, RawLambda>,
+    graph: PureModel,
+  ): Promise<{
+    results: Map<string, string>;
+    errors: Map<string, EngineError>;
+  }>;
+
+  // ------------------------------------------- SDLC -------------------------------------------
+
+  abstract createSandboxProject(): Promise<{
+    projectId: string;
+    webUrl: string | undefined;
+    owner: string;
+  }>;
+
+  abstract userHasPrototypeProjectAccess(userId: string): Promise<boolean>;
+
   // ------------------------------------------- Test -------------------------------------------
 
   abstract runTests(
     inputs: RunTestsTestableInput[],
     graph: PureModel,
   ): Promise<TestResult[]>;
+
+  abstract debugTests(
+    inputs: RunTestsTestableInput[],
+    graph: PureModel,
+  ): Promise<TestDebug[]>;
 
   // ------------------------------------------- Value Specification -------------------------------------------
 
@@ -375,8 +442,12 @@ export abstract class AbstractPureGraphManager {
   abstract serializeValueSpecification(
     valueSpecification: ValueSpecification,
   ): PlainObject;
-  abstract buildRawValueSpecification(
+  abstract transformValueSpecToRawValueSpec(
     valueSpecification: ValueSpecification,
+    graph: PureModel,
+  ): RawValueSpecification;
+  abstract buildRawValueSpecification(
+    valuSpec: object,
     graph: PureModel,
   ): RawValueSpecification;
   abstract serializeRawValueSpecification(
@@ -410,6 +481,15 @@ export abstract class AbstractPureGraphManager {
     generationElement: PackageableElement,
     graph: PureModel,
   ): Promise<Entity[]>;
+
+  // --------------------------------------------- Test Data Generation ---------------------------------------------
+
+  abstract generateTestData(
+    query: RawLambda,
+    mapping: string,
+    runtime: string,
+    graph: PureModel,
+  ): Promise<TestDataGenerationResult>;
 
   // ------------------------------------------- External Format ----------------------------------
 
@@ -445,7 +525,17 @@ export abstract class AbstractPureGraphManager {
     graph: PureModel,
     options?: ExecutionOptions,
     report?: GraphManagerOperationReport,
-  ): Promise<ExecutionResult>;
+  ): Promise<ExecutionResultWithMetadata>;
+
+  abstract exportData(
+    lambda: RawLambda,
+    mapping: Mapping | undefined,
+    runtime: Runtime | undefined,
+    graph: PureModel,
+    options?: ExecutionOptions | undefined,
+    report?: GraphManagerOperationReport | undefined,
+    contentType?: ContentType | undefined,
+  ): Promise<Response>;
 
   abstract cancelUserExecutions(broadcastToCluster: boolean): Promise<string>;
 
@@ -492,6 +582,20 @@ export abstract class AbstractPureGraphManager {
     report?: GraphManagerOperationReport,
   ): Promise<string>;
 
+  abstract generateExecuteTestDataWithSeedData(
+    lambda: RawLambda,
+    tableRowIdentifiers: TableRowIdentifiers[],
+    mapping: Mapping,
+    runtime: Runtime,
+    graph: PureModel,
+    options?: {
+      // Anonymizes data by hashing any string values in the generated data
+      anonymizeGeneratedData?: boolean;
+      parameterValues?: ParameterValue[];
+    },
+    report?: GraphManagerOperationReport,
+  ): Promise<string>;
+
   abstract buildExecutionPlan(
     executionPlanJson: RawExecutionPlan,
     graph: PureModel,
@@ -514,8 +618,40 @@ export abstract class AbstractPureGraphManager {
   abstract getQueryInfo(queryId: string): Promise<QueryInfo>;
   abstract createQuery(query: Query, graph: PureModel): Promise<Query>;
   abstract updateQuery(query: Query, graph: PureModel): Promise<Query>;
+  abstract patchQuery(query: Partial<Query>, graph: PureModel): Promise<Query>;
   abstract renameQuery(queryId: string, queryName: string): Promise<LightQuery>;
-  abstract deleteQuery(queryId: string): Promise<LightQuery>;
+  abstract deleteQuery(queryId: string): Promise<void>;
+
+  abstract productionizeQueryToServiceEntity(
+    query: QueryInfo,
+    serviceConfig: {
+      name: string;
+      packageName: string;
+      pattern: string;
+      serviceOwners: string[];
+    },
+    graph: Entity[],
+  ): Promise<Entity>;
+
+  abstract resolveQueryInfoExecutionContext(
+    query: QueryInfo,
+    graphLoader: () => Promise<PlainObject<Entity>[]>,
+  ): Promise<{ mapping: string | undefined; runtime: string }>;
+
+  // ------------------------------------------- DataCube -------------------------------------------
+
+  abstract searchDataCubes(
+    searchSpecification: QuerySearchSpecification,
+  ): Promise<LightPersistentDataCube[]>;
+  abstract getDataCubes(ids: string[]): Promise<LightPersistentDataCube[]>;
+  abstract getDataCube(id: string): Promise<PersistentDataCube>;
+  abstract createDataCube(
+    dataCube: PersistentDataCube,
+  ): Promise<PersistentDataCube>;
+  abstract updateDataCube(
+    dataCube: PersistentDataCube,
+  ): Promise<PersistentDataCube>;
+  abstract deleteDataCube(id: string): Promise<void>;
 
   // -------------------------------------- Analysis --------------------------------------
 
@@ -571,7 +707,19 @@ export abstract class AbstractPureGraphManager {
   abstract publishFunctionActivatorToSandbox(
     functionActivator: FunctionActivator,
     graphData: GraphData,
-  ): Promise<void>;
+  ): Promise<DeploymentResult>;
+
+  // --------------------------------------------- Relational ---------------------------------------------
+
+  abstract generateModelsFromDatabaseSpecification(
+    databasePath: string,
+    targetPackage: undefined | string,
+    graph: PureModel,
+  ): Promise<Entity[]>;
+
+  abstract getAvailableRelationalDatabaseTypeConfigurations(): Promise<
+    RelationalDatabaseTypeConfiguration[] | undefined
+  >;
 
   // ------------------------------------------- Service -------------------------------------------
   /**
@@ -603,6 +751,11 @@ export abstract class AbstractPureGraphManager {
     serviceUrl: string,
     serviceId: string,
   ): Promise<void>;
+  abstract runServicePostValidations(
+    service: Service,
+    graph: PureModel,
+    assertionId: string,
+  ): Promise<PostValidationAssertionResult>;
 
   // ------------------------------------------- Change detection -------------------------------------------
 
@@ -620,9 +773,7 @@ export abstract class AbstractPureGraphManager {
   async createBasicGraph(options?: {
     initializeSystem?: boolean;
   }): Promise<PureModel> {
-    const extensionElementClasses = this.pluginManager
-      .getPureGraphPlugins()
-      .flatMap((plugin) => plugin.getExtraPureGraphExtensionClasses?.() ?? []);
+    const extensionElementClasses = this.pluginManager.getPureGraphPlugins();
     const coreModel = new CoreModel(extensionElementClasses);
     const systemModel = new SystemModel(extensionElementClasses);
     if (options?.initializeSystem) {
@@ -638,23 +789,11 @@ export abstract class AbstractPureGraphManager {
   }
 
   createDependencyManager(): DependencyManager {
-    return new DependencyManager(
-      this.pluginManager
-        .getPureGraphPlugins()
-        .flatMap(
-          (plugin) => plugin.getExtraPureGraphExtensionClasses?.() ?? [],
-        ),
-    );
+    return new DependencyManager(this.pluginManager.getPureGraphPlugins());
   }
 
   createGenerationModel(): GenerationModel {
-    return new GenerationModel(
-      this.pluginManager
-        .getPureGraphPlugins()
-        .flatMap(
-          (plugin) => plugin.getExtraPureGraphExtensionClasses?.() ?? [],
-        ),
-    );
+    return new GenerationModel(this.pluginManager.getPureGraphPlugins());
   }
 
   /**

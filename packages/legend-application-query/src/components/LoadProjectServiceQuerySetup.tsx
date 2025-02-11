@@ -76,10 +76,10 @@ const LoadProjectServiceQuerySetupContent = observer(() => {
   const projectSelectorPlaceholder = setupStore.loadProjectsState.isInProgress
     ? 'Loading projects'
     : setupStore.loadProjectsState.hasFailed
-    ? 'Error fetching projects'
-    : setupStore.projects.length
-    ? 'Choose a project'
-    : 'You have no projects, please create or acquire access for at least one';
+      ? 'Error fetching projects'
+      : setupStore.projects.length
+        ? 'Choose a project'
+        : 'You have no projects, please create or acquire access for at least one';
   const onProjectOptionChange = (option: ProjectOption): void => {
     setupStore
       .loadProjectServiceUpdater(option.value)
@@ -118,7 +118,10 @@ const LoadProjectServiceQuerySetupContent = observer(() => {
             isLoading={setupStore.loadProjectsState.isInProgress}
             onChange={onProjectOptionChange}
             placeholder={projectSelectorPlaceholder}
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
           />
         </div>
       </div>

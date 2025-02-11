@@ -61,7 +61,12 @@ const entityChanges = {
               upperBound: 1,
             },
             name: 'myNewProperty',
-            type: 'String',
+            genericType: {
+              rawType: {
+                _type: 'packageableType',
+                fullPath: 'String',
+              },
+            },
           },
         ],
       },
@@ -99,7 +104,12 @@ const changedEntities = [
             upperBound: 1,
           },
           name: 'myNewProperty',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },

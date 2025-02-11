@@ -28,7 +28,7 @@ import {
   type RelationalCSVDataTable,
   RelationalCSVData,
 } from '../../../../../../../graph/metamodel/pure/data/RelationalCSVData.js';
-import type { DataElement } from '../../../../../../../graph/metamodel/pure/packageableElements/data/DataElement.js';
+import { DataElement } from '../../../../../../../graph/metamodel/pure/packageableElements/data/DataElement.js';
 import type { DSL_Data_PureProtocolProcessorPlugin_Extension } from '../../../../extensions/DSL_Data_PureProtocolProcessorPlugin_Extension.js';
 import {
   type V1_EmbeddedData,
@@ -44,7 +44,10 @@ import {
   V1_RelationalCSVDataTable,
 } from '../../../model/data/V1_RelationalCSVData.js';
 import { V1_DataElement } from '../../../model/packageableElements/data/V1_DataElement.js';
-import { V1_initPackageableElement } from './V1_CoreTransformerHelper.js';
+import {
+  V1_initPackageableElement,
+  V1_transformElementReferencePointer,
+} from './V1_CoreTransformerHelper.js';
 import {
   V1_transformStereotype,
   V1_transformTaggedValue,
@@ -52,6 +55,7 @@ import {
 import type { V1_GraphTransformerContext } from './V1_GraphTransformerContext.js';
 import { INTERNAL__UnknownEmbeddedData } from '../../../../../../../graph/metamodel/pure/data/INTERNAL__UnknownEmbeddedData.js';
 import { V1_INTERNAL__UnknownEmbeddedData } from '../../../model/data/V1_INTERNAL__UnknownEmbeddedData.js';
+import { PackageableElementPointerType } from '../../../../../../../graph/MetaModelConst.js';
 
 // ----------------------------------------------- DATA ----------------------------------------
 
@@ -110,10 +114,39 @@ export const V1_transformExternalFormatData = (
 
 const V1_transformDataElementReference = (
   element: DataElementReference,
+  context: V1_GraphTransformerContext,
 ): V1_DataElementReference => {
   const dataElementReference = new V1_DataElementReference();
-  dataElementReference.dataElement =
-    element.dataElement.valueForSerialization ?? '';
+  const val = element.dataElement.value;
+  if (val instanceof DataElement) {
+    dataElementReference.dataElement = V1_transformElementReferencePointer(
+      PackageableElementPointerType.DATA,
+      element.dataElement,
+    );
+    return dataElementReference;
+  }
+  const extraEmbeddedDataTransformers = context.plugins.flatMap(
+    (plugin) =>
+      (
+        plugin as DSL_Data_PureProtocolProcessorPlugin_Extension
+      ).V1_getExtraElementPointerTypes?.() ?? [],
+  );
+  let type: string | undefined;
+  for (const transformer of extraEmbeddedDataTransformers) {
+    type = transformer(val);
+    if (type) {
+      break;
+    }
+  }
+  if (!type) {
+    throw new UnsupportedOperationError(
+      `No packagable pointer found for element: ${element.dataElement.valueForSerialization}`,
+    );
+  }
+  dataElementReference.dataElement = V1_transformElementReferencePointer(
+    type,
+    element.dataElement,
+  );
   return dataElementReference;
 };
 
@@ -148,7 +181,7 @@ export function V1_transformEmbeddedData(
   } else if (metamodel instanceof ExternalFormatData) {
     return V1_transformExternalFormatData(metamodel);
   } else if (metamodel instanceof DataElementReference) {
-    return V1_transformDataElementReference(metamodel);
+    return V1_transformDataElementReference(metamodel, context);
   } else if (metamodel instanceof RelationalCSVData) {
     return V1_transformRelationalCSVData(metamodel);
   }

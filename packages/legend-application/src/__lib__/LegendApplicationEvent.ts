@@ -15,6 +15,9 @@
  */
 
 export enum APPLICATION_EVENT {
+  // TODO: split this into specific events
+  GENERIC_FAILURE = 'application.failure.generic',
+
   APPLICATION_SETUP__FAILURE = 'application.setup.failure',
 
   APPLICATION_LOAD__SUCCESS = 'application.load.success',
@@ -43,9 +46,12 @@ export enum APPLICATION_EVENT {
 
   COMMAND_CENTER_REGISTRATION__FAILURE = 'application.command.registration.failure',
 
-  DEVELOPMENT_ISSUE = 'development.issue',
-
   APPLICATION_CONTEXT__ACCESS = 'application.context.access',
 
   APPLICATION_USAGE__INTERRUPT = 'application.usage.interrupt',
+  NAVIGATION_BLOCKED = 'application.usage.navigation-blocked',
+
+  APPLICATION_TELEMETRY_EVENT__FAILURE = 'application.telemetry-event.failure',
+
+  DEBUG = 'development.debug',
 }

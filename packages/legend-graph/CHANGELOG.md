@@ -1,5 +1,583 @@
 # @finos/legend-graph
 
+## 32.1.3
+
+## 32.1.2
+
+## 32.1.1
+
+## 32.1.0
+
+## 32.0.9
+
+### Patch Changes
+
+- [#3848](https://github.com/finos/legend-studio/pull/3848) [`9b009e9`](https://github.com/finos/legend-studio/commit/9b009e93282418ef79f48a760f96079a95eaa3ad) ([@travisstebbins](https://github.com/travisstebbins)) - Additional VSCode dependency exports
+
+## 32.0.8
+
+## 32.0.7
+
+### Patch Changes
+
+- [#3837](https://github.com/finos/legend-studio/pull/3837) [`a851990`](https://github.com/finos/legend-studio/commit/a8519901c85cdd5f6f2200ee6eea0fe5a7ed2a88) ([@gs-rpant1729](https://github.com/gs-rpant1729)) - Support Relation Function class mapping in Studio.
+
+## 32.0.6
+
+## 32.0.5
+
+## 32.0.4
+
+## 32.0.3
+
+### Patch Changes
+
+- [#3808](https://github.com/finos/legend-studio/pull/3808) [`eec360c`](https://github.com/finos/legend-studio/commit/eec360cd6b019d272945bfae9782ec613c17f72c) ([@kelly-thai](https://github.com/kelly-thai)) - Updating dataspaces to dataproducts where necessary
+
+## 32.0.2
+
+## 32.0.1
+
+### Patch Changes
+
+- [#3788](https://github.com/finos/legend-studio/pull/3788) [`0cb9701`](https://github.com/finos/legend-studio/commit/0cb97012611d686014fd926c7b182f2adf9283d9) ([@aziemchawdhary-gs](https://github.com/aziemchawdhary-gs)) - Support primtive types as source of Pure mappings
+
+## 32.0.0
+
+### Major Changes
+
+- [#3763](https://github.com/finos/legend-studio/pull/3763) [`b023be4`](https://github.com/finos/legend-studio/commit/b023be430847591362083ff4648ee67334e3367c) ([@akphi](https://github.com/akphi)) - **BREAKING CHANGE:** Standardize naming of grammar parser and composer methods in `V1_GraphManagerEngine`.
+
+## 31.10.65
+
+## 31.10.64
+
+### Patch Changes
+
+- [#3742](https://github.com/finos/legend-studio/pull/3742) [`cdd7e5d`](https://github.com/finos/legend-studio/commit/cdd7e5d701989f68f1dcc83b807a391123abaac8) ([@travisstebbins](https://github.com/travisstebbins)) - Export dependencies to support Data Cube in VS Code purebook renderer
+
+- [#3764](https://github.com/finos/legend-studio/pull/3764) [`213b512`](https://github.com/finos/legend-studio/commit/213b512a801c4bf9b5a7666e51f83598f12cf01e) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add TabularFunction in metamodel
+
+## 31.10.63
+
+## 31.10.62
+
+### Patch Changes
+
+- [#3753](https://github.com/finos/legend-studio/pull/3753) [`72f70b6`](https://github.com/finos/legend-studio/commit/72f70b62a6e15d96e6f1116ee84ed34eaba82022) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Edit existing data cube query
+
+## 31.10.61
+
+## 31.10.60
+
+### Patch Changes
+
+- [#3727](https://github.com/finos/legend-studio/pull/3727) [`a0d46cb`](https://github.com/finos/legend-studio/commit/a0d46cb4cddd839614a3da4a3e73f4df03c1dac0) ([@travisstebbins](https://github.com/travisstebbins)) - VS Code QueryBuilder Cube integration dependency exports
+
+## 31.10.59
+
+## 31.10.58
+
+### Patch Changes
+
+- [#3716](https://github.com/finos/legend-studio/pull/3716) [`385a9cd`](https://github.com/finos/legend-studio/commit/385a9cd9eff8ed5025db7c6f5579959ed7ce3e46) ([@travisstebbins](https://github.com/travisstebbins)) - VS Code graph build optimizations
+
+- [#3692](https://github.com/finos/legend-studio/pull/3692) [`8b5b907`](https://github.com/finos/legend-studio/commit/8b5b907bc4c717b1e842406035d0f80ed8d92cf5) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add engine roundtip tests for building minial graph using dataspace artifacts
+
+## 31.10.57
+
+### Patch Changes
+
+- [#3710](https://github.com/finos/legend-studio/pull/3710) [`58df540`](https://github.com/finos/legend-studio/commit/58df540c31c8293bb3d23de36edf8a56e5d0cc4b) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add query timeout to database connection
+
+## 31.10.56
+
+## 31.10.55
+
+## 31.10.54
+
+## 31.10.53
+
+## 31.10.52
+
+## 31.10.51
+
+## 31.10.50
+
+## 31.10.49
+
+## 31.10.48
+
+## 31.10.47
+
+## 31.10.46
+
+### Patch Changes
+
+- [#3650](https://github.com/finos/legend-studio/pull/3650) [`982b805`](https://github.com/finos/legend-studio/commit/982b805041184ae14cac565d302b71b440894d56) ([@travisstebbins](https://github.com/travisstebbins)) - Add V1_getFunctionNameWithoutSignature function and additional exports for vscode extension function query builder
+
+## 31.10.45
+
+## 31.10.44
+
+### Patch Changes
+
+- [#3632](https://github.com/finos/legend-studio/pull/3632) [`0162292`](https://github.com/finos/legend-studio/commit/01622924b257112bc950b78df5aaa024b5d7aedf) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Send only store element when building model from store.
+
+## 31.10.43
+
+### Patch Changes
+
+- [#3627](https://github.com/finos/legend-studio/pull/3627) [`dee130c`](https://github.com/finos/legend-studio/commit/dee130ce2715ae136ad4e2438ef9a33a02c97b9b) ([@travisstebbins](https://github.com/travisstebbins)) - Additional legend-vscode-extension-dependencies exports
+
+- [#3628](https://github.com/finos/legend-studio/pull/3628) [`3d68ae4`](https://github.com/finos/legend-studio/commit/3d68ae4b2aeeae0ea6a1b19999f1d73e0475cb7d) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Update snowflakeapp metamodel
+
+## 31.10.42
+
+### Patch Changes
+
+- [#3619](https://github.com/finos/legend-studio/pull/3619) [`3b4b12f`](https://github.com/finos/legend-studio/commit/3b4b12f9aed41d81aa9f906b7f7bb2f7a371b589) ([@travisstebbins](https://github.com/travisstebbins)) - Handle export data download being handled by external source
+
+## 31.10.41
+
+### Patch Changes
+
+- [#3616](https://github.com/finos/legend-studio/pull/3616) [`c261d6c`](https://github.com/finos/legend-studio/commit/c261d6cda6a3ce4e01c2abb9429e979c1a8516a2) ([@travisstebbins](https://github.com/travisstebbins)) - Additional legend-vscode-extension-dependencies exports
+
+## 31.10.40
+
+### Patch Changes
+
+- [#3612](https://github.com/finos/legend-studio/pull/3612) [`5f661e5`](https://github.com/finos/legend-studio/commit/5f661e5c223d08b3d4c9cec5b550ad1fa93d1c52) ([@kelly-thai](https://github.com/kelly-thai)) - Successfully deployed activators will now receive a pop-up alert that includes the link to the deployed activator.
+
+## 31.10.39
+
+## 31.10.38
+
+### Patch Changes
+
+- [#3598](https://github.com/finos/legend-studio/pull/3598) [`b5b32c7`](https://github.com/finos/legend-studio/commit/b5b32c782dfb59bbe9286e9f8fa5acf6e95f3ffc) ([@kelly-thai](https://github.com/kelly-thai)) - Adding ability to add stereotypes and tagged values to function activators. New tabs have been added to the activator form and changes from text mode will be reflected as well.
+
+## 31.10.37
+
+## 31.10.36
+
+## 31.10.35
+
+### Patch Changes
+
+- [#3553](https://github.com/finos/legend-studio/pull/3553) [`ed4abf7`](https://github.com/finos/legend-studio/commit/ed4abf74e827d9fcefd4a835695c205aa7d96c7d) ([@travisstebbins](https://github.com/travisstebbins)) - Allow plugging in different engine implementations into into V1_PureGraphManager
+
+## 31.10.34
+
+## 31.10.33
+
+## 31.10.32
+
+### Patch Changes
+
+- [#3534](https://github.com/finos/legend-studio/pull/3534) [`22f8e5e`](https://github.com/finos/legend-studio/commit/22f8e5e628b999671f393551cea4a55ae5d7c324) ([@viju4076](https://github.com/viju4076)) - ability to select business or processing date for milestoned class in dq class validation
+
+## 31.10.31
+
+## 31.10.30
+
+### Patch Changes
+
+- [#3499](https://github.com/finos/legend-studio/pull/3499) [`2f4227b`](https://github.com/finos/legend-studio/commit/2f4227ba995fc8245c1c3eeb62ad71cd39821732) ([@travisstebbins](https://github.com/travisstebbins)) - Add QueryBuilder to VS Code extension
+
+## 31.10.29
+
+## 31.10.28
+
+## 31.10.27
+
+## 31.10.26
+
+### Patch Changes
+
+- [#3487](https://github.com/finos/legend-studio/pull/3487) [`ac83e22`](https://github.com/finos/legend-studio/commit/ac83e223b15de8aa285670bc69e4b200fd8499c8) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Fix resolving elements in packages for fixing in dataspace elements render.
+
+## 31.10.25
+
+## 31.10.24
+
+### Patch Changes
+
+- [#3466](https://github.com/finos/legend-studio/pull/3466) [`5aa5219`](https://github.com/finos/legend-studio/commit/5aa5219bae3e49d178573030820ac3de3a4fb7fb) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Update the service and Snowflake app model to incorporate stereotypes and tagged values
+
+## 31.10.23
+
+## 31.10.22
+
+## 31.10.21
+
+## 31.10.20
+
+## 31.10.19
+
+### Patch Changes
+
+- [#3395](https://github.com/finos/legend-studio/pull/3395) [`ecb65ab`](https://github.com/finos/legend-studio/commit/ecb65abf6446eeecef7d5824b59ccec49fb9698a) ([@travisstebbins](https://github.com/travisstebbins)) - Allow passing abortController to runQuery function
+
+## 31.10.18
+
+## 31.10.17
+
+## 31.10.16
+
+### Patch Changes
+
+- [#3371](https://github.com/finos/legend-studio/pull/3371) [`9c343c7`](https://github.com/finos/legend-studio/commit/9c343c780f117a258fa62ee820603941773816a9) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add support for snowflake temp table and schema specification in relational connection.
+
+## 31.10.15
+
+## 31.10.14
+
+## 31.10.13
+
+### Patch Changes
+
+- [#3345](https://github.com/finos/legend-studio/pull/3345) [`a9ab9d1`](https://github.com/finos/legend-studio/commit/a9ab9d11cb780b02853f1967393e8b387b33bcca) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Support permissionScheme and usageRole in SnowflakeApp
+
+## 31.10.12
+
+## 31.10.11
+
+## 31.10.10
+
+### Patch Changes
+
+- [#3265](https://github.com/finos/legend-studio/pull/3265) [`beb5599`](https://github.com/finos/legend-studio/commit/beb5599ea58831487321c4bcaf08a19ac8f9af75) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add debug option in mapping tests which shows execution plan and debug log + error when generating exec plan.
+
+## 31.10.9
+
+### Patch Changes
+
+- [#3326](https://github.com/finos/legend-studio/pull/3326) [`4fc2e94`](https://github.com/finos/legend-studio/commit/4fc2e94e90947a351b76e220825967922d0bf3a6) ([@viju4076](https://github.com/viju4076)) - dq validation bug fix
+
+## 31.10.8
+
+### Patch Changes
+
+- [#3320](https://github.com/finos/legend-studio/pull/3320) [`4029e17`](https://github.com/finos/legend-studio/commit/4029e17217a01fa011752b5cdecca5b19b3d0488) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - data quality validations module
+
+## 31.10.7
+
+## 31.10.6
+
+## 31.10.5
+
+## 31.10.4
+
+### Patch Changes
+
+- [#3279](https://github.com/finos/legend-studio/pull/3279) [`f314481`](https://github.com/finos/legend-studio/commit/f314481604d7e63c1570294c84a61549eb905c3d) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Make store in connection metamodel optional.
+
+## 31.10.3
+
+## 31.10.2
+
+## 31.10.1
+
+## 31.10.0
+
+### Minor Changes
+
+- [#3189](https://github.com/finos/legend-studio/pull/3189) [`85fd2ed`](https://github.com/finos/legend-studio/commit/85fd2ed3f03acb1734b770e2924f5e8f82040438) ([@PaulWorkStuff](https://github.com/PaulWorkStuff)) - UnknownElement entity
+
+### Patch Changes
+
+- [#3199](https://github.com/finos/legend-studio/pull/3199) [`803df18`](https://github.com/finos/legend-studio/commit/803df18dd593be772043e34bf7aed5bab4236d12) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - add stereotype in database
+
+## 31.9.16
+
+## 31.9.15
+
+## 31.9.14
+
+### Patch Changes
+
+- [#3115](https://github.com/finos/legend-studio/pull/3115) [`9137ac232`](https://github.com/finos/legend-studio/commit/9137ac2323d676da92261fab49f556698878f8c9) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add support for typed project function (relation feature).
+
+## 31.9.13
+
+## 31.9.12
+
+## 31.9.11
+
+## 31.9.10
+
+### Patch Changes
+
+- [#3068](https://github.com/finos/legend-studio/pull/3068) [`5fc5cbd34`](https://github.com/finos/legend-studio/commit/5fc5cbd34312ddca7ed8cfcbafee95256b3cca37) ([@rafaelbey](https://github.com/rafaelbey)) - add Mapping and PackageableRuntime support for function params
+
+## 31.9.9
+
+## 31.9.8
+
+## 31.9.7
+
+## 31.9.6
+
+## 31.9.5
+
+### Patch Changes
+
+- [#3022](https://github.com/finos/legend-studio/pull/3022) [`88f77a667`](https://github.com/finos/legend-studio/commit/88f77a667e2ad277344af66a95e7adab9b1da07f) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Handle model join by adding `SingleConnectionRuntime` and having DataElementReference point to Dataspace data.
+
+## 31.9.4
+
+### Patch Changes
+
+- [#3017](https://github.com/finos/legend-studio/pull/3017) [`3d1574733`](https://github.com/finos/legend-studio/commit/3d157473363ec3ff9e90216afdce2d1ac556da6c) ([@gayathrir11](https://github.com/gayathrir11)) - Add models for new `ClassInstance` valueSpecification types
+
+## 31.9.3
+
+## 31.9.2
+
+## 31.9.1
+
+## 31.9.0
+
+### Minor Changes
+
+- [#2999](https://github.com/finos/legend-studio/pull/2999) [`58aa24644`](https://github.com/finos/legend-studio/commit/58aa246443117c20e4e5e32cf294cb89063abbce) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Post validate assertion api
+
+## 31.8.7
+
+## 31.8.6
+
+## 31.8.5
+
+## 31.8.4
+
+## 31.8.3
+
+## 31.8.2
+
+## 31.8.1
+
+### Patch Changes
+
+- [#2959](https://github.com/finos/legend-studio/pull/2959) [`75d25e499`](https://github.com/finos/legend-studio/commit/75d25e499a1179ef08e0b20fe89adcab681b723a) ([@PaulWorkStuff](https://github.com/PaulWorkStuff)) - Export INTERNAL\_\_UnknownPackageableElement
+
+## 31.8.0
+
+### Minor Changes
+
+- [#2944](https://github.com/finos/legend-studio/pull/2944) [`a3730a223`](https://github.com/finos/legend-studio/commit/a3730a223fc961dcb3c9fe2054daf5c072c1e49d) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add handling of `defaultValues` for class properties.
+
+### Patch Changes
+
+- [#2939](https://github.com/finos/legend-studio/pull/2939) [`2a544332a`](https://github.com/finos/legend-studio/commit/2a544332ac776e61cfcf41e75a62c58f9b00b813) ([@janeenyamak1](https://github.com/janeenyamak1)) - Add ownership to snowflake app
+
+## 31.7.3
+
+## 31.7.2
+
+## 31.7.1
+
+## 31.7.0
+
+### Minor Changes
+
+- [#2923](https://github.com/finos/legend-studio/pull/2923) [`f557af7b1`](https://github.com/finos/legend-studio/commit/f557af7b1ce0bfe879703c0ada0bd038bbec86c5) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add export data to return `runQuery` as readable stream.
+
+## 31.6.7
+
+## 31.6.6
+
+## 31.6.5
+
+### Patch Changes
+
+- [#2888](https://github.com/finos/legend-studio/pull/2888) [`b95a9fb73`](https://github.com/finos/legend-studio/commit/b95a9fb735a059e7a9c68a69f4d7d49e751414ca) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix the issue where Studio fails to process derived properties from parents when building a query
+
+## 31.6.4
+
+### Patch Changes
+
+- [#2881](https://github.com/finos/legend-studio/pull/2881) [`4ae25db2e`](https://github.com/finos/legend-studio/commit/4ae25db2ee616cc1032a0bf39adc9a162e1d19b6) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add ability to create sandbox projects
+
+## 31.6.3
+
+### Patch Changes
+
+- [#2874](https://github.com/finos/legend-studio/pull/2874) [`42b9b9561`](https://github.com/finos/legend-studio/commit/42b9b9561f9def674acf8fce10a16830992d08bc) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Use `csv_transformed` for csv serialization with engine to leverage correct handling of enums and timestamps in results.
+
+- [#2877](https://github.com/finos/legend-studio/pull/2877) [`2aed15179`](https://github.com/finos/legend-studio/commit/2aed151796f60392995be873037850c3d58cd7b1) ([@janeenyamak1](https://github.com/janeenyamak1)) - Add option to generate OpenApi during service registration
+
+## 31.6.2
+
+## 31.6.1
+
+## 31.6.0
+
+### Minor Changes
+
+- [#2832](https://github.com/finos/legend-studio/pull/2832) [`186ffc011`](https://github.com/finos/legend-studio/commit/186ffc011db9877d0f4853561c4a6e1714e42b38) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Handle unsafe numbers in parsing of execution results.
+
+## 31.5.2
+
+## 31.5.1
+
+### Patch Changes
+
+- [#2800](https://github.com/finos/legend-studio/pull/2800) [`bd598f8d6`](https://github.com/finos/legend-studio/commit/bd598f8d667b287725c9c8e0c3612b2a79f630e6) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Remove runtime store index check + hard non empty string checks on connections to match engine compiler.
+
+## 31.5.0
+
+### Minor Changes
+
+- [#2793](https://github.com/finos/legend-studio/pull/2793) [`056b8a5ad`](https://github.com/finos/legend-studio/commit/056b8a5ad3d1bdc81bb812696eff2717f9bb94e6) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add support for `FunctionTestSuite`
+
+## 31.4.2
+
+## 31.4.1
+
+### Patch Changes
+
+- [#2776](https://github.com/finos/legend-studio/pull/2776) [`4ca8900d7`](https://github.com/finos/legend-studio/commit/4ca8900d71969dcf78a975c433f86a7d3863010f) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Runtime with connection stores.
+
+## 31.4.0
+
+### Minor Changes
+
+- [#2760](https://github.com/finos/legend-studio/pull/2760) [`07664090d`](https://github.com/finos/legend-studio/commit/07664090d33239fbab4beb8f0a24d45c9e6d9d08) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Fix testable collector to predicate of packagable element and fix getting testables from dependencies.
+
+## 31.3.12
+
+## 31.3.11
+
+## 31.3.10
+
+### Patch Changes
+
+- [#2740](https://github.com/finos/legend-studio/pull/2740) [`c1cc6e3fa`](https://github.com/finos/legend-studio/commit/c1cc6e3fa0d84053907581f3aa0cd05be988a224) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - fix the bug where there is a failure in change detection of creating a service with an empty lambda
+
+- [#2741](https://github.com/finos/legend-studio/pull/2741) [`4b135ce78`](https://github.com/finos/legend-studio/commit/4b135ce78ded2325fca6464ac07f35293d234c38) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Fix the default URL value of `JsonModelConnection`
+
+## 31.3.9
+
+## 31.3.8
+
+## 31.3.7
+
+## 31.3.6
+
+## 31.3.5
+
+## 31.3.4
+
+### Patch Changes
+
+- [#2648](https://github.com/finos/legend-studio/pull/2648) [`b27267f04`](https://github.com/finos/legend-studio/commit/b27267f04ec011ffbccc5cb81b17f85f44a61a0b) ([@AFine-gs](https://github.com/AFine-gs)) - Add developer option to set dev protocol version
+
+## 31.3.3
+
+## 31.3.2
+
+## 31.3.1
+
+## 31.3.0
+
+### Minor Changes
+
+- [#2617](https://github.com/finos/legend-studio/pull/2617) [`a2de12f1e`](https://github.com/finos/legend-studio/commit/a2de12f1e8fa16dbf8c708988f5b831b02ccb6fc) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Add support for getting return types for multiple lambdas with `getLambdasReturnType`.
+
+## 31.2.3
+
+## 31.2.2
+
+## 31.2.1
+
+## 31.2.0
+
+### Minor Changes
+
+- [#2441](https://github.com/finos/legend-studio/pull/2441) [`4ab805204`](https://github.com/finos/legend-studio/commit/4ab8052040e4cab0f2004ba872e5fbbb910c30a9) ([@Paarth002](https://github.com/Paarth002)) - Added relational graph fetch execution nodes
+
+## 31.1.10
+
+## 31.1.9
+
+## 31.1.8
+
+## 31.1.7
+
+## 31.1.6
+
+## 31.1.5
+
+## 31.1.4
+
+### Patch Changes
+
+- [#2497](https://github.com/finos/legend-studio/pull/2497) [`fe3cda274`](https://github.com/finos/legend-studio/commit/fe3cda274192425c45373e96d79351b250bbc769) ([@yash0024](https://github.com/yash0024)) - Added support to fetch valid Database Authentication Flows from the backend, displaying a warning on selecting invalid Database Authentication Flows in Text mode
+
+## 31.1.3
+
+## 31.1.2
+
+## 31.1.1
+
+### Patch Changes
+
+- [#2454](https://github.com/finos/legend-studio/pull/2454) [`04977ac84`](https://github.com/finos/legend-studio/commit/04977ac8438db126db2ad8c259e52a9786272d13) ([@gayathrir11](https://github.com/gayathrir11)) - Fix error message being shown for duplicated elements
+
+## 31.1.0
+
+### Minor Changes
+
+- [#2455](https://github.com/finos/legend-studio/pull/2455) [`05fa748a4`](https://github.com/finos/legend-studio/commit/05fa748a49d0a4dc76a441f14c570b05a2927099) ([@jake-kim1](https://github.com/jake-kim1)) - Support generating models from relational database.
+
+### Patch Changes
+
+- [#2469](https://github.com/finos/legend-studio/pull/2469) [`2503ccb8e`](https://github.com/finos/legend-studio/commit/2503ccb8e55544d1940bb0cab5e52172be89ddd2) ([@MauricioUyaguari](https://github.com/MauricioUyaguari)) - Change ordering of usable elements to own, system, dependency except for types/profiles.
+
+## 31.0.4
+
+## 31.0.3
+
+### Patch Changes
+
+- [#2453](https://github.com/finos/legend-studio/pull/2453) [`eda5de1df`](https://github.com/finos/legend-studio/commit/eda5de1dfb302e27deedde0b97bb0c549d13d909) ([@janeenyamak1](https://github.com/janeenyamak1)) - Fix a problem with full-interactive service registration not working in bulk-mode.
+
+## 31.0.2
+
+## 31.0.1
+
+## 31.0.0
+
+### Major Changes
+
+- [#2432](https://github.com/finos/legend-studio/pull/2432) [`e87dea1d2`](https://github.com/finos/legend-studio/commit/e87dea1d2ce3315c58a362420854919d7158057c) ([@gayathrir11](https://github.com/gayathrir11)) - **BREAKING CHANGE:** Removed `V1_getExtraExecutionInputCollectors` from PureProtocolProcessorPlugin.
+
+## 30.0.18
+
+## 30.0.17
+
+### Patch Changes
+
+- [#2392](https://github.com/finos/legend-studio/pull/2392) [`6024e4a17`](https://github.com/finos/legend-studio/commit/6024e4a170be9d90132bb0298914ef0b413cbdd2) ([@Paarth002](https://github.com/Paarth002)) - Added Global Implementation Support in Execution Plan
+
+## 30.0.16
+
+## 30.0.15
+
+## 30.0.14
+
+## 30.0.13
+
+## 30.0.12
+
+### Patch Changes
+
+- [#2368](https://github.com/finos/legend-studio/pull/2368) [`ae61fed8f`](https://github.com/finos/legend-studio/commit/ae61fed8f464de83d4e8ee18eb7f39602f7bcd2c) ([@Paarth002](https://github.com/Paarth002)) - Added Allocation Execution Node, Constant Execution Node, Function Parameters Validation Node and Sequence Execution Node.
+
+## 30.0.11
+
 ## 30.0.10
 
 ### Patch Changes

@@ -123,7 +123,7 @@ const ModelUnitPackageElementEditor = observer(
       handleDropElement,
       isReadOnly,
     } = props;
-    const [{ isElementDragOver }, dropElementRef] = useDrop<
+    const [{ isElementDragOver }, dropConnector] = useDrop<
       ElementDragSource,
       void,
       { isElementDragOver: boolean }
@@ -149,7 +149,7 @@ const ModelUnitPackageElementEditor = observer(
       <div className="model-unit-editor">
         <div className="model-unit-editor__panel__content">
           <PanelDropZone
-            dropTargetConnector={dropElementRef}
+            dropTargetConnector={dropConnector}
             isDragOver={isElementDragOver && !isReadOnly}
           >
             <div className="model-unit-editor__panel__content__form__section">
@@ -186,6 +186,7 @@ const BindingGeneralEditor = observer(
   (props: { editorState: BindingEditorState; isReadOnly: boolean }) => {
     const { editorState, isReadOnly } = props;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const binding = editorState.binding;
     const schemaSets = Array.from(
       editorStore.graphManagerState.graph.allOwnElements,
@@ -204,21 +205,27 @@ const BindingGeneralEditor = observer(
         PackageableElementExplicitReference.create(val.value),
       );
     };
-    const selectedSchemaSet = {
-      value: binding.schemaSet,
-      label: binding.schemaSet?.valueForSerialization,
-    };
-    const schemaIdOptions = selectedSchemaSet.value?.value.schemas.map((e) => ({
-      value: e.id,
-      label: e.id,
-    }));
+    const selectedSchemaSet = binding.schemaSet
+      ? {
+          label: binding.schemaSet.valueForSerialization ?? '',
+          value: binding.schemaSet.value,
+        }
+      : null;
+    const schemaIdOptions = selectedSchemaSet?.value.schemas
+      .filter((e) => e.id)
+      .map((e) => ({
+        value: guaranteeNonNullable(e.id),
+        label: guaranteeNonNullable(e.id),
+      }));
     const onSchemaIdChange = (
       val: { label: string; value: string } | null,
     ): void => externalFormat_Binding_setSchemaId(binding, val?.value);
-    const selectedSchemaId = {
-      value: binding.schemaId,
-      label: binding.schemaId,
-    };
+    const selectedSchemaId = binding.schemaId
+      ? {
+          value: binding.schemaId,
+          label: binding.schemaId,
+        }
+      : null;
     const projectSelectorRef = useRef<SelectComponent>(null);
     const contentTypeOptions =
       editorStore.graphState.graphGenerationState.externalFormatState.formatContentTypes.map(
@@ -246,7 +253,10 @@ const BindingGeneralEditor = observer(
             onChange={onContentTypeChange}
             value={selectedContentType}
             placeholder="Choose a content type"
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
           />
         </div>
         <div className="binding-general-editor__section__header__label">
@@ -256,13 +266,16 @@ const BindingGeneralEditor = observer(
           <CustomSelectorInput
             className="binding-general-editor__section__dropdown"
             disabled={isReadOnly}
-            ref={projectSelectorRef}
+            inputRef={projectSelectorRef}
             options={schemaSetOptions}
             onChange={onSchemaSetChange}
             value={selectedSchemaSet}
             isClearable={true}
             placeholder="Choose a schema set"
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
           />
         </div>
         <div className="binding-general-editor__section__header__label">
@@ -272,13 +285,16 @@ const BindingGeneralEditor = observer(
           <CustomSelectorInput
             className="binding-general-editor__section__dropdown"
             disabled={isReadOnly}
-            ref={projectSelectorRef}
+            inputRef={projectSelectorRef}
             options={schemaIdOptions}
             onChange={onSchemaIdChange}
             value={selectedSchemaId}
             isClearable={true}
             placeholder="Choose a schema ID"
-            darkMode={true}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
           />
         </div>
       </div>

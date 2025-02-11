@@ -22,6 +22,11 @@
     z-index: 101;
   }
 
+  .panel__header__title {
+    width: 8rem;
+    margin-right: 1rem;
+  }
+
   &__header__action--active.panel__header__action:hover,
   &__header__action--active.panel__header__action {
     svg {
@@ -63,9 +68,91 @@
       font-family: 'Roboto Mono', monospace;
     }
   }
+
+  &__property-search__input {
+    font-size: 1.3rem;
+    height: 2.8rem;
+    padding-right: 2.8rem;
+    padding-left: 1rem;
+    width: 100%;
+    background: var(--color-dark-grey-85);
+    border-radius: 0.2rem;
+    border: 0.1rem solid var(--color-dark-grey-200);
+
+    &__container {
+      @include flexCenter;
+
+      position: relative;
+      height: 2.8rem;
+      flex: 1;
+      margin-right: 0.5rem;
+    }
+
+    &--searching {
+      padding-right: 7rem; // account for the count badge
+    }
+
+    &__search__count {
+      @include flexCenter;
+
+      position: absolute;
+      right: 3rem;
+      border-radius: 0.8rem;
+      height: 1.6rem;
+      padding: 0 0.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: var(--color-yellow-100);
+      color: var(--color-dark-grey-280);
+      user-select: none;
+      cursor: default;
+    }
+
+    &__search__icon {
+      @include flexCenter;
+
+      position: absolute;
+      right: 0.3rem;
+      height: 2.8rem;
+      width: 2.8rem;
+
+      svg {
+        color: var(--color-light-shade-100);
+      }
+    }
+
+    &__clear-btn {
+      @include flexCenter;
+
+      position: absolute;
+      right: 0.3rem;
+      height: 2.8rem;
+      width: 2.8rem;
+      cursor: pointer;
+
+      svg {
+        color: var(--color-dark-grey-400);
+      }
+
+      &:hover svg {
+        color: var(--color-dark-grey-500);
+      }
+    }
+  }
 }
 
 .query-builder__variables {
+  &__variable__context-menu {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    padding: 0 0.5rem;
+  }
+
+  &__variable--selected-from-context-menu {
+    background: var(--color-dark-blue-shade-100);
+  }
+
   .panel__header {
     border-top: 0.1rem solid var(--color-dark-grey-200);
   }
@@ -109,6 +196,20 @@
 
     color: var(--color-light-grey-200);
     cursor: pointer;
+
+    svg {
+      font-size: 1.3rem;
+    }
+
+    &--assistant-disabled {
+      cursor: default;
+
+      &:hover {
+        svg {
+          color: var(--color-light-grey-50);
+        }
+      }
+    }
   }
 
   &__variable {
@@ -193,6 +294,11 @@
         height: 1.6rem;
         font-weight: 500;
       }
+
+      &__label--milestoning {
+        background: var(--color-orange-250);
+        color: var(--color-light-grey-200);
+      }
     }
 
     &__name {
@@ -227,6 +333,15 @@
     text-decoration-style: dotted;
     text-underline-position: under;
   }
+
+  &__value--icon {
+    display: flex;
+    align-items: center;
+
+    svg {
+      font-size: 1.2rem;
+    }
+  }
 }
 
 .query-builder-explorer-tree {
@@ -259,7 +374,7 @@
 
   &__node__container:hover &__node__action {
     svg {
-      color: var(--color-light-grey-400);
+      color: var(--color-dark-grey-500);
     }
   }
 
@@ -295,6 +410,24 @@
 
   &__node__label--with-preview {
     width: calc(100% - 4rem);
+  }
+
+  &__node__label--highlight {
+    animation: highlight-keyframes 4s;
+
+    @keyframes highlight-keyframes {
+      0% {
+        background: var(--color-blue-200);
+      }
+
+      25% {
+        background: var(--color-blue-200);
+      }
+
+      100% {
+        background: unset;
+      }
+    }
   }
 
   &__node__label__derived-property {
@@ -338,7 +471,7 @@
     }
 
     &:hover svg {
-      color: var(--color-light-grey-200);
+      color: var(--color-light-grey-200) !important;
     }
 
     &[disabled] svg {
@@ -372,6 +505,6 @@
   }
 
   &__node__info {
-    cursor: help;
+    cursor: pointer;
   }
 }

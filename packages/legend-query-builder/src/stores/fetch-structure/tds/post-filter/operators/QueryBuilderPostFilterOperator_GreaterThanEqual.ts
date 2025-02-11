@@ -17,15 +17,17 @@
 import {
   type FunctionExpression,
   type ValueSpecification,
+  type LambdaFunction,
   AbstractPropertyExpression,
   PRIMITIVE_TYPE,
+  PrimitiveType,
 } from '@finos/legend-graph';
 import { buildPostFilterConditionState } from '../QueryBuilderPostFilterStateBuilder.js';
 import type {
   PostFilterConditionState,
   QueryBuilderPostFilterState,
 } from '../QueryBuilderPostFilterState.js';
-import { buildPostFilterConditionExpression } from './QueryBuilderPostFilterOperatorValueSpecificationBuilder.js';
+import { buildPostFilterConditionExpressionHelper } from './QueryBuilderPostFilterOperatorValueSpecificationBuilder.js';
 import { QueryBuilderPostFilterOperator_GreaterThan } from './QueryBuilderPostFilterOperator_GreaterThan.js';
 import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../../../graph/QueryBuilderMetaModelConst.js';
 import { hashArray } from '@finos/legend-shared';
@@ -38,16 +40,18 @@ export class QueryBuilderPostFilterOperator_GreaterThanEqual extends QueryBuilde
 
   override buildPostFilterConditionExpression(
     postFilterConditionState: PostFilterConditionState,
+    parentExpression: LambdaFunction | undefined,
   ): ValueSpecification | undefined {
-    return buildPostFilterConditionExpression(
+    return buildPostFilterConditionExpressionHelper(
       postFilterConditionState,
       this,
-      postFilterConditionState.columnState.getColumnType()?.path ===
-        PRIMITIVE_TYPE.DATETIME &&
-        postFilterConditionState.value?.genericType?.value.rawType.path !==
-          PRIMITIVE_TYPE.DATETIME
+      postFilterConditionState.leftConditionValue.getColumnType() ===
+        PrimitiveType.DATETIME &&
+        postFilterConditionState.rightConditionValue.type !==
+          PrimitiveType.DATETIME
         ? QUERY_BUILDER_SUPPORTED_FUNCTIONS.IS_ON_OR_AFTER_DAY
         : QUERY_BUILDER_SUPPORTED_FUNCTIONS.GREATER_THAN_EQUAL,
+      parentExpression,
     );
   }
 

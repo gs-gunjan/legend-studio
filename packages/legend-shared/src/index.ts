@@ -31,6 +31,8 @@ export * from './format/FormatterUtils.js';
 export * from './format/MatcherUtils.js';
 export * from './format/ValidatorUtils.js';
 
+export * from './compare/StringCompareUtil.js';
+
 export * from './markdown/MarkdownUtils.js';
 
 export * from './application/HashUtils.js';
@@ -40,6 +42,7 @@ export * from './application/ActionState.js';
 export * from './application/TimerUtils.js';
 export * from './application/AbstractPluginManager.js';
 export * from './application/BrowserUtils.js';
+export * from './application/DocumentationUtils.js';
 
 export * from './data-structure/Pair.js';
 export * from './data-structure/Stack.js';
@@ -49,3 +52,4 @@ export * from './log/WebConsole.js';
 
 export * from './search/FuzzySearch.js';
 export * from './search/FuzzySearchAdvancedConfigState.js';
+export * from './search/AdvancedSearch.js';

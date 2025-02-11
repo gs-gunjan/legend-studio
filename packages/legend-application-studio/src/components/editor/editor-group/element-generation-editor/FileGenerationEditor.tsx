@@ -319,7 +319,7 @@ const GenerationStringPropertyEditor = observer(
     property: GenerationProperty;
     isReadOnly: boolean;
     update: (property: GenerationProperty, newValue: PlainObject) => void;
-    getConfigValue: (name: string) => unknown | undefined;
+    getConfigValue: (name: string) => unknown;
   }) => {
     const { property, getConfigValue, isReadOnly, update } = props;
     // If there is no default value the string will be 'null'. We will treat it as an empty string
@@ -354,7 +354,7 @@ const GenerationIntegerPropertyEditor = observer(
     property: GenerationProperty;
     isReadOnly: boolean;
     update: (property: GenerationProperty, newValue: PlainObject) => void;
-    getConfigValue: (name: string) => unknown | undefined;
+    getConfigValue: (name: string) => unknown;
   }) => {
     const { property, getConfigValue, isReadOnly, update } = props;
     const defaultValue = JSON.parse(property.defaultValue) as
@@ -390,7 +390,7 @@ const GenerationBooleanPropertyEditor = observer(
     property: GenerationProperty;
     isReadOnly: boolean;
     update: (property: GenerationProperty, newValue: PlainObject) => void;
-    getConfigValue: (name: string) => unknown | undefined;
+    getConfigValue: (name: string) => unknown;
   }) => {
     const { property, getConfigValue, isReadOnly, update } = props;
     const defaultValue = JSON.parse(property.defaultValue) as
@@ -417,9 +417,10 @@ const GenerationEnumPropertyEditor = observer(
     property: GenerationProperty;
     isReadOnly: boolean;
     update: (property: GenerationProperty, newValue: PlainObject) => void;
-    getConfigValue: (name: string) => unknown | undefined;
+    getConfigValue: (name: string) => unknown;
   }) => {
     const { property, getConfigValue, isReadOnly, update } = props;
+    const applicationStore = useApplicationStore();
     const getEnumLabel = (_enum: string): string =>
       isValidFullPath(_enum)
         ? resolvePackagePathAndElementName(_enum)[1]
@@ -451,8 +452,10 @@ const GenerationEnumPropertyEditor = observer(
           value={{ label: getEnumLabel(value), value }}
           isClearable={true}
           escapeClearsValue={true}
-          darkMode={true}
-          disable={isReadOnly}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          disabled={isReadOnly}
         />
       </div>
     );
@@ -464,7 +467,7 @@ const GenerationArrayPropertyEditor = observer(
     property: GenerationProperty;
     isReadOnly: boolean;
     update: (property: GenerationProperty, newValue: object) => void;
-    getConfigValue: (name: string) => unknown | undefined;
+    getConfigValue: (name: string) => unknown;
   }) => {
     const { property, getConfigValue, isReadOnly, update } = props;
     let defaultValue: string[] = [];
@@ -654,7 +657,7 @@ const GenerationMapPropertyEditor = observer(
     property: GenerationProperty;
     isReadOnly: boolean;
     update: (property: GenerationProperty, newValue: object) => void;
-    getConfigValue: (name: string) => unknown | undefined;
+    getConfigValue: (name: string) => unknown;
   }) => {
     const { property, getConfigValue, isReadOnly, update } = props;
     // Right now, always assume this is a map between STRING and STRING (might need to support STRING - INTEGER and STRING - BOOLEAN)
@@ -884,7 +887,7 @@ const GenerationMapPropertyEditor = observer(
 export const GenerationPropertyEditor = observer(
   (props: {
     property: GenerationProperty;
-    getConfigValue: (name: string) => unknown | undefined;
+    getConfigValue: (name: string) => unknown;
     isReadOnly: boolean;
     update: (property: GenerationProperty, newValue: object) => void;
   }) => {
@@ -1020,7 +1023,7 @@ export const FileGenerationConfigurationEditor = observer(
         isReadOnly,
       ],
     );
-    const [{ isScopeElementDragOver }, scopeElementDropRef] = useDrop<
+    const [{ isScopeElementDragOver }, dropConnector] = useDrop<
       ElementDragSource,
       void,
       { isScopeElementDragOver: boolean }
@@ -1039,7 +1042,7 @@ export const FileGenerationConfigurationEditor = observer(
       [handleDrop],
     );
 
-    const getConfigValue = (name: string): unknown | undefined =>
+    const getConfigValue = (name: string): unknown =>
       getNullableFileGenerationConfig(fileGeneration, name)?.value;
 
     return (
@@ -1075,7 +1078,7 @@ export const FileGenerationConfigurationEditor = observer(
         </PanelHeader>
         <PanelContent>
           <PanelDropZone
-            dropTargetConnector={scopeElementDropRef}
+            dropTargetConnector={dropConnector}
             isDragOver={
               isScopeElementDragOver && !elementGenerationState && !isReadOnly
             }

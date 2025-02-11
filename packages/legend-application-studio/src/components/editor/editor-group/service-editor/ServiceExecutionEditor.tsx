@@ -22,6 +22,7 @@ import {
   SingleServicePureExecutionState,
   ServicePureExecutionState,
   MultiServicePureExecutionState,
+  InlineServicePureExecutionState,
 } from '../../../../stores/editor/editor-state/element-editor-state/service/ServiceExecutionState.js';
 import { EmbeddedRuntimeEditor } from '../RuntimeEditor.js';
 import { useDrop } from 'react-dnd';
@@ -78,6 +79,7 @@ import {
   buildElementOption,
   type PackageableElementOption,
 } from '@finos/legend-lego/graph-editor';
+import { CUSTOM_LABEL } from '../../../../stores/editor/NewElementState.js';
 
 const PureExecutionContextConfigurationEditor = observer(
   (props: {
@@ -87,6 +89,7 @@ const PureExecutionContextConfigurationEditor = observer(
     const { executionContextState, pureExecutionState } = props;
     const executionContext = executionContextState.executionContext;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const serviceState =
       editorStore.tabManagerState.getCurrentEditorState(ServiceEditorState);
     const isReadOnly = serviceState.isReadOnly;
@@ -113,7 +116,7 @@ const PureExecutionContextConfigurationEditor = observer(
     const selectedMappingOption = {
       value: mapping,
       label: isMappingEmpty ? noMappingLabel : mapping.path,
-    };
+    } as PackageableElementOption<Mapping>;
     const onMappingSelectionChange = (
       val: PackageableElementOption<Mapping>,
     ): void => {
@@ -131,7 +134,7 @@ const PureExecutionContextConfigurationEditor = observer(
       <div className="service-execution-editor__configuration__runtime-option--custom">
         <CogIcon />
         <div className="service-execution-editor__configuration__runtime-option--custom__label">
-          (custom)
+          {CUSTOM_LABEL}
         </div>
       </div>
     );
@@ -140,7 +143,7 @@ const PureExecutionContextConfigurationEditor = observer(
       ? []
       : ([{ label: customRuntimeLabel }] as {
           label: string | React.ReactNode;
-          value?: Runtime;
+          value: Runtime | undefined;
         }[]);
     // NOTE: for now, only include runtime associated with the mapping
     // TODO?: Should we bring the runtime compatibility check from query to here?
@@ -194,7 +197,7 @@ const PureExecutionContextConfigurationEditor = observer(
     };
     const onRuntimeSelectionChange = (val: {
       label: string | React.ReactNode;
-      value?: Runtime;
+      value: Runtime | undefined;
     }): void => {
       if (val.value === undefined) {
         pureExecutionState.useCustomRuntime();
@@ -233,7 +236,7 @@ const PureExecutionContextConfigurationEditor = observer(
       },
       [isReadOnly, mapping, executionContextState, pureExecutionState],
     );
-    const [{ isMappingOrRuntimeDragOver }, dropMappingOrRuntimeRef] = useDrop<
+    const [{ isMappingOrRuntimeDragOver }, dropConnector] = useDrop<
       ElementDragSource,
       void,
       { isMappingOrRuntimeDragOver: boolean }
@@ -259,7 +262,7 @@ const PureExecutionContextConfigurationEditor = observer(
     return (
       <PanelContent>
         <PanelDropZone
-          dropTargetConnector={dropMappingOrRuntimeRef}
+          dropTargetConnector={dropConnector}
           isDragOver={isMappingOrRuntimeDragOver && !isReadOnly}
         >
           <div className="service-execution-editor__configuration__items">
@@ -273,8 +276,11 @@ const PureExecutionContextConfigurationEditor = observer(
                 options={mappingOptions}
                 onChange={onMappingSelectionChange}
                 value={selectedMappingOption}
-                darkMode={true}
-                hasError={isMappingEmpty}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
+                hasError={Boolean(isMappingEmpty)}
               />
               <button
                 className="btn--dark btn--sm service-execution-editor__configuration__item__btn"
@@ -295,7 +301,10 @@ const PureExecutionContextConfigurationEditor = observer(
                 options={runtimeOptions}
                 onChange={onRuntimeSelectionChange}
                 value={selectedRuntimeOption}
-                darkMode={true}
+                darkMode={
+                  !applicationStore.layoutService
+                    .TEMPORARY__isLightColorThemeEnabled
+                }
               />
               {!isRuntimePointer && (
                 <button
@@ -339,6 +348,7 @@ export const ChangeExecutionModal = observer(
     isReadOnly: boolean;
   }) => {
     const { executionState, isReadOnly } = props;
+    const applicationStore = executionState.editorStore.applicationStore;
     const closeModal = (): void => executionState.setShowChangeExecModal(false);
     const isChangingToMulti =
       executionState instanceof SingleServicePureExecutionState;
@@ -364,14 +374,13 @@ export const ChangeExecutionModal = observer(
           />
         );
       } else if (executionState instanceof MultiServicePureExecutionState) {
-        const multiExec = executionState.execution;
         const currentOption = executionState.singleExecutionKey
           ? {
               value: executionState.singleExecutionKey,
               label: executionState.singleExecutionKey.key,
             }
           : undefined;
-        const multiOptions = multiExec.executionParameters.map(
+        const multiOptions = executionState.keyedExecutionParameters.map(
           (keyExecutionParameter) => ({
             value: keyExecutionParameter,
             label: keyExecutionParameter.key,
@@ -393,8 +402,11 @@ export const ChangeExecutionModal = observer(
             onChange={_onChange}
             value={currentOption}
             escapeClearsValue={true}
-            darkMode={true}
-            disable={isReadOnly}
+            darkMode={
+              !applicationStore.layoutService
+                .TEMPORARY__isLightColorThemeEnabled
+            }
+            disabled={isReadOnly}
           />
         );
       }
@@ -552,11 +564,11 @@ export const NewExecutionParameterModal = observer(
     const validationMessage =
       keyValue === ''
         ? `Execution context key can't be empty`
-        : executionState.execution.executionParameters.find(
-            (e) => e.key === keyValue,
-          )
-        ? 'Execution context key already exists'
-        : undefined;
+        : executionState.execution.executionParameters?.find(
+              (e) => e.key === keyValue,
+            )
+          ? 'Execution context key already exists'
+          : undefined;
 
     const closeModal = (): void =>
       executionState.setNewKeyParameterModal(false);
@@ -700,15 +712,19 @@ const MultiPureExecutionEditor = observer(
                 </PanelHeaderActions>
               </PanelHeader>
 
-              {multiExecution.executionParameters.map((executionParameter) => (
-                <KeyExecutionItem
-                  key={executionParameter.key}
-                  multiExecutionState={multiExecutionState}
-                  keyExecutionParameter={executionParameter}
-                  isReadOnly={multiExecutionState.serviceEditorState.isReadOnly}
-                />
-              ))}
-              {!multiExecution.executionParameters.length && (
+              {multiExecutionState.keyedExecutionParameters.map(
+                (executionParameter) => (
+                  <KeyExecutionItem
+                    key={executionParameter.key}
+                    multiExecutionState={multiExecutionState}
+                    keyExecutionParameter={executionParameter}
+                    isReadOnly={
+                      multiExecutionState.serviceEditorState.isReadOnly
+                    }
+                  />
+                ),
+              )}
+              {!multiExecutionState.keyedExecutionParameters.length && (
                 <BlankPanelPlaceholder
                   text="Add an execution context"
                   onClick={addExecutionKey}
@@ -778,7 +794,7 @@ const ServicePureExecutionEditor = observer(
     const showChangeExecutionModal = (): void => {
       if (servicePureExecutionState instanceof MultiServicePureExecutionState) {
         servicePureExecutionState.setSingleExecutionKey(
-          servicePureExecutionState.execution.executionParameters[0],
+          servicePureExecutionState.keyedExecutionParameters[0],
         );
       }
       servicePureExecutionState.setShowChangeExecModal(true);
@@ -809,69 +825,81 @@ const ServicePureExecutionEditor = observer(
         />
       );
     };
-    return (
-      <div className="service-execution-editor">
-        <ResizablePanelGroup orientation="horizontal">
-          <ResizablePanel size={500} minSize={28}>
-            <ServiceExecutionQueryEditor
-              executionState={servicePureExecutionState}
-              isReadOnly={isReadOnly}
-            />
-          </ResizablePanel>
-          <ResizablePanelSplitter>
-            <ResizablePanelSplitterLine color="var(--color-dark-grey-200)" />
-          </ResizablePanelSplitter>
-          <ResizablePanel minSize={56}>
-            <div className="service-execution-editor__content">
-              <Panel>
-                <div className="panel__header">
-                  <div className="panel__header__title">
-                    <div className="panel__header__title__label service-editor__execution__label--test">
-                      context
+    if (servicePureExecutionState instanceof InlineServicePureExecutionState) {
+      return (
+        <div className="service-execution-editor">
+          <ServiceExecutionQueryEditor
+            executionState={servicePureExecutionState}
+            isReadOnly={isReadOnly}
+          />
+        </div>
+      );
+    } else {
+      return (
+        <div className="service-execution-editor">
+          <ResizablePanelGroup orientation="horizontal">
+            <ResizablePanel size={500} minSize={28}>
+              <ServiceExecutionQueryEditor
+                executionState={servicePureExecutionState}
+                isReadOnly={isReadOnly}
+              />
+            </ResizablePanel>
+            <ResizablePanelSplitter>
+              <ResizablePanelSplitterLine color="var(--color-dark-grey-200)" />
+            </ResizablePanelSplitter>
+            <ResizablePanel minSize={56}>
+              <div className="service-execution-editor__content">
+                <Panel>
+                  <div className="panel__header">
+                    <div className="panel__header__title">
+                      <div className="panel__header__title__label service-editor__execution__label--test">
+                        context
+                      </div>
+                    </div>
+                    <div className="service-multi-execution-editor__actions">
+                      {(servicePureExecutionState instanceof
+                        SingleServicePureExecutionState ||
+                        servicePureExecutionState instanceof
+                          MultiServicePureExecutionState) && (
+                        <button
+                          className="service-multi-execution-editor__action"
+                          tabIndex={-1}
+                          onClick={showChangeExecutionModal}
+                          title={`Switch to ${
+                            servicePureExecutionState instanceof
+                            SingleServicePureExecutionState
+                              ? 'multi execution'
+                              : 'single execution'
+                          }`}
+                        >
+                          {isMultiExecution ? (
+                            <ArrowsJoinIcon />
+                          ) : (
+                            <ArrowsSplitIcon />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="service-multi-execution-editor__actions">
-                    {(servicePureExecutionState instanceof
-                      SingleServicePureExecutionState ||
-                      servicePureExecutionState instanceof
-                        MultiServicePureExecutionState) && (
-                      <button
-                        className="service-multi-execution-editor__action"
-                        tabIndex={-1}
-                        onClick={showChangeExecutionModal}
-                        title={`Switch to ${
-                          servicePureExecutionState instanceof
-                          SingleServicePureExecutionState
-                            ? 'multi execution'
-                            : 'single execution'
-                        }`}
-                      >
-                        {isMultiExecution ? (
-                          <ArrowsJoinIcon />
-                        ) : (
-                          <ArrowsSplitIcon />
-                        )}
-                      </button>
+                  <div className="panel__content service-execution-editor__configuration__content">
+                    {renderExecutionEditor()}
+                    {servicePureExecutionState.showChangeExecModal && (
+                      <ChangeExecutionModal
+                        executionState={servicePureExecutionState}
+                        isReadOnly={
+                          servicePureExecutionState.serviceEditorState
+                            .isReadOnly
+                        }
+                      />
                     )}
                   </div>
-                </div>
-                <div className="panel__content service-execution-editor__configuration__content">
-                  {renderExecutionEditor()}
-                  {servicePureExecutionState.showChangeExecModal && (
-                    <ChangeExecutionModal
-                      executionState={servicePureExecutionState}
-                      isReadOnly={
-                        servicePureExecutionState.serviceEditorState.isReadOnly
-                      }
-                    />
-                  )}
-                </div>
-              </Panel>
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-    );
+                </Panel>
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+      );
+    }
   },
 );
 
@@ -891,7 +919,7 @@ export const ServiceExecutionEditor = observer(() => {
   }
   return (
     <UnsupportedEditorPanel
-      text="Can't display thie service execution in form-mode"
+      text="Can't display this service execution in form-mode"
       isReadOnly={serviceState.isReadOnly}
     />
   );

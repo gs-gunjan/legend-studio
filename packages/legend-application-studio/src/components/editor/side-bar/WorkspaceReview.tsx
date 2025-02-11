@@ -33,11 +33,15 @@ import { ACTIVITY_MODE } from '../../../stores/editor/EditorConfig.js';
 import { generateReviewRoute } from '../../../__lib__/LegendStudioNavigation.js';
 import { LEGEND_STUDIO_TEST_ID } from '../../../__lib__/LegendStudioTesting.js';
 import { flowResult } from 'mobx';
-import type { EntityDiff } from '@finos/legend-server-sdlc';
+import {
+  AuthorizableProjectAction,
+  type EntityDiff,
+} from '@finos/legend-server-sdlc';
 import { entityDiffSorter } from '../../../stores/editor/EditorSDLCState.js';
 import { useEditorStore } from '../EditorStoreProvider.js';
 import { useLegendStudioApplicationStore } from '../../LegendStudioFrameworkProvider.js';
 import { formatDistanceToNow } from '@finos/legend-shared';
+import { STUDIO_SDLC_USER_ERRORS } from '../../shared/StudioSDLCErrors.js';
 
 export const WorkspaceReviewDiffs = observer(() => {
   const editorStore = useEditorStore();
@@ -75,17 +79,14 @@ export const WorkspaceReviewDiffs = observer(() => {
         </div>
       </div>
       <PanelContent>
-        {changes
-          .slice()
-          .sort(entityDiffSorter)
-          .map((diff) => (
-            <EntityDiffSideBarItem
-              key={diff.key}
-              diff={diff}
-              isSelected={isSelectedDiff(diff)}
-              openDiff={openChange(diff)}
-            />
-          ))}
+        {changes.toSorted(entityDiffSorter).map((diff) => (
+          <EntityDiffSideBarItem
+            key={diff.key}
+            diff={diff}
+            isSelected={isSelectedDiff(diff)}
+            openDiff={openChange(diff)}
+          />
+        ))}
       </PanelContent>
     </div>
   );
@@ -128,6 +129,21 @@ export const WorkspaceReview = observer(() => {
       applicationStore.alertUnhandledError,
     );
   };
+  // commit Review
+  const isCommitReviewDisabled =
+    isDispatchingAction ||
+    Boolean(!workspaceReview) ||
+    workspaceContainsSnapshotDependencies ||
+    !workspaceReviewState.canMergeReview;
+  const commitReviewTitle = workspaceContainsSnapshotDependencies
+    ? STUDIO_SDLC_USER_ERRORS.COMMIT_WORKSPACE_WITH_SNAPSHOT
+    : workspaceReviewState.sdlcState.isActiveProjectSandbox
+      ? `Can't commit review: reviews are not allowed on sandbox projects`
+      : !workspaceReviewState.canMergeReview
+        ? workspaceReviewState.sdlcState.unAuthorizedActionMessage(
+            AuthorizableProjectAction.COMMIT_REVIEW,
+          )
+        : 'Commit review';
   const commitReview = (): void => {
     if (workspaceReview && !isDispatchingAction) {
       editorStore.localChangesState.alertUnsavedChanges((): void => {
@@ -138,6 +154,23 @@ export const WorkspaceReview = observer(() => {
       });
     }
   };
+  // create Review
+  const isCreateReviewDisabled =
+    isDispatchingAction ||
+    Boolean(workspaceReview) ||
+    !workspaceReviewState.reviewTitle ||
+    workspaceContainsSnapshotDependencies ||
+    !workspaceReviewState.canCreateReview ||
+    workspaceReviewState.sdlcState.isActiveProjectSandbox;
+  const createReviewTitle = workspaceContainsSnapshotDependencies
+    ? STUDIO_SDLC_USER_ERRORS.COMMIT_WORKSPACE_WITH_SNAPSHOT
+    : workspaceReviewState.sdlcState.isActiveProjectSandbox
+      ? `Can't create review: reviews are not allowed on sandbox projects`
+      : !workspaceReviewState.canCreateReview
+        ? workspaceReviewState.sdlcState.unAuthorizedActionMessage(
+            AuthorizableProjectAction.SUBMIT_REVIEW,
+          )
+        : 'Create review';
   const createReview = (): void => {
     if (
       workspaceReviewState.reviewTitle &&
@@ -229,17 +262,8 @@ export const WorkspaceReview = observer(() => {
                     'btn--error': workspaceContainsSnapshotDependencies,
                   })}
                   onClick={createReview}
-                  disabled={
-                    isDispatchingAction ||
-                    Boolean(workspaceReview) ||
-                    !workspaceReviewState.reviewTitle ||
-                    workspaceContainsSnapshotDependencies
-                  }
-                  title={
-                    !workspaceContainsSnapshotDependencies
-                      ? 'Create review'
-                      : `Can't create review: workspace has snapshot dependencies`
-                  }
+                  disabled={isCreateReviewDisabled}
+                  title={createReviewTitle}
                 >
                   <PlusIcon />
                 </button>
@@ -283,17 +307,9 @@ export const WorkspaceReview = observer(() => {
                     { 'btn--error': workspaceContainsSnapshotDependencies },
                   )}
                   onClick={commitReview}
-                  disabled={
-                    isDispatchingAction ||
-                    Boolean(!workspaceReview) ||
-                    workspaceContainsSnapshotDependencies
-                  }
+                  disabled={isCommitReviewDisabled}
                   tabIndex={-1}
-                  title={
-                    !workspaceContainsSnapshotDependencies
-                      ? 'Commit review'
-                      : `Can't commit review: workspace has snapshot dependencies`
-                  }
+                  title={commitReviewTitle}
                 >
                   <TruncatedGitMergeIcon />
                 </button>

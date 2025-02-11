@@ -6753,7 +6753,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6761,7 +6766,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'firm',
-          type: 'test::Firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'test::Firm',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6769,7 +6779,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'age',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6777,7 +6792,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'weight',
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6785,7 +6805,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'isEmployed',
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6793,7 +6818,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'master',
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6801,7 +6831,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'description',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6809,7 +6844,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'employedDate',
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6817,7 +6857,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'title',
-          type: 'test::Title',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'test::Title',
+            },
+          },
         },
       ],
     },
@@ -6836,7 +6881,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -6855,7 +6905,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'legalName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6863,7 +6918,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'otherName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6871,10 +6931,20 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'trade',
-          type: 'test::Trade',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'test::Trade',
+            },
+          },
         },
       ],
-      superTypes: ['test::LegalEntity'],
+      superTypes: [
+        {
+          path: 'test::LegalEntity',
+          type: 'CLASS',
+        },
+      ],
     },
     classifierPath: 'meta::pure::metamodel::type::Class',
   },
@@ -6891,7 +6961,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6899,7 +6974,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'marketName',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6907,7 +6987,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'price',
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -6915,7 +7000,12 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'createdBy',
-          type: 'test::Person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'test::Person',
+            },
+          },
         },
       ],
     },
@@ -7522,7 +7612,10 @@ export const TEST_DATA__FlatDataMappingRoundtrip = [
               ],
             },
           ],
-          enumeration: 'Title',
+          enumeration: {
+            path: 'Title',
+            type: 'ENUMERATION',
+          },
           id: 'titleMap',
         },
       ],
@@ -7584,7 +7677,12 @@ export const TEST_DATA__FlatDataAssociationMapping = [
             upperBound: 1,
           },
           name: 'fname',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -7603,7 +7701,12 @@ export const TEST_DATA__FlatDataAssociationMapping = [
             upperBound: 1,
           },
           name: 'name',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -7611,7 +7714,12 @@ export const TEST_DATA__FlatDataAssociationMapping = [
             upperBound: 1,
           },
           name: 'eid',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },
@@ -7629,7 +7737,12 @@ export const TEST_DATA__FlatDataAssociationMapping = [
             lowerBound: 0,
           },
           name: 'pid',
-          type: 'model::person',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'model::person',
+            },
+          },
         },
         {
           multiplicity: {
@@ -7637,7 +7750,12 @@ export const TEST_DATA__FlatDataAssociationMapping = [
             upperBound: 1,
           },
           name: 'fid',
-          type: 'model::firm',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'model::firm',
+            },
+          },
         },
       ],
     },
@@ -7739,7 +7857,10 @@ export const TEST_DATA__FlatDataAssociationMapping = [
       associationMappings: [
         {
           _type: 'flatData',
-          association: 'model::NewAssociation',
+          association: {
+            path: 'model::NewAssociation',
+            type: 'ASSOCIATION',
+          },
           propertyMappings: [
             {
               _type: 'flatDataAssociationPropertyMapping',
@@ -8027,7 +8148,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Origination Date',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8044,7 +8170,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'First loan installement payment Date',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8062,7 +8193,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Accrual start date for when the new rate takes affect.  ARMs are adjusted monthly.To determine how to do the interest accrual validation.  Expected date of first reset (Typically first day after month after close).  Will be blank for fixed loans.',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8080,7 +8216,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Date of the first payment change on an ARM loan at origination',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8097,7 +8238,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Interest rate of the loan at the time of origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8114,7 +8260,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Original combined loan-to-value (including second liens)',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8132,7 +8283,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Combined Loan-To-Value ratio including silent seconds at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8149,7 +8305,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Document status of the loan at time of settlement',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8166,7 +8327,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Front End Debt-To-Income at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8184,7 +8350,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 "How much of the borrower's gross income goes towards paying any debt (Total Debt Obligations/Income)",
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8202,7 +8373,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Indicates if the loan is subject to negative amortization at origination',
             },
           ],
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8219,7 +8395,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Current amortization type',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8236,7 +8417,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Interest Only flag at the time of origination',
             },
           ],
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8253,7 +8439,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Lien position of a loan at the time of origination',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8270,7 +8461,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Maturity date of a loan as of origination',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8288,7 +8484,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Whether or not residents are currently within a household at time of origination',
             },
           ],
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8305,7 +8506,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Level of income documentation at origination',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8323,7 +8529,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Is part or all of the mortgage debt paid before it is due (Y/N) ',
             },
           ],
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8340,7 +8551,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Minimum % that the first rate can change for an ARM loan',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8358,7 +8574,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'The lower limit for how low an adjustable rate mortgage can go',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8376,7 +8597,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'limits the lower amount by which the interest rate on an adjustable rate loan can decrease at a specified adjustment date. Percentage amount the rate can decrease each reset period',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8394,7 +8620,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Minimum payment amount determined for a certain period of time at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8411,7 +8642,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Indicates ARM vs. Fixed loan at origination',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8428,7 +8664,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Financial index that an ARM loan follows at origination.',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8446,7 +8687,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Indicates Y/N whether or not the loan has a balloon payment at the time of maturity',
             },
           ],
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8463,7 +8709,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Maximum % that the first rate can change for an ARM loan',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8481,7 +8732,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Maximum payment amount determined for a certain period of time at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8498,7 +8754,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Channel indicating type of mortgage origination',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8516,7 +8777,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'End Date of the Interest Only portion of the loan at origination',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8533,7 +8799,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Maximum value that a rate can rise to on an ARM loan',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8550,7 +8821,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Minimum value that a rate can rise to on an ARM loan',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8568,7 +8844,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'limits the upper amount by which the interest rate on an adjustable rate loan can increase at a specified adjustment date.  Percentage amount the rate can increase each reset period',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8585,7 +8866,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Indicates if the loan is an option ARM   at origination',
             },
           ],
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8602,7 +8888,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'The date the property was originally valued',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8619,7 +8910,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Type of valuation',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8637,7 +8933,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'A fixed percentage rate that is added to an index value to determine the fully indexed interest rate of an ARM',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8654,7 +8955,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Lifetime maximum interest rate on an ARM loan',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8672,7 +8978,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'The credit score of the borrower at the time of origination',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8689,7 +9000,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Provider of the credit score at the time of origination',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8706,7 +9022,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Version of the credit score at the time of origination',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8723,7 +9044,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Date of the credit score at the time of origination',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8741,7 +9067,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Describes if the property is owner occupied or investment or other descriptions',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8758,7 +9089,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Origination Date',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8776,7 +9112,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 "Amount of time (in months) from close to when the loan resets. Should be blank for fixed rate loans and '0' for ARMs.",
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8793,7 +9134,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Original amortization term',
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8810,7 +9156,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'The value of the property at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8827,7 +9178,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Original term of the loan, in months',
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8844,7 +9200,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Tax amount at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8862,7 +9223,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Interest Only Period at the time of origination of the loan.  This will be the entire maturity period in months. ',
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8879,7 +9245,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Maximum amortization amount on negam loan',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8896,7 +9267,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Payment frequency at the time of origination',
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8913,7 +9289,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Prepayment term at origination',
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8930,7 +9311,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Total escrow amount at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8947,7 +9333,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Senior balance at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8965,7 +9356,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Number of months it takes for the rate to reset on an arm loan (Annual/Semi Annual Etc)',
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
         {
           multiplicity: {
@@ -8983,7 +9379,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'The original total drawable dollar amount on a HELOC loan, indicating the borrowers pre-approved spending limit',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9000,7 +9401,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Principal and interest payments at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9017,7 +9423,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Taxes and Insurance payment at origination',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9035,7 +9446,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Number of months it takes for the payment to reset on an arm loan (Annual/Semi Annual Etc)',
             },
           ],
-          type: 'Integer',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Integer',
+            },
+          },
         },
       ],
       taggedValues: [
@@ -9063,7 +9479,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'borrowerId',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9080,7 +9501,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Date that an eligible SCRA borrower started active duty',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9097,7 +9523,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Date that an eligible SCRA borrower ended active duty',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9115,7 +9546,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'A flag indicating if the borrower is entitled to relief and protections proved under the Service members Civil Relief Act',
             },
           ],
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9133,7 +9569,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Date that the servicer has last performed a DMDC/SCRA check',
             },
           ],
-          type: 'StrictDate',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'StrictDate',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9150,7 +9591,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Borrower income currency',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9167,7 +9613,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'The given name of the borrower',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9184,7 +9635,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'The familiy name of the borrower',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9201,7 +9657,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'The given name of the borrower',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9218,7 +9679,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'The familiy name of the borrower',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9226,7 +9692,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'resiBorrAddress',
-          type: 'myFlatDataTest::entity::Address',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'myFlatDataTest::entity::Address',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9234,7 +9705,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'borrowerType',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9252,7 +9728,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 "Ratio indicating the portion of borrower's income going towards any debt payments",
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9269,7 +9750,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Front End Debt-To-Income',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9287,7 +9773,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
                 'Total balance of other loans outstanding with the borrower',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9304,7 +9795,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Borrower income per annum',
             },
           ],
-          type: 'Float',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Float',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9321,7 +9817,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'Indicates borrower ability to eRecord',
             },
           ],
-          type: 'Boolean',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'Boolean',
+            },
+          },
         },
       ],
     },
@@ -9340,7 +9841,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'id',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9348,7 +9854,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'resiOrigination',
-          type: 'myFlatDataTest::Origination',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'myFlatDataTest::Origination',
+            },
+          },
         },
       ],
       taggedValues: [
@@ -9377,7 +9888,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'addressLine1',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9385,7 +9901,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'addressLine2',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9393,7 +9914,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'addressLine3',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9401,7 +9927,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'city',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9409,7 +9940,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'postalCode',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9417,7 +9953,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'typeDescription',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9425,7 +9966,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'county',
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9433,7 +9979,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'state',
-          type: 'myFlatDataTest::geography::State',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'myFlatDataTest::geography::State',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9441,7 +9992,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
             upperBound: 1,
           },
           name: 'country',
-          type: 'myFlatDataTest::geography::Country',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'myFlatDataTest::geography::Country',
+            },
+          },
         },
       ],
       taggedValues: [
@@ -9479,7 +10035,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'The country code, which is an ISO 3166 code.',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9496,7 +10057,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'ISO 3166-1 3-digit code.',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9513,7 +10079,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'The country full name.',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9530,7 +10101,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'The country currency code. [ country currency code ]',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
       taggedValues: [
@@ -9567,7 +10143,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: '3 digit State Code.',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9584,7 +10165,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'State/Province name based on ISO_3166-2 standard.',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9601,7 +10187,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'State/Province code based on ISO_3166-2 standard.',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
         {
           multiplicity: {
@@ -9618,7 +10209,12 @@ export const TEST_DATA__EmbeddedFlatDataMappingRoundtrip = [
               value: 'allow for some sources that do not have iso',
             },
           ],
-          type: 'String',
+          genericType: {
+            rawType: {
+              _type: 'packageableType',
+              fullPath: 'String',
+            },
+          },
         },
       ],
     },

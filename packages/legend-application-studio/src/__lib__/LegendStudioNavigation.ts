@@ -20,7 +20,9 @@ import { guaranteeNonNullable } from '@finos/legend-shared';
 import { generatePath } from '@finos/legend-application/browser';
 
 export enum LEGEND_STUDIO_ROUTE_PATTERN_TOKEN {
+  SHOWCASE_PATH = 'showcasePath',
   PROJECT_ID = 'projectId',
+  PATCH_RELEASE_VERSION_ID = 'patchReleaseVersionId',
   WORKSPACE_ID = 'workspaceId',
   GROUP_WORKSPACE_ID = 'groupWorkspaceId',
   REVISION_ID = 'revisionId',
@@ -38,21 +40,32 @@ export const LEGEND_STUDIO_ROUTE_PATTERN = Object.freeze({
   VIEW_BY_REVISION_ENTITY: `/view/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/revision/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.REVISION_ID}/entity/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH}`,
   VIEW_BY_VERSION_ENTITY: `/view/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/version/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.VERSION_ID}/entity/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH}`,
   REVIEW: `/review/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.REVIEW_ID}`,
+  PATCH_REVIEW: `/review/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/patches/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PATCH_RELEASE_VERSION_ID}/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.REVIEW_ID}`,
   EDIT_WORKSPACE: `/edit/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID}/`,
+  EDIT_PATCH_WORKSPACE: `/edit/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/patches/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PATCH_RELEASE_VERSION_ID}/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID}/`,
   EDIT_WORKSPACE_ENTITY: `/edit/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID}/entity/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH}`,
+  EDIT_PATCH_WORKSPACE_ENTITY: `/edit/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/patches/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PATCH_RELEASE_VERSION_ID}/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID}/entity/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH}`,
   EDIT_GROUP_WORKSPACE: `/edit/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/groupWorkspace/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID}/`,
+  EDIT_PATCH_GROUP_WORKSPACE: `/edit/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/patches/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PATCH_RELEASE_VERSION_ID}/groupWorkspace/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID}/`,
   EDIT_GROUP_WORKSPACE_ENTITY: `/edit/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/groupWorkspace/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID}/entity/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH}`,
+  EDIT_PATCH_GROUP_WORKSPACE_ENTITY: `/edit/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/patches/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PATCH_RELEASE_VERSION_ID}/groupWorkspace/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID}/entity/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH}`,
   SETUP_WORKSPACE: `/setup/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}?/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID}?`,
+  SETUP_PATCH_WORKSPACE: `/setup/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/patches/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PATCH_RELEASE_VERSION_ID}?/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID}?`,
   SETUP_GROUP_WORKSPACE: `/setup/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/groupWorkspace/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID}/`,
+  SETUP_PATCH_GROUP_WORKSPACE: `/setup/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/patches/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PATCH_RELEASE_VERSION_ID}?/groupWorkspace/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID}/`,
+  TEXT_GROUP_WORKSPACE: `/text/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/groupWorkspace/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID}/`,
+  TEXT_WORKSPACE: `/text/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID}/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID}/`,
 });
 
 export const LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN = Object.freeze({
   VIEW_BY_GAV: `/view/archive/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GAV}`,
   VIEW_BY_GAV_ENTITY: `/view/archive/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GAV}/entity/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH}`,
   PREVIEW_BY_GAV_ENTITY: `/view/archive/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GAV}/entity/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH}/preview`,
+  SHOWCASE: `/showcase/:${LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.SHOWCASE_PATH}`,
+  PCT_REPORT: '/pct',
 });
 
-export type WorkspaceReviewPathParams = {
+export type ProjectReviewerPathParams = {
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID]: string;
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.REVIEW_ID]: string;
 };
@@ -65,15 +78,27 @@ export type ProjectViewerPathParams = {
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH]?: string;
 };
 
+export type ShowcaseViewerPathParams = {
+  [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.SHOWCASE_PATH]?: string;
+};
+
 export type WorkspaceEditorPathParams = {
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID]: string;
+  [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PATCH_RELEASE_VERSION_ID]?: string;
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID]?: string;
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID]?: string;
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.ENTITY_PATH]?: string;
 };
 
+export type LazyTextEditorPathParams = {
+  [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID]: string;
+  [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID]?: string;
+  [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID]?: string;
+};
+
 export type WorkspaceSetupPathParams = {
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PROJECT_ID]?: string;
+  [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.PATCH_RELEASE_VERSION_ID]?: string;
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.WORKSPACE_ID]?: string;
   [LEGEND_STUDIO_ROUTE_PATTERN_TOKEN.GROUP_WORKSPACE_ID]?: string;
 };
@@ -85,84 +110,137 @@ export type ElementPreviewPathParams = {
 
 const generateGroupWorkspaceSetupRoute = (
   projectId: string | undefined,
+  patchReleaseVersionId: string | undefined,
   groupWorkspaceId: string,
 ): string =>
-  generatePath(LEGEND_STUDIO_ROUTE_PATTERN.SETUP_GROUP_WORKSPACE, {
-    // FIXME: due to some problem with typings, we will need to cast like this
-    // we will fix this when upgrading react-router
-    // See https://github.com/finos/legend-studio/issues/688
-    projectId: projectId as string,
-    groupWorkspaceId,
-  });
+  patchReleaseVersionId
+    ? generatePath(LEGEND_STUDIO_ROUTE_PATTERN.SETUP_PATCH_GROUP_WORKSPACE, {
+        projectId: projectId as string,
+        patchReleaseVersionId: patchReleaseVersionId,
+        groupWorkspaceId,
+      })
+    : generatePath(LEGEND_STUDIO_ROUTE_PATTERN.SETUP_GROUP_WORKSPACE, {
+        projectId: projectId as string,
+        groupWorkspaceId,
+      });
 
 const generateWorkspaceSetupRoute = (
   projectId: string | undefined,
-  workspaceId?: string,
+  patchReleaseVersionId: string | undefined,
+  workspaceId?: string | undefined,
 ): string =>
-  generatePath(LEGEND_STUDIO_ROUTE_PATTERN.SETUP_WORKSPACE, {
-    // FIXME: due to some problem with typings, we will need to cast like this
-    // we will fix this when upgrading react-router
-    // See https://github.com/finos/legend-studio/issues/688
-    projectId: projectId as string,
-    // FIXME: due to some problem with typings, we will need to cast like this
-    // we will fix this when upgrading react-router
-    // See https://github.com/finos/legend-studio/issues/688
-    workspaceId: workspaceId as string,
-  });
+  patchReleaseVersionId
+    ? generatePath(LEGEND_STUDIO_ROUTE_PATTERN.SETUP_PATCH_WORKSPACE, {
+        projectId: projectId as string,
+        patchReleaseVersionId: patchReleaseVersionId,
+        workspaceId: workspaceId as string,
+      })
+    : generatePath(LEGEND_STUDIO_ROUTE_PATTERN.SETUP_WORKSPACE, {
+        projectId: projectId as string,
+        workspaceId: workspaceId as string,
+      });
 
 export const generateSetupRoute = (
   projectId: string | undefined,
+  patchReleaseVersionId: string | undefined,
   workspaceId?: string | undefined,
   workspaceType?: WorkspaceType | undefined,
 ): string =>
   workspaceType === WorkspaceType.GROUP
     ? generateGroupWorkspaceSetupRoute(
         projectId,
+        patchReleaseVersionId,
         guaranteeNonNullable(workspaceId),
       )
-    : generateWorkspaceSetupRoute(projectId, workspaceId);
+    : generateWorkspaceSetupRoute(
+        projectId,
+        patchReleaseVersionId,
+        workspaceId,
+      );
 
 const generateGroupWorkspaceEditorRoute = (
   projectId: string,
+  patchReleaseVersionId: string | undefined,
   groupWorkspaceId: string,
   entityPath?: string | undefined,
 ): string =>
   !entityPath
-    ? generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_GROUP_WORKSPACE, {
-        projectId,
-        groupWorkspaceId,
-      })
-    : generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_GROUP_WORKSPACE_ENTITY, {
-        projectId,
-        groupWorkspaceId,
-        entityPath,
-      });
+    ? patchReleaseVersionId
+      ? generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_PATCH_GROUP_WORKSPACE, {
+          projectId,
+          patchReleaseVersionId,
+          groupWorkspaceId,
+        })
+      : generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_GROUP_WORKSPACE, {
+          projectId,
+          groupWorkspaceId,
+        })
+    : patchReleaseVersionId
+      ? generatePath(
+          LEGEND_STUDIO_ROUTE_PATTERN.EDIT_PATCH_GROUP_WORKSPACE_ENTITY,
+          {
+            projectId,
+            patchReleaseVersionId,
+            groupWorkspaceId,
+            entityPath,
+          },
+        )
+      : generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_GROUP_WORKSPACE_ENTITY, {
+          projectId,
+          groupWorkspaceId,
+          entityPath,
+        });
 
 const generateWorkspaceEditorRoute = (
   projectId: string,
+  patchReleaseVersionId: string | undefined,
   workspaceId: string,
   entityPath?: string | undefined,
 ): string =>
   !entityPath
-    ? generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_WORKSPACE, {
-        projectId,
-        workspaceId,
-      })
-    : generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_WORKSPACE_ENTITY, {
-        projectId,
-        workspaceId,
-        entityPath,
-      });
+    ? patchReleaseVersionId
+      ? generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_PATCH_WORKSPACE, {
+          projectId,
+          patchReleaseVersionId,
+          workspaceId,
+        })
+      : generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_WORKSPACE, {
+          projectId,
+          workspaceId,
+        })
+    : patchReleaseVersionId
+      ? generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_PATCH_WORKSPACE_ENTITY, {
+          projectId,
+          patchReleaseVersionId,
+          workspaceId,
+          entityPath,
+        })
+      : generatePath(LEGEND_STUDIO_ROUTE_PATTERN.EDIT_WORKSPACE_ENTITY, {
+          projectId,
+          workspaceId,
+          entityPath,
+        });
 
 export const generateEditorRoute = (
   projectId: string,
+  patchReleaseVersionId: string | undefined,
   workspaceId: string,
   workspaceType: WorkspaceType,
   entityPath?: string | undefined,
 ): string =>
   workspaceType === WorkspaceType.GROUP
-    ? generateGroupWorkspaceEditorRoute(projectId, workspaceId, entityPath)
-    : generateWorkspaceEditorRoute(projectId, workspaceId, entityPath);
+    ? generateGroupWorkspaceEditorRoute(
+        projectId,
+        patchReleaseVersionId,
+        workspaceId,
+        entityPath,
+      )
+    : generateWorkspaceEditorRoute(
+        projectId,
+        patchReleaseVersionId,
+        workspaceId,
+        entityPath,
+      );
 
 export const generateReviewRoute = (
   projectId: string,
@@ -266,3 +344,8 @@ export const EXTERNAL_APPLICATION_NAVIGATION__generateServiceQueryCreatorUrl = (
     artifactId,
     versionId,
   )}/${servicePath}`;
+
+export const generateShowcasePath = (showcasePath: string): string =>
+  generatePath(LEGEND_STUDIO_SDLC_BYPASSED_ROUTE_PATTERN.SHOWCASE, {
+    showcasePath: encodeURIComponent(showcasePath),
+  });

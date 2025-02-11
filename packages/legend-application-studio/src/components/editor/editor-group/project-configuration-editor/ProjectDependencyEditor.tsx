@@ -27,7 +27,7 @@ import {
   CustomSelectorInput,
   TimesIcon,
   Dialog,
-  DropdownMenu,
+  ControlledDropdownMenu,
   CaretDownIcon,
   MenuContentItem,
   MenuContent,
@@ -69,11 +69,9 @@ import {
   isNonNullable,
   LogEvent,
   prettyCONSTName,
-} from '@finos/legend-shared';
-import {
   compareSemVerVersions,
-  generateGAVCoordinates,
-} from '@finos/legend-storage';
+} from '@finos/legend-shared';
+import { generateGAVCoordinates } from '@finos/legend-storage';
 import { flowResult } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { forwardRef, useEffect, useRef, useState } from 'react';
@@ -97,7 +95,7 @@ import {
 import { LEGEND_STUDIO_TEST_ID } from '../../../../__lib__/LegendStudioTesting.js';
 import { useEditorStore } from '../../EditorStoreProvider.js';
 
-interface VersionOption {
+export interface VersionOption {
   label: string;
   value: string;
 }
@@ -595,6 +593,7 @@ const ProjectDependencyReportModal = observer(
     tab: DEPENDENCY_REPORT_TAB;
   }) => {
     const { dependencyEditorState } = props;
+    const applicationStore = dependencyEditorState.editorStore.applicationStore;
     const reportTab = dependencyEditorState.reportTab;
     const tabs = Object.values(DEPENDENCY_REPORT_TAB);
     const changeTab =
@@ -642,7 +641,12 @@ const ProjectDependencyReportModal = observer(
           paper: 'editor-modal__content',
         }}
       >
-        <Modal darkMode={true} className="editor-modal">
+        <Modal
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
+          className="editor-modal"
+        >
           <ModalHeader title="Dependency Explorer" />
           <ModalBody>
             <div className="panel project-dependency-report">
@@ -731,7 +735,11 @@ const ProjectDependencyReportModal = observer(
             </div>
           </ModalBody>
           <ModalFooter>
-            <ModalFooterButton onClick={closeModal} text="Close" />
+            <ModalFooterButton
+              onClick={closeModal}
+              text="Close"
+              type="secondary"
+            />
           </ModalFooter>
         </Modal>
       </Dialog>
@@ -785,17 +793,15 @@ const ProjectVersionDependencyEditor = observer(
         if (val) {
           try {
             fetchSelectedProjectVersionsStatus.inProgress();
-            const v = (await flowResult(
-              editorStore.depotServerClient.getVersions(
-                guaranteeNonNullable(projectDependency.groupId),
-                guaranteeNonNullable(projectDependency.artifactId),
-                true,
-              ),
-            )) as string[];
-            configState.versions.set(val.value.coordinates, v);
-            if (v.length) {
+            const _versions = await editorStore.depotServerClient.getVersions(
+              guaranteeNonNullable(projectDependency.groupId),
+              guaranteeNonNullable(projectDependency.artifactId),
+              true,
+            );
+            configState.versions.set(val.value.coordinates, _versions);
+            if (_versions.length) {
               projectDependency.setVersionId(
-                guaranteeNonNullable(v[v.length - 1]),
+                guaranteeNonNullable(_versions[_versions.length - 1]),
               );
               flowResult(dependencyEditorState.fetchDependencyReport()).catch(
                 applicationStore.alertUnhandledError,
@@ -815,8 +821,7 @@ const ProjectVersionDependencyEditor = observer(
     // version
     const version = projectDependency.versionId;
     const versionOptions = versions
-      .slice()
-      .sort((v1, v2) => compareSemVerVersions(v2, v1))
+      .toSorted((v1, v2) => compareSemVerVersions(v2, v1))
       .map((v) => {
         if (v === MASTER_SNAPSHOT_ALIAS) {
           return { value: v, label: SNAPSHOT_VERSION_ALIAS };
@@ -852,19 +857,17 @@ const ProjectVersionDependencyEditor = observer(
       }
     };
     const viewProject = (): void => {
-      if (!projectDependency.isLegacyDependency) {
-        applicationStore.navigationService.navigator.visitAddress(
-          applicationStore.navigationService.navigator.generateAddress(
-            generateViewProjectByGAVRoute(
-              guaranteeNonNullable(projectDependency.groupId),
-              guaranteeNonNullable(projectDependency.artifactId),
-              projectDependency.versionId === MASTER_SNAPSHOT_ALIAS
-                ? SNAPSHOT_VERSION_ALIAS
-                : projectDependency.versionId,
-            ),
+      applicationStore.navigationService.navigator.visitAddress(
+        applicationStore.navigationService.navigator.generateAddress(
+          generateViewProjectByGAVRoute(
+            guaranteeNonNullable(projectDependency.groupId),
+            guaranteeNonNullable(projectDependency.artifactId),
+            projectDependency.versionId === MASTER_SNAPSHOT_ALIAS
+              ? SNAPSHOT_VERSION_ALIAS
+              : projectDependency.versionId,
           ),
-        );
-      }
+        ),
+      );
     };
     // NOTE: This assumes that the dependant project is in the same studio instance as the current project
     // In the future, the studio instance may be part of the project data
@@ -885,27 +888,33 @@ const ProjectVersionDependencyEditor = observer(
     const projectSelectorPlaceholder = !projectDependency.projectId.length
       ? 'Choose project'
       : versionDisabled
-      ? 'No project version found. Please create a new one.'
-      : 'Select version';
+        ? 'No project version found. Please create a new one.'
+        : 'Select version';
 
     return (
       <div className="project-dependency-editor">
         <CustomSelectorInput
           className="project-dependency-editor__selector"
-          ref={projectSelectorRef}
+          inputRef={projectSelectorRef}
           disabled={projectDisabled}
           options={projectsOptions}
           isClearable={true}
           escapeClearsValue={true}
-          onChange={onProjectSelectionChange}
+          onChange={(val: ProjectOption | null) => {
+            onProjectSelectionChange(val).catch(
+              applicationStore.alertUnhandledError,
+            );
+          }}
           value={selectedProjectOption}
           isLoading={configState.fetchingProjectVersionsState.isInProgress}
           formatOptionLabel={formatOptionLabel}
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
         />
         <CustomSelectorInput
           className="project-dependency-editor__selector"
-          ref={versionSelectorRef}
+          inputRef={versionSelectorRef}
           options={versionOptions}
           isClearable={true}
           escapeClearsValue={true}
@@ -922,18 +931,16 @@ const ProjectVersionDependencyEditor = observer(
               .fetchingProjectVersionsState.isInProgress ||
             fetchSelectedProjectVersionsStatus.isInProgress
           }
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
         />
-        <DropdownMenu
+        <ControlledDropdownMenu
           className="project-dependency-editor__visit-project-btn__dropdown-trigger btn--medium"
           content={
             <MenuContent>
               <MenuContentItem
-                disabled={
-                  projectDependency.isLegacyDependency ||
-                  !selectedProject ||
-                  !selectedVersionOption
-                }
+                disabled={!selectedProject || !selectedVersionOption}
                 onClick={viewProject}
                 title="View project"
               >
@@ -942,7 +949,6 @@ const ProjectVersionDependencyEditor = observer(
               <MenuContentItem
                 title="View SDLC project"
                 disabled={
-                  projectDependency.isLegacyDependency ||
                   !selectedProject ||
                   !selectedVersionOption ||
                   !projectDependencyData
@@ -955,7 +961,7 @@ const ProjectVersionDependencyEditor = observer(
           }
         >
           Go to... <CaretDownIcon title="Show more options..." />
-        </DropdownMenu>
+        </ControlledDropdownMenu>
 
         <button
           className="project-dependency-editor__remove-btn btn--dark btn--caution"
@@ -995,14 +1001,13 @@ export const ProjectDependencyEditor = observer(() => {
 
   return (
     <PanelContentLists>
-      <PanelLoadingIndicator isLoading={isLoading} />
       {isLoading && (
         <div className="project-dependency-editor__progress-msg">
           {configState.updatingConfigurationState.isInProgress
             ? `Updating configuration...`
             : configState.fetchingProjectVersionsState.isInProgress
-            ? `Fetching dependency versions`
-            : 'Updating project dependency tree and potential conflicts'}
+              ? `Fetching dependency versions`
+              : 'Updating project dependency tree and potential conflicts'}
         </div>
       )}
       <ProjectDependencyActions dependencyEditorState={dependencyEditorState} />

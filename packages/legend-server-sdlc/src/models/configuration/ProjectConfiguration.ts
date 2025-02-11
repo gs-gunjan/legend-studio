@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { list, createModelSchema, primitive } from 'serializr';
+import {
+  list,
+  createModelSchema,
+  primitive,
+  optional,
+  custom,
+  SKIP,
+} from 'serializr';
 import { observable, action, computed, makeObservable } from 'mobx';
 import { ProjectStructureVersion } from '../configuration/ProjectStructureVersion.js';
 import { ProjectDependency } from '../configuration/ProjectDependency.js';
@@ -31,13 +38,25 @@ import { ENTITY_PATH_DELIMITER } from '@finos/legend-storage';
 import { PlatformConfiguration } from './PlatformConfiguration.js';
 import { SDLC_HASH_STRUCTURE } from '../../SDLC_HashUtils.js';
 
+/**
+ * Embedded Mode enables user to manage their pipeline/build and deployment flow.
+ * This will disable releasing and platform version configuration.
+ * Additionally, the concept of extension version will not be applicable when dealing with project structure version.
+ */
+export enum ProjectType {
+  MANAGED = 'MANAGED',
+  EMBEDDED = 'EMBEDDED',
+}
+
 export class ProjectConfiguration implements Hashable {
   projectId!: string;
   groupId!: string;
   artifactId!: string;
+  projectType: ProjectType | undefined;
   projectStructureVersion!: ProjectStructureVersion;
   platformConfigurations?: PlatformConfiguration[] | undefined;
   projectDependencies: ProjectDependency[] = [];
+  runDependencyTests?: boolean | undefined;
 
   constructor() {
     makeObservable(this, {
@@ -46,11 +65,13 @@ export class ProjectConfiguration implements Hashable {
       projectStructureVersion: observable,
       platformConfigurations: observable,
       projectDependencies: observable,
+      runDependencyTests: observable,
       setGroupId: action,
       setPlatformConfigurations: action,
       setArtifactId: action,
       deleteProjectDependency: action,
       addProjectDependency: action,
+      setRunDependencyTests: action,
       dependencyKey: computed,
       hashCode: computed,
     });
@@ -67,11 +88,20 @@ export class ProjectConfiguration implements Hashable {
         usingModelSchema(ProjectDependency.serialization.schema),
       ),
       projectId: primitive(),
+      projectType: optional(primitive()),
       projectStructureVersion: usingModelSchema(
         ProjectStructureVersion.serialization.schema,
       ),
+      runDependencyTests: custom(
+        () => SKIP,
+        (value: boolean | null | undefined) => (value ? value : SKIP),
+      ),
     }),
   );
+
+  setRunDependencyTests(val: boolean | undefined): void {
+    this.runDependencyTests = val;
+  }
 
   setGroupId(val: string): void {
     this.groupId = val;
@@ -109,6 +139,7 @@ export class ProjectConfiguration implements Hashable {
       this.projectStructureVersion.version.toString(),
       this.projectStructureVersion.extensionVersion?.toString() ?? '',
       hashArray(this.projectDependencies),
+      this.runDependencyTests?.toString() ?? '',
     ]);
   }
 }

@@ -24,6 +24,9 @@ export enum LEGEND_STUDIO_DOCUMENTATION_KEY {
   CREATE_PROJECT = 'setup.create-project',
   IMPORT_PROJECT = 'setup.import-project',
   CREATE_WORKSPACE = 'setup.create-workspace',
+  CREATE_PATCH = 'setup.create-patch',
+  SETUP_CREATE_SANDBOX_UNAUTHORIZED = 'setup.create-sandbox-unauthorized',
+  SETUP_CREATE_SANDBOX_PROJECT = 'setup.create-sandbox-project',
 
   // grammar parsers
   GRAMMAR_PARSER_PURE = 'grammar.parser.pure',
@@ -70,16 +73,27 @@ export enum LEGEND_STUDIO_DOCUMENTATION_KEY {
   QUESTION_HOW_TO_SPECIFY_A_SUPERTYPE = 'question.how-to-specify-a-class-supertype',
   QUESTION_HOW_TO_UPDATE_PROJECT_GAV_COORDINATES = 'question.how-to-update-project-gav-coordinates',
   QUESTION_WHEN_TO_CONFIGURE_PLATFORM_VERSIONS = 'question.when-to-configure-project-platform-dependencies-versions',
+  QUESTION_WHAT_IS_EMBEDDED_MODE_PROJECT_TYPE = 'question.what-is-embedded-project-type',
   QUESTION_HOW_TO_WRITE_A_SERVICE_TEST = 'question.how-to-write-a-service-test',
+  QUESTION_HOW_TO_WRITE_A_MAPPING_TEST = 'question.how-to-write-a-mapping-test',
+  QUESTION_HOW_TO_WRITE_A_FUNCTION_TEST = 'question.how-to-write-a-function-test',
   QUESTION_HOW_TO_WRITE_A_SERVICE_POST_VALIDATION = 'question.how-to-write-a-service-post-validation',
   QUESTION_WHY_DO_I_SEE_ERROR_WITH_ASSOCIATION_PROPERTY_TYPE = 'question.why-do-i-see-error-with-association-property-type',
   QUESTION_HOW_TO_WRITE_SERVICE_CONNECTION_TEST_DATA = 'question.how-to-write-service-connection-test-data',
   QUESTION_HOW_TO_CREATE_A_DATA_ELEMENT = 'question.how-to-create-a-data-element',
 
+  // sdlc
+  QUESTION_WHAT_ARE_PROJECT_ROLES = 'question.what-are-project-roles',
+
   // contexts
   CONTEXT_CLASS_EDITOR = 'context.class-editor',
   CONTEXT_SERVICE_TEST_EDITOR = 'context.service-editor.test',
   CONTEXT_DATA_ELEMENT_EDITOR = 'context.data-element-editor',
+  CONTEXT_MAPPING_TEST_EDITOR = 'context.mapping-editor.test',
+  // application cards
+  APPLICATION_PRODUCTION = 'application.production',
+  APPLICATION_SANDBOX = 'application.sandbox',
+  APPLICATION_RULE_ENGAGEMENT = 'application.rule-engagement',
 }
 
 export const CORE_CONTEXTUAL_DOCUMENTATION_CONFIG: ContextualDocumentationConfig =
@@ -92,6 +106,8 @@ export const CORE_CONTEXTUAL_DOCUMENTATION_CONFIG: ContextualDocumentationConfig
       LEGEND_STUDIO_DOCUMENTATION_KEY.QUESTION_HOW_TO_WRITE_A_CONSTRAINT_LAMBDA,
     [LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY.SERVICE_EDITOR_TEST]:
       LEGEND_STUDIO_DOCUMENTATION_KEY.CONTEXT_SERVICE_TEST_EDITOR,
+    [LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY.MAPPING_EDITOR_TEST]:
+      LEGEND_STUDIO_DOCUMENTATION_KEY.CONTEXT_MAPPING_TEST_EDITOR,
     [LEGEND_STUDIO_APPLICATION_NAVIGATION_CONTEXT_KEY.DATA_ELEMENT_EDITOR]:
       LEGEND_STUDIO_DOCUMENTATION_KEY.CONTEXT_DATA_ELEMENT_EDITOR,
   };

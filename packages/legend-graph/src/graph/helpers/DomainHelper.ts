@@ -64,11 +64,17 @@ import type {
 import { DerivedProperty } from '../metamodel/pure/packageableElements/domain/DerivedProperty.js';
 import type { Enum } from '../metamodel/pure/packageableElements/domain/Enum.js';
 import type { Constraint } from '../metamodel/pure/packageableElements/domain/Constraint.js';
-import type { GenericType } from '../metamodel/pure/packageableElements/domain/GenericType.js';
+import { GenericType } from '../metamodel/pure/packageableElements/domain/GenericType.js';
 import { Multiplicity } from '../metamodel/pure/packageableElements/domain/Multiplicity.js';
 import type { AnnotatedElement } from '../metamodel/pure/packageableElements/domain/AnnotatedElement.js';
 import type { ConcreteFunctionDefinition } from '../metamodel/pure/packageableElements/function/ConcreteFunctionDefinition.js';
 import { extractDependencyGACoordinateFromRootPackageName } from '../DependencyManager.js';
+import {
+  FunctionAnalysisInfo,
+  FunctionAnalysisParameterInfo,
+} from './FunctionAnalysis.js';
+import { generateFunctionPrettyName } from './PureLanguageHelper.js';
+import type { GenericTypeReference } from '../metamodel/pure/packageableElements/domain/GenericTypeReference.js';
 
 export const addElementToPackage = (
   parent: Package,
@@ -88,16 +94,42 @@ export const deleteElementFromPackage = (
   );
 };
 
-export const getDescendantsOfPackage = (
-  parent: Package,
-): Set<PackageableElement> => {
+const getDescendantsOfPackage = (parent: Package): Set<PackageableElement> => {
   const descendants: Set<PackageableElement> = new Set<PackageableElement>();
   parent.children.forEach((c) => {
-    c instanceof Package
-      ? getDescendantsOfPackage(c).forEach((e) => descendants.add(e))
-      : descendants.add(c);
+    if (c instanceof Package) {
+      getDescendantsOfPackage(c).forEach((e) => descendants.add(e));
+    } else {
+      descendants.add(c);
+    }
   });
   return descendants;
+};
+
+export const getAllDescendantsOfPackage = (
+  parent: Package,
+  graph: PureModel,
+): Set<PackageableElement> =>
+  new Set(
+    graph
+      .getPackages(parent.path)
+      .map((p) => [...getDescendantsOfPackage(p)])
+      .flat(),
+  );
+
+export const elementBelongsToPackage = (
+  element: PackageableElement,
+  parent: Package,
+): boolean => {
+  const elementPackage = element instanceof Package ? element : element.package;
+  if (!elementPackage) {
+    return false;
+  }
+  const elementPackagePath = elementPackage.path;
+  const parentPackage = parent.path;
+  return (elementPackagePath + ELEMENT_PATH_DELIMITER).startsWith(
+    parentPackage + ELEMENT_PATH_DELIMITER,
+  );
 };
 
 export const getElementRootPackage = (element: PackageableElement): Package =>
@@ -700,7 +732,7 @@ export const getFunctionSignature = (
           p.multiplicity.upperBound,
         )}_`,
     )
-    .join('_')}_${func.returnType.value.name}_${getMultiplicityString(
+    .join('_')}_${func.returnType.value.rawType.name}_${getMultiplicityString(
     func.returnMultiplicity.lowerBound,
     func.returnMultiplicity.upperBound,
   )}_`;
@@ -713,6 +745,36 @@ export const getFunctionName = (
 export const getFunctionNameWithPath = (
   func: ConcreteFunctionDefinition,
 ): string => func.package?.path + ELEMENT_PATH_DELIMITER + func.functionName;
+
+export const buildFunctionAnalysisInfoFromConcreteFunctionDefinition = (
+  funcs: ConcreteFunctionDefinition[],
+  graph: PureModel,
+): FunctionAnalysisInfo[] => {
+  const functionInfos = funcs.map((func) => {
+    const functionInfo = new FunctionAnalysisInfo();
+    functionInfo.functionPath = func.path;
+    functionInfo.name = func.name;
+    functionInfo.functionName = func.functionName;
+    functionInfo.functionPrettyName = generateFunctionPrettyName(func, {
+      fullPath: true,
+      spacing: false,
+    });
+    functionInfo.packagePath = func.package?.path ?? '';
+    functionInfo.returnType = func.returnType.value.rawType.name;
+    functionInfo.parameterInfoList = func.parameters.map((param) => {
+      const paramInfo = new FunctionAnalysisParameterInfo();
+      paramInfo.multiplicity = graph.getMultiplicity(
+        param.multiplicity.lowerBound,
+        param.multiplicity.upperBound,
+      );
+      paramInfo.name = param.name;
+      paramInfo.type = param.type.value.name;
+      return paramInfo;
+    });
+    return functionInfo;
+  });
+  return functionInfos;
+};
 
 const _classHasCycle = (
   _class: Class,
@@ -754,3 +816,29 @@ export const classHasCycle = (
     excludedPaths?: Map<string, string[]> | undefined;
   },
 ): boolean => _classHasCycle(_class, new Set<string>(), options);
+
+export const getElementOrigin = (
+  element: PackageableElement,
+  graph: PureModel,
+): string => {
+  if (isSystemElement(element)) {
+    return 'system elements';
+  } else if (isGeneratedElement(element)) {
+    return 'generation elements';
+  } else if (isDependencyElement(element)) {
+    const name = graph.dependencyManager.getElementOrigin(element);
+    if (name) {
+      return `project dependency ${name}`;
+    }
+  }
+  return '';
+};
+
+export const newGenericType = (
+  rawType: Type,
+  typeArguments: GenericTypeReference[],
+): GenericType => {
+  const genericType = new GenericType(rawType);
+  genericType.typeArguments = typeArguments;
+  return genericType;
+};

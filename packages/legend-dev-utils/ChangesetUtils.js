@@ -21,10 +21,9 @@ import { getChangedPackagesSinceRef } from '@changesets/git';
 import readChangesets from '@changesets/read';
 import getReleasePlan from '@changesets/get-release-plan';
 import { error, warn, info, log } from '@changesets/logger';
-import { getPackages } from '@manypkg/get-packages';
 import { read } from '@changesets/config';
 import writeChangeset from '@changesets/write';
-import assembleReleasePlan from '@changesets/assemble-release-plan';
+import { getPackages } from '@manypkg/get-packages';
 
 /**
  * Ref `master` does not seem to be available in github-actions pipeline when using with action/checkout
@@ -59,11 +58,10 @@ function isListablePackage(config, pkg) {
  * for any PR.
  */
 export async function validateChangesets(cwd, sinceRef) {
-  const packages = await getPackages(cwd);
-  const config = await read(cwd, packages);
+  const config = await read(cwd);
   const sinceBranch = sinceRef ?? DEFAULT_SINCE_REF;
   const changesetPackageNames = (
-    await getReleasePlan.default(cwd, sinceBranch, config)
+    await getReleasePlan(cwd, sinceBranch, config)
   ).releases
     // packages whose versions are bumped because they depend on a package
     // whose version is explicitly bumped is not of our concern
@@ -78,12 +76,13 @@ export async function validateChangesets(cwd, sinceRef) {
     .filter((pkg) => isListablePackage(config, pkg))
     .map((pkg) => pkg.packageJson.name);
 
-  // Check for packages listeded in changeset(s) but no longer exists
+  // Check for packages listed in changeset(s) but no longer exists
   // This is useful in case the current PR deletes some packages
   // making some changesets invalid and can potentially break the release
+  const packages = await getPackages(cwd);
   const knownPackages = packages.packages.map((pkg) => pkg.packageJson.name);
   const unknownPackagesIndex = new Map();
-  const allExistingChangesets = await readChangesets.default(cwd);
+  const allExistingChangesets = await readChangesets(cwd);
   allExistingChangesets.forEach((changeset) => {
     const unknownPackages = new Set();
     changeset.releases.forEach((release) => {
@@ -164,8 +163,7 @@ export async function validateChangesets(cwd, sinceRef) {
 }
 
 export async function generateChangeset(cwd, message, sinceRef) {
-  const packages = await getPackages(cwd);
-  const config = await read(cwd, packages);
+  const config = await read(cwd);
   const sinceBranch = sinceRef ?? DEFAULT_SINCE_REF;
   const changedPackages = new Set(
     (
@@ -187,7 +185,7 @@ export async function generateChangeset(cwd, message, sinceRef) {
     })),
     summary: message,
   };
-  const changesetID = await writeChangeset.default(newChangeset, cwd);
+  const changesetID = await writeChangeset(newChangeset, cwd);
   log(
     chalk.green(
       'Successfully generated changeset! If you want to modify or expand on the changeset summary, you can find it here:',
@@ -196,16 +194,30 @@ export async function generateChangeset(cwd, message, sinceRef) {
   info(chalk.blue(resolve(resolve(cwd, '.changeset'), `${changesetID}.md`)));
 }
 
-export async function getNextReleasePlan(cwd) {
+export async function generateUptickChangeset(cwd) {
+  const config = await read(cwd);
   const packages = await getPackages(cwd);
-  const config = await read(cwd, packages);
-
-  const releasePlan = assembleReleasePlan.default(
-    await readChangesets.default(cwd),
-    packages,
-    config,
-    undefined,
+  const allPublishablePackages = packages.packages
+    .filter((pkg) => isListablePackage(config, pkg))
+    .map((pkg) => pkg.packageJson.name);
+  const newChangeset = {
+    releases: allPublishablePackages.map((pkgName) => ({
+      name: pkgName,
+      type: 'patch',
+    })),
+    summary: '',
+  };
+  const changesetID = await writeChangeset(newChangeset, cwd);
+  log(
+    chalk.green(
+      'Successfully generated version uptick changeset! If you want to modify or expand on the changeset summary, you can find it here:',
+    ),
   );
+  info(chalk.blue(resolve(resolve(cwd, '.changeset'), `${changesetID}.md`)));
+}
 
+export async function getNextReleasePlan(cwd) {
+  const config = await read(cwd);
+  const releasePlan = await getReleasePlan(cwd, undefined, config);
   return releasePlan.releases;
 }

@@ -48,7 +48,10 @@ import type { PureProtocolProcessorPlugin } from '../../../PureProtocolProcessor
 import type { Entity } from '@finos/legend-storage';
 import { GraphDataDeserializationError } from '../../../../../../graph-manager/GraphManagerUtils.js';
 import { V1_PureModelContextText } from '../../model/context/V1_PureModelContextText.js';
-import type { SubtypeInfo } from '../../../../../action/protocol/ProtocolInfo.js';
+import type {
+  ClassifierPathMappingMap,
+  SubtypeInfo,
+} from '../../../../../action/protocol/ProtocolInfo.js';
 
 enum V1_SDLCType {
   ALLOY = 'alloy',
@@ -66,6 +69,7 @@ export const V1_entitiesToPureModelContextData = async (
   graph: V1_PureModelContextData,
   plugins: PureProtocolProcessorPlugin[],
   subtypeInfo?: SubtypeInfo | undefined,
+  classifierPathMappingMap?: ClassifierPathMappingMap | undefined,
   /**
    * FIXME: to be deleted when most users have migrated to using full function signature as function name
    * Currently, SDLC store many functions in legacy form (entity path does
@@ -90,6 +94,8 @@ export const V1_entitiesToPureModelContextData = async (
           entity.content,
           plugins,
           subtypeInfo,
+          classifierPathMappingMap,
+          entity.classifierPath,
         );
         TEMPORARY__entityPathIndex?.set(element.path, entity.path);
         return element;
@@ -125,16 +131,19 @@ export const V1_entitiesToPureModelContextData = async (
   }
 };
 
-const legendSDLCSerializationModelSchema = createModelSchema(V1_LegendSDLC, {
-  _type: usingConstantValueSchema(V1_SDLCType.ALLOY),
-  baseVersion: optional(primitive()),
-  version: primitive(),
-  groupId: primitive(),
-  artifactId: primitive(),
-  packageableElementPointers: list(
-    usingModelSchema(V1_packageableElementPointerModelSchema),
-  ),
-});
+export const V1_legendSDLCSerializationModelSchema = createModelSchema(
+  V1_LegendSDLC,
+  {
+    _type: usingConstantValueSchema(V1_SDLCType.ALLOY),
+    baseVersion: optional(primitive()),
+    version: primitive(),
+    groupId: primitive(),
+    artifactId: primitive(),
+    packageableElementPointers: list(
+      usingModelSchema(V1_packageableElementPointerModelSchema),
+    ),
+  },
+);
 
 const V1_pureModelContextTextSchema = createModelSchema(
   V1_PureModelContextText,
@@ -150,7 +159,7 @@ const V1_pureModelContextPointerModelSchema = createModelSchema(
   {
     _type: usingConstantValueSchema(V1_PureModelContextType.POINTER),
     serializer: optional(usingModelSchema(V1_Protocol.serialization.schema)),
-    sdlcInfo: usingModelSchema(legendSDLCSerializationModelSchema),
+    sdlcInfo: usingModelSchema(V1_legendSDLCSerializationModelSchema),
   },
 );
 
@@ -168,6 +177,7 @@ const V1_pureModelContextCompositeModelSchema = createModelSchema(
 export const V1_setupPureModelContextDataSerialization = (
   plugins: PureProtocolProcessorPlugin[],
   subtypeInfo?: SubtypeInfo | undefined,
+  classifierPathMappingMap?: ClassifierPathMappingMap | undefined,
 ): void => {
   createModelSchema(V1_PureModelContextData, {
     _type: usingConstantValueSchema(V1_PureModelContextType.DATA),
@@ -177,7 +187,12 @@ export const V1_setupPureModelContextDataSerialization = (
         (element: V1_PackageableElement) =>
           V1_serializePackageableElement(element, plugins),
         (element: PlainObject<V1_PackageableElement>) =>
-          V1_deserializePackageableElement(element, plugins, subtypeInfo),
+          V1_deserializePackageableElement(
+            element,
+            plugins,
+            subtypeInfo,
+            classifierPathMappingMap,
+          ),
       ),
     ),
     serializer: usingModelSchema(V1_Protocol.serialization.schema),

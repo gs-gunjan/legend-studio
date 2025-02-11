@@ -15,10 +15,23 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
-import { act } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  getAllByText,
+  getByText,
+  queryByText,
+  waitFor,
+} from '@testing-library/react';
 import {
   TEST_DATA__getAllWithHardcodedDateInput,
   TEST_DATA__getAllWithHardcodedDateOutput,
+  TEST_DATA__simpleGetAllVersionsWithBiTemporalSourceAndBiTemporalTarget,
+  TEST_DATA__simpleGetAllVersionsWithBusinessTemporalClass,
+  TEST_DATA__simpleGetAllVersionsWithBusinessTemporalSourceAndBusinessTemporalTarget,
+  TEST_DATA__simpleGetAllVersionsWithProcessingTemporalClass,
+  TEST_DATA__simpleGetAllVersionsWithProcessingTemporalSourceAndBusinessTemporalTarget,
+  TEST_DATA__simpleGetAllVersionsWithProcessingTemporalSourceAndProcessingTemporalTarget,
   TEST_DATA__simpleProjectionWithAggregationInput,
   TEST_DATA__simpleProjectionWithAggregationOutput,
   TEST_DATA__simpleProjectionWithBiTemporalSourceAndBiTemporalTarget,
@@ -34,7 +47,7 @@ import {
   TEST_DATA__simpleProjectionWithProcessingTemporalSourceAndBusinessTemporalTarget,
   TEST_DATA__simpleProjectionWithProcessingTemporalSourceAndProcessingTemporalTarget,
 } from '../../stores/__tests__/TEST_DATA__QueryBuilder_Milestoning.js';
-import TEST_MilestoningModel from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_Milestoning.json';
+import TEST_MilestoningModel from '../../stores/__tests__/TEST_DATA__QueryBuilder_Model_Milestoning.json' with { type: 'json' };
 import { guaranteeNonNullable, guaranteeType } from '@finos/legend-shared';
 import { integrationTest } from '@finos/legend-shared/test';
 import { stub_RawLambda, create_RawLambda } from '@finos/legend-graph';
@@ -42,6 +55,8 @@ import { QueryBuilderSimpleProjectionColumnState } from '../../stores/fetch-stru
 import { QueryBuilderTDSState } from '../../stores/fetch-structure/tds/QueryBuilderTDSState.js';
 import type { Entity } from '@finos/legend-storage';
 import { TEST__setUpQueryBuilder } from '../__test-utils__/QueryBuilderComponentTestUtils.js';
+import { QUERY_BUILDER_TEST_ID } from '../../__lib__/QueryBuilderTesting.js';
+import { TEST_DATA__ModelCoverageAnalysisResult_Milestoning } from '../../stores/__tests__/TEST_DATA__ModelCoverageAnalysisResult.js';
 
 type QueryComparisonTestCase = [
   string,
@@ -133,6 +148,7 @@ type QueryPropertyParameterTestCase = [
     expectedNumberOfDerivedPropertyStates: number;
     expectedNumberOfParameterValues: number;
     expectedNumberOfPropertyParameterValues: number;
+    hasNonMilestoningParams: boolean;
   },
 ];
 
@@ -149,6 +165,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 2,
       expectedNumberOfPropertyParameterValues: 2,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -163,6 +180,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 1,
       expectedNumberOfPropertyParameterValues: 2,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -177,6 +195,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 2,
       expectedNumberOfPropertyParameterValues: 3,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -191,6 +210,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 2,
       expectedNumberOfPropertyParameterValues: 3,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -205,6 +225,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 2,
       expectedNumberOfPropertyParameterValues: 2,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -219,6 +240,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 2,
       expectedNumberOfPropertyParameterValues: 2,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -233,6 +255,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 2,
       expectedNumberOfPropertyParameterValues: 3,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -247,6 +270,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 2,
       expectedNumberOfPropertyParameterValues: 2,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -261,6 +285,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 1,
       expectedNumberOfPropertyParameterValues: 2,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -275,6 +300,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 1,
       expectedNumberOfPropertyParameterValues: 2,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -289,6 +315,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 1,
       expectedNumberOfPropertyParameterValues: 2,
+      hasNonMilestoningParams: false,
     },
   ],
   [
@@ -303,6 +330,7 @@ const QUERY_PROPERTY_PARAMETER_CASES: QueryPropertyParameterTestCase[] = [
       expectedNumberOfDerivedPropertyStates: 1,
       expectedNumberOfParameterValues: 2,
       expectedNumberOfPropertyParameterValues: 3,
+      hasNonMilestoningParams: false,
     },
   ],
 ];
@@ -327,13 +355,15 @@ describe(
           expectedNumberOfDerivedPropertyStates,
           expectedNumberOfParameterValues,
           expectedNumberOfPropertyParameterValues,
+          hasNonMilestoningParams,
         } = testCase;
-        const { queryBuilderState } = await TEST__setUpQueryBuilder(
-          entities,
-          stub_RawLambda(),
-          mappingPath,
-          runtimePath,
-        );
+        const { renderResult, queryBuilderState } =
+          await TEST__setUpQueryBuilder(
+            entities,
+            stub_RawLambda(),
+            mappingPath,
+            runtimePath,
+          );
 
         const _personClass =
           queryBuilderState.graphManagerState.graph.getClass(classPath);
@@ -377,7 +407,820 @@ describe(
         expect(parameterValues.length).toBe(
           expectedNumberOfPropertyParameterValues,
         );
+
+        // Check if we have paramter panel hided when there are only milestoning parameters and able to run query
+        if (expectedNumberOfParameterValues > 0) {
+          await waitFor(() =>
+            renderResult.getByTestId(
+              QUERY_BUILDER_TEST_ID.QUERY_BUILDER_RESULT_PANEL,
+            ),
+          );
+          await act(async () => {
+            fireEvent.click(renderResult.getByText('Run Query'));
+          });
+          expect(queryBuilderState.showParametersPanel).toBe(
+            hasNonMilestoningParams,
+          );
+          if (!hasNonMilestoningParams) {
+            expect(renderResult.queryByText('Set Parameter Values')).toBeNull();
+          } else {
+            expect(
+              renderResult.queryByText('Set Parameter Values'),
+            ).not.toBeNull();
+          }
+        }
       },
     );
+  },
+);
+
+test(
+  integrationTest(
+    'Query builder state is properly set after creating a query with non-temporal source and temporal target',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_MilestoningModel,
+      stub_RawLambda(),
+      'my::map',
+      'my::runtime',
+      TEST_DATA__ModelCoverageAnalysisResult_Milestoning,
+    );
+    const _firmClass =
+      queryBuilderState.graphManagerState.graph.getClass('my::Firm');
+    await act(async () => {
+      queryBuilderState.changeClass(_firmClass);
+    });
+    const queryBuilderSetup = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_SETUP),
+    );
+    await waitFor(() => getAllByText(queryBuilderSetup, 'Firm'));
+
+    const explorerPanel = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_EXPLORER),
+    );
+
+    //Add properties to fetch-structure
+    const element = await waitFor(() =>
+      getByText(explorerPanel, 'Business Temporal'),
+    );
+    fireEvent.contextMenu(element);
+    fireEvent.click(
+      renderResult.getByText('Add Properties to Fetch Structure'),
+    );
+    const tdsStateOne = guaranteeType(
+      queryBuilderState.fetchStructureState.implementation,
+      QueryBuilderTDSState,
+    );
+    expect(tdsStateOne.projectionColumns.length).toBe(2);
+
+    // Check if we have paramter panel hided and able to run query
+    expect(queryBuilderState.showParametersPanel).toBe(false);
+
+    const resultModifierPromptPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_RESULT_MODIFIER_PROMPT,
+      ),
+    );
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'Business Date'),
+    );
+    await waitFor(() => getAllByText(resultModifierPromptPanel, 'Now'));
+    const queryOptionsButton = await waitFor(() =>
+      renderResult.getByRole('button', { name: 'Query Options' }),
+    );
+    fireEvent.click(queryOptionsButton);
+    const queryOptionsDialog = await waitFor(() =>
+      renderResult.getByRole('dialog'),
+    );
+    fireEvent.click(
+      await waitFor(() => getByText(queryOptionsDialog, '"Now"')),
+    );
+    fireEvent.click(await waitFor(() => renderResult.getByText('Today')));
+    fireEvent.click(queryOptionsDialog);
+    await waitFor(async () =>
+      fireEvent.click(
+        await waitFor(() => getByText(queryOptionsDialog, 'Apply')),
+      ),
+    );
+    await waitFor(() => getAllByText(resultModifierPromptPanel, 'Today'));
+    await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_RESULT_PANEL,
+      ),
+    );
+    await act(async () => {
+      fireEvent.click(renderResult.getByText('Run Query'));
+    });
+
+    expect(renderResult.queryByText('Set Parameter Values')).toBeNull();
+  },
+);
+
+test(
+  integrationTest(
+    'Query builder result modifier panel displays milestoning dates',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_MilestoningModel,
+      stub_RawLambda(),
+      'my::map',
+      'my::runtime',
+      TEST_DATA__ModelCoverageAnalysisResult_Milestoning,
+    );
+    const _personClass =
+      queryBuilderState.graphManagerState.graph.getClass('my::Person');
+    await act(async () => {
+      queryBuilderState.changeClass(_personClass);
+    });
+    const queryBuilderSetup = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_SETUP),
+    );
+    await waitFor(() => getAllByText(queryBuilderSetup, 'Person'));
+
+    const resultModifierPromptPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_RESULT_MODIFIER_PROMPT,
+      ),
+    );
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'Business Date'),
+    );
+    await waitFor(() => getAllByText(resultModifierPromptPanel, 'Now'));
+
+    const queryOptionsButton = await waitFor(() =>
+      renderResult.getByRole('button', { name: 'Query Options' }),
+    );
+    fireEvent.click(queryOptionsButton);
+    const allVersionsToggle = await renderResult.findByText(
+      'Query All Milestoned Versions of the Root Class',
+    );
+    fireEvent.click(allVersionsToggle);
+    const applyButton = (await renderResult.findByRole('button', {
+      name: 'Apply',
+    })) as HTMLButtonElement;
+    await waitFor(() => fireEvent.click(applyButton));
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'All Versions'),
+    );
+    await waitFor(() => getAllByText(resultModifierPromptPanel, 'Yes'));
+    fireEvent.click(queryOptionsButton);
+    const allVersionInRangeToggle = await renderResult.findByText(
+      'Optionally apply a date range to get All Versions for',
+    );
+    fireEvent.click(allVersionInRangeToggle);
+    fireEvent.click(renderResult.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => getAllByText(resultModifierPromptPanel, '(Now - Now)'));
+    fireEvent.click(queryOptionsButton);
+    fireEvent.click(allVersionInRangeToggle);
+    const cancelButton = (await renderResult.findByRole('button', {
+      name: 'Cancel',
+    })) as HTMLButtonElement;
+    fireEvent.click(cancelButton);
+    await waitFor(() => getAllByText(resultModifierPromptPanel, '(Now - Now)'));
+  },
+);
+
+test(
+  integrationTest(
+    'Query builder result modifier panel displays correct milestoning names after renaming milestoning parameters',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_MilestoningModel,
+      stub_RawLambda(),
+      'my::map',
+      'my::runtime',
+      TEST_DATA__ModelCoverageAnalysisResult_Milestoning,
+    );
+    const _personClass =
+      queryBuilderState.graphManagerState.graph.getClass('my::Person');
+    await act(async () => {
+      queryBuilderState.changeClass(_personClass);
+    });
+    const queryBuilderSetup = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_SETUP),
+    );
+    await waitFor(() => getAllByText(queryBuilderSetup, 'Person'));
+    const resultModifierPromptPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_RESULT_MODIFIER_PROMPT,
+      ),
+    );
+
+    // since we choose to hide milestoning parameters in the parameter panel,
+    // currently there is no UI for users to rename milestoning parameters
+
+    // const parameterPanel = await waitFor(() =>
+    //   renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_PARAMETERS),
+    // );
+    // await waitFor(() =>
+    //   getAllByText(resultModifierPromptPanel, 'Business Date'),
+    // );
+    // await waitFor(() => getAllByText(resultModifierPromptPanel, 'Now'));
+    // fireEvent.click(getByText(parameterPanel, 'businessDate'));
+    // const parameterNameInput = getParameterNameInput(renderResult);
+    // fireEvent.change(parameterNameInput, {
+    //   target: { value: 'businessDateRenamed' },
+    // });
+    // const updateButton = (await renderResult.findByRole('button', {
+    //   name: 'Update',
+    // })) as HTMLButtonElement;
+    // fireEvent.click(updateButton);
+    await waitFor(() => getAllByText(resultModifierPromptPanel, 'Now'));
+    const queryOptionsButton = await waitFor(() =>
+      renderResult.getByRole('button', { name: 'Query Options' }),
+    );
+    fireEvent.click(queryOptionsButton);
+    const cancelButton = (await renderResult.findByRole('button', {
+      name: 'Cancel',
+    })) as HTMLButtonElement;
+    fireEvent.click(cancelButton);
+    await waitFor(() => getAllByText(resultModifierPromptPanel, 'Now'));
+    expect(queryBuilderState.parametersState.parameterStates.length).toBe(1);
+  },
+);
+
+type QueryGetAllVersionsTestCase = [
+  string,
+  {
+    mappingPath: string;
+    runtimePath: string;
+    classPath: string;
+    entities: Entity[];
+    rawLambda: { parameters?: object; body?: object };
+    expectedLambda: { parameters?: object; body?: object };
+  },
+];
+const QUERY_GET_ALL_VERSIONS_CASES: QueryGetAllVersionsTestCase[] = [
+  [
+    'Query builder state is properly built after setting getAllVersions with business temporal source and business temporal target',
+    {
+      mappingPath: 'my::map',
+      runtimePath: 'my::runtime',
+      classPath: 'my::Person',
+      entities: TEST_MilestoningModel,
+      rawLambda:
+        TEST_DATA__simpleProjectionWithBusinessTemporalSourceAndBusinessTemporalTarget,
+      expectedLambda:
+        TEST_DATA__simpleGetAllVersionsWithBusinessTemporalSourceAndBusinessTemporalTarget,
+    },
+  ],
+  [
+    'Query builder state is properly built after setting getAllVersions with bi temporal source and bi temporal target',
+    {
+      mappingPath: 'my::map',
+      runtimePath: 'my::runtime',
+      classPath: 'my::Person',
+      entities: TEST_MilestoningModel,
+      rawLambda:
+        TEST_DATA__simpleProjectionWithBiTemporalSourceAndBiTemporalTarget,
+      expectedLambda:
+        TEST_DATA__simpleGetAllVersionsWithBiTemporalSourceAndBiTemporalTarget,
+    },
+  ],
+  [
+    'Query builder state is properly built after setting getAllVersions with processing temporal source and processing temporal target',
+    {
+      mappingPath: 'my::map',
+      runtimePath: 'my::runtime',
+      classPath: 'my::Person',
+      entities: TEST_MilestoningModel,
+      rawLambda:
+        TEST_DATA__simpleProjectionWithProcessingTemporalSourceAndProcessingTemporalTarget,
+      expectedLambda:
+        TEST_DATA__simpleGetAllVersionsWithProcessingTemporalSourceAndProcessingTemporalTarget,
+    },
+  ],
+  [
+    'Query builder state is properly built after setting getAllVersions with processing temporal source and business temporal target',
+    {
+      mappingPath: 'my::map',
+      runtimePath: 'my::runtime',
+      classPath: 'my::Person',
+      entities: TEST_MilestoningModel,
+      rawLambda:
+        TEST_DATA__simpleProjectionWithProcessingTemporalSourceAndBusinessTemporalTarget,
+      expectedLambda:
+        TEST_DATA__simpleGetAllVersionsWithProcessingTemporalSourceAndBusinessTemporalTarget,
+    },
+  ],
+];
+
+describe(
+  integrationTest(
+    `Milestoning query is properly set after selecting getAllVersions`,
+  ),
+  () => {
+    test.each(QUERY_GET_ALL_VERSIONS_CASES)(
+      '%s',
+      async (
+        testName: QueryGetAllVersionsTestCase[0],
+        testCase: QueryGetAllVersionsTestCase[1],
+      ) => {
+        const {
+          mappingPath,
+          runtimePath,
+          classPath,
+          entities,
+          rawLambda,
+          expectedLambda,
+        } = testCase;
+        const { renderResult, queryBuilderState } =
+          await TEST__setUpQueryBuilder(
+            entities,
+            stub_RawLambda(),
+            mappingPath,
+            runtimePath,
+            TEST_DATA__ModelCoverageAnalysisResult_Milestoning,
+          );
+
+        const _personClass =
+          queryBuilderState.graphManagerState.graph.getClass(classPath);
+        await act(async () => {
+          queryBuilderState.changeClass(_personClass);
+        });
+
+        await act(async () => {
+          queryBuilderState.initializeWithQuery(
+            create_RawLambda(rawLambda.parameters, rawLambda.body),
+          );
+        });
+
+        const queryOptionsButton = await waitFor(() =>
+          renderResult.getByRole('button', { name: 'Query Options' }),
+        );
+        fireEvent.click(queryOptionsButton);
+
+        const dialog = await waitFor(() => renderResult.getByRole('dialog'));
+
+        fireEvent.click(
+          getByText(dialog, 'Query All Milestoned Versions of the Root Class'),
+        );
+
+        const applyButton = (await renderResult.findByRole('button', {
+          name: 'Apply',
+        })) as HTMLButtonElement;
+
+        await waitFor(() => fireEvent.click(applyButton));
+
+        const receivedOutput = queryBuilderState.buildQuery();
+
+        // Compare input JSON and output JSON for building a query
+        expect(receivedOutput.parameters).toEqual(expectedLambda.parameters);
+        expect(receivedOutput.body).toEqual(expectedLambda.body);
+      },
+    );
+  },
+);
+
+type QueryGetAllVersionsInRangeTestCase = [
+  string,
+  {
+    mappingPath: string;
+    runtimePath: string;
+    classPath: string;
+    entities: Entity[];
+    rawLambda: { parameters?: object; body?: object };
+    expectedMilestoningDate: string;
+  },
+];
+const QUERY_GET_ALL_VERSIONS_IN_RANGE_CASES: QueryGetAllVersionsInRangeTestCase[] =
+  [
+    [
+      'Query builder state is properly built after setting getAllVersionsInRange() with business temporal source',
+      {
+        mappingPath: 'my::map',
+        runtimePath: 'my::runtime',
+        classPath: 'my::Person',
+        entities: TEST_MilestoningModel,
+        rawLambda: TEST_DATA__simpleGetAllVersionsWithBusinessTemporalClass,
+        expectedMilestoningDate: 'businessDate',
+      },
+    ],
+    [
+      'Query builder state is properly built after setting getAllVersionsInRange() with processing temporal source',
+      {
+        mappingPath: 'my::map',
+        runtimePath: 'my::runtime',
+        classPath: 'my::Person',
+        entities: TEST_MilestoningModel,
+        rawLambda: TEST_DATA__simpleGetAllVersionsWithProcessingTemporalClass,
+        expectedMilestoningDate: 'processingDate',
+      },
+    ],
+  ];
+
+describe(
+  integrationTest(
+    `Milestoning query is properly set after selecting getAllVersionsInRange()`,
+  ),
+  () => {
+    test.each(QUERY_GET_ALL_VERSIONS_IN_RANGE_CASES)(
+      '%s',
+      async (
+        testName: QueryGetAllVersionsInRangeTestCase[0],
+        testCase: QueryGetAllVersionsInRangeTestCase[1],
+      ) => {
+        const {
+          mappingPath,
+          runtimePath,
+          classPath,
+          entities,
+          rawLambda,
+          expectedMilestoningDate,
+        } = testCase;
+        const { renderResult, queryBuilderState } =
+          await TEST__setUpQueryBuilder(
+            entities,
+            stub_RawLambda(),
+            mappingPath,
+            runtimePath,
+            TEST_DATA__ModelCoverageAnalysisResult_Milestoning,
+          );
+
+        const _personClass =
+          queryBuilderState.graphManagerState.graph.getClass(classPath);
+        await act(async () => {
+          queryBuilderState.changeClass(_personClass);
+        });
+
+        await act(async () => {
+          queryBuilderState.initializeWithQuery(
+            create_RawLambda(rawLambda.parameters, rawLambda.body),
+          );
+        });
+
+        const queryOptionsButton = await waitFor(() =>
+          renderResult.getByRole('button', { name: 'Query Options' }),
+        );
+        fireEvent.click(queryOptionsButton);
+        const dialog = await waitFor(() => renderResult.getByRole('dialog'));
+        // Check if we are setting start date and end date when allVersionsInRange() is selected
+        fireEvent.click(
+          getByText(
+            dialog,
+            'Optionally apply a date range to get All Versions for',
+          ),
+        );
+
+        expect(getAllByText(dialog, 'startDate').length).toBe(2);
+        expect(getAllByText(dialog, 'endDate').length).toBe(2);
+
+        // Change the function back to getAll()
+        fireEvent.click(
+          getByText(dialog, 'Query All Milestoned Versions of the Root Class'),
+        );
+        expect(getAllByText(dialog, expectedMilestoningDate).length).toBe(2);
+      },
+    );
+  },
+);
+
+//====================================     test milestoning reset logic      ====================================
+
+test(
+  integrationTest(
+    'Milestoning query is properly reset after setting getAllVersions() with business temporal source',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_MilestoningModel,
+      stub_RawLambda(),
+      'my::map',
+      'my::runtime',
+      TEST_DATA__ModelCoverageAnalysisResult_Milestoning,
+    );
+    const _personClass =
+      queryBuilderState.graphManagerState.graph.getClass('my::Person');
+    await act(async () => {
+      queryBuilderState.changeClass(_personClass);
+    });
+    const queryBuilderSetup = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_SETUP),
+    );
+    await waitFor(() => getAllByText(queryBuilderSetup, 'Person'));
+
+    const explorerPanel = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_EXPLORER),
+    );
+
+    //Add properties to fetch-structure
+    const element = await waitFor(() => getByText(explorerPanel, 'Date'));
+    fireEvent.contextMenu(element);
+    fireEvent.click(renderResult.getByText('Add Property to Fetch Structure'));
+    const tdsStateOne = guaranteeType(
+      queryBuilderState.fetchStructureState.implementation,
+      QueryBuilderTDSState,
+    );
+    expect(tdsStateOne.projectionColumns.length).toBe(1);
+
+    // Check if we have paramter panel hided and able to run query
+    expect(queryBuilderState.showParametersPanel).toBe(false);
+
+    const queryOptionsButton = await waitFor(() =>
+      renderResult.getByRole('button', { name: 'Query Options' }),
+    );
+    fireEvent.click(queryOptionsButton);
+
+    const queryOptiondialog = await waitFor(() =>
+      renderResult.getByRole('dialog'),
+    );
+    // check if Business Date is shown
+    expect(getByText(queryOptiondialog, 'Business Date')).not.toBeNull();
+
+    fireEvent.click(
+      getByText(
+        queryOptiondialog,
+        'Query All Milestoned Versions of the Root Class',
+      ),
+    );
+    expect(
+      getByText(queryOptiondialog, 'All Versions In Range'),
+    ).not.toBeNull();
+
+    const cancelButton = (await renderResult.findByRole('button', {
+      name: 'Cancel',
+    })) as HTMLButtonElement;
+    fireEvent.click(cancelButton);
+    const resultModifierPromptPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_RESULT_MODIFIER_PROMPT,
+      ),
+    );
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'Business Date'),
+    );
+    await waitFor(() => getAllByText(resultModifierPromptPanel, 'Now'));
+    expect(queryBuilderState.parametersState.parameterStates.length).toBe(1);
+  },
+);
+
+test(
+  integrationTest(
+    'Milestoning query is properly reset with business temporal source and all versions in range enabled',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_MilestoningModel,
+      stub_RawLambda(),
+      'my::map',
+      'my::runtime',
+      TEST_DATA__ModelCoverageAnalysisResult_Milestoning,
+    );
+    const _personClass =
+      queryBuilderState.graphManagerState.graph.getClass('my::Person');
+    await act(async () => {
+      queryBuilderState.changeClass(_personClass);
+    });
+    const queryBuilderSetup = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_SETUP),
+    );
+    await waitFor(() => getAllByText(queryBuilderSetup, 'Person'));
+
+    const explorerPanel = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_EXPLORER),
+    );
+
+    //Add properties to fetch-structure
+    const element = await waitFor(() => getByText(explorerPanel, 'Date'));
+    fireEvent.contextMenu(element);
+    fireEvent.click(renderResult.getByText('Add Property to Fetch Structure'));
+    const tdsStateOne = guaranteeType(
+      queryBuilderState.fetchStructureState.implementation,
+      QueryBuilderTDSState,
+    );
+    expect(tdsStateOne.projectionColumns.length).toBe(1);
+
+    // Check if we have paramter panel hided and able to run query
+    expect(queryBuilderState.showParametersPanel).toBe(false);
+
+    const queryOptionsButton = await waitFor(() =>
+      renderResult.getByRole('button', { name: 'Query Options' }),
+    );
+    fireEvent.click(queryOptionsButton);
+    const queryOptiondialog = await waitFor(() =>
+      renderResult.getByRole('dialog'),
+    );
+
+    // set query to use all versions in range
+    fireEvent.click(
+      getByText(
+        queryOptiondialog,
+        'Query All Milestoned Versions of the Root Class',
+      ),
+    );
+    fireEvent.click(
+      getByText(
+        queryOptiondialog,
+        'Optionally apply a date range to get All Versions for',
+      ),
+    );
+    const applyButton = (await renderResult.findByRole('button', {
+      name: 'Apply',
+    })) as HTMLButtonElement;
+    fireEvent.click(applyButton);
+    const resultModifierPromptPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_RESULT_MODIFIER_PROMPT,
+      ),
+    );
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'All Versions'),
+    );
+    await waitFor(() => getAllByText(resultModifierPromptPanel, '(Now - Now)'));
+    expect(queryBuilderState.parametersState.parameterStates.length).toBe(2);
+
+    // test cancellation
+    fireEvent.click(queryOptionsButton);
+    fireEvent.click(
+      getByText(
+        queryOptiondialog,
+        'Query All Milestoned Versions of the Root Class',
+      ),
+    );
+    expect(getByText(queryOptiondialog, 'Business Date')).not.toBeNull();
+    fireEvent.click(
+      (await renderResult.findByRole('button', {
+        name: 'Cancel',
+      })) as HTMLButtonElement,
+    );
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'All Versions'),
+    );
+    await waitFor(() => getAllByText(resultModifierPromptPanel, '(Now - Now)'));
+  },
+);
+
+test(
+  integrationTest('Milestoning query is properly reset with bitemporal source'),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_MilestoningModel,
+      stub_RawLambda(),
+      'my::map',
+      'my::runtime',
+      TEST_DATA__ModelCoverageAnalysisResult_Milestoning,
+    );
+    const _person1Class =
+      queryBuilderState.graphManagerState.graph.getClass('my::Person1');
+    await act(async () => {
+      queryBuilderState.changeClass(_person1Class);
+    });
+    const queryBuilderSetup = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_SETUP),
+    );
+    await waitFor(() => getAllByText(queryBuilderSetup, 'Person1'));
+
+    const explorerPanel = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_EXPLORER),
+    );
+
+    //Add properties to fetch-structure
+    const element = await waitFor(() => getByText(explorerPanel, 'Firm ID'));
+    fireEvent.contextMenu(element);
+    fireEvent.click(renderResult.getByText('Add Property to Fetch Structure'));
+    const tdsStateOne = guaranteeType(
+      queryBuilderState.fetchStructureState.implementation,
+      QueryBuilderTDSState,
+    );
+    expect(tdsStateOne.projectionColumns.length).toBe(1);
+
+    // Check if we have paramter panel hided and able to run query
+    expect(queryBuilderState.showParametersPanel).toBe(false);
+
+    const queryOptionsButton = await waitFor(() =>
+      renderResult.getByRole('button', { name: 'Query Options' }),
+    );
+    fireEvent.click(queryOptionsButton);
+    const queryOptiondialog = await waitFor(() =>
+      renderResult.getByRole('dialog'),
+    );
+
+    // set query to use all versions
+    fireEvent.click(
+      getByText(
+        queryOptiondialog,
+        'Query All Milestoned Versions of the Root Class',
+      ),
+    );
+    expect(queryByText(queryOptiondialog, 'Processing Date')).toBeNull();
+    expect(queryByText(queryOptiondialog, 'Business Date')).toBeNull();
+    fireEvent.click(
+      getByText(
+        queryOptiondialog,
+        'Query All Milestoned Versions of the Root Class',
+      ),
+    );
+    expect(queryByText(queryOptiondialog, 'Business Date')).not.toBeNull();
+    expect(queryByText(queryOptiondialog, 'Business Date')).not.toBeNull();
+
+    //  set query to use all versions again
+    fireEvent.click(
+      getByText(
+        queryOptiondialog,
+        'Query All Milestoned Versions of the Root Class',
+      ),
+    );
+    const cancelButton = (await renderResult.findByRole('button', {
+      name: 'Cancel',
+    })) as HTMLButtonElement;
+    fireEvent.click(cancelButton);
+    const resultModifierPromptPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_RESULT_MODIFIER_PROMPT,
+      ),
+    );
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'Business Date'),
+    );
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'Processing Date'),
+    );
+    expect(
+      (await waitFor(() => getAllByText(resultModifierPromptPanel, 'Now')))
+        .length,
+    ).toBe(2);
+    expect(queryBuilderState.parametersState.parameterStates.length).toBe(2);
+  },
+);
+
+test(
+  integrationTest(
+    'Used milestoning parameters will not be deleted when setting getAllVersions()',
+  ),
+  async () => {
+    const { renderResult, queryBuilderState } = await TEST__setUpQueryBuilder(
+      TEST_MilestoningModel,
+      stub_RawLambda(),
+      'my::map',
+      'my::runtime',
+      TEST_DATA__ModelCoverageAnalysisResult_Milestoning,
+    );
+    const _personClass =
+      queryBuilderState.graphManagerState.graph.getClass('my::Person');
+    await act(async () => {
+      queryBuilderState.changeClass(_personClass);
+    });
+    const queryBuilderSetup = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_SETUP),
+    );
+    await waitFor(() => getAllByText(queryBuilderSetup, 'Person'));
+
+    const explorerPanel = await waitFor(() =>
+      renderResult.getByTestId(QUERY_BUILDER_TEST_ID.QUERY_BUILDER_EXPLORER),
+    );
+
+    //Add properties to fetch-structure
+    const element = await waitFor(() =>
+      getByText(explorerPanel, 'Business Temporal'),
+    );
+    fireEvent.contextMenu(element);
+    fireEvent.click(
+      renderResult.getByText('Add Properties to Fetch Structure'),
+    );
+    const tdsStateOne = guaranteeType(
+      queryBuilderState.fetchStructureState.implementation,
+      QueryBuilderTDSState,
+    );
+    expect(tdsStateOne.projectionColumns.length).toBe(2);
+
+    // Check if we have paramter panel hided and able to run query
+    expect(queryBuilderState.showParametersPanel).toBe(false);
+
+    const queryOptionsButton = await waitFor(() =>
+      renderResult.getByRole('button', { name: 'Query Options' }),
+    );
+    fireEvent.click(queryOptionsButton);
+    const queryOptiondialog = await waitFor(() =>
+      renderResult.getByRole('dialog'),
+    );
+
+    // set query to use all versions
+    fireEvent.click(
+      getByText(
+        queryOptiondialog,
+        'Query All Milestoned Versions of the Root Class',
+      ),
+    );
+    const applyButton = (await renderResult.findByRole('button', {
+      name: 'Apply',
+    })) as HTMLButtonElement;
+    fireEvent.click(applyButton);
+    const resultModifierPromptPanel = await waitFor(() =>
+      renderResult.getByTestId(
+        QUERY_BUILDER_TEST_ID.QUERY_BUILDER_TDS_RESULT_MODIFIER_PROMPT,
+      ),
+    );
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'All Versions'),
+    );
+    await waitFor(() => getAllByText(resultModifierPromptPanel, 'Yes'));
+    await waitFor(() => getAllByText(resultModifierPromptPanel, 'Now'));
+    await waitFor(() =>
+      getAllByText(resultModifierPromptPanel, 'Business Date'),
+    );
+    expect(queryBuilderState.parametersState.parameterStates.length).toBe(1);
   },
 );

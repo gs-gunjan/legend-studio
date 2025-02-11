@@ -16,19 +16,10 @@
 
 import { action, computed, makeObservable, observable } from 'mobx';
 import type { QueryBuilderTDSState } from './QueryBuilderTDSState.js';
-import {
-  addUniqueEntry,
-  deleteEntry,
-  type Hashable,
-  hashArray,
-} from '@finos/legend-shared';
+import { addUniqueEntry, type Hashable, hashArray } from '@finos/legend-shared';
 import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../../QueryBuilderStateHashUtils.js';
 import type { QueryBuilderTDSColumnState } from './QueryBuilderTDSColumnState.js';
-
-export enum COLUMN_SORT_TYPE {
-  ASC = 'ASC',
-  DESC = 'DESC',
-}
+import { COLUMN_SORT_TYPE } from '../../../graph/QueryBuilderMetaModelConst.js';
 
 export class SortColumnState implements Hashable {
   columnState: QueryBuilderTDSColumnState;
@@ -69,6 +60,7 @@ export class QueryResultSetModifierState implements Hashable {
   limit?: number | undefined;
   distinct = false;
   sortColumns: SortColumnState[] = [];
+  slice: [number, number] | undefined;
 
   constructor(tdsState: QueryBuilderTDSState) {
     makeObservable(this, {
@@ -76,12 +68,15 @@ export class QueryResultSetModifierState implements Hashable {
       limit: observable,
       distinct: observable,
       sortColumns: observable,
+      slice: observable.ref,
       setShowModal: action,
       setLimit: action,
-      toggleDistinct: action,
-      deleteSortColumn: action,
+      setDistinct: action,
+      setSortColumns: action,
       addSortColumn: action,
       updateSortColumns: action,
+      setSlice: action,
+      reset: action,
       hashCode: computed,
     });
 
@@ -96,12 +91,12 @@ export class QueryResultSetModifierState implements Hashable {
     this.limit = val === undefined || val <= 0 ? undefined : val;
   }
 
-  toggleDistinct(): void {
-    this.distinct = !this.distinct;
+  setDistinct(val: boolean): void {
+    this.distinct = val;
   }
 
-  deleteSortColumn(val: SortColumnState): void {
-    deleteEntry(this.sortColumns, val);
+  setSortColumns(val: SortColumnState[]): void {
+    this.sortColumns = val;
   }
 
   addSortColumn(val: SortColumnState): void {
@@ -112,6 +107,16 @@ export class QueryResultSetModifierState implements Hashable {
     this.sortColumns = this.sortColumns.filter((colState) =>
       this.tdsState.tdsColumns.includes(colState.columnState),
     );
+  }
+
+  setSlice(slice: [number, number] | undefined): void {
+    this.slice = slice;
+  }
+
+  reset(): void {
+    this.sortColumns = [];
+    this.distinct = false;
+    this.limit = undefined;
   }
 
   get hashCode(): string {

@@ -44,6 +44,7 @@ import {
   type LambdaFunction,
   type ValueSpecification,
   type VariableExpression,
+  type EngineError,
   GRAPH_MANAGER_EVENT,
   extractSourceInformationCoordinates,
   LAMBDA_PIPE,
@@ -121,6 +122,7 @@ export class QueryBuilderTDSState
   isConvertDerivationProjectionObjects = false;
   showPostFilterPanel: boolean;
   showWindowFuncPanel = false;
+  useColFunc = false;
 
   postFilterOperators: QueryBuilderPostFilterOperator[] =
     getQueryBuilderCorePostFilterOperators();
@@ -138,20 +140,29 @@ export class QueryBuilderTDSState
     super(queryBuilderState, fetchStructureState);
 
     makeObservable(this, {
+      aggregationState: observable,
       projectionColumns: observable,
       isConvertDerivationProjectionObjects: observable,
       showPostFilterPanel: observable,
       showWindowFuncPanel: observable,
+      useColFunc: observable,
       TEMPORARY__showPostFetchStructurePanel: computed,
       derivations: computed,
       hasParserError: computed,
+      isQueryOptionsSet: computed,
       addColumn: action,
       moveColumn: action,
+      removeAllColumns: action,
+      removeColumn: action,
       replaceColumn: action,
       initialize: action,
+      initializeWithQuery: action,
       setShowPostFilterPanel: action,
       setShowWindowFuncPanel: action,
+      setUseColFunc: action,
+      checkBeforeChangingImplementation: action,
       convertDerivationProjectionObjects: flow,
+      fetchDerivedReturnTypes: flow,
     });
 
     this.resultSetModifierState = new QueryResultSetModifierState(this);
@@ -188,6 +199,14 @@ export class QueryBuilderTDSState
     return this.derivations.some(
       (derivation) => derivation.derivationLambdaEditorState.parserError,
     );
+  }
+
+  override get fetchLabel(): string {
+    return 'Columns';
+  }
+
+  override get canBeExportedToCube(): boolean {
+    return true;
   }
 
   override get TEMPORARY__showPostFetchStructurePanel(): boolean {
@@ -274,6 +293,14 @@ export class QueryBuilderTDSState
 
   get fetchStructureValidationIssues(): string[] {
     const validationIssues: string[] = [];
+
+    const hasEmptyProjectionColumnName = this.projectionColumns.some(
+      (column) => column.columnName.length === 0,
+    );
+    if (hasEmptyProjectionColumnName) {
+      validationIssues.push('Query has projection column with no name');
+    }
+
     const hasInValidCalendarAggregateColumns =
       this.aggregationState.columns.some(
         (column) =>
@@ -285,6 +312,7 @@ export class QueryBuilderTDSState
         'Query has calendar function with no date column specified',
       );
     }
+
     const hasDuplicatedProjectionColumns = this.projectionColumns.some(
       (column) =>
         this.projectionColumns.filter((c) => c.columnName === column.columnName)
@@ -292,13 +320,42 @@ export class QueryBuilderTDSState
     );
     if (hasDuplicatedProjectionColumns) {
       validationIssues.push('Query has duplicated projection columns');
-      return validationIssues;
     }
-    const hasNoProjectionColumns = this.projectionColumns.length === 0;
+
+    const hasDuplicatedProjectionWindowColumns = this.projectionColumns.some(
+      (column) =>
+        this.windowState.windowColumns.filter(
+          (c) => c.columnName === column.columnName,
+        ).length > 0,
+    );
+    if (hasDuplicatedProjectionWindowColumns) {
+      validationIssues.push('Query has duplicated projection/window columns');
+    }
+
+    const hasNoProjectionColumns =
+      this.projectionColumns.length === 0 &&
+      this.queryBuilderState.changeHistoryState.canUndo;
     if (hasNoProjectionColumns) {
       validationIssues.push('Query has no projection columns');
-      return validationIssues;
     }
+
+    this.projectionColumns.forEach((column) => {
+      if (
+        column instanceof QueryBuilderSimpleProjectionColumnState &&
+        column.propertyExpressionState.derivedPropertyExpressionStates.some(
+          (p) => !p.isValid,
+        )
+      ) {
+        validationIssues.push(
+          `Derived property parameter value for ${column.propertyExpressionState.title} is missing`,
+        );
+      }
+    });
+
+    this.aggregationState.allValidationIssues.forEach((issue) =>
+      validationIssues.push(issue),
+    );
+
     return validationIssues;
   }
 
@@ -306,9 +363,20 @@ export class QueryBuilderTDSState
     const fetchStructureValidationIssues = [
       ...this.fetchStructureValidationIssues,
       ...this.windowState.windowValidationIssues,
+      ...this.postFilterState.allValidationIssues,
     ];
 
     return fetchStructureValidationIssues;
+  }
+
+  get isQueryOptionsSet(): boolean {
+    return (
+      this.resultSetModifierState.limit !== undefined ||
+      this.queryBuilderState.milestoningState.isMilestonedQuery ||
+      this.resultSetModifierState.slice !== undefined ||
+      this.resultSetModifierState.sortColumns.length > 0 ||
+      this.resultSetModifierState.distinct
+    );
   }
 
   get tdsColumns(): QueryBuilderTDSColumnState[] {
@@ -357,6 +425,12 @@ export class QueryBuilderTDSState
     this.setShowWindowFuncPanel(false);
   }
 
+  override initializeWithQuery(): void {
+    flowResult(this.fetchDerivedReturnTypes()).catch(
+      this.queryBuilderState.applicationStore.alertUnhandledError,
+    );
+  }
+
   isColumnInUse(tdsCol: QueryBuilderTDSColumnState): boolean {
     return Boolean(
       [
@@ -390,6 +464,10 @@ export class QueryBuilderTDSState
 
   setShowWindowFuncPanel(val: boolean): void {
     this.showWindowFuncPanel = val;
+  }
+
+  setUseColFunc(val: boolean): void {
+    this.useColFunc = val;
   }
 
   *convertDerivationProjectionObjects(): GeneratorFn<void> {
@@ -451,7 +529,7 @@ export class QueryBuilderTDSState
       new QueryBuilderDerivationProjectionColumnState(
         this,
         guaranteeType(
-          this.queryBuilderState.graphManagerState.graphManager.buildRawValueSpecification(
+          this.queryBuilderState.graphManagerState.graphManager.transformValueSpecToRawValueSpec(
             columnColumnLambda,
             this.queryBuilderState.graphManagerState.graph,
           ),
@@ -465,7 +543,9 @@ export class QueryBuilderTDSState
     // convert to grammar for display
     flowResult(
       derivationColumnState.derivationLambdaEditorState.convertLambdaObjectToGrammarString(
-        false,
+        {
+          pretty: false,
+        },
       ),
     ).catch(this.queryBuilderState.applicationStore.alertUnhandledError);
   }
@@ -531,21 +611,19 @@ export class QueryBuilderTDSState
 
     if (!options?.skipSorting) {
       // sort columns: aggregate columns go last
-      this.projectionColumns = this.projectionColumns
-        .slice()
-        .sort(
-          (colA, colB) =>
-            (this.aggregationState.columns.find(
-              (column) => column.projectionColumnState === colA,
-            )
-              ? 1
-              : 0) -
-            (this.aggregationState.columns.find(
-              (column) => column.projectionColumnState === colB,
-            )
-              ? 1
-              : 0),
-        );
+      this.projectionColumns = this.projectionColumns.toSorted(
+        (colA, colB) =>
+          (this.aggregationState.columns.find(
+            (column) => column.projectionColumnState === colA,
+          )
+            ? 1
+            : 0) -
+          (this.aggregationState.columns.find(
+            (column) => column.projectionColumnState === colB,
+          )
+            ? 1
+            : 0),
+      );
     }
   }
 
@@ -738,7 +816,7 @@ export class QueryBuilderTDSState
       filterByType(QueryBuilderDerivationProjectionColumnState),
     );
     if (derivationColumns.length) {
-      // we will return false if any derivation cols are present as we can't verify is the variable is ued
+      // we will return false if any derivation cols are present as we can't verify is the variable is used
       return false;
     }
     const usedInProjection = columns
@@ -746,6 +824,23 @@ export class QueryBuilderTDSState
       .find((col) => col.isVariableUsed(variable));
     const usedInPostFilter = this.postFilterState.isVariableUsed(variable);
     return Boolean(usedInProjection ?? usedInPostFilter);
+  }
+
+  get hasInvalidFilterValues(): boolean {
+    return (
+      this.postFilterState.hasInvalidFilterValues ||
+      this.postFilterState.hasInvalidDerivedPropertyParameters
+    );
+  }
+
+  get hasInvalidDerivedPropertyParameters(): boolean {
+    return this.projectionColumns.some(
+      (column) =>
+        column instanceof QueryBuilderSimpleProjectionColumnState &&
+        column.propertyExpressionState.derivedPropertyExpressionStates.some(
+          (p) => !p.isValid,
+        ),
+    );
   }
 
   get hashCode(): string {
@@ -756,5 +851,38 @@ export class QueryBuilderTDSState
       this.postFilterState,
       this.resultSetModifierState,
     ]);
+  }
+
+  *fetchDerivedReturnTypes(): GeneratorFn<void> {
+    try {
+      const input = new Map<string, RawLambda>();
+      const graph = this.queryBuilderState.graphManagerState.graph;
+      const derivedCols = this.projectionColumns.filter(
+        filterByType(QueryBuilderDerivationProjectionColumnState),
+      );
+      derivedCols.forEach((col) =>
+        input.set(col.columnName, col.getIsolatedRawLambda()),
+      );
+      const result =
+        (yield this.queryBuilderState.graphManagerState.graphManager.getLambdasReturnType(
+          input,
+          graph,
+        )) as {
+          results: Map<string, string>;
+          errors: Map<string, EngineError>;
+        };
+      Array.from(result.results.entries()).forEach((res) => {
+        const col = derivedCols.find((d) => d.columnName === res[0]);
+        if (col) {
+          col.setLambdaReturnType(res[1]);
+        }
+      });
+    } catch (error) {
+      assertErrorThrown(error);
+      this.queryBuilderState.applicationStore.logService.info(
+        LogEvent.create('Unable to fetch derived return types'),
+        error,
+      );
+    }
   }
 }

@@ -1019,8 +1019,43 @@ export const TEST_DATA__ModelCoverageAnalysisResult_ComplexRelational = {
 export const TEST_DATA__ModelCoverageAnalysisResult_SimpleSubtype = {
   mappedEntities: [
     {
+      path: 'model::Colony',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'id',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'streetName',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zipcode',
+        },
+      ],
+    },
+    {
+      path: 'model::Firm',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'Name',
+        },
+        {
+          _type: 'entity',
+          entityPath: 'model::Person',
+          name: 'employees',
+        },
+      ],
+    },
+    {
       path: 'model::LegalEntity',
       properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'Name',
+        },
         {
           _type: 'entity',
           entityPath: 'model::Person',
@@ -1032,25 +1067,15 @@ export const TEST_DATA__ModelCoverageAnalysisResult_SimpleSubtype = {
           name: 'firm',
           subType: 'model::Firm',
         },
-        {
-          _type: 'MappedProperty',
-          name: 'Name',
-        },
       ],
     },
     {
       path: '@model::Firm',
       properties: [
         {
-          _type: 'entity',
-          entityPath: 'model::Person',
-          name: 'employees',
+          _type: 'MappedProperty',
+          name: 'Name',
         },
-      ],
-    },
-    {
-      path: 'model::Firm',
-      properties: [
         {
           _type: 'entity',
           entityPath: 'model::Person',
@@ -1062,14 +1087,24 @@ export const TEST_DATA__ModelCoverageAnalysisResult_SimpleSubtype = {
       path: 'model::Person',
       properties: [
         {
-          _type: 'MappedProperty',
-          name: 'lastName',
+          _type: 'entity',
+          entityPath: 'model::Colony',
+          name: 'address',
+          subType: 'model::Colony',
         },
         {
           _type: 'MappedProperty',
           name: 'firstName',
         },
+        {
+          _type: 'MappedProperty',
+          name: 'lastName',
+        },
       ],
+    },
+    {
+      path: 'model_Person_address',
+      properties: [],
     },
   ],
 };
@@ -1097,6 +1132,37 @@ export const TEST_DATA__ModelCoverageAnalysisResult_SimpleRelational = {
   ],
 };
 
+export const TEST_DATA__ModelCoverageAnalysisResult_CircularDependency = {
+  mappedEntities: [
+    {
+      path: 'my::Firm',
+      properties: [
+        { _type: 'MappedProperty', name: 'legalName' },
+        { _type: 'entity', entityPath: 'my::Person', name: 'employees' },
+        { _type: 'MappedProperty', name: 'id' },
+      ],
+    },
+    {
+      path: 'my::Person',
+      properties: [
+        { _type: 'MappedProperty', name: 'age' },
+        { _type: 'entity', entityPath: 'my::Firm', name: 'employer' },
+        { _type: 'MappedProperty', name: 'firmID' },
+        { _type: 'MappedProperty', name: 'firstName' },
+        { _type: 'entity', entityPath: 'my::Hobby', name: 'hobbies' },
+        { _type: 'MappedProperty', name: 'lastName' },
+      ],
+    },
+    {
+      path: 'my::Hobby',
+      properties: [
+        { _type: 'MappedProperty', name: 'id' },
+        { _type: 'MappedProperty', name: 'name' },
+      ],
+    },
+  ],
+};
+
 export const TEST_DATA__ModelCoverageAnalysisResult_HighlightProperties = {
   mappedEntities: [
     {
@@ -1119,11 +1185,144 @@ export const TEST_DATA__ModelCoverageAnalysisResult_HighlightProperties = {
 export const TEST_DATA__ModelCoverageAnalysisResult_NestedSubtype = {
   mappedEntities: [
     {
+      path: 'model::Address',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'streetName',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zip',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zipcode',
+        },
+        {
+          _type: 'entity',
+          entityPath: '@model::AddressType1',
+          name: 'addressType1',
+          subType: 'model::AddressType1',
+        },
+      ],
+    },
+    {
+      path: '@model::AddressType1',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'streetName',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zip',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zipcode',
+        },
+        {
+          _type: 'entity',
+          entityPath: '@model::AddressType2',
+          name: 'addressType2',
+          subType: 'model::AddressType2',
+        },
+        {
+          _type: 'entity',
+          entityPath: '@model::AddressType3',
+          name: 'addressType3',
+          subType: 'model::AddressType3',
+        },
+      ],
+    },
+    {
+      path: '@model::AddressType2',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'streetName',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zip',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zipcode',
+        },
+      ],
+    },
+    {
+      path: '@model::AddressType3',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'streetName',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zipcode',
+        },
+      ],
+    },
+    {
+      path: 'model::AddressType1',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'streetName',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zip',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zipcode',
+        },
+        {
+          _type: 'entity',
+          entityPath: '@model::AddressType2',
+          name: 'addressType2',
+          subType: 'model::AddressType2',
+        },
+        {
+          _type: 'entity',
+          entityPath: '@model::AddressType3',
+          name: 'addressType3',
+          subType: 'model::AddressType3',
+        },
+      ],
+    },
+    {
       path: 'model::AddressType2',
       properties: [
-        { _type: 'MappedProperty', name: 'streetName' },
-        { _type: 'MappedProperty', name: 'zip' },
-        { _type: 'MappedProperty', name: 'zipcode' },
+        {
+          _type: 'MappedProperty',
+          name: 'streetName',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zip',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zipcode',
+        },
+      ],
+    },
+    {
+      path: 'model::AddressType3',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'streetName',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'zipcode',
+        },
       ],
     },
     {
@@ -1131,12 +1330,51 @@ export const TEST_DATA__ModelCoverageAnalysisResult_NestedSubtype = {
       properties: [
         {
           _type: 'entity',
-          entityPath: 'model::AddressType2',
+          entityPath: 'model::Address',
           name: 'address',
-          subType: 'model::AddressType2',
         },
-        { _type: 'MappedProperty', name: 'name' },
+        {
+          _type: 'MappedProperty',
+          name: 'name',
+        },
       ],
+    },
+  ],
+};
+
+export const TEST_DATA__ModelCoverageAnalysisResult_MultiMappedNestedSubtype = {
+  mappedEntities: [
+    {
+      path: 'model::Firm',
+      properties: [
+        { _type: 'MappedProperty', name: 'name' },
+        {
+          _type: 'entity',
+          entityPath: 'pos',
+          name: 'position',
+          subType: 'model::SubPosition',
+        },
+      ],
+    },
+    {
+      path: 'model::SubPosition',
+      properties: [
+        { _type: 'entity', entityPath: 'model::Firm', name: 'firm' },
+        { _type: 'MappedProperty', name: 'rank' },
+        { _type: 'MappedProperty', name: 'subName' },
+      ],
+    },
+    {
+      path: 'pos',
+      properties: [
+        { _type: 'entity', entityPath: 'model::Firm', name: 'firm' },
+        { _type: 'MappedProperty', name: 'rank' },
+        { _type: 'MappedProperty', name: 'subName' },
+      ],
+    },
+    {
+      path: 'pos2',
+      properties: [{ _type: 'MappedProperty', name: 'subName' }],
     },
   ],
 };
@@ -1190,6 +1428,416 @@ export const TEST_DATA__ModelCoverageAnalysisResult_SimpleRelationalResult = {
       properties: [
         { _type: 'MappedProperty', name: 'from' },
         { _type: 'MappedProperty', name: 'thru' },
+      ],
+    },
+  ],
+};
+
+export const TEST_DATA__ModelCoverageAnalysisResult_SimpleRelationalWithExists =
+  {
+    mappedEntities: [
+      {
+        path: 'model::Address',
+        properties: [
+          {
+            _type: 'MappedProperty',
+            name: 'pincode',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'streetName',
+          },
+        ],
+      },
+      {
+        path: 'model::Firm',
+        properties: [
+          {
+            _type: 'entity',
+            entityPath: 'model::Address',
+            name: 'address',
+          },
+          {
+            _type: 'entity',
+            entityPath: 'model::Person',
+            name: 'contractors',
+          },
+          {
+            _type: 'entity',
+            entityPath: 'model::Person',
+            name: 'employees',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'id',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'legalName',
+          },
+        ],
+      },
+      {
+        path: 'model::Hobby',
+        properties: [
+          {
+            _type: 'MappedProperty',
+            name: 'id',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'name',
+          },
+        ],
+      },
+      {
+        path: 'model::Person',
+        properties: [
+          {
+            _type: 'MappedProperty',
+            name: 'firstName',
+          },
+          {
+            _type: 'entity',
+            entityPath: 'model::Hobby',
+            name: 'hobbies',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'lastName',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'isActive',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'prependedName',
+          },
+        ],
+      },
+      {
+        path: 'model_Address_milestoning',
+        properties: [
+          {
+            _type: 'MappedProperty',
+            name: 'from',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'thru',
+          },
+        ],
+      },
+    ],
+  };
+
+export const TEST_DATA__ModelCoverageAnalysisResult_SimpleRelationalWithDates =
+  {
+    mappedEntities: [
+      {
+        path: 'model::Person',
+        properties: [
+          {
+            _type: 'MappedProperty',
+            name: 'age',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'dobDate',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'dobStrictDate',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'dobTime',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'firstName',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'lastName',
+          },
+        ],
+      },
+    ],
+  };
+
+export const TEST_DATA__ModelCoverageAnalysisResult_Milestoning = {
+  mappedEntities: [
+    {
+      path: 'my::Firm',
+      properties: [
+        {
+          _type: 'entity',
+          entityPath: 'my::Person1',
+          name: 'biTemporal',
+        },
+        {
+          _type: 'entity',
+          entityPath: 'my::Person',
+          name: 'businessTemporal',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'firmID',
+        },
+        {
+          _type: 'entity',
+          entityPath: 'my::Person2',
+          name: 'processingTemporal',
+        },
+      ],
+    },
+    {
+      path: 'my::Person',
+      properties: [
+        {
+          _type: 'entity',
+          entityPath: 'my::Person1',
+          name: 'biTemporal',
+        },
+        {
+          _type: 'entity',
+          entityPath: 'my::Person',
+          name: 'businessTemporal',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'date',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'firmID',
+        },
+        {
+          _type: 'entity',
+          entityPath: 'my::Person2',
+          name: 'processingTemporal',
+        },
+      ],
+    },
+    {
+      path: 'my::Person1',
+      properties: [
+        {
+          _type: 'entity',
+          entityPath: 'my::Person1',
+          name: 'biTemporal',
+        },
+        {
+          _type: 'entity',
+          entityPath: 'my::Person',
+          name: 'businessTemporal',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'firmID',
+        },
+        {
+          _type: 'entity',
+          entityPath: 'my::Person2',
+          name: 'processingTemporal',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'prop',
+        },
+      ],
+    },
+    {
+      path: 'my::Person2',
+      properties: [
+        {
+          _type: 'entity',
+          entityPath: 'my::Person1',
+          name: 'biTemporal',
+        },
+        {
+          _type: 'entity',
+          entityPath: 'my::Person',
+          name: 'businessTemporal',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'firmID',
+        },
+        {
+          _type: 'entity',
+          entityPath: 'my::Person2',
+          name: 'processingTemporal',
+        },
+      ],
+    },
+    {
+      path: 'my_Person_milestoning',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'from',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'thru',
+        },
+      ],
+    },
+    {
+      path: 'my_Person1_milestoning',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'from',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'in',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'out',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'thru',
+        },
+      ],
+    },
+    {
+      path: 'my_Person2_milestoning',
+      properties: [
+        {
+          _type: 'MappedProperty',
+          name: 'in',
+        },
+        {
+          _type: 'MappedProperty',
+          name: 'out',
+        },
+      ],
+    },
+  ],
+};
+
+export const TEST_DATA__ModelCoverageAnalysisResult_SimpleRelationalWithDerivedPropFromParentUsedInFilter =
+  {
+    mappedEntities: [
+      {
+        path: 'model::Address',
+        properties: [
+          {
+            _type: 'MappedProperty',
+            name: 'pincode',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'streetName',
+          },
+        ],
+      },
+      {
+        path: 'model::Firm',
+        properties: [
+          {
+            _type: 'entity',
+            entityPath: 'model::Address',
+            name: 'address',
+          },
+          {
+            _type: 'entity',
+            entityPath: 'model::Person',
+            name: 'contractors',
+          },
+          {
+            _type: 'entity',
+            entityPath: 'model::Person',
+            name: 'employees',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'id',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'legalName',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'derivedPropFromParent',
+          },
+        ],
+      },
+      {
+        path: 'model::Hobby',
+        properties: [
+          {
+            _type: 'MappedProperty',
+            name: 'id',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'name',
+          },
+        ],
+      },
+      {
+        path: 'model::Person',
+        properties: [
+          {
+            _type: 'MappedProperty',
+            name: 'firstName',
+          },
+          {
+            _type: 'entity',
+            entityPath: 'model::Hobby',
+            name: 'hobbies',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'lastName',
+          },
+        ],
+      },
+      {
+        path: 'model_Address_milestoning',
+        properties: [
+          {
+            _type: 'MappedProperty',
+            name: 'from',
+          },
+          {
+            _type: 'MappedProperty',
+            name: 'thru',
+          },
+        ],
+      },
+    ],
+  };
+
+export const TEST_DATA__ModelCoverageAnalysisResult_QueryExecution_Entities = {
+  mappedEntities: [
+    {
+      path: 'model::Firm',
+      properties: [
+        { _type: 'entity', entityPath: 'model::Person', name: 'employees' },
+        { _type: 'enum', enumPath: 'model::IncType', name: 'incType' },
+        { _type: 'MappedProperty', name: 'isApple' },
+        { _type: 'MappedProperty', name: 'legalName' },
+        { _type: 'MappedProperty', name: 'employeeSizes' },
+        { _type: 'MappedProperty', name: 'averageAge' },
+      ],
+    },
+    {
+      path: 'model::Person',
+      properties: [
+        { _type: 'MappedProperty', name: 'age' },
+        { _type: 'MappedProperty', name: 'firstName' },
+        { _type: 'MappedProperty', name: 'lastName' },
+        { _type: 'MappedProperty', name: 'fullName' },
       ],
     },
   ],

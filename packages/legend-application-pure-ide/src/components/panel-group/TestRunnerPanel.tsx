@@ -81,9 +81,9 @@ import {
 import {
   CODE_EDITOR_LANGUAGE,
   CODE_EDITOR_THEME,
-  disposeCodeEditor,
-  getBaseConsoleOptions,
-} from '@finos/legend-lego/code-editor';
+  getBaseCodeEditorOptions,
+} from '@finos/legend-code-editor';
+import { disposeCodeEditor } from '@finos/legend-lego/code-editor';
 
 const TestTreeNodeContainer = observer(
   (
@@ -360,7 +360,26 @@ const TestResultConsole: React.FC<{
     if (!editor && textInputRef.current) {
       const element = textInputRef.current;
       const newEditor = monacoEditorAPI.create(element, {
-        ...getBaseConsoleOptions(),
+        ...getBaseCodeEditorOptions(),
+        fontSize: 12,
+        extraEditorClassName: 'monaco-editor--small-font',
+        readOnly: true,
+        glyphMargin: false,
+        folding: false,
+        lineNumbers: 'off',
+        lineDecorationsWidth: 10,
+        lineNumbersMinChars: 0,
+        minimap: {
+          enabled: false,
+        },
+        guides: {
+          bracketPairs: false,
+          bracketPairsHorizontal: false,
+          highlightActiveBracketPair: false,
+          indentation: false,
+          highlightActiveIndentation: false,
+        },
+        renderLineHighlight: 'none',
         theme: CODE_EDITOR_THEME.DEFAULT_DARK,
         language: CODE_EDITOR_LANGUAGE.TEXT,
       });
@@ -380,7 +399,6 @@ const TestResultConsole: React.FC<{
               model.getLineContent(i).matchAll(TEST_ERROR_LOCATION_PATTERN),
             ).forEach((match) => {
               if (
-                match.index !== undefined &&
                 match.groups?.path &&
                 match.groups.path_sourceId &&
                 match.groups.path_column &&
@@ -431,8 +449,8 @@ const TestResultConsole: React.FC<{
         result instanceof TestSuccessResult
           ? 'Test passed!'
           : result instanceof TestFailureResult
-          ? result.error.text
-          : 'Running...';
+            ? result.error.text
+            : 'Running...';
       editor.setValue(value);
       // color text based on test result/status
       if (
@@ -546,6 +564,10 @@ const TestRunnerResultDisplay = observer(
     const ideStore = usePureIDEStore();
     const applicationStore = useApplicationStore();
     const numberOfTests = testRunnerState.testExecutionResult.count;
+    const pctAdapter = ideStore.PCTAdapters.find(
+      (adapter) =>
+        adapter.func === testRunnerState.testExecutionResult.pctAdapter,
+    );
     const testResultInfo = testRunnerState.testResultInfo;
     const overallResult = testResultInfo?.suiteStatus ?? TestSuiteStatus.NONE;
     const runPercentage = testResultInfo?.runPercentage ?? 0;
@@ -600,6 +622,9 @@ const TestRunnerResultDisplay = observer(
                       <div className="test-runner-panel__explorer__report__time">
                         {testResultInfo.time}ms
                       </div>
+                    )}
+                    {pctAdapter !== undefined && (
+                      <div className="test-runner-panel__explorer__report__pct">{`PCT: ${pctAdapter.name}`}</div>
                     )}
                   </div>
                 </div>

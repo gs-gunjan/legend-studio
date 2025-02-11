@@ -33,6 +33,7 @@ import {
   guaranteeIsString,
   isString,
   isPlainObject,
+  optionalCustom,
 } from '@finos/legend-shared';
 import { V1_Variable } from '../../../model/valueSpecification/V1_Variable.js';
 import { V1_RootGraphFetchTree } from '../../../model/valueSpecification/raw/classInstance/graph/V1_RootGraphFetchTree.js';
@@ -64,6 +65,9 @@ import { V1_TDSColumnInformation } from '../../../model/valueSpecification/raw/c
 import { V1_TDSSortInformation } from '../../../model/valueSpecification/raw/classInstance/V1_TDSSortInformation.js';
 import { V1_TDSOlapRank } from '../../../model/valueSpecification/raw/classInstance/V1_TDSOlapRank.js';
 import { V1_TDSOlapAggregation } from '../../../model/valueSpecification/raw/classInstance/V1_TDSOlapAggregation.js';
+import { V1_ColSpecArray } from '../../../model/valueSpecification/raw/classInstance/relation/V1_ColSpecArray.js';
+import { V1_ColSpec } from '../../../model/valueSpecification/raw/classInstance/relation/V1_ColSpec.js';
+import { V1_RelationStoreAccessor } from '../../../model/valueSpecification/raw/classInstance/relation/V1_RelationStoreAccessor.js';
 import { V1_multiplicityModelSchema } from './V1_CoreSerializationHelper.js';
 import type {
   V1_ValueSpecification,
@@ -86,6 +90,11 @@ import { V1_Multiplicity } from '../../../model/packageableElements/domain/V1_Mu
 import type { PureProtocolProcessorPlugin } from '../../../../PureProtocolProcessorPlugin.js';
 import { V1_ClassInstance } from '../../../model/valueSpecification/raw/V1_ClassInstance.js';
 import { V1_CByteArray } from '../../../model/valueSpecification/raw/V1_CByteArray.js';
+import {
+  V1_deserializeGenericType,
+  V1_genericTypeModelSchema,
+} from './V1_TypeSerializationHelper.js';
+import { V1_createGenericTypeWithElementPath } from '../../../helpers/V1_DomainHelper.js';
 
 enum V1_ExecutionContextType {
   BASE_EXECUTION_CONTEXT = 'BaseExecutionContext',
@@ -111,6 +120,10 @@ export enum V1_ClassInstanceType {
   PURE_LIST = 'listInstance',
   RUNTIME_INSTANCE = 'runtimeInstance',
   SERIALIZATION_CONFIG = 'alloySerializationConfig',
+
+  COL_SPEC = 'colSpec',
+  COL_SPEC_ARRAY = 'colSpecArray',
+  RELATION_STORE_ACCESSOR = '>',
 
   TDS_AGGREGATE_VALUE = 'tdsAggregateValue',
   TDS_COLUMN_INFORMATION = 'tdsColumnInformation',
@@ -157,14 +170,30 @@ enum V1_ValueSpecificationType {
 
 // ---------------------------------------- Value Specification --------------------------------------
 
-const variableModelSchema = createModelSchema(V1_Variable, {
+export const V1_variableModelSchema = createModelSchema(V1_Variable, {
   _type: usingConstantValueSchema(V1_ValueSpecificationType.VARIABLE),
-  class: optional(primitive()),
+  genericType: optionalCustom(
+    (val) => serialize(V1_genericTypeModelSchema, val),
+    (val) => V1_deserializeGenericType(val),
+    {
+      beforeDeserialize: function (callback, jsonValue, jsonParentValue) {
+        /** @backwardCompatibility */
+        if (
+          jsonParentValue.class !== undefined &&
+          jsonParentValue.genericType === undefined
+        ) {
+          callback(null, jsonParentValue.class);
+        } else {
+          callback(null, jsonParentValue.genericType);
+        }
+      },
+    },
+  ),
   multiplicity: usingModelSchema(V1_multiplicityModelSchema),
   name: primitive(),
 });
 
-const lambdaModelSchema = (
+export const V1_lambdaModelSchema = (
   plugins: PureProtocolProcessorPlugin[],
 ): ModelSchema<V1_Lambda> =>
   createModelSchema(V1_Lambda, {
@@ -175,7 +204,7 @@ const lambdaModelSchema = (
         (val) => V1_deserializeValueSpecification(val, plugins),
       ),
     ),
-    parameters: list(usingModelSchema(variableModelSchema)),
+    parameters: list(usingModelSchema(V1_variableModelSchema)),
   });
 
 const keyExpressionModelSchema = (
@@ -223,47 +252,62 @@ const appliedPropertyModelSchema = (
     property: primitive(),
   });
 
-const packageableElementPtrSchema = createModelSchema(
-  V1_PackageableElementPtr,
-  {
+export const V1_packageableElementPtrSchema = (isType?: boolean) =>
+  createModelSchema(V1_PackageableElementPtr, {
     _type: usingConstantValueSchema(
       V1_ValueSpecificationType.PACKAGEABLE_ELEMENT_PTR,
     ),
     fullPath: primitive(),
-  },
-);
+  });
 
-const genericTypeInstanceSchema = createModelSchema(V1_GenericTypeInstance, {
-  _type: usingConstantValueSchema(
-    V1_ValueSpecificationType.GENERIC_TYPE_INSTANCE,
-  ),
-  fullPath: primitive(),
-});
+const genericTypeInstanceSchema = (plugins: PureProtocolProcessorPlugin[]) =>
+  createModelSchema(V1_GenericTypeInstance, {
+    _type: usingConstantValueSchema(
+      V1_ValueSpecificationType.GENERIC_TYPE_INSTANCE,
+    ),
+    genericType: custom(
+      (val) => serialize(V1_genericTypeModelSchema, val),
+      (val) => V1_deserializeGenericType(val),
+      {
+        beforeDeserialize: function (callback, jsonValue, jsonParentValue) {
+          /** @backwardCompatibility */
+          if (
+            jsonParentValue.fullPath !== undefined &&
+            jsonParentValue.genericType === undefined
+          ) {
+            callback(null, jsonParentValue.fullPath);
+          } else {
+            callback(null, jsonParentValue.genericType);
+          }
+        },
+      },
+    ),
+  });
 
-/**
- * @backwardCompatibility
- */
+/** @backwardCompatibility */
 const deserializeHackedUnit = (json: PlainObject): V1_GenericTypeInstance => {
   const protocol = new V1_GenericTypeInstance();
   if (isString(json.unitType)) {
-    protocol.fullPath = json.unitType;
+    protocol.genericType = V1_createGenericTypeWithElementPath(json.unitType);
   } else {
-    protocol.fullPath = guaranteeIsString(
-      json.fullPath,
-      `Can't deserialize hacked unit: either field 'fullPath' or 'unitType' must be a non-empty string`,
+    protocol.genericType = V1_createGenericTypeWithElementPath(
+      guaranteeIsString(
+        json.fullPath,
+        `Can't deserialize hacked unit: either field 'fullPath' or 'unitType' must be a non-empty string`,
+      ),
     );
   }
   return protocol;
 };
 
-/**
- * @backwardCompatibility
- */
+/** @backwardCompatibility */
 const deserializeHackedClass = (json: PlainObject): V1_GenericTypeInstance => {
   const protocol = new V1_GenericTypeInstance();
-  protocol.fullPath = guaranteeIsString(
-    json.fullPath,
-    `Can't deserialize hacked class: field 'fullPath' must be a non-empty string`,
+  protocol.genericType = V1_createGenericTypeWithElementPath(
+    guaranteeIsString(
+      json.fullPath,
+      `Can't deserialize hacked class: field 'fullPath' must be a non-empty string`,
+    ),
   );
   return protocol;
 };
@@ -337,9 +381,7 @@ const CByteArrayModelSchema = createModelSchema(V1_CByteArray, {
   value: primitive(),
 });
 
-/**
- * @backwardCompatibility
- */
+/** @backwardCompatibility */
 const deserializePrimitiveValueSpecification = <
   T extends V1_PrimitiveValueSpecification,
 >(
@@ -482,6 +524,12 @@ const propertyGraphFetchTreeModelSchema = (
         (val) => V1_deserializeGraphFetchTree(val, plugins),
       ),
     ),
+    subTypeTrees: list(
+      custom(
+        (val) => V1_serializeGraphFetchTree(val, plugins),
+        (val) => V1_deserializeGraphFetchTree(val, plugins),
+      ),
+    ),
     subType: optional(primitive()),
   });
 
@@ -501,10 +549,20 @@ const subTypeGraphFetchTreeModelSchema = (
     subTypeClass: primitive(),
   });
 
-function V1_serializeGraphFetchTree(
+export function V1_serializeGraphFetchTree(
   protocol: V1_GraphFetchTree,
   plugins: PureProtocolProcessorPlugin[],
 ): PlainObject<V1_GraphFetchTree> {
+  // we have further subtypes of Property and RootGraph Tree so we should look at the extensions first
+  const serializers = plugins.flatMap(
+    (plugin) => plugin.V1_getExtraGraphFetchProtocolSerializers?.() ?? [],
+  );
+  for (const serializer of serializers) {
+    const json = serializer(protocol, plugins);
+    if (json) {
+      return json;
+    }
+  }
   if (protocol instanceof V1_PropertyGraphFetchTree) {
     return serialize(propertyGraphFetchTreeModelSchema(plugins), protocol);
   } else if (protocol instanceof V1_RootGraphFetchTree) {
@@ -513,12 +571,12 @@ function V1_serializeGraphFetchTree(
     return serialize(subTypeGraphFetchTreeModelSchema(plugins), protocol);
   }
   throw new UnsupportedOperationError(
-    `Can't serialize graph fetch tree`,
+    `Can't serialize graph fetch tree: no compatible serializer available from plugins`,
     protocol,
   );
 }
 
-function V1_deserializeGraphFetchTree(
+export function V1_deserializeGraphFetchTree(
   json: PlainObject<V1_GraphFetchTree>,
   plugins: PureProtocolProcessorPlugin[],
 ): V1_GraphFetchTree {
@@ -529,10 +587,20 @@ function V1_deserializeGraphFetchTree(
       return deserialize(rootGraphFetchTreeModelSchema(plugins), json);
     case V1_ClassInstanceType.SUBTYPE_GRAPH_FETCH_TREE:
       return deserialize(subTypeGraphFetchTreeModelSchema(plugins), json);
-    default:
-      throw new UnsupportedOperationError(
-        `Can't deserialize graph fetch tree node of type '${json._type}'`,
+    default: {
+      const deserializers = plugins.flatMap(
+        (plugin) => plugin.V1_getExtraGraphFetchProtocolDeserializers?.() ?? [],
       );
+      for (const deserializer of deserializers) {
+        const protocol = deserializer(json, plugins);
+        if (protocol) {
+          return protocol;
+        }
+      }
+      throw new UnsupportedOperationError(
+        `Can't deserialize graph fetch tree node of type '${json._type}': no compatible deserializer available from plugins`,
+      );
+    }
   }
 }
 
@@ -547,7 +615,7 @@ const analyticsExecutionContextModelSchema = (
     ),
     enableConstraints: optional(primitive()),
     queryTimeOutInSeconds: optional(primitive()),
-    toFlowSetFunction: usingModelSchema(lambdaModelSchema(plugins)),
+    toFlowSetFunction: usingModelSchema(V1_lambdaModelSchema(plugins)),
     useAnalytics: primitive(),
   });
 
@@ -607,8 +675,8 @@ const aggregationValueModelSchema = (
 ): ModelSchema<V1_AggregateValue> =>
   createModelSchema(V1_AggregateValue, {
     _type: usingConstantValueSchema(V1_ClassInstanceType.AGGREGATE_VALUE),
-    mapFn: usingModelSchema(lambdaModelSchema(plugins)),
-    aggregateFn: usingModelSchema(lambdaModelSchema(plugins)),
+    mapFn: usingModelSchema(V1_lambdaModelSchema(plugins)),
+    aggregateFn: usingModelSchema(V1_lambdaModelSchema(plugins)),
   });
 
 const pairModelSchema = (
@@ -669,8 +737,8 @@ const tdsAggregrateValueModelSchema = (
   createModelSchema(V1_TDSAggregateValue, {
     _type: usingConstantValueSchema(V1_ClassInstanceType.TDS_AGGREGATE_VALUE),
     name: primitive(),
-    pmapFn: usingModelSchema(lambdaModelSchema(plugins)),
-    aggregateFn: usingModelSchema(lambdaModelSchema(plugins)),
+    pmapFn: usingModelSchema(V1_lambdaModelSchema(plugins)),
+    aggregateFn: usingModelSchema(V1_lambdaModelSchema(plugins)),
   });
 
 const tdsColumnInformationModelSchema = (
@@ -681,7 +749,7 @@ const tdsColumnInformationModelSchema = (
       V1_ClassInstanceType.TDS_COLUMN_INFORMATION,
     ),
     name: primitive(),
-    columnFn: usingModelSchema(lambdaModelSchema(plugins)),
+    columnFn: usingModelSchema(V1_lambdaModelSchema(plugins)),
   });
 
 const tdsSortInformationModelSchema = createModelSchema(V1_TDSSortInformation, {
@@ -690,12 +758,36 @@ const tdsSortInformationModelSchema = createModelSchema(V1_TDSSortInformation, {
   direction: primitive(),
 });
 
+const relationStoreAccessorModelSchema = createModelSchema(
+  V1_RelationStoreAccessor,
+  {
+    path: list(primitive()),
+  },
+);
+
+const colSpecModelSchema = (
+  plugins: PureProtocolProcessorPlugin[],
+): ModelSchema<V1_ColSpec> =>
+  createModelSchema(V1_ColSpec, {
+    function1: optional(usingModelSchema(V1_lambdaModelSchema(plugins))),
+    function2: optional(usingModelSchema(V1_lambdaModelSchema(plugins))),
+    name: primitive(),
+    type: optional(primitive()),
+  });
+
+const colSpecArrayModelSchema = (
+  plugins: PureProtocolProcessorPlugin[],
+): ModelSchema<V1_ColSpecArray> =>
+  createModelSchema(V1_ColSpecArray, {
+    colSpecs: list(usingModelSchema(colSpecModelSchema(plugins))),
+  });
+
 const tdsOlapRankModelSchema = (
   plugins: PureProtocolProcessorPlugin[],
 ): ModelSchema<V1_TDSOlapRank> =>
   createModelSchema(V1_TDSOlapRank, {
     _type: usingConstantValueSchema(V1_ClassInstanceType.TDS_OLAP_RANK),
-    function: usingModelSchema(lambdaModelSchema(plugins)),
+    function: usingModelSchema(V1_lambdaModelSchema(plugins)),
   });
 
 const tdsOlapAggregationModelSchema = (
@@ -703,7 +795,7 @@ const tdsOlapAggregationModelSchema = (
 ): ModelSchema<V1_TDSOlapAggregation> =>
   createModelSchema(V1_TDSOlapAggregation, {
     _type: usingConstantValueSchema(V1_ClassInstanceType.TDS_OLAP_AGGREGATION),
-    function: usingModelSchema(lambdaModelSchema(plugins)),
+    function: usingModelSchema(V1_lambdaModelSchema(plugins)),
     columnName: primitive(),
   });
 
@@ -739,6 +831,12 @@ export function V1_deserializeClassInstanceValue(
       return deserialize(tdsOlapRankModelSchema(plugins), json);
     case V1_ClassInstanceType.TDS_SORT_INFORMATION:
       return deserialize(tdsSortInformationModelSchema, json);
+    case V1_ClassInstanceType.COL_SPEC:
+      return deserialize(colSpecModelSchema(plugins), json);
+    case V1_ClassInstanceType.COL_SPEC_ARRAY:
+      return deserialize(colSpecArrayModelSchema(plugins), json);
+    case V1_ClassInstanceType.RELATION_STORE_ACCESSOR:
+      return deserialize(relationStoreAccessorModelSchema, json);
     default: {
       const deserializers = plugins.flatMap(
         (plugin) =>
@@ -787,6 +885,12 @@ export function V1_serializeClassInstanceValue(
     return serialize(tdsOlapRankModelSchema(plugins), protocol);
   } else if (protocol instanceof V1_TDSSortInformation) {
     return serialize(tdsSortInformationModelSchema, protocol);
+  } else if (protocol instanceof V1_ColSpec) {
+    return serialize(colSpecModelSchema(plugins), protocol);
+  } else if (protocol instanceof V1_ColSpecArray) {
+    return serialize(colSpecArrayModelSchema(plugins), protocol);
+  } else if (protocol instanceof V1_RelationStoreAccessor) {
+    return serialize(relationStoreAccessorModelSchema, protocol);
   }
   const serializers = plugins.flatMap(
     (plugin) =>
@@ -824,13 +928,13 @@ class V1_ValueSpecificationSerializer
   visit_Variable(
     valueSpecification: V1_Variable,
   ): PlainObject<V1_ValueSpecification> {
-    return serialize(variableModelSchema, valueSpecification);
+    return serialize(V1_variableModelSchema, valueSpecification);
   }
 
   visit_Lambda(
     valueSpecification: V1_Lambda,
   ): PlainObject<V1_ValueSpecification> {
-    return serialize(lambdaModelSchema(this.plugins), valueSpecification);
+    return serialize(V1_lambdaModelSchema(this.plugins), valueSpecification);
   }
 
   visit_KeyExpression(
@@ -845,13 +949,16 @@ class V1_ValueSpecificationSerializer
   visit_PackageableElementPtr(
     valueSpecification: V1_PackageableElementPtr,
   ): PlainObject<V1_ValueSpecification> {
-    return serialize(packageableElementPtrSchema, valueSpecification);
+    return serialize(V1_packageableElementPtrSchema(), valueSpecification);
   }
 
   visit_GenericTypeInstance(
     valueSpecification: V1_GenericTypeInstance,
   ): PlainObject<V1_ValueSpecification> {
-    return serialize(genericTypeInstanceSchema, valueSpecification);
+    return serialize(
+      genericTypeInstanceSchema(this.plugins),
+      valueSpecification,
+    );
   }
 
   visit_AppliedFunction(
@@ -964,9 +1071,9 @@ export function V1_deserializeValueSpecification(
     case V1_ValueSpecificationType.APPLIED_PROPERTY:
       return deserialize(appliedPropertyModelSchema(plugins), json);
     case V1_ValueSpecificationType.VARIABLE:
-      return deserialize(variableModelSchema, json);
+      return deserialize(V1_variableModelSchema, json);
     case V1_ValueSpecificationType.LAMBDA:
-      return deserialize(lambdaModelSchema(plugins), json);
+      return deserialize(V1_lambdaModelSchema(plugins), json);
     case V1_ValueSpecificationType.KEY_EXPRESSION:
       return deserialize(keyExpressionModelSchema(plugins), json);
     case V1_ValueSpecificationType.COLLECTION:
@@ -1068,9 +1175,9 @@ export function V1_deserializeValueSpecification(
     case V1_ValueSpecificationType.CLASS: // deprecated
     case V1_ValueSpecificationType.MAPPING_INSTANCE: // deprecated
     case V1_ValueSpecificationType.PACKAGEABLE_ELEMENT_PTR:
-      return deserialize(packageableElementPtrSchema, json);
+      return deserialize(V1_packageableElementPtrSchema(), json);
     case V1_ValueSpecificationType.GENERIC_TYPE_INSTANCE:
-      return deserialize(genericTypeInstanceSchema, json);
+      return deserialize(genericTypeInstanceSchema(plugins), json);
     default:
       throw new UnsupportedOperationError(
         `Can't deserialize value specification of type '${json._type}'`,

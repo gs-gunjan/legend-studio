@@ -22,20 +22,11 @@ import { QueryBuilderFilterOperator } from '../QueryBuilderFilterOperator.js';
 import {
   type ValueSpecification,
   type SimpleFunctionExpression,
-  type Enum,
   type AbstractPropertyExpression,
-  EnumValueInstanceValue,
-  GenericTypeExplicitReference,
-  GenericType,
-  EnumValueExplicitReference,
   Enumeration,
   PRIMITIVE_TYPE,
 } from '@finos/legend-graph';
-import {
-  type Hashable,
-  hashArray,
-  UnsupportedOperationError,
-} from '@finos/legend-shared';
+import { type Hashable, hashArray } from '@finos/legend-shared';
 import {
   buildFilterConditionState,
   buildFilterConditionExpression,
@@ -43,20 +34,17 @@ import {
 import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../../graph/QueryBuilderMetaModelConst.js';
 import {
   buildNotExpression,
-  generateDefaultValueForPrimitiveType,
-  getNonCollectionValueSpecificationType,
   isTypeCompatibleForAssignment,
   unwrapNotExpression,
 } from '../../QueryBuilderValueSpecificationHelper.js';
 import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../../QueryBuilderStateHashUtils.js';
-import { buildPrimitiveInstanceValue } from '../../shared/ValueSpecificationEditorHelper.js';
-import { instanceValue_setValues } from '../../shared/ValueSpecificationModifierHelper.js';
+import { buildDefaultInstanceValue } from '../../shared/ValueSpecificationEditorHelper.js';
 
 export class QueryBuilderFilterOperator_Equal
   extends QueryBuilderFilterOperator
   implements Hashable
 {
-  getLabel(filterConditionState: FilterConditionState): string {
+  getLabel(): string {
     return 'is';
   }
 
@@ -89,8 +77,9 @@ export class QueryBuilderFilterOperator_Equal
     filterConditionState: FilterConditionState,
   ): boolean {
     return isTypeCompatibleForAssignment(
-      filterConditionState.value
-        ? getNonCollectionValueSpecificationType(filterConditionState.value)
+      filterConditionState.rightConditionValue &&
+        !filterConditionState.rightConditionValue.isCollection
+        ? filterConditionState.rightConditionValue.type
         : undefined,
       filterConditionState.propertyExpressionState.propertyExpression.func.value
         .genericType.value.rawType,
@@ -103,77 +92,29 @@ export class QueryBuilderFilterOperator_Equal
     const propertyType =
       filterConditionState.propertyExpressionState.propertyExpression.func.value
         .genericType.value.rawType;
-    switch (propertyType.path) {
-      case PRIMITIVE_TYPE.STRING:
-      case PRIMITIVE_TYPE.BOOLEAN:
-      case PRIMITIVE_TYPE.STRICTDATE:
-      case PRIMITIVE_TYPE.DATETIME:
-      case PRIMITIVE_TYPE.NUMBER:
-      case PRIMITIVE_TYPE.DECIMAL:
-      case PRIMITIVE_TYPE.FLOAT:
-      case PRIMITIVE_TYPE.INTEGER: {
-        return buildPrimitiveInstanceValue(
-          filterConditionState.filterState.queryBuilderState.graphManagerState
-            .graph,
-          propertyType.path,
-          generateDefaultValueForPrimitiveType(propertyType.path),
-          filterConditionState.filterState.queryBuilderState.observerContext,
-        );
-      }
-      case PRIMITIVE_TYPE.DATE: {
-        return buildPrimitiveInstanceValue(
-          filterConditionState.filterState.queryBuilderState.graphManagerState
-            .graph,
-          PRIMITIVE_TYPE.STRICTDATE,
-          generateDefaultValueForPrimitiveType(propertyType.path),
-          filterConditionState.filterState.queryBuilderState.observerContext,
-        );
-      }
-      default:
-        if (propertyType instanceof Enumeration) {
-          if (propertyType.values.length > 0) {
-            const enumValueInstanceValue = new EnumValueInstanceValue(
-              GenericTypeExplicitReference.create(
-                new GenericType(propertyType),
-              ),
-            );
-            instanceValue_setValues(
-              enumValueInstanceValue,
-              [
-                EnumValueExplicitReference.create(
-                  propertyType.values[0] as Enum,
-                ),
-              ],
-              filterConditionState.filterState.queryBuilderState
-                .observerContext,
-            );
-            return enumValueInstanceValue;
-          }
-          throw new UnsupportedOperationError(
-            `Can't get default value for filter operator '${this.getLabel(
-              filterConditionState,
-            )}' since enumeration '${propertyType.path}' has no value`,
-          );
-        }
-        throw new UnsupportedOperationError(
-          `Can't get default value for filter operator '${this.getLabel(
-            filterConditionState,
-          )}' when the LHS property is of type '${propertyType.path}'`,
-        );
-    }
+    return buildDefaultInstanceValue(
+      filterConditionState.filterState.queryBuilderState.graphManagerState
+        .graph,
+      propertyType,
+      filterConditionState.filterState.queryBuilderState.observerContext,
+      filterConditionState.filterState.queryBuilderState
+        .INTERNAL__enableInitializingDefaultSimpleExpressionValue,
+    );
   }
 
   buildFilterConditionExpression(
     filterConditionState: FilterConditionState,
+    lambdaParameterName?: string | undefined,
   ): ValueSpecification {
     return buildFilterConditionExpression(
       filterConditionState,
       filterConditionState.propertyExpressionState.propertyExpression.func.value
         .genericType.value.rawType.path === PRIMITIVE_TYPE.DATETIME &&
-        filterConditionState.value?.genericType?.value.rawType.path !==
+        filterConditionState.rightConditionValue?.type?.path !==
           PRIMITIVE_TYPE.DATETIME
         ? QUERY_BUILDER_SUPPORTED_FUNCTIONS.IS_ON_DAY
         : QUERY_BUILDER_SUPPORTED_FUNCTIONS.EQUAL,
+      lambdaParameterName,
     );
   }
 
@@ -202,15 +143,19 @@ export class QueryBuilderFilterOperator_Equal
 }
 
 export class QueryBuilderFilterOperator_NotEqual extends QueryBuilderFilterOperator_Equal {
-  override getLabel(filterConditionState: FilterConditionState): string {
+  override getLabel(): string {
     return `is not`;
   }
 
   override buildFilterConditionExpression(
     filterConditionState: FilterConditionState,
+    lambdaParameterName?: string | undefined,
   ): ValueSpecification {
     return buildNotExpression(
-      super.buildFilterConditionExpression(filterConditionState),
+      super.buildFilterConditionExpression(
+        filterConditionState,
+        lambdaParameterName,
+      ),
     );
   }
 

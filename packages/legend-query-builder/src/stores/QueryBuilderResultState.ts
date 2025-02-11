@@ -17,11 +17,10 @@
 import { action, flow, makeObservable, observable } from 'mobx';
 import {
   type GeneratorFn,
+  type ContentType,
   assertErrorThrown,
   LogEvent,
   guaranteeNonNullable,
-  type ContentType,
-  downloadFileUsingDataURI,
   ActionState,
   StopWatch,
   getContentTypeFileExtension,
@@ -32,15 +31,17 @@ import {
   type ExecutionResult,
   type RawLambda,
   type EXECUTION_SERIALIZATION_FORMAT,
+  type QueryGridConfig,
+  type ExecutionResultWithMetadata,
   GRAPH_MANAGER_EVENT,
-  RawExecutionResult,
   buildRawLambdaFromLambdaFunction,
   reportGraphAnalytics,
-  extractExecutionResultValues,
   TDSExecutionResult,
+  V1_ZIPKIN_TRACE_HEADER,
+  ExecutionError,
+  V1_DELEGATED_EXPORT_HEADER,
 } from '@finos/legend-graph';
 import { buildLambdaFunction } from './QueryBuilderValueSpecificationBuilder.js';
-import { DEFAULT_TAB_SIZE } from '@finos/legend-application';
 import {
   buildExecutionParameterValues,
   getExecutionQueryFromRawLambda,
@@ -49,8 +50,23 @@ import type { LambdaFunctionBuilderOption } from './QueryBuilderValueSpecificati
 import { QueryBuilderTelemetryHelper } from '../__lib__/QueryBuilderTelemetryHelper.js';
 import { QUERY_BUILDER_EVENT } from '../__lib__/QueryBuilderEvent.js';
 import { ExecutionPlanState } from './execution-plan/ExecutionPlanState.js';
+import type { DataGridColumnState } from '@finos/legend-lego/data-grid';
+import { downloadStream } from '@finos/legend-application';
+import { QueryBuilderDataGridCustomAggregationFunction } from '../components/result/tds/QueryBuilderTDSGridResult.js';
+import { QueryBuilderTDSState } from './fetch-structure/tds/QueryBuilderTDSState.js';
 
 export const DEFAULT_LIMIT = 1000;
+
+export type QueryBuilderTDSResultCellDataType =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined;
+
+export interface QueryBuilderTDSRowDataType {
+  [key: string]: QueryBuilderTDSResultCellDataType;
+}
 
 export interface ExportDataInfo {
   contentType: ContentType;
@@ -58,7 +74,7 @@ export interface ExportDataInfo {
 }
 
 export interface QueryBuilderTDSResultCellData {
-  value: string | number | boolean | null | undefined;
+  value: QueryBuilderTDSResultCellDataType;
   columnName: string;
   coordinates: QueryBuilderTDSResultCellCoordinate;
 }
@@ -68,28 +84,71 @@ export interface QueryBuilderTDSResultCellCoordinate {
   colIndex: number;
 }
 
+type QueryBuilderDataGridConfig = {
+  columns: DataGridColumnState[];
+  isPivotModeEnabled: boolean | undefined;
+  isLocalModeEnabled: boolean | undefined;
+  previewLimit?: number | undefined;
+  weightedColumnPairs?: Map<string, string> | undefined;
+};
+
+export class QueryBuilderResultWavgAggregationState {
+  isApplyingWavg = false;
+  weightedColumnIdPairs: Map<string, string>;
+
+  constructor() {
+    makeObservable(this, {
+      isApplyingWavg: observable,
+      weightedColumnIdPairs: observable,
+      setIsApplyingWavg: action,
+      addWeightedColumnIdPair: action,
+      removeWeightedColumnIdPair: action,
+    });
+    this.weightedColumnIdPairs = new Map<string, string>();
+  }
+
+  setIsApplyingWavg(val: boolean): void {
+    this.isApplyingWavg = val;
+  }
+
+  addWeightedColumnIdPair(col: string, weightedColumnId: string): void {
+    this.weightedColumnIdPairs.set(col, weightedColumnId);
+  }
+
+  removeWeightedColumnIdPair(col: string): void {
+    this.weightedColumnIdPairs.delete(col);
+  }
+}
+
 export class QueryBuilderResultState {
   readonly queryBuilderState: QueryBuilderState;
-  readonly exportDataState = ActionState.create();
   readonly executionPlanState: ExecutionPlanState;
+  readonly exportState = ActionState.create();
 
   previewLimit = DEFAULT_LIMIT;
   pressedRunQuery = ActionState.create();
   isRunningQuery = false;
   isGeneratingPlan = false;
   executionResult?: ExecutionResult | undefined;
+  isExecutionResultOverflowing = false;
   executionDuration?: number | undefined;
+  executionTraceId?: string;
   latestRunHashCode?: string | undefined;
-  queryRunPromise: Promise<ExecutionResult> | undefined = undefined;
+  queryRunPromise: Promise<ExecutionResultWithMetadata> | undefined = undefined;
   isQueryUsageViewerOpened = false;
+  executionError: Error | string | undefined;
 
   selectedCells: QueryBuilderTDSResultCellData[];
   mousedOverCell: QueryBuilderTDSResultCellData | null = null;
   isSelectingCells: boolean;
 
+  gridConfig: QueryBuilderDataGridConfig | undefined;
+  wavgAggregationState: QueryBuilderResultWavgAggregationState | undefined;
+
   constructor(queryBuilderState: QueryBuilderState) {
     makeObservable(this, {
       executionResult: observable,
+      executionTraceId: observable,
       previewLimit: observable,
       executionDuration: observable,
       latestRunHashCode: observable,
@@ -99,17 +158,28 @@ export class QueryBuilderResultState {
       mousedOverCell: observable,
       isRunningQuery: observable,
       isSelectingCells: observable,
-      setIsSelectingCells: action,
       isQueryUsageViewerOpened: observable,
+      isExecutionResultOverflowing: observable,
+      gridConfig: observable,
+      wavgAggregationState: observable,
+      executionError: observable,
+      setGridConfig: action,
+      setWavgAggregationState: action,
+      setIsSelectingCells: action,
       setIsRunningQuery: action,
       setExecutionResult: action,
+      setExecutionTraceId: action,
       setExecutionDuration: action,
       setPreviewLimit: action,
-      addCellData: action,
+      addSelectedCell: action,
       setSelectedCells: action,
       setMouseOverCell: action,
       setQueryRunPromise: action,
       setIsQueryUsageViewerOpened: action,
+      setIsExecutionResultOverflowing: action,
+      handlePreConfiguredGridConfig: action,
+      updatePreviewLimitInConfig: action,
+      setExecutionError: action,
       exportData: flow,
       runQuery: flow,
       cancelQuery: flow,
@@ -118,6 +188,7 @@ export class QueryBuilderResultState {
     this.isSelectingCells = false;
 
     this.selectedCells = [];
+    this.gridConfig = undefined;
     this.queryBuilderState = queryBuilderState;
     this.executionPlanState = new ExecutionPlanState(
       this.queryBuilderState.applicationStore,
@@ -125,86 +196,158 @@ export class QueryBuilderResultState {
     );
   }
 
-  setIsSelectingCells = (val: boolean): void => {
+  setGridConfig(val: QueryBuilderDataGridConfig | undefined): void {
+    this.gridConfig = val;
+  }
+
+  setWavgAggregationState(
+    val: QueryBuilderResultWavgAggregationState | undefined,
+  ): void {
+    this.wavgAggregationState = val;
+  }
+
+  setIsSelectingCells(val: boolean): void {
     this.isSelectingCells = val;
-  };
+  }
 
-  setIsRunningQuery = (val: boolean): void => {
+  setIsRunningQuery(val: boolean): void {
     this.isRunningQuery = val;
-  };
+  }
 
-  setExecutionResult = (val: ExecutionResult | undefined): void => {
+  setExecutionResult(val: ExecutionResult | undefined): void {
     this.executionResult = val;
-  };
+  }
 
-  setExecutionDuration = (val: number | undefined): void => {
+  setExecutionTraceId(val: string): void {
+    this.executionTraceId = val;
+  }
+
+  setExecutionDuration(val: number | undefined): void {
     this.executionDuration = val;
-  };
+  }
 
-  setPreviewLimit = (val: number): void => {
+  setPreviewLimit(val: number): void {
     this.previewLimit = Math.max(1, val);
-  };
+  }
 
-  addCellData = (val: QueryBuilderTDSResultCellData): void => {
+  addSelectedCell(val: QueryBuilderTDSResultCellData): void {
     this.selectedCells.push(val);
-  };
+  }
 
-  setSelectedCells = (val: QueryBuilderTDSResultCellData[]): void => {
+  setSelectedCells(val: QueryBuilderTDSResultCellData[]): void {
     this.selectedCells = val;
-  };
+  }
 
-  setMouseOverCell = (val: QueryBuilderTDSResultCellData | null): void => {
+  setMouseOverCell(val: QueryBuilderTDSResultCellData | null): void {
     this.mousedOverCell = val;
-  };
+  }
 
-  setQueryRunPromise = (
-    promise: Promise<ExecutionResult> | undefined,
-  ): void => {
+  setQueryRunPromise(
+    promise: Promise<ExecutionResultWithMetadata> | undefined,
+  ): void {
     this.queryRunPromise = promise;
-  };
-
-  findColumnFromCoordinates = (
-    colIndex: number,
-  ): string | number | boolean | null | undefined => {
-    if (
-      !this.executionResult ||
-      !(this.executionResult instanceof TDSExecutionResult)
-    ) {
-      return undefined;
-    }
-    return this.executionResult.result.columns[colIndex];
-  };
-
-  findRowFromRowIndex = (
-    rowIndex: number,
-  ): (string | number | boolean | null)[] => {
-    if (
-      !this.executionResult ||
-      !(this.executionResult instanceof TDSExecutionResult)
-    ) {
-      return [''];
-    }
-    return this.executionResult.result.rows[rowIndex]?.values ?? [''];
-  };
-
-  findResultValueFromCoordinates = (
-    resultCoordinate: [number, number],
-  ): string | number | boolean | null | undefined => {
-    const rowIndex = resultCoordinate[0];
-    const colIndex = resultCoordinate[1];
-
-    if (
-      !this.executionResult ||
-      !(this.executionResult instanceof TDSExecutionResult)
-    ) {
-      return undefined;
-    }
-
-    return this.executionResult.result.rows[rowIndex]?.values[colIndex];
-  };
+  }
 
   setIsQueryUsageViewerOpened(val: boolean): void {
     this.isQueryUsageViewerOpened = val;
+  }
+
+  setExecutionError(val: Error | string | undefined): void {
+    this.executionError = val;
+  }
+
+  setIsExecutionResultOverflowing(val: boolean): void {
+    this.isExecutionResultOverflowing = val;
+  }
+
+  updatePreviewLimitInConfig(): void {
+    if (this.gridConfig) {
+      this.gridConfig.previewLimit = this.previewLimit;
+    }
+  }
+
+  getExecutionResultLimit = (): number =>
+    Math.min(
+      this.queryBuilderState.fetchStructureState.implementation instanceof
+        QueryBuilderTDSState &&
+        this.queryBuilderState.fetchStructureState.implementation
+          .resultSetModifierState.limit
+        ? this.queryBuilderState.fetchStructureState.implementation
+            .resultSetModifierState.limit
+        : Number.MAX_SAFE_INTEGER,
+      this.previewLimit,
+    );
+
+  processExecutionResult = (result: ExecutionResult): void => {
+    this.setIsExecutionResultOverflowing(false);
+    if (result instanceof TDSExecutionResult) {
+      const resultLimit = this.getExecutionResultLimit();
+      if (result.result.rows.length > resultLimit) {
+        this.setIsExecutionResultOverflowing(true);
+        result.result.rows = result.result.rows.slice(0, resultLimit);
+      }
+    }
+    this.setExecutionResult(result);
+  };
+
+  processWeightedColumnPairsMap(
+    config: QueryGridConfig,
+  ): Map<string, string> | undefined {
+    if (config.weightedColumnPairs) {
+      const wavgColumns = config.columns
+        .filter(
+          (col) =>
+            (col as DataGridColumnState).aggFunc ===
+            QueryBuilderDataGridCustomAggregationFunction.WAVG,
+        )
+        .map((col) => (col as DataGridColumnState).colId);
+      const weightedColumnPairsMap = new Map<string, string>();
+      config.weightedColumnPairs.forEach((wc) => {
+        if (wc[0] && wc[1]) {
+          weightedColumnPairsMap.set(wc[0], wc[1]);
+        }
+      });
+      for (const wavgCol of weightedColumnPairsMap.keys()) {
+        if (!wavgColumns.includes(wavgCol)) {
+          weightedColumnPairsMap.delete(wavgCol);
+        }
+      }
+      return weightedColumnPairsMap;
+    }
+    return undefined;
+  }
+
+  handlePreConfiguredGridConfig(config: QueryGridConfig): void {
+    let newConfig;
+    const weightedColumnPairsMap = this.processWeightedColumnPairsMap(config);
+    if (weightedColumnPairsMap) {
+      this.wavgAggregationState = new QueryBuilderResultWavgAggregationState();
+      this.wavgAggregationState.weightedColumnIdPairs = weightedColumnPairsMap;
+      newConfig = {
+        ...config,
+        weightedColumnPairs: weightedColumnPairsMap,
+        columns: config.columns as DataGridColumnState[],
+      };
+    } else {
+      newConfig = {
+        ...config,
+        columns: config.columns as DataGridColumnState[],
+      };
+    }
+    if (config.previewLimit) {
+      this.setPreviewLimit(config.previewLimit);
+    }
+    this.setGridConfig(newConfig);
+  }
+
+  getQueryGridConfig(): QueryGridConfig | undefined {
+    if (this.gridConfig) {
+      return {
+        ...this.gridConfig,
+        columns: this.gridConfig.columns as object[],
+      };
+    }
+    return undefined;
   }
 
   get checkForStaleResults(): boolean {
@@ -221,6 +364,7 @@ export class QueryBuilderResultState {
     if (this.queryBuilderState.isQuerySupported) {
       const lambdaFunction = buildLambdaFunction(this.queryBuilderState, {
         isBuildingExecutionQuery: true,
+        useTypedRelationFunctions: this.queryBuilderState.isFetchStructureTyped,
         ...executionOptions,
       });
       query = buildRawLambdaFromLambdaFunction(
@@ -245,21 +389,27 @@ export class QueryBuilderResultState {
 
   *exportData(format: string): GeneratorFn<void> {
     try {
+      this.exportState.inProgress();
+      this.queryBuilderState.applicationStore.notificationService.notifySuccess(
+        `Export ${format} will run in background`,
+      );
       const exportData =
         this.queryBuilderState.fetchStructureState.implementation.getExportDataInfo(
           format,
         );
       const contentType = exportData.contentType;
       const serializationFormat = exportData.serializationFormat;
-      this.exportDataState.inProgress();
       const query = this.buildExecutionRawLambda({
         isExportingResult: true,
       });
+      QueryBuilderTelemetryHelper.logEvent_ExportQueryDataLaunched(
+        this.queryBuilderState.applicationStore.telemetryService,
+      );
       const result =
-        (yield this.queryBuilderState.graphManagerState.graphManager.runQuery(
+        (yield this.queryBuilderState.graphManagerState.graphManager.exportData(
           query,
-          this.queryBuilderState.mapping,
-          this.queryBuilderState.runtimeValue,
+          this.queryBuilderState.executionContextState.mapping,
+          this.queryBuilderState.executionContextState.runtimeValue,
           this.queryBuilderState.graphManagerState.graph,
           {
             serializationFormat,
@@ -268,21 +418,46 @@ export class QueryBuilderResultState {
               this.queryBuilderState.graphManagerState,
             ),
           },
-        )) as ExecutionResult;
-      let content: string;
-      if (result instanceof RawExecutionResult) {
-        content = result.value === null ? 'null' : result.value.toString();
-      } else {
-        content = JSON.stringify(
-          extractExecutionResultValues(result),
-          null,
-          DEFAULT_TAB_SIZE,
-        );
+          undefined,
+          contentType,
+        )) as Response;
+      if (result.headers.get(V1_DELEGATED_EXPORT_HEADER) === 'true') {
+        if (result.status === 200) {
+          this.exportState.pass();
+        } else {
+          this.exportState.fail();
+        }
+        return;
       }
-      const fileName = `result.${getContentTypeFileExtension(contentType)}`;
-      downloadFileUsingDataURI(fileName, content, contentType);
-      this.exportDataState.pass();
+      const report = reportGraphAnalytics(
+        this.queryBuilderState.graphManagerState.graph,
+      );
+      downloadStream(
+        result,
+        `result.${getContentTypeFileExtension(contentType)}`,
+        exportData.contentType,
+      )
+        .then(() => {
+          const reportWithState = Object.assign(
+            {},
+            report,
+            this.queryBuilderState.getStateInfo(),
+          );
+          QueryBuilderTelemetryHelper.logEvent_ExportQueryDatSucceeded(
+            this.queryBuilderState.applicationStore.telemetryService,
+            reportWithState,
+          );
+          this.exportState.pass();
+        })
+        .catch((error) => {
+          assertErrorThrown(error);
+          this.queryBuilderState.applicationStore.logService.error(
+            LogEvent.create(GRAPH_MANAGER_EVENT.EXECUTION_FAILURE),
+            error,
+          );
+        });
     } catch (error) {
+      this.exportState.fail();
       assertErrorThrown(error);
       this.queryBuilderState.applicationStore.logService.error(
         LogEvent.create(GRAPH_MANAGER_EVENT.EXECUTION_FAILURE),
@@ -291,7 +466,7 @@ export class QueryBuilderResultState {
       this.queryBuilderState.applicationStore.notificationService.notifyError(
         error,
       );
-      this.exportDataState.fail();
+      this.exportState.complete();
     }
   }
 
@@ -301,14 +476,16 @@ export class QueryBuilderResultState {
       this.setIsRunningQuery(true);
       const currentHashCode = this.queryBuilderState.hashCode;
       const mapping = guaranteeNonNullable(
-        this.queryBuilderState.mapping,
+        this.queryBuilderState.executionContextState.mapping,
         'Mapping is required to execute query',
       );
       const runtime = guaranteeNonNullable(
-        this.queryBuilderState.runtimeValue,
+        this.queryBuilderState.executionContextState.runtimeValue,
         `Runtime is required to execute query`,
       );
-      const query = this.buildExecutionRawLambda();
+      const query = this.buildExecutionRawLambda({
+        withDataOverflowCheck: true,
+      });
       const parameterValues = buildExecutionParameterValues(
         this.queryBuilderState.parametersState.parameterStates,
         this.queryBuilderState.graphManagerState,
@@ -330,13 +507,18 @@ export class QueryBuilderResultState {
         this.queryBuilderState.graphManagerState.graph,
         {
           parameterValues,
+          convertUnsafeNumbersToString: true,
+          preservedResponseHeadersList: [V1_ZIPKIN_TRACE_HEADER],
         },
       );
 
       this.setQueryRunPromise(promise);
-      const result = (yield promise) as ExecutionResult;
+      const result = (yield promise) as ExecutionResultWithMetadata;
       if (this.queryRunPromise === promise) {
-        this.setExecutionResult(result);
+        this.processExecutionResult(result.executionResult);
+        if (result.executionTraceId) {
+          this.setExecutionTraceId(result.executionTraceId);
+        }
         this.latestRunHashCode = currentHashCode;
         this.setExecutionDuration(stopWatch.elapsed);
 
@@ -345,9 +527,14 @@ export class QueryBuilderResultState {
             stopWatch,
             report.timings,
           );
+        const reportWithState = Object.assign(
+          {},
+          report,
+          this.queryBuilderState.getStateInfo(),
+        );
         QueryBuilderTelemetryHelper.logEvent_QueryRunSucceeded(
           this.queryBuilderState.applicationStore.telemetryService,
-          report,
+          reportWithState,
         );
       }
     } catch (error) {
@@ -360,9 +547,10 @@ export class QueryBuilderResultState {
           LogEvent.create(GRAPH_MANAGER_EVENT.EXECUTION_FAILURE),
           error,
         );
-        this.queryBuilderState.applicationStore.notificationService.notifyError(
-          error,
-        );
+        this.setExecutionError(error);
+        if (error instanceof ExecutionError && error.executionTraceId) {
+          this.setExecutionTraceId(error.executionTraceId);
+        }
       }
     } finally {
       this.setIsRunningQuery(false);
@@ -391,11 +579,11 @@ export class QueryBuilderResultState {
     try {
       this.isGeneratingPlan = true;
       const mapping = guaranteeNonNullable(
-        this.queryBuilderState.mapping,
+        this.queryBuilderState.executionContextState.mapping,
         'Mapping is required to execute query',
       );
       const runtime = guaranteeNonNullable(
-        this.queryBuilderState.runtimeValue,
+        this.queryBuilderState.executionContextState.runtimeValue,
         `Runtime is required to execute query`,
       );
       const query = this.queryBuilderState.buildQuery();
@@ -442,7 +630,7 @@ export class QueryBuilderResultState {
             rawPlan,
             this.queryBuilderState.graphManagerState.graph,
           );
-        this.executionPlanState.setPlan(plan);
+        this.executionPlanState.initialize(plan);
       } catch {
         // do nothing
       }
@@ -454,15 +642,20 @@ export class QueryBuilderResultState {
           stopWatch,
           report.timings,
         );
+      const reportWithState = Object.assign(
+        {},
+        report,
+        this.queryBuilderState.getStateInfo(),
+      );
       if (debug) {
         QueryBuilderTelemetryHelper.logEvent_ExecutionPlanDebugSucceeded(
           this.queryBuilderState.applicationStore.telemetryService,
-          report,
+          reportWithState,
         );
       } else {
         QueryBuilderTelemetryHelper.logEvent_ExecutionPlanGenerationSucceeded(
           this.queryBuilderState.applicationStore.telemetryService,
-          report,
+          reportWithState,
         );
       }
     } catch (error) {

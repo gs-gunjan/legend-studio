@@ -25,9 +25,9 @@ import {
 import {
   ActionState,
   assertErrorThrown,
-  getNullableFirstEntry,
   guaranteeNonNullable,
   guaranteeType,
+  compareSemVerVersions,
 } from '@finos/legend-shared';
 import { flowResult } from 'mobx';
 import { observer, useLocalObservable } from 'mobx-react-lite';
@@ -51,7 +51,6 @@ import {
   type ProjectOption,
   type VersionOption,
 } from './QuerySetup.js';
-import { compareSemVerVersions } from '@finos/legend-storage';
 import type { Mapping, PackageableRuntime } from '@finos/legend-graph';
 import {
   buildElementOption,
@@ -130,10 +129,10 @@ const CreateMappingQuerySetupContent = observer(() => {
   const projectSelectorPlaceholder = setupStore.loadProjectsState.isInProgress
     ? 'Loading projects'
     : setupStore.loadProjectsState.hasFailed
-    ? 'Error fetching projects'
-    : setupStore.projects.length
-    ? 'Choose a project'
-    : 'You have no projects, please create or acquire access for at least one';
+      ? 'Error fetching projects'
+      : setupStore.projects.length
+        ? 'Choose a project'
+        : 'You have no projects, please create or acquire access for at least one';
   const onProjectOptionChange = async (
     option: ProjectOption | null,
   ): Promise<void> => {
@@ -146,14 +145,12 @@ const CreateMappingQuerySetupContent = observer(() => {
       setupStore.setCurrentProjectVersions([]);
       try {
         fetchSelectedProjectVersionsStatus.inProgress();
-        const v = (await flowResult(
-          depotServerClient.getVersions(
-            guaranteeNonNullable(option?.value.groupId),
-            guaranteeNonNullable(option?.value.artifactId),
-            true,
-          ),
-        )) as string[];
-        setupStore.setCurrentProjectVersions(v);
+        const versions = await depotServerClient.getVersions(
+          guaranteeNonNullable(option?.value.groupId),
+          guaranteeNonNullable(option?.value.artifactId),
+          true,
+        );
+        setupStore.setCurrentProjectVersions(versions);
       } catch (error) {
         assertErrorThrown(error);
         applicationStore.notificationService.notifyError(error);
@@ -168,8 +165,7 @@ const CreateMappingQuerySetupContent = observer(() => {
     LATEST_VERSION_ALIAS,
     ...(setupStore.currentProjectVersions ?? []),
   ]
-    .slice()
-    .sort((v1, v2) => compareSemVerVersions(v2, v1))
+    .toSorted((v1, v2) => compareSemVerVersions(v2, v1))
     .map(buildVersionOption);
   const selectedVersionOption = setupStore.currentVersionId
     ? buildVersionOption(setupStore.currentVersionId)
@@ -212,9 +208,7 @@ const CreateMappingQuerySetupContent = observer(() => {
     setupStore.setCurrentMapping(option?.value);
     // cascade
     if (setupStore.currentMapping) {
-      setupStore.setCurrentRuntime(
-        getNullableFirstEntry(setupStore.compatibleRuntimes),
-      );
+      setupStore.setCurrentRuntime(setupStore.compatibleRuntimes[0]);
     } else {
       setupStore.setCurrentRuntime(undefined);
     }
@@ -231,8 +225,8 @@ const CreateMappingQuerySetupContent = observer(() => {
   const runtimeSelectorPlaceholder = !setupStore.currentMapping
     ? 'No mapping specified'
     : runtimeOptions.length
-    ? 'Choose a runtime'
-    : 'No runtime available';
+      ? 'Choose a runtime'
+      : 'No runtime available';
   const onRuntimeOptionChange = (
     option: PackageableElementOption<PackageableRuntime> | null,
   ): void => {
@@ -281,12 +275,19 @@ const CreateMappingQuerySetupContent = observer(() => {
                 !projectOptions.length
               }
               isLoading={setupStore.loadProjectsState.isInProgress}
-              onChange={onProjectOptionChange}
+              onChange={(option: ProjectOption | null) => {
+                onProjectOptionChange(option).catch(
+                  applicationStore.alertUnhandledError,
+                );
+              }}
               value={selectedProjectOption}
               placeholder={projectSelectorPlaceholder}
               isClearable={true}
               escapeClearsValue={true}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
           <div className="query-setup__wizard__group">
@@ -296,7 +297,11 @@ const CreateMappingQuerySetupContent = observer(() => {
               options={versionOptions}
               disabled={!setupStore.currentProject}
               isLoading={fetchSelectedProjectVersionsStatus.isInProgress}
-              onChange={onVersionOptionChange}
+              onChange={(option: VersionOption | null) => {
+                onVersionOptionChange(option).catch(
+                  applicationStore.alertUnhandledError,
+                );
+              }}
               value={selectedVersionOption}
               placeholder={
                 fetchSelectedProjectVersionsStatus.isInProgress
@@ -305,7 +310,10 @@ const CreateMappingQuerySetupContent = observer(() => {
               }
               isClearable={true}
               escapeClearsValue={true}
-              darkMode={true}
+              darkMode={
+                !applicationStore.layoutService
+                  .TEMPORARY__isLightColorThemeEnabled
+              }
             />
           </div>
         </div>
@@ -327,8 +335,8 @@ const CreateMappingQuerySetupContent = observer(() => {
                 {setupStore.surveyMappingRuntimeCompatibilityState.isInProgress
                   ? `Surveying runtime and mapping compatibility...`
                   : setupStore.surveyMappingRuntimeCompatibilityState.hasFailed
-                  ? `Can't load runtime and mapping`
-                  : 'Project and version must be specified'}
+                    ? `Can't load runtime and mapping`
+                    : 'Project and version must be specified'}
               </BlankPanelContent>
             </div>
           )}
@@ -353,9 +361,14 @@ const CreateMappingQuerySetupContent = observer(() => {
                     }
                     isClearable={true}
                     escapeClearsValue={true}
-                    darkMode={true}
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
                     formatOptionLabel={getPackageableElementOptionFormatter({
-                      darkMode: true,
+                      darkMode:
+                        !applicationStore.layoutService
+                          .TEMPORARY__isLightColorThemeEnabled,
                     })}
                   />
                 </div>
@@ -374,9 +387,14 @@ const CreateMappingQuerySetupContent = observer(() => {
                     placeholder={runtimeSelectorPlaceholder}
                     isClearable={true}
                     escapeClearsValue={true}
-                    darkMode={true}
+                    darkMode={
+                      !applicationStore.layoutService
+                        .TEMPORARY__isLightColorThemeEnabled
+                    }
                     formatOptionLabel={getPackageableElementOptionFormatter({
-                      darkMode: true,
+                      darkMode:
+                        !applicationStore.layoutService
+                          .TEMPORARY__isLightColorThemeEnabled,
                     })}
                   />
                 </div>

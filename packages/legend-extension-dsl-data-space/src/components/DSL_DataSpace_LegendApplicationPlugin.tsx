@@ -15,25 +15,30 @@
  */
 
 import {
-  LegendApplicationPlugin,
-  type LegendApplicationSetup,
   type LegendApplicationPluginManager,
-  collectKeyedCommandConfigEntriesFromConfig,
   type KeyedCommandConfigEntry,
+  collectKeyedCommandConfigEntriesFromConfig,
+  LegendApplicationPlugin,
 } from '@finos/legend-application';
-import packageJson from '../../package.json';
+import packageJson from '../../package.json' with { type: 'json' };
 import type {
+  CuratedTemplateQuery,
+  CuratedTemplateQuerySpecification,
   LoadQueryFilterOption,
+  QueryBuilderState,
   QueryBuilder_LegendApplicationPlugin_Extension,
+  TemplateQueryPanelContentRenderer,
 } from '@finos/legend-query-builder';
-import { DataSpaceQueryBuilderState } from '../stores/query/DataSpaceQueryBuilderState.js';
+import { DataSpaceQueryBuilderState } from '../stores/query-builder/DataSpaceQueryBuilderState.js';
+import { DSL_DATA_SPACE_LEGEND_APPLICATION_COMMAND_CONFIG } from '../__lib__/DSL_DataSpace_LegendApplicationCommand.js';
+import { type QuerySearchSpecification } from '@finos/legend-graph';
+import { DataSpaceExecutableTemplate } from '../graph/metamodel/pure/model/packageableElements/dataSpace/DSL_DataSpace_DataSpace.js';
+import { filterByType } from '@finos/legend-shared';
 import {
   createQueryClassTaggedValue,
   createQueryDataSpaceTaggedValue,
-} from '../stores/query/DataSpaceQueryCreatorStore.js';
-import { DSL_DATA_SPACE_LEGEND_APPLICATION_COMMAND_CONFIG } from '../__lib__/DSL_DataSpace_LegendApplicationCommand.js';
-import type { QuerySearchSpecification } from '@finos/legend-graph';
-import { configureDataGridComponent } from '@finos/legend-lego/data-grid';
+} from '../stores/shared/DataSpaceUtils.js';
+import { renderDataSpaceQueryBuilderTemplateQueryPanelContent } from './query-builder/DataSpaceQueryBuilderTemplateQueryPanelContent.js';
 
 export class DSL_DataSpace_LegendApplicationPlugin
   extends LegendApplicationPlugin
@@ -57,21 +62,13 @@ export class DSL_DataSpace_LegendApplicationPlugin
     );
   }
 
-  override getExtraApplicationSetups(): LegendApplicationSetup[] {
-    return [
-      async (applicationStore) => {
-        configureDataGridComponent();
-      },
-    ];
-  }
-
   getExtraLoadQueryFilterOptions(): LoadQueryFilterOption[] {
     return [
       {
         key: 'data-space-filter-option',
         label: (queryBuilderState): string | undefined => {
           if (queryBuilderState instanceof DataSpaceQueryBuilderState) {
-            return 'Current Data Space';
+            return 'Current Data Product';
           }
           return undefined;
         },
@@ -107,8 +104,90 @@ export class DSL_DataSpace_LegendApplicationPlugin
               createQueryDataSpaceTaggedValue(queryBuilderState.dataSpace.path),
               createQueryClassTaggedValue(queryBuilderState.class.path),
             ];
+            searchSpecification.combineTaggedValuesCondition = true;
           }
           return searchSpecification;
+        },
+      },
+    ];
+  }
+
+  getQueryFilterOptionsRelatedToTemplateQuery(): (
+    queryBuilderState: QueryBuilderState,
+  ) => string[] {
+    return (queryBuilderState): string[] => {
+      if (queryBuilderState instanceof DataSpaceQueryBuilderState) {
+        return ['Current Data Product'];
+      }
+      return [];
+    };
+  }
+
+  getExtraTemplateQueryPanelContentRenderer(): TemplateQueryPanelContentRenderer[] {
+    return [
+      (queryBuilderState: QueryBuilderState): React.ReactNode => {
+        if (queryBuilderState instanceof DataSpaceQueryBuilderState) {
+          return renderDataSpaceQueryBuilderTemplateQueryPanelContent(
+            queryBuilderState,
+          );
+        }
+        return undefined;
+      },
+    ];
+  }
+
+  getCuratedTemplateQuerySpecifications(): CuratedTemplateQuerySpecification[] {
+    return [
+      {
+        getCuratedTemplateQueries: (
+          queryBuilderState,
+        ): CuratedTemplateQuery[] => {
+          if (queryBuilderState instanceof DataSpaceQueryBuilderState) {
+            const executableTemplates =
+              queryBuilderState.dataSpace.executables?.filter(
+                filterByType(DataSpaceExecutableTemplate),
+              );
+            return executableTemplates
+              ? executableTemplates.map(
+                  (e) =>
+                    ({
+                      id: e.id,
+                      title: e.title,
+                      description: e.description,
+                      query: e.query,
+                      executionContextKey:
+                        e.executionContextKey ??
+                        queryBuilderState.dataSpace.defaultExecutionContext
+                          .name,
+                    }) as CuratedTemplateQuery,
+                )
+              : [];
+          }
+          return [];
+        },
+        loadCuratedTemplateQuery: async (
+          templateQuery: CuratedTemplateQuery,
+          queryBuilderState: QueryBuilderState,
+        ): Promise<void> => {
+          if (queryBuilderState instanceof DataSpaceQueryBuilderState) {
+            if (
+              queryBuilderState.executionContext.name !==
+              templateQuery.executionContextKey
+            ) {
+              const executionContext =
+                queryBuilderState.dataSpace.executionContexts.find(
+                  (c) => c.name === templateQuery.executionContextKey,
+                );
+              if (executionContext) {
+                queryBuilderState.setExecutionContext(executionContext);
+                await queryBuilderState.propagateExecutionContextChange();
+                queryBuilderState.initializeWithQuery(templateQuery.query);
+                queryBuilderState.onExecutionContextChange?.(executionContext);
+              }
+            } else {
+              queryBuilderState.initializeWithQuery(templateQuery.query);
+            }
+          }
         },
       },
     ];

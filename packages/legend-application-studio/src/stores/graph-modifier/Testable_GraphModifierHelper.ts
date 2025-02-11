@@ -15,15 +15,18 @@
  */
 
 import {
+  type EqualTo,
   type EqualToJson,
   type ExternalFormatData,
   type AtomicTest,
   type TestAssertion,
   type TestSuite,
   type ObserverContext,
+  type Test,
   observe_TestAssertion,
   observe_ExternalFormatData,
   observe_AtomicTest,
+  type Testable,
 } from '@finos/legend-graph';
 import { addUniqueEntry, deleteEntry } from '@finos/legend-shared';
 import { action } from 'mobx';
@@ -31,6 +34,12 @@ import { action } from 'mobx';
 export const equalToJSON_setExpected = action(
   (equalToJSON: EqualToJson, val: ExternalFormatData): void => {
     equalToJSON.expected = observe_ExternalFormatData(val);
+  },
+);
+
+export const equalTo_setExpected = action(
+  (equalToJSON: EqualTo, val: object): void => {
+    equalToJSON.expected = val;
   },
 );
 
@@ -64,7 +73,7 @@ export const testSuite_setId = action((test: TestSuite, val: string): void => {
 });
 
 export const testable_setId = action(
-  (test: TestSuite | TestAssertion | AtomicTest, val: string): void => {
+  (test: Test | AtomicTest, val: string): void => {
     test.id = val;
   },
 );
@@ -72,6 +81,12 @@ export const testable_setId = action(
 export const testSuite_deleteTest = action(
   (test: TestSuite, val: AtomicTest): void => {
     deleteEntry(test.tests, val);
+  },
+);
+
+export const testable_deleteTest = action(
+  (testable: Testable, val: Test): void => {
+    deleteEntry(testable.tests, val);
   },
 );
 

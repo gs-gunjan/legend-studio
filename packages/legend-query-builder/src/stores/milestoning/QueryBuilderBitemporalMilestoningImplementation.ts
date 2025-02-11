@@ -22,15 +22,22 @@ import {
   AbstractPropertyExpression,
   MILESTONING_STEREOTYPE,
   INTERNAL__PropagatedValue,
+  PrimitiveType,
+  VariableExpression,
 } from '@finos/legend-graph';
 import {
+  UnsupportedOperationError,
   assertTrue,
   guaranteeNonNullable,
   guaranteeType,
+  isNonNullable,
 } from '@finos/legend-shared';
 import { getParameterValue } from '../../components/QueryBuilderSideBar.js';
+import { QUERY_BUILDER_SUPPORTED_FUNCTIONS } from '../../graph/QueryBuilderMetaModelConst.js';
 import type { QueryBuilderDerivedPropertyExpressionState } from '../QueryBuilderPropertyEditorState.js';
+import { createSupportedFunctionExpression } from '../shared/ValueSpecificationEditorHelper.js';
 import { QueryBuilderMilestoningImplementation } from './QueryBuilderMilestoningImplementation.js';
+import type { LambdaParameterState } from '../shared/LambdaParameterState.js';
 
 export class QueryBuilderBitemporalMilestoningImplementation extends QueryBuilderMilestoningImplementation {
   getMilestoningDate(index?: number): ValueSpecification | undefined {
@@ -64,6 +71,26 @@ export class QueryBuilderBitemporalMilestoningImplementation extends QueryBuilde
     }
   }
 
+  buildParameterStatesFromMilestoningParameters(): LambdaParameterState[] {
+    const businessState =
+      this.milestoningState.buildParameterStateFromMilestoningParameter(
+        this.milestoningState.businessDate &&
+          this.milestoningState.businessDate instanceof VariableExpression
+          ? this.milestoningState.businessDate.name
+          : BUSINESS_DATE_MILESTONING_PROPERTY_NAME,
+      );
+
+    const processingState =
+      this.milestoningState.buildParameterStateFromMilestoningParameter(
+        this.milestoningState.processingDate &&
+          this.milestoningState.processingDate instanceof VariableExpression
+          ? this.milestoningState.processingDate.name
+          : PROCESSING_DATE_MILESTONING_PROPERTY_NAME,
+      );
+
+    return [businessState, processingState].filter(isNonNullable);
+  }
+
   processGetAllParamaters(parameterValues: ValueSpecification[]): void {
     assertTrue(
       parameterValues.length === 3,
@@ -85,6 +112,25 @@ export class QueryBuilderBitemporalMilestoningImplementation extends QueryBuilde
         this.getMilestoningDate(1),
         `Milestoning class should have a parameter of type 'Date'`,
       ),
+    );
+  }
+
+  buildGetAllWithDefaultParameters(
+    getAllFunction: SimpleFunctionExpression,
+  ): void {
+    const parameterValue = createSupportedFunctionExpression(
+      QUERY_BUILDER_SUPPORTED_FUNCTIONS.NOW,
+      PrimitiveType.DATETIME,
+    );
+    getAllFunction.parametersValues.push(parameterValue);
+    getAllFunction.parametersValues.push(parameterValue);
+  }
+
+  buildGetAllVersionsInRangeParameters(
+    getAllVersionsInRangeFunction: SimpleFunctionExpression,
+  ): void {
+    throw new UnsupportedOperationError(
+      `Can't build getAllVersionsInRange() function: expects root class to be business temporal or processing temporal milestoned`,
     );
   }
 

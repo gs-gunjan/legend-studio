@@ -53,7 +53,6 @@ import {
   type ElementDragSource,
   type FileGenerationSourceDropTarget,
 } from '../../../stores/editor/utils/DnDUtils.js';
-import { getNullableFirstEntry } from '@finos/legend-shared';
 import type { DSL_Generation_LegendStudioApplicationPlugin_Extension } from '../../../stores/extensions/DSL_Generation_LegendStudioApplicationPlugin_Extension.js';
 import { flowResult } from 'mobx';
 import { useEditorStore } from '../EditorStoreProvider.js';
@@ -89,9 +88,13 @@ const ModelGenerationItem = observer(
     const { nodeState, specState, options } = props;
     const generationTreeNode = nodeState.node;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const modelGenerationRef = generationTreeNode.generationElement;
     const modelGeneration = modelGenerationRef.value;
-    const value = { label: modelGeneration.name, value: modelGeneration };
+    const value = {
+      label: modelGeneration.name,
+      value: modelGeneration,
+    } as PackageableElementOption<FileGenerationSpecification>;
     const onChange = (
       val: PackageableElementOption<FileGenerationSpecification> | null,
     ): void => {
@@ -201,10 +204,14 @@ const ModelGenerationItem = observer(
         />
         <CustomSelectorInput
           className="generation-spec-model-generation-editor__item__dropdown"
-          options={options}
+          options={
+            options as PackageableElementOption<FileGenerationSpecification>[]
+          }
           onChange={onChange}
           value={value}
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
         />
         <button
           className="btn--dark btn--sm"
@@ -253,7 +260,7 @@ const ModelGenerationSpecifications = observer(
     const modelGenerationElementOptions =
       modelGenerationElementsInGraph.map(buildElementOption);
     const addModelGeneration = (): void => {
-      const option = getNullableFirstEntry(modelGenerationElementOptions);
+      const option = modelGenerationElementOptions[0];
       if (option) {
         specState.addGenerationTreeNode(
           new GenerationTreeNode(
@@ -274,7 +281,7 @@ const ModelGenerationSpecifications = observer(
         ),
       [specState],
     );
-    const [{ isDragOver }, dropTargetConnector] = useDrop<
+    const [{ isDragOver }, dropConnector] = useDrop<
       ElementDragSource,
       void,
       { isDragOver: boolean }
@@ -308,7 +315,7 @@ const ModelGenerationSpecifications = observer(
         <PanelContent>
           <PanelDropZone
             isDragOver={isDragOver}
-            dropTargetConnector={dropTargetConnector}
+            dropTargetConnector={dropConnector}
           >
             {specNodesStates.length ? (
               <div className="generation-spec-model-generation-editor__items">
@@ -350,6 +357,7 @@ const FileGenerationItem = observer(
     const { fileGeneraitonRef, generationSpecificationEditorState, options } =
       props;
     const editorStore = useEditorStore();
+    const applicationStore = editorStore.applicationStore;
     const fileGeneration = fileGeneraitonRef.value;
     const value = { label: fileGeneration.name, value: fileGeneration };
     const onChange = (
@@ -376,7 +384,9 @@ const FileGenerationItem = observer(
           options={options}
           onChange={onChange}
           value={value}
-          darkMode={true}
+          darkMode={
+            !applicationStore.layoutService.TEMPORARY__isLightColorThemeEnabled
+          }
         />
         <button
           className="btn--dark btn--sm"
@@ -416,7 +426,7 @@ const FileGenerationSpecifications = observer(
       .filter((f) => !fileGenerations.includes(f))
       .map(buildElementOption);
     const addFileGeneration = (): void => {
-      const option = getNullableFirstEntry(fileGenerationsOptions);
+      const option = fileGenerationsOptions[0];
       if (option) {
         generationSpecification_addFileGeneration(generationSpec, option.value);
       }
@@ -434,7 +444,7 @@ const FileGenerationSpecifications = observer(
       },
       [fileGenerations, generationSpec],
     );
-    const [{ isDragOver }, dropTargetConnector] = useDrop<
+    const [{ isDragOver }, dropConnector] = useDrop<
       ElementDragSource,
       void,
       { isDragOver: boolean }
@@ -471,7 +481,7 @@ const FileGenerationSpecifications = observer(
         <PanelContent>
           <PanelDropZone
             isDragOver={isDragOver}
-            dropTargetConnector={dropTargetConnector}
+            dropTargetConnector={dropConnector}
           >
             {generationSpec.fileGenerations.length ? (
               <div className="generation-spec-file-generation-editor__items">

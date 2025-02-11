@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/@changesets/config@2.2.0/schema.json",
+  "$schema": "https://unpkg.com/@changesets/config@3.0.3/schema.json",
   "changelog": [
     "@finos/legend-dev-utils/ChangesetChangelogUtils",
     { "repo": "finos/legend-studio" }
@@ -8,7 +8,8 @@
   "fixed": [
     [
       "@finos/legend-application-*-bootstrap",
-      "@finos/legend-application-*-deployment"
+      "@finos/legend-application-*-deployment",
+      "@finos/legend-server-*-deployment"
     ]
   ],
   "access": "public",
