@@ -880,6 +880,10 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
     return { dbReference, columnNames };
   }
 
+  async clearLocalFileIngestData() {
+    await this._duckDBEngine.clearLocalFileDataIngest();
+  }
+
   private _synthesizeMinimalModelContext(data: {
     schemaName: string;
     tableName: string;
