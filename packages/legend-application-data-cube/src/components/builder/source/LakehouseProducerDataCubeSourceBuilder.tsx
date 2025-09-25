@@ -46,16 +46,6 @@ export const LakehouseProducerDataCubeSourceBuilder: React.FC<{
     state.setUserManagerSettings(auth.settings);
   }, [state, auth]);
 
-  useEffect(() => {
-    if (isIcebergEnabled) {
-      state
-        .fetchIcebergCatalogDetails(auth.user?.access_token)
-        .catch((error) => {
-          store.alertService.alertUnhandledError(error);
-        });
-    }
-  }, [state, auth, store, isIcebergEnabled]);
-
   function createUrnPairs(
     urns: string[],
   ): Record<string, string | undefined>[] {
