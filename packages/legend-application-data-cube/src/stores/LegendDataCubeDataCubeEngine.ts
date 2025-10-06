@@ -164,6 +164,8 @@ import {
   LakehouseConsumerDataCubeSource,
   RawLakehouseConsumerDataCubeSource,
 } from './model/LakehouseConsumerDataCubeSource.js';
+import { SecondaryOAuthClient } from './model/SecondaryOauthClient.js';
+import type { UserManagerSettings } from 'oidc-client-ts';
 
 export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
   private readonly _application: LegendDataCubeApplicationStore;
@@ -172,6 +174,7 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
   private readonly _graphManager: V1_PureGraphManager;
   private readonly _duckDBEngine: LegendDataCubeDuckDBEngine;
   private _ingestDefinition: PlainObject | undefined;
+  private _secondaryOauthClient: SecondaryOAuthClient | undefined;
 
   constructor(
     application: LegendDataCubeApplicationStore,
@@ -1045,10 +1048,13 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
           `Can't process execution plan: failed to extract generated SQL`,
         );
         const endTime = performance.now();
+        const token = await this._secondaryOauthClient?.getToken();
         return {
           executedQuery: await queryCodePromise,
           executedSQL: sql,
-          result: await this._duckDBEngine.runSQLQuery(sql),
+          result: token?.refreshed
+            ? await this._duckDBEngine.runSQLQueryWithToken(sql, token.token)
+            : await this._duckDBEngine.runSQLQuery(sql),
           executionTime: endTime - startTime,
         };
       } else {
@@ -1265,6 +1271,14 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
 
   registerIngestDefinition(ingestDefinition: PlainObject | undefined) {
     this._ingestDefinition = ingestDefinition;
+  }
+
+  registerSecondaryOauthClient(userManagerSettings: UserManagerSettings) {
+    if (this._secondaryOauthClient === undefined) {
+      this._secondaryOauthClient = new SecondaryOAuthClient(
+        userManagerSettings,
+      );
+    }
   }
 
   // ---------------------------------- CACHING --------------------------------------
@@ -1634,14 +1648,14 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
     paths: string[],
     catalogApi: string,
     refId?: string,
-    token?: string,
   ) {
+    const token = await this._secondaryOauthClient?.getToken();
     const { dbReference } = await this._duckDBEngine.ingestIcebergTable(
       warehouse,
       paths,
       catalogApi,
       refId,
-      token,
+      token?.token,
     );
     return { dbReference };
   }

@@ -48,7 +48,6 @@ import {
   V1_PureModelContextData,
 } from '@finos/legend-graph';
 import type { UserManagerSettings } from 'oidc-client-ts';
-import { SecondaryOAuthClient } from '../../model/SecondaryOauthClient.js';
 
 export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeSourceBuilderState {
   deploymentId: number | undefined;
@@ -342,7 +341,7 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
     const rawSource = new RawLakehouseProducerDataCubeSource();
     // build data cube source
     if (this.enableIceberg) {
-      const oauthClient = new SecondaryOAuthClient(
+      this._engine.registerSecondaryOauthClient(
         guaranteeNonNullable(this.userManagerSettings),
       );
       this.milestoning =
@@ -352,14 +351,11 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
       const icebergConfig = new IcebergConfig();
       icebergConfig.catalogUrl = guaranteeNonNullable(this.catalogUrl);
 
-      const token = await oauthClient.getToken();
-
       const refId = await this._engine.ingestIcebergTable(
         guaranteeNonNullable(this.warehouse),
         this.paths,
         guaranteeNonNullable(this.catalogUrl),
         undefined,
-        token,
       );
       icebergConfig.icebergRef = refId.dbReference;
       rawSource.icebergConfig = icebergConfig;

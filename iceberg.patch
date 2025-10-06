@@ -1,0 +1,1698 @@
+From c91dc995ab1acc3f065e0d0ca58048aeec322d4d Mon Sep 17 00:00:00 2001
+From: gs-gunjan <Gunjan.Shah@ny.email.gs.com>
+Date: Tue, 16 Sep 2025 11:30:43 +0530
+Subject: [PATCH 1/7] Initial support on iceberg flow for lakehouse producers
+
+---
+ .changeset/beige-aliens-train.md              |   7 +
+ ...LakehouseProducerDataCubeSourceBuilder.tsx |  37 ++-
+ .../stores/LegendDataCubeDataCubeEngine.ts    | 271 ++++++++++++------
+ .../src/stores/LegendDataCubeDuckDBEngine.ts  |  72 ++++-
+ ...houseProducerDataCubeSourceBuilderState.ts | 111 ++++++-
+ ...ehouseProducerDataCubeSourceLoaderState.ts |  19 +-
+ .../model/LakehouseProducerDataCubeSource.ts  |  14 +-
+ .../ingest/V1_LakehouseIngestEnvironment.ts   |  18 ++
+ .../ingest/V1_LakehouseProducerEnvironment.ts |  40 +++
+ .../V1_IngestSerializationHelper.ts           |  81 +++++-
+ packages/legend-graph/src/index.ts            |   7 +-
+ .../src/LakehouseIngestServerClient.ts        |  12 +
+ 12 files changed, 591 insertions(+), 98 deletions(-)
+ create mode 100644 .changeset/beige-aliens-train.md
+ create mode 100644 packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseProducerEnvironment.ts
+
+diff --git a/.changeset/beige-aliens-train.md b/.changeset/beige-aliens-train.md
+new file mode 100644
+index 0000000000..66fd2b831a
+--- /dev/null
++++ b/.changeset/beige-aliens-train.md
+@@ -0,0 +1,7 @@
++---
++'@finos/legend-application-data-cube': minor
++'@finos/legend-server-lakehouse': minor
++'@finos/legend-graph': minor
++---
++
++datacube: support iceberg querying flow for lakehouse producers
+diff --git a/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx b/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx
+index 9a65446644..f9bf1cc70f 100644
+--- a/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx
++++ b/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx
+@@ -15,23 +15,43 @@
+  */
+ import { observer } from 'mobx-react-lite';
+ import type { LakehouseProducerDataCubeSourceBuilderState } from '../../../stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.js';
+-import { FormButton, FormTextInput } from '@finos/legend-data-cube';
++import {
++  FormButton,
++  FormCheckbox,
++  FormTextInput,
++} from '@finos/legend-data-cube';
+ import { CustomSelectorInput } from '@finos/legend-art';
+ import { useAuth } from 'react-oidc-context';
+ import { useLegendDataCubeBuilderStore } from '../LegendDataCubeBuilderStoreProvider.js';
+ import { guaranteeNonNullable } from '@finos/legend-shared';
+-import { useEffect } from 'react';
++import { useEffect, useState } from 'react';
+ 
+ export const LakehouseProducerDataCubeSourceBuilder: React.FC<{
+   sourceBuilder: LakehouseProducerDataCubeSourceBuilderState;
+ }> = observer(({ sourceBuilder: state }) => {
+   const auth = useAuth();
+   const store = useLegendDataCubeBuilderStore();
++  const [isIcebergEnabled, setIsIcebergEnabled] = useState(false);
++
++  const toggleSetisIcebergEnabled = () => {
++    setIsIcebergEnabled(!isIcebergEnabled);
++    state.setIcebergEnabled(isIcebergEnabled);
++  };
+ 
+   useEffect(() => {
+     state.reset();
+   }, [state]);
+ 
++  useEffect(() => {
++    if (isIcebergEnabled) {
++      state
++        .fetchIcebergCatalogDetails(auth.user?.access_token)
++        .catch((error) => {
++          store.alertService.alertUnhandledError(error);
++        });
++    }
++  }, [state, auth, store, isIcebergEnabled]);
++
+   function createUrnPairs(
+     urns: string[],
+   ): Record<string, string | undefined>[] {
+@@ -130,7 +150,18 @@ export const LakehouseProducerDataCubeSourceBuilder: React.FC<{
+             />
+           </div>
+         )}
+-        {state.selectedTable && (
++        {state.icebergEnabled && (
++          <div className="query-setup__wizard__group mt-2">
++            <div className="query-setup__wizard__group__title">Dataset</div>
++            <div className="flex h-5 w-[calc(100%_-_40px)] overflow-x-auto">
++              <FormCheckbox
++                checked={isIcebergEnabled}
++                onChange={toggleSetisIcebergEnabled}
++              />
++            </div>
++          </div>
++        )}
++        {state.selectedTable && !isIcebergEnabled && (
+           <div className="query-setup__wizard__group mt-2">
+             <div className="query-setup__wizard__group__title">Warehouse</div>
+             <FormTextInput
+diff --git a/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts b/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
+index e08ac1e08c..8c03b111c6 100644
+--- a/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
++++ b/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
+@@ -154,6 +154,7 @@ import { QUERY_BUILDER_PURE_PATH } from '@finos/legend-query-builder';
+ import {
+   LAKEHOUSE_PRODUCER_DATA_CUBE_SOURCE_TYPE,
+   LakehouseProducerDataCubeSource,
++  LakehouseProducerIcebergCachedDataCubeSource,
+   RawLakehouseProducerDataCubeSource,
+ } from './model/LakehouseProducerDataCubeSource.js';
+ import {
+@@ -196,6 +197,7 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+   // ---------------------------------- IMPLEMENTATION ----------------------------------
+ 
+   override getDataFromSource(source?: DataCubeSource): PlainObject {
++    // TODO: add lakehouse sources
+     if (source instanceof LegendQueryDataCubeSource) {
+       const queryInfo = source.info;
+       return {
+@@ -376,6 +378,8 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+           warehouse: rawSource.warehouse,
+           ingestServerUrl: rawSource.ingestServerUrl,
+         },
++        icebergCatalog: rawSource.catalogUrl,
++        paths: rawSource.paths,
+         sourceType: source._type,
+       };
+     } else if (source.type === LAKEHOUSE_CONSUMER_DATA_CUBE_SOURCE_TYPE) {
+@@ -457,62 +461,7 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+               // TODO: confirm this is in accordance to engine
+               // check if we have a duckdb enum mapping
+               // See https://duckdb.org/docs/sql/data_types/overview.html
+-              switch (col[1] as string) {
+-                case 'BIT': {
+-                  column.type = new V1_Bit();
+-                  break;
+-                }
+-                case 'BOOLEAN': {
+-                  // TODO: understand why boolean is not present in relationalDataType
+-                  column.type = new V1_VarChar();
+-                  break;
+-                }
+-                case 'DATE': {
+-                  column.type = new V1_Date();
+-                  break;
+-                }
+-                case 'DECIMAL': {
+-                  column.type = new V1_Decimal();
+-                  break;
+-                }
+-                case 'DOUBLE': {
+-                  column.type = new V1_Double();
+-                  break;
+-                }
+-                case 'FLOAT': {
+-                  column.type = new V1_Float();
+-                  break;
+-                }
+-                case 'INTEGER': {
+-                  column.type = new V1_Integer();
+-                  break;
+-                }
+-                case 'TININT': {
+-                  column.type = new V1_TinyInt();
+-                  break;
+-                }
+-                case 'SMALLINT': {
+-                  column.type = new V1_SmallInt();
+-                  break;
+-                }
+-                case 'BIGINT': {
+-                  column.type = new V1_BigInt();
+-                  break;
+-                }
+-                case 'TIMESTAMP': {
+-                  column.type = new V1_Timestamp();
+-                  break;
+-                }
+-                case 'VARCHAR': {
+-                  column.type = new V1_VarChar();
+-                  break;
+-                }
+-                default: {
+-                  throw new UnsupportedOperationError(
+-                    `Can't ingest local file data: failed to find matching relational data type for DuckDB type '${col[1]}' when synthesizing table definition`,
+-                  );
+-                }
+-              }
++              this._getColumnType(col, column);
+               return column;
+             }),
+           });
+@@ -701,33 +650,84 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+         const rawSource =
+           RawLakehouseProducerDataCubeSource.serialization.fromJson(value);
+ 
+-        const source = new LakehouseProducerDataCubeSource();
+-
+-        const query = new V1_ClassInstance();
+-        query.type = V1_ClassInstanceType.INGEST_ACCESSOR;
+-        const ingestAccesor = new V1_RelationStoreAccessor();
+-        ingestAccesor.path = rawSource.paths;
+-        ingestAccesor.metadata = false;
+-        query.value = ingestAccesor;
+-        source.query = query;
+-
+-        const model = this._synthesizeLakehouseProducerPMCD(rawSource, source);
+-        source.model = V1_serializePureModelContextData(model);
++        if (rawSource.icebergRef && rawSource.catalogUrl) {
++          const source = new LakehouseProducerIcebergCachedDataCubeSource();
++          const tableCatalog = this._duckDBEngine.retrieveCatalogTable(
++            rawSource.icebergRef,
++          );
+ 
+-        try {
+-          source.columns = (
+-            await this._getLambdaRelationType(
+-              this.serializeValueSpecification(_lambda([], [source.query])),
+-              source.model,
+-            )
+-          ).columns;
+-        } catch (error) {
+-          assertErrorThrown(error);
+-          throw new Error(
+-            `Can't get query result columns. Make sure the source query return a relation (i.e. typed TDS). Error: ${error.message}`,
++          const { model, database, schema, table, runtime } =
++            this._synthesizeMinimalModelContext({
++              schemaName: tableCatalog.schemaName,
++              tableName: tableCatalog.tableName,
++              tableColumns: tableCatalog.columns.map((col) => {
++                const column = new V1_Column();
++                column.name = col[0] as string;
++                // TODO: confirm this is in accordance to engine
++                // check if we have a duckdb enum mapping
++                // See https://duckdb.org/docs/sql/data_types/overview.html
++                this._getColumnType(col, column);
++                return column;
++              }),
++            });
++
++          source.db = database.path;
++          source.model = model;
++          source.table = table.name;
++          source.schema = schema.name;
++          source.runtime = runtime.path;
++
++          const query = new V1_ClassInstance();
++          query.type = V1_ClassInstanceType.RELATION_STORE_ACCESSOR;
++          const storeAccessor = new V1_RelationStoreAccessor();
++          storeAccessor.path = [source.db, source.schema, source.table];
++          query.value = storeAccessor;
++          source.query = query;
++          try {
++            source.columns = (
++              await this._getLambdaRelationType(
++                this.serializeValueSpecification(_lambda([], [source.query])),
++                source.model,
++              )
++            ).columns;
++          } catch (error) {
++            assertErrorThrown(error);
++            throw new Error(
++              `Can't get query result columns. Make sure the source query return a relation (i.e. typed TDS). Error: ${error.message}`,
++            );
++          }
++          return source;
++        } else {
++          const source = new LakehouseProducerDataCubeSource();
++
++          const query = new V1_ClassInstance();
++          query.type = V1_ClassInstanceType.INGEST_ACCESSOR;
++          const ingestAccesor = new V1_RelationStoreAccessor();
++          ingestAccesor.path = rawSource.paths;
++          ingestAccesor.metadata = false;
++          query.value = ingestAccesor;
++          source.query = query;
++
++          const model = this._synthesizeLakehouseProducerPMCD(
++            rawSource,
++            source,
+           );
++          source.model = V1_serializePureModelContextData(model);
++          try {
++            source.columns = (
++              await this._getLambdaRelationType(
++                this.serializeValueSpecification(_lambda([], [source.query])),
++                source.model,
++              )
++            ).columns;
++          } catch (error) {
++            assertErrorThrown(error);
++            throw new Error(
++              `Can't get query result columns. Make sure the source query return a relation (i.e. typed TDS). Error: ${error.message}`,
++            );
++          }
++          return source;
+         }
+-        return source;
+       }
+       case LAKEHOUSE_CONSUMER_DATA_CUBE_SOURCE_TYPE: {
+         const rawSource =
+@@ -1014,6 +1014,35 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+           result: await this._duckDBEngine.runSQLQuery(sql),
+           executionTime: endTime - startTime,
+         };
++      } else if (
++        source instanceof LakehouseProducerIcebergCachedDataCubeSource
++      ) {
++        const executionPlan = await this._generateExecutionPlan(
++          query,
++          source.model,
++          [],
++          // NOTE: for local file, we're using DuckDB, but its protocol models
++          // are not available in the latest production protocol version V1_33_0, so
++          // we have to force using VX_X_X
++          // once we either cut another protocol version or backport the DuckDB models
++          // to V1_33_0, we will can remove this
++          { ...options, clientVersion: PureClientVersion.VX_X_X },
++        );
++        const sql = guaranteeNonNullable(
++          executionPlan instanceof V1_SimpleExecutionPlan
++            ? executionPlan.rootExecutionNode.executionNodes
++                .filter(filterByType(V1_SQLExecutionNode))
++                .at(-1)?.sqlQuery
++            : undefined,
++          `Can't process execution plan: failed to extract generated SQL`,
++        );
++        const endTime = performance.now();
++        return {
++          executedQuery: await queryCodePromise,
++          executedSQL: sql,
++          result: await this._duckDBEngine.runSQLQuery(sql),
++          executionTime: endTime - startTime,
++        };
+       } else {
+         throw new UnsupportedOperationError(
+           `Can't execute query with unsupported source`,
+@@ -1199,6 +1228,11 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+         DataCubeFunction.FROM,
+         [_elementPtr(source.runtime)].filter(isNonNullable),
+       );
++    } else if (source instanceof LakehouseProducerIcebergCachedDataCubeSource) {
++      return _function(
++        DataCubeFunction.FROM,
++        [_elementPtr(source.runtime)].filter(isNonNullable),
++      );
+     } else if (source instanceof LakehouseProducerDataCubeSource) {
+       return _function(
+         DataCubeFunction.FROM,
+@@ -1330,6 +1364,8 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+       return this._getLambdaRelationType(query, source.model);
+     } else if (source instanceof LakehouseProducerDataCubeSource) {
+       return this._getLambdaRelationType(query, source.model);
++    } else if (source instanceof LakehouseProducerIcebergCachedDataCubeSource) {
++      return this._getLambdaRelationType(query, source.model);
+     } else if (source instanceof LakehouseConsumerDataCubeSource) {
+       return this._getLambdaRelationType(query, source.model);
+     }
+@@ -1560,6 +1596,81 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+     return { dbReference, columnNames };
+   }
+ 
++  async ingestIcebergTable(
++    warehouse: string,
++    paths: string[],
++    catalogApi: string,
++    token?: string,
++  ) {
++    const { dbReference } = await this._duckDBEngine.ingestIcebergTable(
++      warehouse,
++      paths,
++      catalogApi,
++      undefined,
++      token,
++    );
++    return { dbReference };
++  }
++
++  private _getColumnType(col: string[], column: V1_Column) {
++    switch (col[1] as string) {
++      case 'BIT': {
++        column.type = new V1_Bit();
++        break;
++      }
++      case 'BOOLEAN': {
++        // TODO: understand why boolean is not present in relationalDataType
++        column.type = new V1_VarChar();
++        break;
++      }
++      case 'DATE': {
++        column.type = new V1_Date();
++        break;
++      }
++      case 'DECIMAL': {
++        column.type = new V1_Decimal();
++        break;
++      }
++      case 'DOUBLE': {
++        column.type = new V1_Double();
++        break;
++      }
++      case 'FLOAT': {
++        column.type = new V1_Float();
++        break;
++      }
++      case 'INTEGER': {
++        column.type = new V1_Integer();
++        break;
++      }
++      case 'TININT': {
++        column.type = new V1_TinyInt();
++        break;
++      }
++      case 'SMALLINT': {
++        column.type = new V1_SmallInt();
++        break;
++      }
++      case 'BIGINT': {
++        column.type = new V1_BigInt();
++        break;
++      }
++      case 'TIMESTAMP': {
++        column.type = new V1_Timestamp();
++        break;
++      }
++      case 'VARCHAR': {
++        column.type = new V1_VarChar();
++        break;
++      }
++      default: {
++        throw new UnsupportedOperationError(
++          `Can't ingest local file data: failed to find matching relational data type for DuckDB type '${col[1]}' when synthesizing table definition`,
++        );
++      }
++    }
++  }
++
+   private _synthesizeMinimalModelContext(data: {
+     schemaName: string;
+     tableName: string;
+diff --git a/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts b/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts
+index 1728881d88..4e3ce0befe 100644
+--- a/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts
++++ b/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts
+@@ -106,6 +106,12 @@ export class LegendDataCubeDuckDBEngine {
+     const database = new duckdb.AsyncDuckDB(logger, worker);
+     await database.instantiate(bundle.mainModule, bundle.pthreadWorker);
+     this._database = database;
++
++    const connection = await this.database.connect();
++    await connection.query(`SET builtin_httpfs = false;`);
++    await connection.query(
++      `INSTALL iceberg FROM 'https://nightly-extensions.duckdb.org/iceberg/caca3ac6';`,
++    );
+   }
+ 
+   async cache(result: TDSExecutionResult) {
+@@ -265,6 +271,70 @@ export class LegendDataCubeDuckDBEngine {
+     };
+   }
+ 
++  async ingestIcebergTable(
++    warehouse: string,
++    paths: string[],
++    catalogApi: string,
++    refId?: string,
++    token?: string,
++  ) {
++    if (!isNullable(refId) && this._catalog.has(refId)) {
++      guaranteeNonNullable(this._catalog.get(refId));
++      return {
++        dbReference: refId,
++      };
++    }
++    const schemaName = LegendDataCubeDuckDBEngine.DUCKDB_DEFAULT_SCHEMA_NAME;
++    LegendDataCubeDuckDBEngine.ingestFileTableCounter += 1;
++    const tableName = `${LegendDataCubeDuckDBEngine.INGEST_TABLE_NAME_PREFIX}${LegendDataCubeDuckDBEngine.ingestFileTableCounter}`;
++
++    const connection = await this.database.connect();
++
++    const secret = `CREATE OR REPLACE iceberg_secret (
++      TYPE ICEBERG,
++      TOKEN '${token}'
++    );`;
++    await connection.query(secret);
++
++    const catalog = `ATTACH OR REPLACE '${warehouse}' AS iceberg_catalog (
++      TYPE iCEBERG,
++      SECRET iceberg_secret,
++      ENDPOINT '${catalogApi}',
++      SUPPORT_NESTED_NAMESPACES true
++    );`;
++    await connection.query(catalog);
++
++    const selectQuery = `SELECT * from iceberg_catalog."${paths[0]}.${paths[1]}".${paths[2]};`;
++    const results = await connection.query(selectQuery);
++
++    await connection.insertArrowTable(results, {
++      name: tableName,
++      create: true,
++      schema: schemaName,
++    });
++
++    const tableSpec = (
++      await connection.query(`DESCRIBE ${schemaName}.${tableName}`)
++    )
++      .toArray()
++      .map((spec) => [
++        spec[LegendDataCubeDuckDBEngine.COLUMN_NAME] as string,
++        spec[LegendDataCubeDuckDBEngine.COLUMN_TYPE] as string,
++      ]);
++    await connection.close();
++
++    const ref = isNullable(refId) ? uuid() : refId;
++    this._catalog.set(ref, {
++      schemaName,
++      tableName,
++      columns: tableSpec,
++    } satisfies DuckDBCatalogTable);
++
++    return {
++      dbReference: ref,
++    };
++  }
++
+   async runSQLQuery(sql: string) {
+     const connection = await this.database.connect();
+     const result = await connection.query(sql);
+@@ -374,7 +444,7 @@ export class LegendDataCubeDuckDBEngine {
+   }
+ }
+ 
+-type DuckDBCatalogTable = {
++export type DuckDBCatalogTable = {
+   schemaName: string;
+   tableName: string;
+   columns: string[][];
+diff --git a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
+index f969c14bde..6723ecab6f 100644
+--- a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
++++ b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
+@@ -19,7 +19,11 @@ import {
+   LegendDataCubeSourceBuilderState,
+   LegendDataCubeSourceBuilderType,
+ } from './LegendDataCubeSourceBuilderState.js';
+-import { guaranteeNonNullable, type PlainObject } from '@finos/legend-shared';
++import {
++  guaranteeNonNullable,
++  guaranteeType,
++  type PlainObject,
++} from '@finos/legend-shared';
+ import type { DataCubeAlertService } from '@finos/legend-data-cube';
+ import type { LegendDataCubeApplicationStore } from '../../LegendDataCubeBaseStore.js';
+ import type { LegendDataCubeDataCubeEngine } from '../../LegendDataCubeDataCubeEngine.js';
+@@ -30,7 +34,14 @@ import {
+   type LakehouseIngestServerClient,
+   type LakehousePlatformServerClient,
+ } from '@finos/legend-server-lakehouse';
+-import type { V1_IngestDefinition } from '@finos/legend-graph';
++import {
++  V1_AWSSnowflakeIngestEnvironment,
++  V1_AWSSnowflakeProducerEnvironment,
++  V1_deserializeIngestEnvironment,
++  V1_deserializeProducerEnvironment,
++  V1_OpenCatalog,
++  type V1_IngestDefinition,
++} from '@finos/legend-graph';
+ 
+ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeSourceBuilderState {
+   deploymentId: number | undefined;
+@@ -43,6 +54,11 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+   ingestUrns: string[] = [];
+   tables: string[] = [];
+   datasetGroup: string | undefined;
++  icebergEnabled: boolean | undefined;
++  enableIceberg: boolean;
++  databaseName: string | undefined;
++  catalogUrl: string | undefined;
++  milestoning: boolean;
+ 
+   readonly _platformServerClient: LakehousePlatformServerClient;
+   readonly _ingestServerClient: LakehouseIngestServerClient;
+@@ -66,6 +82,7 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+       tables: observable,
+       datasetGroup: observable,
+       selectedTable: observable,
++      icebergEnabled: observable,
+ 
+       setDeploymentId: action,
+       setSelectedIngestUrn: action,
+@@ -74,12 +91,15 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+       setTables: action,
+       setDatasetGroup: action,
+       setSelectedTable: action,
++      setIcebergEnabled: action,
+     });
+ 
+     this.selectedIngestUrn = '';
+     this.selectedTable = '';
+     this.warehouse = undefined;
+     this.paths = [];
++    this.enableIceberg = false;
++    this.milestoning = false;
+   }
+ 
+   setDeploymentId(deploymentId: number | undefined): void {
+@@ -111,6 +131,10 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+     this.selectedTable = selectedTable;
+   }
+ 
++  setIcebergEnabled(enable: boolean) {
++    this.enableIceberg = enable;
++  }
++
+   async fetchIngestUrns(access_token: string | undefined) {
+     //TODO: we should retry this method if access token is invalid
+     this.resetDeployment(this.deploymentId);
+@@ -133,6 +157,13 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+         access_token,
+       );
+       const producer = ProducerEnvironment.serialization.fromJson(producerUrn);
++
++      await this.fetchProducerEnvironmentDetails(
++        producer,
++        ingestServerUrl,
++        access_token,
++      );
++
+       const ingestDefinitions =
+         await this._ingestServerClient.getIngestDefinitions(
+           producer.producerEnvironmentUrn,
+@@ -146,6 +177,27 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+     }
+   }
+ 
++  private async fetchProducerEnvironmentDetails(
++    producer: ProducerEnvironment,
++    ingestServerUrl: string,
++    access_token: string | undefined,
++  ) {
++    const producerEnvPlainObject =
++      await this._ingestServerClient.getProducerEnvironmentDetails(
++        producer.producerEnvironmentUrn,
++        ingestServerUrl,
++        access_token,
++      );
++
++    const producerEnv = guaranteeType(
++      V1_deserializeProducerEnvironment(producerEnvPlainObject),
++      V1_AWSSnowflakeProducerEnvironment,
++    );
++    this.icebergEnabled = producerEnv.icebergEnabled;
++
++    this.databaseName = producerEnv.databaseName;
++  }
++
+   async fetchDatasets(access_token: string | undefined) {
+     this.setTables([]);
+     this.setSelectedTable(undefined);
+@@ -177,6 +229,27 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+     return ingestUrn.split('~').pop();
+   }
+ 
++  async fetchIcebergCatalogDetails(access_token: string | undefined) {
++    try {
++      const ingestEnvPlainObject =
++        await this._ingestServerClient.getIngestEnvironment(
++          this.ingestionServerUrl,
++          access_token,
++        );
++      const ingestEnv = guaranteeType(
++        V1_deserializeIngestEnvironment(ingestEnvPlainObject),
++        V1_AWSSnowflakeIngestEnvironment,
++      );
++      this.warehouse = ingestEnv.iceberg.catalog.name;
++      this.catalogUrl = guaranteeType(
++        ingestEnv.iceberg.catalog,
++        V1_OpenCatalog,
++      ).privateLinkUrl;
++    } catch (error) {
++      throw error;
++    }
++  }
++
+   createPath() {
+     this.paths = [];
+     this.paths.push(
+@@ -187,6 +260,17 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+     );
+   }
+ 
++  createIcebergPath() {
++    this.paths = [];
++    this.paths.push(
++      guaranteeNonNullable(this.databaseName),
++      guaranteeNonNullable(this.datasetGroup),
++      this.milestoning
++        ? `${guaranteeNonNullable(this.selectedTable)}_MILESTONED`
++        : guaranteeNonNullable(this.selectedTable),
++    );
++  }
++
+   reset() {
+     this.setDeploymentId(undefined);
+     this.setIngestUrns([]);
+@@ -219,13 +303,28 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+     );
+   }
+ 
+-  override generateSourceData(): Promise<PlainObject> {
++  override async generateSourceData(): Promise<PlainObject> {
+     // register ingest definition
+-    this._engine.registerIngestDefinition(this.ingestDefinition);
+ 
+-    // build data cube source
+-    this.createPath();
+     const rawSource = new RawLakehouseProducerDataCubeSource();
++    // build data cube source
++    if (this.enableIceberg) {
++      this.milestoning =
++        // eslint-disable-next-line @typescript-eslint/no-explicit-any
++        (this.ingestDefinition as any).writeMode._type === 'batch_milestoned';
++      this.createIcebergPath();
++      rawSource.catalogUrl = guaranteeNonNullable(this.catalogUrl);
++
++      const refId = await this._engine.ingestIcebergTable(
++        guaranteeNonNullable(this.warehouse),
++        this.paths,
++        guaranteeNonNullable(this.catalogUrl),
++      );
++      rawSource.icebergRef = refId.dbReference;
++    } else {
++      this.createPath();
++      this._engine.registerIngestDefinition(this.ingestDefinition);
++    }
+     rawSource.ingestDefinitionUrn = guaranteeNonNullable(
+       this.selectedIngestUrn,
+     );
+diff --git a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceLoaderState.ts b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceLoaderState.ts
+index 8c2eafe7e7..694eaaeffd 100644
+--- a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceLoaderState.ts
++++ b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceLoaderState.ts
+@@ -110,11 +110,20 @@ export class LakehouseProducerDataCubeSourceLoaderState extends LegendDataCubeSo
+         guaranteeNonNullable(source),
+       );
+ 
+-    this._engine.registerIngestDefinition(
+-      Object.values(
+-        guaranteeNonNullable(this.ingestDefinition),
+-      )[0] as PlainObject,
+-    );
++    if (deserializedSource.icebergRef && deserializedSource.catalogUrl) {
++      const refId = await this._engine.ingestIcebergTable(
++        deserializedSource.warehouse,
++        deserializedSource.paths,
++        deserializedSource.catalogUrl,
++      );
++      deserializedSource.icebergRef = refId.dbReference;
++    } else {
++      this._engine.registerIngestDefinition(
++        Object.values(
++          guaranteeNonNullable(this.ingestDefinition),
++        )[0] as PlainObject,
++      );
++    }
+ 
+     return RawLakehouseProducerDataCubeSource.serialization.toJson(
+       deserializedSource,
+diff --git a/packages/legend-application-data-cube/src/stores/model/LakehouseProducerDataCubeSource.ts b/packages/legend-application-data-cube/src/stores/model/LakehouseProducerDataCubeSource.ts
+index f8c3143aeb..1928b590e7 100644
+--- a/packages/legend-application-data-cube/src/stores/model/LakehouseProducerDataCubeSource.ts
++++ b/packages/legend-application-data-cube/src/stores/model/LakehouseProducerDataCubeSource.ts
+@@ -21,7 +21,7 @@ import {
+   usingConstantValueSchema,
+   type PlainObject,
+ } from '@finos/legend-shared';
+-import { createModelSchema, list, primitive } from 'serializr';
++import { createModelSchema, list, optional, primitive } from 'serializr';
+ 
+ export const LAKEHOUSE_PRODUCER_DATA_CUBE_SOURCE_TYPE = 'lakehouseProducer';
+ 
+@@ -30,11 +30,21 @@ export class LakehouseProducerDataCubeSource extends DataCubeSource {
+   runtime!: string;
+ }
+ 
++export class LakehouseProducerIcebergCachedDataCubeSource extends DataCubeSource {
++  model!: PlainObject<V1_PureModelContextData>;
++  runtime!: string;
++  db!: string;
++  schema!: string;
++  table!: string;
++}
++
+ export class RawLakehouseProducerDataCubeSource {
+   ingestDefinitionUrn!: string;
+   warehouse!: string;
+   ingestServerUrl!: string;
+   paths!: string[];
++  icebergRef?: string;
++  catalogUrl?: string;
+ 
+   static readonly serialization = new SerializationFactory(
+     createModelSchema(RawLakehouseProducerDataCubeSource, {
+@@ -43,6 +53,8 @@ export class RawLakehouseProducerDataCubeSource {
+       warehouse: primitive(),
+       ingestServerUrl: primitive(),
+       paths: list(primitive()),
++      icebergEnabled: optional(primitive()),
++      catalogUrl: optional(primitive()),
+     }),
+   );
+ }
+diff --git a/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseIngestEnvironment.ts b/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseIngestEnvironment.ts
+index 0b48774504..ac1b7c6057 100644
+--- a/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseIngestEnvironment.ts
++++ b/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseIngestEnvironment.ts
+@@ -20,6 +20,10 @@ export enum V1_IngestEnvironmentType {
+   AWSSnowflake = 'AWSSnowflake',
+ }
+ 
++export enum V1_CatalogType {
++  OpenCatalog = 'OpenCatalog',
++}
++
+ export enum V1_IngestEnvironmentClassification {
+   PROD = 'prod',
+   PROD_PARALLEL = 'prod-parallel',
+@@ -40,6 +44,7 @@ export abstract class V1_AWSIngestEnvironment extends V1_IngestEnvironment {
+   ingestStepFunctionsAvtivityArn!: string;
+   ingestStateMachineArn!: string;
+   ingestSystemAccount!: string;
++  iceberg!: V1_IcebergDetails;
+ }
+ 
+ export class V1_AWSSnowflakeIngestEnvironment extends V1_AWSIngestEnvironment {
+@@ -52,3 +57,16 @@ export class V1_AWSSnowflakeIngestEnvironment extends V1_AWSIngestEnvironment {
+ export class V1_GCPIngestEnvironment extends V1_IngestEnvironment {
+   gcsStagingBucketName!: string;
+ }
++
++export class V1_IcebergDetails {
++  catalog!: V1_Catalog;
++}
++
++export abstract class V1_Catalog {
++  name!: string;
++  url!: string;
++}
++
++export class V1_OpenCatalog extends V1_Catalog {
++  privateLinkUrl!: string;
++}
+diff --git a/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseProducerEnvironment.ts b/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseProducerEnvironment.ts
+new file mode 100644
+index 0000000000..35b9510b1a
+--- /dev/null
++++ b/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseProducerEnvironment.ts
+@@ -0,0 +1,40 @@
++/**
++ * Copyright (c) 2025-present, Goldman Sachs
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++import type { V1_AppDirNode } from '../entitlements/V1_CoreEntitlements.js';
++
++//TODO: we need to add more producer environment types
++
++export enum V1_ProducerEnvironmentType {
++  AWSSnowflake = 'AWSSnowflake',
++  AWSSnowflakeWithOnPremS3Only = 'AWSSnowflakeWithOnPremS3Only',
++  AWSSnowflakeWithProducerManagedStageBucket = 'AWSSnowflakeWithProducerManagedStageBucket',
++}
++
++export abstract class V1_ProducerEnvironment {
++  appDirDeployment!: V1_AppDirNode;
++}
++
++export abstract class V1_SnowflakeBasedProducerEnvironment extends V1_ProducerEnvironment {
++  snowflakeRole!: string;
++  databaseName!: string;
++  warehouseName!: string;
++  stageName!: string;
++  icebergEnabled!: boolean;
++  databaseOwnerDeploymentId!: number;
++}
++
++export class V1_AWSSnowflakeProducerEnvironment extends V1_SnowflakeBasedProducerEnvironment {}
+diff --git a/packages/legend-graph/src/graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.ts b/packages/legend-graph/src/graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.ts
+index fa5b90aa5a..c3f1e5eba1 100644
+--- a/packages/legend-graph/src/graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.ts
++++ b/packages/legend-graph/src/graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.ts
+@@ -15,6 +15,7 @@
+  */
+ 
+ import {
++  UnsupportedOperationError,
+   usingConstantValueSchema,
+   usingModelSchema,
+   type PlainObject,
+@@ -23,12 +24,27 @@ import { V1_IngestDefinition } from '../../../model/packageableElements/ingest/V
+ import type { V1_PackageableElement } from '../../../model/packageableElements/V1_PackageableElement.js';
+ import type { V1_AppDirNode } from '../../../lakehouse/entitlements/V1_CoreEntitlements.js';
+ import { V1_AppDirNodeModelSchema } from './V1_EntitlementSerializationHelper.js';
+-import { createModelSchema, deserialize, primitive } from 'serializr';
++import {
++  createModelSchema,
++  custom,
++  deserialize,
++  primitive,
++  serialize,
++} from 'serializr';
+ import {
+   type V1_IngestEnvironment,
+   V1_AWSSnowflakeIngestEnvironment,
++  V1_CatalogType,
++  V1_IcebergDetails,
+   V1_IngestEnvironmentType,
++  V1_OpenCatalog,
++  type V1_Catalog,
+ } from '../../../lakehouse/ingest/V1_LakehouseIngestEnvironment.js';
++import {
++  V1_AWSSnowflakeProducerEnvironment,
++  V1_ProducerEnvironmentType,
++  type V1_ProducerEnvironment,
++} from '../../../lakehouse/ingest/V1_LakehouseProducerEnvironment.js';
+ 
+ type IngestDefinitionInterface = {
+   appDirDeployment?: PlainObject<V1_AppDirNode> | undefined;
+@@ -58,6 +74,41 @@ export const V1_createIngestDef = (
+   return ingestDef;
+ };
+ 
++export const V1_OpenCatalogModelSchema = createModelSchema(V1_OpenCatalog, {
++  name: primitive(),
++  url: primitive(),
++  privateLinkUrl: primitive(),
++  _type: usingConstantValueSchema(V1_CatalogType.OpenCatalog),
++});
++
++export const V1_deserializeCatalog = (
++  json: PlainObject<V1_Catalog>,
++): V1_Catalog => {
++  switch (json._type) {
++    case V1_CatalogType.OpenCatalog:
++      return deserialize(V1_OpenCatalogModelSchema, json);
++    default:
++      throw new Error(`Unknown V1_Catalog type: ${json._type}`);
++  }
++};
++
++export const V1_serializeCatalog = (protocol: V1_Catalog): V1_Catalog => {
++  if (protocol instanceof V1_OpenCatalog) {
++    return serialize(V1_OpenCatalogModelSchema, protocol);
++  }
++  throw new UnsupportedOperationError(`Unknown V1_Catalog type:`, protocol);
++};
++
++export const V1_IcebergDetailsModelSchema = createModelSchema(
++  V1_IcebergDetails,
++  {
++    catalog: custom(
++      (val) => V1_serializeCatalog(val),
++      (val) => V1_deserializeCatalog(val),
++    ),
++  },
++);
++
+ export const V1_AWSSnowflakeIngestEnvironmentModelSchema = createModelSchema(
+   V1_AWSSnowflakeIngestEnvironment,
+   {
+@@ -75,6 +126,7 @@ export const V1_AWSSnowflakeIngestEnvironmentModelSchema = createModelSchema(
+     snowflakeHost: primitive(),
+     s3StagingBucketName: primitive(),
+     storageIntegrationName: primitive(),
++    iceberg: usingModelSchema(V1_IcebergDetailsModelSchema),
+   },
+ );
+ 
+@@ -88,3 +140,30 @@ export const V1_deserializeIngestEnvironment = (
+       throw new Error(`Unknown V1_IngestEnvironment type: ${json._type}`);
+   }
+ };
++
++export const V1_AWSSnowflakeProducerEnvironmentModelSchema = createModelSchema(
++  V1_AWSSnowflakeProducerEnvironment,
++  {
++    _type: primitive(),
++    appDirDeployment: usingModelSchema(V1_AppDirNodeModelSchema),
++    snowflakeRole: primitive(),
++    databaseName: primitive(),
++    warehouseName: primitive(),
++    stageName: primitive(),
++    icebergEnabled: primitive(),
++    databaseOwnerDeploymentId: primitive(),
++  },
++);
++
++export const V1_deserializeProducerEnvironment = (
++  json: PlainObject<V1_ProducerEnvironment>,
++): V1_ProducerEnvironment => {
++  switch (json._type) {
++    case V1_ProducerEnvironmentType.AWSSnowflake:
++    case V1_ProducerEnvironmentType.AWSSnowflakeWithOnPremS3Only:
++    case V1_ProducerEnvironmentType.AWSSnowflakeWithProducerManagedStageBucket:
++      return deserialize(V1_AWSSnowflakeProducerEnvironmentModelSchema, json);
++    default:
++      throw new Error(`Unknown V1_ProducerEnvironment type: ${json._type}`);
++  }
++};
+diff --git a/packages/legend-graph/src/index.ts b/packages/legend-graph/src/index.ts
+index a2428ab086..7df5f02296 100644
+--- a/packages/legend-graph/src/index.ts
++++ b/packages/legend-graph/src/index.ts
+@@ -379,7 +379,9 @@ export {
+   V1_IngestEnvironmentClassification,
+   V1_IngestEnvironment,
+   V1_AWSSnowflakeIngestEnvironment,
++  V1_OpenCatalog,
+ } from './graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseIngestEnvironment.js';
++export * from './graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseProducerEnvironment.js';
+ export {
+   V1_observe_DataContract,
+   V1_observe_LiteDataContract,
+@@ -390,7 +392,10 @@ export {
+   V1_dataSubscriptionModelSchema,
+   V1_DataSubscriptionResponseModelSchema,
+ } from './graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_SubscriptionSerializationHelper.js';
+-export { V1_deserializeIngestEnvironment } from './graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.js';
++export {
++  V1_deserializeIngestEnvironment,
++  V1_deserializeProducerEnvironment,
++} from './graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.js';
+ export * from './graph-manager/protocol/pure/v1/model/lineage/V1_Lineage.js';
+ 
+ // --------------------------------------------- EXECUTION PLAN --------------------------------------------------
+diff --git a/packages/legend-server-lakehouse/src/LakehouseIngestServerClient.ts b/packages/legend-server-lakehouse/src/LakehouseIngestServerClient.ts
+index 8e91325d54..0b54ee405f 100644
+--- a/packages/legend-server-lakehouse/src/LakehouseIngestServerClient.ts
++++ b/packages/legend-server-lakehouse/src/LakehouseIngestServerClient.ts
+@@ -33,6 +33,7 @@ import type {
+   V1_IngestEnvironment,
+   V1_SandboxDataProductDeploymentResponse,
+   V1_IngestDefinition,
++  V1_ProducerEnvironment,
+ } from '@finos/legend-graph';
+ 
+ export class LakehouseIngestServerClient extends AbstractServerClient {
+@@ -153,6 +154,17 @@ export class LakehouseIngestServerClient extends AbstractServerClient {
+       this._token(token),
+     );
+ 
++  getProducerEnvironmentDetails = (
++    producerEnvironmentUrn: string,
++    ingestServerUrl: string | undefined,
++    token: string | undefined,
++  ): Promise<PlainObject<V1_ProducerEnvironment>> =>
++    this.get(
++      `${this._ingest(ingestServerUrl)}/catalog-state/producer-environments/${producerEnvironmentUrn}`,
++      {},
++      this._token(token),
++    );
++
+   getIngestDefinitionDetail = (
+     ingestDefinitionUrn: string,
+     ingestServerUrl: string | undefined,
+
+From ef573f8ab62a19a0025d7e616af1c08cbd0e7032 Mon Sep 17 00:00:00 2001
+From: gs-gunjan <Gunjan.Shah@ny.email.gs.com>
+Date: Tue, 16 Sep 2025 16:06:37 +0530
+Subject: [PATCH 2/7] supporting loading of saved iceberg query
+
+---
+ ...LakehouseProducerDataCubeSourceBuilder.tsx | 24 +++++++++----------
+ .../stores/LegendDataCubeDataCubeEngine.ts    |  3 ++-
+ .../src/stores/LegendDataCubeDuckDBEngine.ts  |  2 +-
+ ...ehouseProducerDataCubeSourceLoaderState.ts |  1 +
+ .../model/LakehouseProducerDataCubeSource.ts  |  2 +-
+ 5 files changed, 17 insertions(+), 15 deletions(-)
+
+diff --git a/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx b/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx
+index f9bf1cc70f..442c88c9f9 100644
+--- a/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx
++++ b/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx
+@@ -35,7 +35,7 @@ export const LakehouseProducerDataCubeSourceBuilder: React.FC<{
+ 
+   const toggleSetisIcebergEnabled = () => {
+     setIsIcebergEnabled(!isIcebergEnabled);
+-    state.setIcebergEnabled(isIcebergEnabled);
++    state.setIcebergEnabled(!isIcebergEnabled);
+   };
+ 
+   useEffect(() => {
+@@ -90,6 +90,17 @@ export const LakehouseProducerDataCubeSourceBuilder: React.FC<{
+             </FormButton>
+           </div>
+         </div>
++        {state.icebergEnabled && (
++          <div className="query-setup__wizard__group mt-2">
++            <div className="flex h-5 w-[calc(100%_-_40px)] overflow-x-auto">
++              <FormCheckbox
++                label="Use Iceberg"
++                checked={isIcebergEnabled}
++                onChange={toggleSetisIcebergEnabled}
++              />
++            </div>
++          </div>
++        )}
+         {state.ingestUrns.length > 0 && (
+           <div className="query-setup__wizard__group mt-3">
+             <div className="query-setup__wizard__group__title">Ingest Urn</div>
+@@ -150,17 +161,6 @@ export const LakehouseProducerDataCubeSourceBuilder: React.FC<{
+             />
+           </div>
+         )}
+-        {state.icebergEnabled && (
+-          <div className="query-setup__wizard__group mt-2">
+-            <div className="query-setup__wizard__group__title">Dataset</div>
+-            <div className="flex h-5 w-[calc(100%_-_40px)] overflow-x-auto">
+-              <FormCheckbox
+-                checked={isIcebergEnabled}
+-                onChange={toggleSetisIcebergEnabled}
+-              />
+-            </div>
+-          </div>
+-        )}
+         {state.selectedTable && !isIcebergEnabled && (
+           <div className="query-setup__wizard__group mt-2">
+             <div className="query-setup__wizard__group__title">Warehouse</div>
+diff --git a/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts b/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
+index 8c03b111c6..0d3514c93a 100644
+--- a/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
++++ b/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
+@@ -1600,13 +1600,14 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+     warehouse: string,
+     paths: string[],
+     catalogApi: string,
++    refId?: string,
+     token?: string,
+   ) {
+     const { dbReference } = await this._duckDBEngine.ingestIcebergTable(
+       warehouse,
+       paths,
+       catalogApi,
+-      undefined,
++      refId,
+       token,
+     );
+     return { dbReference };
+diff --git a/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts b/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts
+index 4e3ce0befe..8974da429d 100644
+--- a/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts
++++ b/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts
+@@ -290,7 +290,7 @@ export class LegendDataCubeDuckDBEngine {
+ 
+     const connection = await this.database.connect();
+ 
+-    const secret = `CREATE OR REPLACE iceberg_secret (
++    const secret = `CREATE OR REPLACE SECRET iceberg_secret (
+       TYPE ICEBERG,
+       TOKEN '${token}'
+     );`;
+diff --git a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceLoaderState.ts b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceLoaderState.ts
+index 694eaaeffd..760a15faab 100644
+--- a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceLoaderState.ts
++++ b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceLoaderState.ts
+@@ -115,6 +115,7 @@ export class LakehouseProducerDataCubeSourceLoaderState extends LegendDataCubeSo
+         deserializedSource.warehouse,
+         deserializedSource.paths,
+         deserializedSource.catalogUrl,
++        deserializedSource.icebergRef,
+       );
+       deserializedSource.icebergRef = refId.dbReference;
+     } else {
+diff --git a/packages/legend-application-data-cube/src/stores/model/LakehouseProducerDataCubeSource.ts b/packages/legend-application-data-cube/src/stores/model/LakehouseProducerDataCubeSource.ts
+index 1928b590e7..5375c3085c 100644
+--- a/packages/legend-application-data-cube/src/stores/model/LakehouseProducerDataCubeSource.ts
++++ b/packages/legend-application-data-cube/src/stores/model/LakehouseProducerDataCubeSource.ts
+@@ -53,7 +53,7 @@ export class RawLakehouseProducerDataCubeSource {
+       warehouse: primitive(),
+       ingestServerUrl: primitive(),
+       paths: list(primitive()),
+-      icebergEnabled: optional(primitive()),
++      icebergRef: optional(primitive()),
+       catalogUrl: optional(primitive()),
+     }),
+   );
+
+From ffeb4f537d9b0b9ff5fd70dc27d0789d94eb86bb Mon Sep 17 00:00:00 2001
+From: gs-gunjan <Gunjan.Shah@ny.email.gs.com>
+Date: Thu, 18 Sep 2025 15:24:13 +0530
+Subject: [PATCH 3/7] adding oauth client to connect to icebrg
+
+---
+ .../legend-application-data-cube/package.json |  1 +
+ .../LegendDataCubeFrameworkProvider.tsx       |  4 +-
+ .../LegendDataCubeWebApplication.tsx          |  1 +
+ .../src/stores/LegendDataCubeBaseStore.ts     |  8 ++-
+ .../stores/LegendDataCubeDataCubeEngine.ts    |  7 ++-
+ .../src/stores/LegendDataCubeDuckDBEngine.ts  | 17 ++---
+ ...houseProducerDataCubeSourceBuilderState.ts |  2 +-
+ .../src/stores/model/OauthClient.ts           | 63 +++++++++++++++++++
+ .../ingest/V1_LakehouseIngestEnvironment.ts   |  2 +-
+ .../V1_IngestSerializationHelper.ts           |  2 +-
+ 10 files changed, 88 insertions(+), 19 deletions(-)
+ create mode 100644 packages/legend-application-data-cube/src/stores/model/OauthClient.ts
+
+diff --git a/packages/legend-application-data-cube/package.json b/packages/legend-application-data-cube/package.json
+index 199b125790..67cc1e5471 100644
+--- a/packages/legend-application-data-cube/package.json
++++ b/packages/legend-application-data-cube/package.json
+@@ -58,6 +58,7 @@
+     "apache-arrow": "19.0.1",
+     "mobx": "6.13.6",
+     "mobx-react-lite": "4.1.0",
++    "oidc-client-ts": "^3.2.0",
+     "react": "19.0.0",
+     "react-dom": "19.0.0",
+     "react-oidc-context": "^3.3.0",
+diff --git a/packages/legend-application-data-cube/src/components/LegendDataCubeFrameworkProvider.tsx b/packages/legend-application-data-cube/src/components/LegendDataCubeFrameworkProvider.tsx
+index 79d20298bd..4cb70de6c7 100644
+--- a/packages/legend-application-data-cube/src/components/LegendDataCubeFrameworkProvider.tsx
++++ b/packages/legend-application-data-cube/src/components/LegendDataCubeFrameworkProvider.tsx
+@@ -25,6 +25,7 @@ import {
+ import type { LegendDataCubeApplicationConfig } from '../application/LegendDataCubeApplicationConfig.js';
+ import type { LegendDataCubePluginManager } from '../application/LegendDataCubePluginManager.js';
+ import { LegendDataCubeBaseStore } from '../stores/LegendDataCubeBaseStore.js';
++import { useAuth } from 'react-oidc-context';
+ 
+ export const useLegendDataCubeApplicationStore = (): ApplicationStore<
+   LegendDataCubeApplicationConfig,
+@@ -43,8 +44,9 @@ const LegendDataCubeBaseStoreProvider: React.FC<{
+   children: React.ReactNode;
+ }> = ({ children }) => {
+   const application = useLegendDataCubeApplicationStore();
++  const auth = useAuth();
+   const store = useLocalObservable(
+-    () => new LegendDataCubeBaseStore(application),
++    () => new LegendDataCubeBaseStore(application, auth.settings),
+   );
+   return (
+     <LegendDataCubeBaseStoreContext.Provider value={store}>
+diff --git a/packages/legend-application-data-cube/src/components/LegendDataCubeWebApplication.tsx b/packages/legend-application-data-cube/src/components/LegendDataCubeWebApplication.tsx
+index 666f068ec1..439720837e 100644
+--- a/packages/legend-application-data-cube/src/components/LegendDataCubeWebApplication.tsx
++++ b/packages/legend-application-data-cube/src/components/LegendDataCubeWebApplication.tsx
+@@ -81,6 +81,7 @@ const AuthenticatedLegendDataCubeWebProvider = withAuthenticationRequired(
+     ),
+     signinRedirectArgs: {
+       state: `${window.location.pathname}${window.location.search}`,
++      extraQueryParams: {},
+     },
+   },
+ );
+diff --git a/packages/legend-application-data-cube/src/stores/LegendDataCubeBaseStore.ts b/packages/legend-application-data-cube/src/stores/LegendDataCubeBaseStore.ts
+index 5731221236..08ab9c798b 100644
+--- a/packages/legend-application-data-cube/src/stores/LegendDataCubeBaseStore.ts
++++ b/packages/legend-application-data-cube/src/stores/LegendDataCubeBaseStore.ts
+@@ -55,6 +55,8 @@ import {
+   LegendDataCubeSettingKey,
+   LegendDataCubeSettingStorageKey,
+ } from '../__lib__/LegendDataCubeSetting.js';
++import { OAuthClient } from './model/OauthClient.js';
++import { type UserManagerSettings } from 'oidc-client-ts';
+ 
+ declare const AG_GRID_LICENSE: string | undefined;
+ 
+@@ -84,7 +86,10 @@ export class LegendDataCubeBaseStore {
+ 
+   gridClientLicense?: string | undefined;
+ 
+-  constructor(application: LegendDataCubeApplicationStore) {
++  constructor(
++    application: LegendDataCubeApplicationStore,
++    userManagerSettings: UserManagerSettings,
++  ) {
+     this.application = application;
+     this.pluginManager = application.pluginManager;
+     this.depotServerClient = new DepotServerClient({
+@@ -163,6 +168,7 @@ export class LegendDataCubeBaseStore {
+       this.depotServerClient,
+       this.engineServerClient,
+       this.graphManager,
++      new OAuthClient(userManagerSettings),
+     );
+     this.taskService = new DataCubeTaskService();
+     this.layoutService = new DataCubeLayoutService();
+diff --git a/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts b/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
+index 0d3514c93a..7ce8ff1d2b 100644
+--- a/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
++++ b/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
+@@ -162,6 +162,7 @@ import {
+   LakehouseConsumerDataCubeSource,
+   RawLakehouseConsumerDataCubeSource,
+ } from './model/LakehouseConsumerDataCubeSource.js';
++import type { OAuthClient } from './model/OauthClient.js';
+ 
+ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+   private readonly _application: LegendDataCubeApplicationStore;
+@@ -169,6 +170,7 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+   private readonly _engineServerClient: V1_EngineServerClient;
+   private readonly _graphManager: V1_PureGraphManager;
+   private readonly _duckDBEngine: LegendDataCubeDuckDBEngine;
++  private readonly _oauthClient?: OAuthClient;
+   private _ingestDefinition: PlainObject | undefined;
+ 
+   constructor(
+@@ -176,10 +178,12 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+     depotServerClient: DepotServerClient,
+     engineServerClient: V1_EngineServerClient,
+     graphManager: V1_PureGraphManager,
++    oauthClient: OAuthClient,
+   ) {
+     super();
+ 
+     this._application = application;
++    this._oauthClient = oauthClient;
+     this._depotServerClient = depotServerClient;
+     this._engineServerClient = engineServerClient;
+     this._graphManager = graphManager;
+@@ -1603,12 +1607,13 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+     refId?: string,
+     token?: string,
+   ) {
++    const token1 = await this._oauthClient?.getToken();
+     const { dbReference } = await this._duckDBEngine.ingestIcebergTable(
+       warehouse,
+       paths,
+       catalogApi,
+       refId,
+-      token,
++      token ?? token1,
+     );
+     return { dbReference };
+   }
+diff --git a/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts b/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts
+index 8974da429d..90ad3fd770 100644
+--- a/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts
++++ b/packages/legend-application-data-cube/src/stores/LegendDataCubeDuckDBEngine.ts
+@@ -284,9 +284,8 @@ export class LegendDataCubeDuckDBEngine {
+         dbReference: refId,
+       };
+     }
+-    const schemaName = LegendDataCubeDuckDBEngine.DUCKDB_DEFAULT_SCHEMA_NAME;
+-    LegendDataCubeDuckDBEngine.ingestFileTableCounter += 1;
+-    const tableName = `${LegendDataCubeDuckDBEngine.INGEST_TABLE_NAME_PREFIX}${LegendDataCubeDuckDBEngine.ingestFileTableCounter}`;
++    const schemaName = `iceberg_catalog."${paths[0]}.${paths[1]}"`;
++    const tableName = `${paths[2]}`;
+ 
+     const connection = await this.database.connect();
+ 
+@@ -304,18 +303,10 @@ export class LegendDataCubeDuckDBEngine {
+     );`;
+     await connection.query(catalog);
+ 
+-    const selectQuery = `SELECT * from iceberg_catalog."${paths[0]}.${paths[1]}".${paths[2]};`;
++    const selectQuery = `DESCRIBE ${schemaName}.${tableName};`;
+     const results = await connection.query(selectQuery);
+ 
+-    await connection.insertArrowTable(results, {
+-      name: tableName,
+-      create: true,
+-      schema: schemaName,
+-    });
+-
+-    const tableSpec = (
+-      await connection.query(`DESCRIBE ${schemaName}.${tableName}`)
+-    )
++    const tableSpec = results
+       .toArray()
+       .map((spec) => [
+         spec[LegendDataCubeDuckDBEngine.COLUMN_NAME] as string,
+diff --git a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
+index 6723ecab6f..e80c9e1527 100644
+--- a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
++++ b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
+@@ -244,7 +244,7 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+       this.catalogUrl = guaranteeType(
+         ingestEnv.iceberg.catalog,
+         V1_OpenCatalog,
+-      ).privateLinkUrl;
++      ).proxyUrl;
+     } catch (error) {
+       throw error;
+     }
+diff --git a/packages/legend-application-data-cube/src/stores/model/OauthClient.ts b/packages/legend-application-data-cube/src/stores/model/OauthClient.ts
+new file mode 100644
+index 0000000000..380f63cea7
+--- /dev/null
++++ b/packages/legend-application-data-cube/src/stores/model/OauthClient.ts
+@@ -0,0 +1,63 @@
++/**
++ * Copyright (c) 2020-present, Goldman Sachs
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++import { guaranteeNonNullable } from '@finos/legend-shared';
++import {
++  UserManager,
++  type UserManagerSettings,
++  type User,
++} from 'oidc-client-ts';
++
++export class OAuthClient {
++  private userManager: UserManager;
++  private user: User | null = null;
++
++  constructor(config: UserManagerSettings) {
++    this.userManager = new UserManager(config);
++  }
++
++  /** Login via popup */
++  async loginWithPopup(): Promise<void> {
++    this.user = await this.userManager.signinPopup();
++  }
++
++  /** Logout via popup */
++  async logoutWithPopup(): Promise<void> {
++    await this.userManager.signoutPopup();
++    this.user = null;
++  }
++
++  /** Get current token, refresh if needed */
++  public async getToken(): Promise<string> {
++    // 1️⃣ Try to get existing user
++    this.user = this.user ?? (await this.userManager.getUser());
++
++    // 2️⃣ If user exists and token valid
++    if (this.user) {
++      const exp = this.user.expires_at ? this.user.expires_at * 1000 : 0;
++      if (Date.now() < exp - 10 * 60 * 1000) {
++        return this.user.access_token;
++      }
++
++      // Token expiring soon → refresh silently
++      this.user = await this.userManager.signinSilent();
++      return guaranteeNonNullable(this.user?.access_token);
++    }
++
++    this.user = await this.userManager.signinPopup();
++    return this.user.access_token;
++  }
++}
+diff --git a/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseIngestEnvironment.ts b/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseIngestEnvironment.ts
+index ac1b7c6057..95ff4d5d17 100644
+--- a/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseIngestEnvironment.ts
++++ b/packages/legend-graph/src/graph-manager/protocol/pure/v1/lakehouse/ingest/V1_LakehouseIngestEnvironment.ts
+@@ -68,5 +68,5 @@ export abstract class V1_Catalog {
+ }
+ 
+ export class V1_OpenCatalog extends V1_Catalog {
+-  privateLinkUrl!: string;
++  proxyUrl!: string;
+ }
+diff --git a/packages/legend-graph/src/graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.ts b/packages/legend-graph/src/graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.ts
+index c3f1e5eba1..8e54818ab4 100644
+--- a/packages/legend-graph/src/graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.ts
++++ b/packages/legend-graph/src/graph-manager/protocol/pure/v1/transformation/pureProtocol/serializationHelpers/V1_IngestSerializationHelper.ts
+@@ -77,7 +77,7 @@ export const V1_createIngestDef = (
+ export const V1_OpenCatalogModelSchema = createModelSchema(V1_OpenCatalog, {
+   name: primitive(),
+   url: primitive(),
+-  privateLinkUrl: primitive(),
++  proxyUrl: primitive(),
+   _type: usingConstantValueSchema(V1_CatalogType.OpenCatalog),
+ });
+ 
+
+From 27b656abc374c0e7d7861b01bbdb65f107bc86b9 Mon Sep 17 00:00:00 2001
+From: gs-gunjan <Gunjan.Shah@ny.email.gs.com>
+Date: Thu, 18 Sep 2025 16:12:00 +0530
+Subject: [PATCH 4/7] fixing build
+
+---
+ .../src/stores/LegendDataCubeBaseStore.ts                     | 4 ++--
+ .../src/stores/LegendDataCubeDataCubeEngine.ts                | 4 ++--
+ yarn.lock                                                     | 1 +
+ 3 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/packages/legend-application-data-cube/src/stores/LegendDataCubeBaseStore.ts b/packages/legend-application-data-cube/src/stores/LegendDataCubeBaseStore.ts
+index 08ab9c798b..fbd230333d 100644
+--- a/packages/legend-application-data-cube/src/stores/LegendDataCubeBaseStore.ts
++++ b/packages/legend-application-data-cube/src/stores/LegendDataCubeBaseStore.ts
+@@ -88,7 +88,7 @@ export class LegendDataCubeBaseStore {
+ 
+   constructor(
+     application: LegendDataCubeApplicationStore,
+-    userManagerSettings: UserManagerSettings,
++    userManagerSettings?: UserManagerSettings,
+   ) {
+     this.application = application;
+     this.pluginManager = application.pluginManager;
+@@ -168,7 +168,7 @@ export class LegendDataCubeBaseStore {
+       this.depotServerClient,
+       this.engineServerClient,
+       this.graphManager,
+-      new OAuthClient(userManagerSettings),
++      userManagerSettings ? new OAuthClient(userManagerSettings) : undefined,
+     );
+     this.taskService = new DataCubeTaskService();
+     this.layoutService = new DataCubeLayoutService();
+diff --git a/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts b/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
+index 7ce8ff1d2b..2f41f3379e 100644
+--- a/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
++++ b/packages/legend-application-data-cube/src/stores/LegendDataCubeDataCubeEngine.ts
+@@ -170,7 +170,7 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+   private readonly _engineServerClient: V1_EngineServerClient;
+   private readonly _graphManager: V1_PureGraphManager;
+   private readonly _duckDBEngine: LegendDataCubeDuckDBEngine;
+-  private readonly _oauthClient?: OAuthClient;
++  private readonly _oauthClient?: OAuthClient | undefined;
+   private _ingestDefinition: PlainObject | undefined;
+ 
+   constructor(
+@@ -178,7 +178,7 @@ export class LegendDataCubeDataCubeEngine extends DataCubeEngine {
+     depotServerClient: DepotServerClient,
+     engineServerClient: V1_EngineServerClient,
+     graphManager: V1_PureGraphManager,
+-    oauthClient: OAuthClient,
++    oauthClient?: OAuthClient,
+   ) {
+     super();
+ 
+diff --git a/yarn.lock b/yarn.lock
+index 210622fdee..9769ee4ffc 100644
+--- a/yarn.lock
++++ b/yarn.lock
+@@ -2360,6 +2360,7 @@ __metadata:
+     mobx: "npm:6.13.6"
+     mobx-react-lite: "npm:4.1.0"
+     npm-run-all: "npm:4.1.5"
++    oidc-client-ts: "npm:^3.2.0"
+     react: "npm:19.0.0"
+     react-dom: "npm:19.0.0"
+     react-oidc-context: "npm:^3.3.0"
+
+From f6972bd365ec9ae557bd2877e7a55fb059b8682f Mon Sep 17 00:00:00 2001
+From: gs-gunjan <Gunjan.Shah@ny.email.gs.com>
+Date: Thu, 18 Sep 2025 16:16:51 +0530
+Subject: [PATCH 5/7] adding scope and storage
+
+---
+ .../src/stores/model/OauthClient.ts                        | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/packages/legend-application-data-cube/src/stores/model/OauthClient.ts b/packages/legend-application-data-cube/src/stores/model/OauthClient.ts
+index 380f63cea7..611b631e43 100644
+--- a/packages/legend-application-data-cube/src/stores/model/OauthClient.ts
++++ b/packages/legend-application-data-cube/src/stores/model/OauthClient.ts
+@@ -19,6 +19,7 @@ import {
+   UserManager,
+   type UserManagerSettings,
+   type User,
++  WebStorageStateStore,
+ } from 'oidc-client-ts';
+ 
+ export class OAuthClient {
+@@ -26,7 +27,11 @@ export class OAuthClient {
+   private user: User | null = null;
+ 
+   constructor(config: UserManagerSettings) {
+-    this.userManager = new UserManager(config);
++    this.userManager = new UserManager({
++      ...config,
++      userStore: new WebStorageStateStore({ store: window.localStorage }),
++      scope: config.extraQueryParams?.scope as string,
++    });
+   }
+ 
+   /** Login via popup */
+
+From 2447315bcb701ff423b360ee0316ded1e93428d0 Mon Sep 17 00:00:00 2001
+From: gs-gunjan <Gunjan.Shah@ny.email.gs.com>
+Date: Fri, 19 Sep 2025 12:34:13 +0530
+Subject: [PATCH 6/7] default to using iceberg if iceberg enabled
+
+---
+ ...LakehouseProducerDataCubeSourceBuilder.tsx | 27 ++++++++++---------
+ ...houseProducerDataCubeSourceBuilderState.ts |  5 ++++
+ 2 files changed, 19 insertions(+), 13 deletions(-)
+
+diff --git a/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx b/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx
+index 442c88c9f9..6732431273 100644
+--- a/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx
++++ b/packages/legend-application-data-cube/src/components/builder/source/LakehouseProducerDataCubeSourceBuilder.tsx
+@@ -31,7 +31,7 @@ export const LakehouseProducerDataCubeSourceBuilder: React.FC<{
+ }> = observer(({ sourceBuilder: state }) => {
+   const auth = useAuth();
+   const store = useLegendDataCubeBuilderStore();
+-  const [isIcebergEnabled, setIsIcebergEnabled] = useState(false);
++  const [isIcebergEnabled, setIsIcebergEnabled] = useState(true);
+ 
+   const toggleSetisIcebergEnabled = () => {
+     setIsIcebergEnabled(!isIcebergEnabled);
+@@ -161,18 +161,19 @@ export const LakehouseProducerDataCubeSourceBuilder: React.FC<{
+             />
+           </div>
+         )}
+-        {state.selectedTable && !isIcebergEnabled && (
+-          <div className="query-setup__wizard__group mt-2">
+-            <div className="query-setup__wizard__group__title">Warehouse</div>
+-            <FormTextInput
+-              className="w-full text-base text-black"
+-              value={state.warehouse}
+-              onChange={(event) => {
+-                state.setWarehouse(event.target.value);
+-              }}
+-            />
+-          </div>
+-        )}
++        {state.selectedTable &&
++          (!isIcebergEnabled || !state.icebergEnabled) && (
++            <div className="query-setup__wizard__group mt-2">
++              <div className="query-setup__wizard__group__title">Warehouse</div>
++              <FormTextInput
++                className="w-full text-base text-black"
++                value={state.warehouse}
++                onChange={(event) => {
++                  state.setWarehouse(event.target.value);
++                }}
++              />
++            </div>
++          )}
+       </div>
+     </div>
+   );
+diff --git a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
+index e80c9e1527..3e92680d5e 100644
+--- a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
++++ b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
+@@ -83,6 +83,7 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+       datasetGroup: observable,
+       selectedTable: observable,
+       icebergEnabled: observable,
++      enableIceberg: observable,
+ 
+       setDeploymentId: action,
+       setSelectedIngestUrn: action,
+@@ -195,6 +196,10 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+     );
+     this.icebergEnabled = producerEnv.icebergEnabled;
+ 
++    if (this.icebergEnabled) {
++      await this.fetchIcebergCatalogDetails(access_token);
++    }
++
+     this.databaseName = producerEnv.databaseName;
+   }
+ 
+
+From 6392b97e8d8e0248a6ea45a0005e4cad4c255eec Mon Sep 17 00:00:00 2001
+From: gs-gunjan <Gunjan.Shah@ny.email.gs.com>
+Date: Fri, 19 Sep 2025 13:14:44 +0530
+Subject: [PATCH 7/7] setting state
+
+---
+ .../source/LakehouseProducerDataCubeSourceBuilderState.ts        | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
+index 3e92680d5e..2aa73e1c1f 100644
+--- a/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
++++ b/packages/legend-application-data-cube/src/stores/builder/source/LakehouseProducerDataCubeSourceBuilderState.ts
+@@ -197,6 +197,7 @@ export class LakehouseProducerDataCubeSourceBuilderState extends LegendDataCubeS
+     this.icebergEnabled = producerEnv.icebergEnabled;
+ 
+     if (this.icebergEnabled) {
++      this.setIcebergEnabled(this.icebergEnabled);
+       await this.fetchIcebergCatalogDetails(access_token);
+     }
+ 

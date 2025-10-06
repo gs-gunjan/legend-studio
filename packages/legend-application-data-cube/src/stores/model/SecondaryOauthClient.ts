@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { guaranteeNonNullable } from '@finos/legend-shared';
 import {
   UserManager,
   type UserManagerSettings,
@@ -33,19 +34,28 @@ export class SecondaryOAuthClient {
     });
   }
 
-  /** Get current token, refresh if needed */
-  public async getToken(): Promise<string> {
-    this.user = this.user ?? (await this.userManager.getUser());
+  public tokenExpired(): boolean {
     if (this.user) {
       const exp = this.user.expires_at ? this.user.expires_at * 1000 : 0;
       if (Date.now() < exp - 10 * 60 * 1000) {
-        return this.user.access_token;
-      } else {
-        this.user = await this.userManager.signinPopup();
-        return this.user.access_token;
+        return false;
       }
+      return true;
     }
-    this.user = await this.userManager.signinPopup();
-    return this.user.access_token;
+    return true;
+  }
+
+  /** Get current token, refresh if needed */
+  public async getToken(): Promise<{ token: string; refreshed: boolean }> {
+    this.user = this.user ?? (await this.userManager.getUser());
+    const refreshed = false;
+    if (this.tokenExpired()) {
+      this.user = await this.userManager.signinPopup();
+      return { token: this.user.access_token, refreshed: true };
+    }
+    return {
+      token: guaranteeNonNullable(this.user).access_token,
+      refreshed,
+    };
   }
 }

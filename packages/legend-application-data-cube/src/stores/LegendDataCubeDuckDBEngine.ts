@@ -282,9 +282,8 @@ export class LegendDataCubeDuckDBEngine {
       };
     }
 
-    const schemaName = LegendDataCubeDuckDBEngine.DUCKDB_DEFAULT_SCHEMA_NAME;
-    LegendDataCubeDuckDBEngine.ingestFileTableCounter += 1;
-    const tableName = `${LegendDataCubeDuckDBEngine.INGEST_TABLE_NAME_PREFIX}${LegendDataCubeDuckDBEngine.ingestFileTableCounter}`;
+    const schemaName = `iceberg_catalog."${paths[0]}.${paths[1]}"`;
+    const tableName = `${paths[2]}`;
 
     const connection = await this.database.connect();
 
@@ -301,15 +300,6 @@ export class LegendDataCubeDuckDBEngine {
       SUPPORT_NESTED_NAMESPACES true
     );`;
     await connection.query(catalog);
-
-    const selectQuery = `SELECT * from iceberg_catalog."${paths[0]}.${paths[1]}".${paths[2]};`;
-    const results = await connection.query(selectQuery);
-
-    await connection.insertArrowTable(results, {
-      name: tableName,
-      create: true,
-      schema: schemaName,
-    });
 
     const describeQuery = `DESCRIBE ${schemaName}.${tableName};`;
     const describeResult = await connection.query(describeQuery);
@@ -332,6 +322,18 @@ export class LegendDataCubeDuckDBEngine {
     return {
       dbReference: ref,
     };
+  }
+
+  async runSQLQueryWithToken(sql: string, token: string) {
+    const connection = await this.database.connect();
+
+    const secret = `CREATE OR REPLACE SECRET iceberg_secret (
+      TYPE ICEBERG,
+      TOKEN '${token}'
+    );`;
+    await connection.query(secret);
+
+    return this.runSQLQuery(sql);
   }
 
   async runSQLQuery(sql: string) {

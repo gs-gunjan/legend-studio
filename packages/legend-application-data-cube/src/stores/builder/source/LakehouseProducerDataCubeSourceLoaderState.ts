@@ -35,7 +35,6 @@ import type { LakehouseIngestServerClient } from '@finos/legend-server-lakehouse
 import { action, makeObservable, observable } from 'mobx';
 import { LegendDataCubeSourceBuilderType } from './LegendDataCubeSourceBuilderState.js';
 import type { UserManagerSettings } from 'oidc-client-ts';
-import { SecondaryOAuthClient } from '../../model/SecondaryOauthClient.js';
 
 export class LakehouseProducerDataCubeSourceLoaderState extends LegendDataCubeSourceLoaderState {
   readonly processState = ActionState.create();
@@ -143,16 +142,14 @@ export class LakehouseProducerDataCubeSourceLoaderState extends LegendDataCubeSo
       deserializedSource.icebergConfig?.icebergRef &&
       deserializedSource.icebergConfig.catalogUrl
     ) {
-      const oauthClient = new SecondaryOAuthClient(
+      this._engine.registerSecondaryOauthClient(
         guaranteeNonNullable(this.userManagerSettings),
       );
-      const token = await oauthClient.getToken();
       const refId = await this._engine.ingestIcebergTable(
         deserializedSource.warehouse,
         deserializedSource.paths,
         deserializedSource.icebergConfig.catalogUrl,
         deserializedSource.icebergConfig.icebergRef,
-        token,
       );
       deserializedSource.icebergConfig.icebergRef = refId.dbReference;
     } else {
